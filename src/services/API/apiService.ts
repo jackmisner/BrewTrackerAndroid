@@ -4,8 +4,8 @@ import axios, {
   AxiosError,
   InternalAxiosRequestConfig,
 } from "axios";
-import * as SecureStore from 'expo-secure-store';
-import { API_CONFIG, STORAGE_KEYS, ENDPOINTS } from '../config';
+import * as SecureStore from "expo-secure-store";
+import { API_CONFIG, STORAGE_KEYS, ENDPOINTS } from "../config";
 import {
   // Authentication types
   LoginRequest,
@@ -42,6 +42,21 @@ import {
   RecipeVersionHistoryResponse,
   PublicRecipesResponse,
 
+  // Brew Session types
+  BrewSessionResponse,
+  BrewSessionsListResponse,
+  CreateBrewSessionRequest,
+  CreateBrewSessionResponse,
+  UpdateBrewSessionRequest,
+  UpdateBrewSessionResponse,
+  CreateFermentationEntryRequest,
+  CreateFermentationEntryResponse,
+  UpdateFermentationEntryRequest,
+  UpdateFermentationEntryResponse,
+  FermentationEntriesResponse,
+  FermentationStatsResponse,
+  DashboardResponse,
+
   // Common types
   ID,
 } from "../../types";
@@ -61,7 +76,7 @@ class TokenManager {
     try {
       return await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
     } catch (error) {
-      console.error('Error getting token:', error);
+      console.error("Error getting token:", error);
       return null;
     }
   }
@@ -70,7 +85,7 @@ class TokenManager {
     try {
       await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, token);
     } catch (error) {
-      console.error('Error setting token:', error);
+      console.error("Error setting token:", error);
       throw error;
     }
   }
@@ -79,14 +94,16 @@ class TokenManager {
     try {
       await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
     } catch (error) {
-      console.error('Error removing token:', error);
+      console.error("Error removing token:", error);
     }
   }
 }
 
 // Request interceptor to add authentication token
 api.interceptors.request.use(
-  async (config: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> => {
+  async (
+    config: InternalAxiosRequestConfig
+  ): Promise<InternalAxiosRequestConfig> => {
     const token = await TokenManager.getToken();
     if (token && config.headers) {
       config.headers["Authorization"] = `Bearer ${token}`;
@@ -119,7 +136,7 @@ api.interceptors.response.use(
     ) {
       console.error("API Error:", (error.response.data as any).error);
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -164,11 +181,13 @@ const ApiService = {
     ): Promise<AxiosResponse<VerifyEmailResponse>> =>
       api.post(ENDPOINTS.AUTH.VERIFY_EMAIL, data),
 
-    resendVerification: (): Promise<AxiosResponse<ResendVerificationResponse>> =>
-      api.post(ENDPOINTS.AUTH.RESEND_VERIFICATION),
+    resendVerification: (): Promise<
+      AxiosResponse<ResendVerificationResponse>
+    > => api.post(ENDPOINTS.AUTH.RESEND_VERIFICATION),
 
-    getVerificationStatus: (): Promise<AxiosResponse<VerificationStatusResponse>> =>
-      api.get('/auth/verification-status'),
+    getVerificationStatus: (): Promise<
+      AxiosResponse<VerificationStatusResponse>
+    > => api.get("/auth/verification-status"),
   },
 
   // User settings endpoints
@@ -272,10 +291,88 @@ const ApiService = {
     },
   },
 
+  // Brew sessions endpoints
+  brewSessions: {
+    getAll: (
+      page: number = 1,
+      perPage: number = 10
+    ): Promise<AxiosResponse<BrewSessionsListResponse>> =>
+      api.get(
+        `${ENDPOINTS.BREW_SESSIONS.LIST}?page=${page}&per_page=${perPage}`
+      ),
+
+    getById: (id: ID): Promise<AxiosResponse<BrewSessionResponse>> =>
+      api.get(ENDPOINTS.BREW_SESSIONS.DETAIL(id)),
+
+    create: (
+      brewSessionData: CreateBrewSessionRequest
+    ): Promise<AxiosResponse<CreateBrewSessionResponse>> =>
+      api.post(ENDPOINTS.BREW_SESSIONS.CREATE, brewSessionData),
+
+    update: (
+      id: ID,
+      brewSessionData: UpdateBrewSessionRequest
+    ): Promise<AxiosResponse<UpdateBrewSessionResponse>> =>
+      api.put(ENDPOINTS.BREW_SESSIONS.UPDATE(id), brewSessionData),
+
+    delete: (id: ID): Promise<AxiosResponse<{ message: string }>> =>
+      api.delete(ENDPOINTS.BREW_SESSIONS.DELETE(id)),
+
+    // Fermentation tracking
+    getFermentationEntries: (
+      brewSessionId: ID
+    ): Promise<AxiosResponse<FermentationEntriesResponse>> =>
+      api.get(ENDPOINTS.BREW_SESSIONS.FERMENTATION(brewSessionId)),
+
+    addFermentationEntry: (
+      brewSessionId: ID,
+      entryData: CreateFermentationEntryRequest
+    ): Promise<AxiosResponse<CreateFermentationEntryResponse>> =>
+      api.post(ENDPOINTS.BREW_SESSIONS.FERMENTATION(brewSessionId), entryData),
+
+    updateFermentationEntry: (
+      brewSessionId: ID,
+      entryIndex: number,
+      entryData: UpdateFermentationEntryRequest
+    ): Promise<AxiosResponse<UpdateFermentationEntryResponse>> =>
+      api.put(
+        ENDPOINTS.BREW_SESSIONS.FERMENTATION_ENTRY(brewSessionId, entryIndex),
+        entryData
+      ),
+
+    deleteFermentationEntry: (
+      brewSessionId: ID,
+      entryIndex: number
+    ): Promise<AxiosResponse<{ message: string }>> =>
+      api.delete(
+        ENDPOINTS.BREW_SESSIONS.FERMENTATION_ENTRY(brewSessionId, entryIndex)
+      ),
+
+    getFermentationStats: (
+      brewSessionId: ID
+    ): Promise<AxiosResponse<FermentationStatsResponse>> =>
+      api.get(ENDPOINTS.BREW_SESSIONS.FERMENTATION_STATS(brewSessionId)),
+
+    analyzeCompletion: (
+      brewSessionId: ID
+    ): Promise<
+      AxiosResponse<{
+        estimated_days_remaining: number;
+        completion_probability: number;
+      }>
+    > => api.get(ENDPOINTS.BREW_SESSIONS.ANALYZE_COMPLETION(brewSessionId)),
+  },
+
+  // Dashboard endpoints
+  dashboard: {
+    getData: (): Promise<AxiosResponse<DashboardResponse>> =>
+      api.get(ENDPOINTS.DASHBOARD.DATA),
+  },
+
   // Network status check
   checkConnection: async (): Promise<boolean> => {
     try {
-      const response = await api.get('/health', { timeout: 5000 });
+      const response = await api.get("/health", { timeout: 5000 });
       return response.status === 200;
     } catch (error) {
       return false;

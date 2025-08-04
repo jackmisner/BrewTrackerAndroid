@@ -1,4 +1,4 @@
-import { UnitSystem, ID } from './common';
+import { UnitSystem, ID } from "./common";
 
 // User interface
 export interface User {
@@ -27,7 +27,7 @@ export interface UserSettings {
   default_mash_temp_unit: string;
   email_notifications: boolean;
   push_notifications?: boolean; // Mobile-specific
-  theme_preference?: 'light' | 'dark' | 'auto'; // Mobile-specific
+  theme_preference?: "light" | "dark" | "auto"; // Mobile-specific
   privacy_settings: {
     share_recipes: boolean;
     show_in_leaderboards: boolean;
@@ -51,7 +51,7 @@ export interface UserProfile {
 
 // User preferences (client-side)
 export interface UserPreferences {
-  theme: 'light' | 'dark' | 'auto';
+  theme: "light" | "dark" | "auto";
   notifications_enabled: boolean;
   offline_mode: boolean;
   auto_sync: boolean;

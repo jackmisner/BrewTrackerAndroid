@@ -11,32 +11,32 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             headerStyle: {
-              backgroundColor: '#f4511e',
+              backgroundColor: "#f4511e",
             },
-            headerTintColor: '#fff',
+            headerTintColor: "#fff",
             headerTitleStyle: {
-              fontWeight: 'bold',
+              fontWeight: "bold",
             },
           }}
         >
-          <Stack.Screen 
-            name="index" 
-            options={{ 
+          <Stack.Screen
+            name="index"
+            options={{
               title: "BrewTracker",
-              headerShown: false 
-            }} 
+              headerShown: false,
+            }}
           />
-          <Stack.Screen 
-            name="(auth)" 
-            options={{ 
-              headerShown: false 
-            }} 
+          <Stack.Screen
+            name="(auth)"
+            options={{
+              headerShown: false,
+            }}
           />
-          <Stack.Screen 
-            name="(tabs)" 
-            options={{ 
-              headerShown: false 
-            }} 
+          <Stack.Screen
+            name="(tabs)"
+            options={{
+              headerShown: false,
+            }}
           />
         </Stack>
       </AuthProvider>

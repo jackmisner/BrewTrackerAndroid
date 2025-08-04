@@ -20,7 +20,7 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { register, error, clearError } = useAuth();
   const router = useRouter();
 
@@ -57,7 +57,7 @@ export default function RegisterScreen() {
       clearError();
       setIsLoading(true);
       await register({ username, email, password });
-      
+
       Alert.alert(
         "Registration Successful",
         "Please check your email to verify your account before signing in.",
@@ -69,7 +69,10 @@ export default function RegisterScreen() {
         ]
       );
     } catch (error: any) {
-      Alert.alert("Registration Failed", error.message || "An error occurred during registration");
+      Alert.alert(
+        "Registration Failed",
+        error.message || "An error occurred during registration"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -80,8 +83,8 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
+    <KeyboardAvoidingView
+      style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -140,9 +143,7 @@ export default function RegisterScreen() {
             />
           </View>
 
-          {error && (
-            <Text style={styles.errorText}>{error}</Text>
-          )}
+          {error && <Text style={styles.errorText}>{error}</Text>}
 
           <TouchableOpacity
             style={[styles.button, styles.primaryButton]}

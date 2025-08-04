@@ -4,6 +4,16 @@ import {
   RecipeFormData,
   RecipeSearchFilters,
 } from "./recipe";
+import {
+  BrewSession,
+  CreateBrewSessionRequest,
+  UpdateBrewSessionRequest,
+  FermentationEntry,
+  CreateFermentationEntryRequest,
+  UpdateFermentationEntryRequest,
+  FermentationStats,
+  BrewSessionSummary,
+} from "./brewSession";
 import { User, UserSettings } from "./user";
 import { ApiResponse, PaginatedResponse, ID } from "./common";
 
@@ -150,9 +160,12 @@ export interface PublicRecipesResponse extends PaginatedResponse<Recipe> {
   pagination: {
     page: number;
     pages: number;
+    per_page: number;
     has_prev: boolean;
     has_next: boolean;
     total: number;
+    prev_num?: number;
+    next_num?: number;
   };
 }
 
@@ -202,3 +215,50 @@ export interface ApiCallOptions {
   retries?: number;
   signal?: AbortSignal;
 }
+
+// Brew Session API types
+export interface BrewSessionResponse extends ApiResponse<BrewSession> {}
+
+export interface BrewSessionsListResponse
+  extends PaginatedResponse<BrewSession> {
+  brew_sessions: BrewSession[];
+}
+
+export interface CreateBrewSessionResponse extends ApiResponse<BrewSession> {}
+
+export interface UpdateBrewSessionResponse extends ApiResponse<BrewSession> {}
+
+export interface FermentationEntryResponse
+  extends ApiResponse<FermentationEntry> {}
+
+export interface FermentationEntriesResponse
+  extends ApiResponse<FermentationEntry[]> {
+  data: FermentationEntry[];
+}
+
+export interface CreateFermentationEntryResponse
+  extends ApiResponse<FermentationEntry> {}
+
+export interface UpdateFermentationEntryResponse
+  extends ApiResponse<FermentationEntry> {}
+
+export interface FermentationStatsResponse
+  extends ApiResponse<FermentationStats> {}
+
+export interface BrewSessionSummaryResponse
+  extends ApiResponse<BrewSessionSummary> {}
+
+// Dashboard API types
+export interface DashboardData {
+  user_stats: {
+    total_recipes: number;
+    public_recipes: number;
+    total_brew_sessions: number;
+    active_brew_sessions: number;
+  };
+  recent_recipes: Recipe[];
+  active_brew_sessions: BrewSession[];
+  brew_session_summary: BrewSessionSummary;
+}
+
+export interface DashboardResponse extends ApiResponse<DashboardData> {}
