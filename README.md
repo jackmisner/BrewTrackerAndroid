@@ -14,8 +14,10 @@ A React Native mobile app for the BrewTracker homebrewing platform, built with E
 
 ### Prerequisites
 
+- Expo CLI - for React Native development (`npm install -g @expo/cli`)
+- Android Studio or Android device - for mobile app testing
+- Java JDK 17+ - for Android development
 - Node.js 18+ 
-- Expo CLI (`npm install -g @expo/cli`)
 - BrewTracker backend running (see main project README)
 
 ### Installation
@@ -49,24 +51,48 @@ A React Native mobile app for the BrewTracker homebrewing platform, built with E
 
 ## Architecture
 
-### Project Structure
+## 🏗️ Project Structure
 
 ```
-src/
-├── components/         # Reusable UI components
-├── contexts/           # React contexts (Auth, etc.)
-├── hooks/              # Custom React hooks
-├── services/           # API services and business logic
-├── types/              # TypeScript type definitions
-├── utils/              # Utility functions
-└── styles/             # Global styles and theme
-
-app/
-├── (auth)/             # Authentication screens
-├── (tabs)/             # Main app tabs
-├── _layout.tsx         # Root layout with providers
-└── index.tsx           # Entry point with auth routing
-```
+BrewTrackerAndroid/                                   # React Native Android application
+├── app/                                              # Expo Router file-based routing structure
+│   ├── (auth)/                                       # Authentication flow screens
+│   │   ├── login.tsx                                 # Login screen with JWT authentication and navigation
+│   │   ├── register.tsx                              # User registration with real-time validation
+│   │   ├── verify-email.tsx                          # Email verification with token input and resend functionality
+│   │   └── _layout.tsx                               # Authentication layout configuration
+│   ├── (tabs)/                                       # Main application tab navigation
+│   │   ├── index.tsx                                 # Dashboard/home screen with brewing overview
+│   │   ├── recipes.tsx                               # Recipe management and browsing
+│   │   ├── brew-sessions.tsx                         # Brew session tracking and management
+│   │   ├── profile.tsx                               # User profile and settings with secure logout
+│   │   └── _layout.tsx                               # Tab navigation layout with Material Icons
+│   ├── index.tsx                                     # Entry point with auth routing
+│   └── _layout.tsx                                   # Root layout with AuthProvider and QueryClient
+├── src/                                              # Source code for React Native components and services
+│   ├── components/                                   # Reusable UI components
+│   ├── contexts/                                     # React contexts (Auth, etc.)
+│   │   └── AuthContext.tsx                           # Authentication context with secure token storage
+│   ├── hooks/                                        # Custom React hooks
+│   ├── services/                                     # API services and business logic
+│   │   ├── API/
+│   │   │   ├── apiService.ts                         # Complete API service layer with Axios configuration
+│   │   │   └── queryClient.ts                        # React Query client configuration
+│   │   └── config.ts                                 # Service configuration and constants
+│   ├── styles/                                       # Global styles and theme
+│   ├── types/                                        # TypeScript type definitions for mobile app
+│   │   ├── api.ts                                    # API request/response interfaces
+│   │   ├── common.ts                                 # Shared utility types
+│   │   ├── recipe.ts                                 # Recipe and ingredient types
+│   │   ├── user.ts                                   # User account and authentication types
+│   │   └── index.ts                                  # Central type exports
+│   └── utils/                                        # Utility functions
+├── assets/                                           # Static assets (images, fonts, icons)
+├── app.json                                          # Expo configuration for Android-only development
+├── package.json                                      # React Native dependencies and Expo configuration
+├── tsconfig.json                                     # TypeScript configuration for React Native
+└── .env                                              # Environment variables for API URL and mobile configuration
+``` 
 
 ### Key Technologies
 
