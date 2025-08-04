@@ -15,8 +15,15 @@ export default function VerifyEmailScreen() {
   const [verificationCode, setVerificationCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  
-  const { user, verifyEmail, resendVerification, checkVerificationStatus, error, clearError } = useAuth();
+
+  const {
+    user,
+    verifyEmail,
+    resendVerification,
+    checkVerificationStatus,
+    error,
+    clearError,
+  } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -41,7 +48,7 @@ export default function VerifyEmailScreen() {
       clearError();
       setIsLoading(true);
       await verifyEmail(verificationCode.trim());
-      
+
       Alert.alert(
         "Email Verified",
         "Your email has been successfully verified!",
@@ -53,7 +60,10 @@ export default function VerifyEmailScreen() {
         ]
       );
     } catch (error: any) {
-      Alert.alert("Verification Failed", error.message || "Invalid verification code");
+      Alert.alert(
+        "Verification Failed",
+        error.message || "Invalid verification code"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -64,13 +74,16 @@ export default function VerifyEmailScreen() {
       clearError();
       setIsResending(true);
       await resendVerification();
-      
+
       Alert.alert(
         "Code Sent",
         "A new verification code has been sent to your email address."
       );
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to resend verification code");
+      Alert.alert(
+        "Error",
+        error.message || "Failed to resend verification code"
+      );
     } finally {
       setIsResending(false);
     }
@@ -81,7 +94,7 @@ export default function VerifyEmailScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Verify Your Email</Text>
         <Text style={styles.subtitle}>
-          We&apos;ve sent a verification code to{'\n'}
+          We&apos;ve sent a verification code to{"\n"}
           <Text style={styles.email}>{user?.email}</Text>
         </Text>
       </View>
@@ -100,9 +113,7 @@ export default function VerifyEmailScreen() {
           />
         </View>
 
-        {error && (
-          <Text style={styles.errorText}>{error}</Text>
-        )}
+        {error && <Text style={styles.errorText}>{error}</Text>}
 
         <TouchableOpacity
           style={[styles.button, styles.primaryButton]}

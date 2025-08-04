@@ -18,7 +18,7 @@ export default function LoginScreen() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { login, error, clearError } = useAuth();
   const router = useRouter();
 
@@ -32,14 +32,16 @@ export default function LoginScreen() {
       clearError();
       setIsLoading(true);
       await login({ username, password });
-      
+
       // Add a small delay to ensure state updates are processed
       setTimeout(() => {
         router.replace("/");
       }, 100);
-      
     } catch (error: any) {
-      Alert.alert("Login Failed", error.message || "An error occurred during login");
+      Alert.alert(
+        "Login Failed",
+        error.message || "An error occurred during login"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -50,8 +52,8 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
+    <KeyboardAvoidingView
+      style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -85,9 +87,7 @@ export default function LoginScreen() {
             />
           </View>
 
-          {error && (
-            <Text style={styles.errorText}>{error}</Text>
-          )}
+          {error && <Text style={styles.errorText}>{error}</Text>}
 
           <TouchableOpacity
             style={[styles.button, styles.primaryButton]}

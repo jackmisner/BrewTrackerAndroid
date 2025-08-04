@@ -1,9 +1,19 @@
-import { ID } from './common';
+import { ID } from "./common";
 
 // Recipe types
 export type IngredientType = "fermentable" | "hop" | "yeast" | "other";
 export type BatchSizeUnit = "gal" | "l";
-export type IngredientUnit = "lb" | "kg" | "g" | "oz" | "pkg" | "tsp" | "tbsp" | "cup" | "ml" | "l";
+export type IngredientUnit =
+  | "lb"
+  | "kg"
+  | "g"
+  | "oz"
+  | "pkg"
+  | "tsp"
+  | "tbsp"
+  | "cup"
+  | "ml"
+  | "l";
 
 // Recipe ingredient interface
 export interface RecipeIngredient {
@@ -12,28 +22,28 @@ export interface RecipeIngredient {
   type: IngredientType;
   amount: number;
   unit: IngredientUnit;
-  
+
   // Fermentable-specific
   potential?: number;
   color?: number;
   grain_type?: string;
-  
+
   // Hop-specific
   alpha_acid?: number;
   use?: string;
   time?: number;
   hop_type?: string;
-  
+
   // Yeast-specific
   attenuation?: number;
   yeast_type?: string;
   manufacturer?: string;
   code?: string;
-  
+
   // Other ingredient fields
   description?: string;
   notes?: string;
-  
+
   // Meta fields
   created_at?: string;
   updated_at?: string;
@@ -64,23 +74,23 @@ export interface Recipe {
   is_public: boolean;
   notes: string;
   ingredients: RecipeIngredient[];
-  
+
   // Calculated metrics (stored)
   estimated_og?: number;
   estimated_fg?: number;
   estimated_abv?: number;
   estimated_ibu?: number;
   estimated_srm?: number;
-  
+
   // Version control
   version?: number;
   parent_recipe_id?: ID;
   original_author?: string;
-  
+
   // Timestamps
   created_at: string;
   updated_at: string;
-  
+
   // User context
   author?: string;
   author_id?: ID;

@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import Constants from "expo-constants";
 import { useAuth } from "../../src/contexts/AuthContext";
 
 export default function ProfileScreen() {
@@ -16,21 +17,17 @@ export default function ProfileScreen() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    Alert.alert(
-      "Sign Out",
-      "Are you sure you want to sign out?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Sign Out",
-          style: "destructive",
-          onPress: async () => {
-            await logout();
-            router.replace("/(auth)/login");
-          },
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+          router.replace("/(auth)/login");
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -77,7 +74,9 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.version}>BrewTracker v1.0.0</Text>
+        <Text style={styles.version}>
+          BrewTracker v{Constants.expoConfig?.version || "0.1.0"}
+        </Text>
         <Text style={styles.copyright}>© 2025 BrewTracker</Text>
       </View>
     </ScrollView>

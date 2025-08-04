@@ -5,7 +5,7 @@ export type ID = string;
 export interface ApiResponse<T = any> {
   data: T;
   message?: string;
-  status?: 'success' | 'error';
+  status?: "success" | "error";
 }
 
 // Paginated response wrapper
@@ -47,7 +47,7 @@ export interface FilterOptions {
 // Sort options
 export interface SortOption {
   field: string;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
   label: string;
 }
 
@@ -55,6 +55,6 @@ export interface SortOption {
 export interface SearchFilters {
   query?: string;
   sortBy?: string;
-  sortDirection?: 'asc' | 'desc';
+  sortDirection?: "asc" | "desc";
   [key: string]: any;
 }

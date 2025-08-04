@@ -17,32 +17,37 @@ A React Native mobile app for the BrewTracker homebrewing platform, built with E
 - Expo CLI - for React Native development (`npm install -g @expo/cli`)
 - Android Studio or Android device - for mobile app testing
 - Java JDK 17+ - for Android development
-- Node.js 18+ 
+- Node.js 18+
 - BrewTracker backend running (see main project README)
 
 ### Installation
 
 1. Clone the project and navigate to the Android directory:
+
    ```bash
    cd BrewTrackerAndroid
    ```
 
 2. Install dependencies:
+
    ```bash
    npm install
    ```
 
 3. Configure environment variables:
+
    ```bash
    cp .env.example .env
    ```
-   
+
    Update `.env` with your backend URL:
+
    ```
    EXPO_PUBLIC_API_URL=http://YOUR_BACKEND_IP:5000/api
    ```
 
 4. Start the development server:
+
    ```bash
    npm start
    ```
@@ -92,7 +97,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 ├── package.json                                      # React Native dependencies and Expo configuration
 ├── tsconfig.json                                     # TypeScript configuration for React Native
 └── .env                                              # Environment variables for API URL and mobile configuration
-``` 
+```
 
 ### Key Technologies
 
@@ -129,6 +134,7 @@ Configure in `.env`:
 The app connects to the BrewTracker Flask backend. Ensure the backend is running and accessible from your mobile device's network.
 
 For local development, use your computer's IP address instead of `localhost`:
+
 ```
 EXPO_PUBLIC_API_URL=http://192.168.1.100:5000/api
 ```
@@ -155,6 +161,7 @@ EXPO_PUBLIC_API_URL=http://192.168.1.100:5000/api
 ## Features Status
 
 ### ✅ Completed (Phase 1)
+
 - Project setup with Expo and TypeScript
 - Authentication system with secure storage
 - Navigation structure with tab and stack navigation
@@ -163,11 +170,13 @@ EXPO_PUBLIC_API_URL=http://192.168.1.100:5000/api
 - Environment configuration
 
 ### 🚧 In Progress (Phase 2)
+
 - Recipe management screens
 - Brew session tracking
 - User settings and preferences
 
 ### 📋 Planned (Phase 3+)
+
 - Recipe builder with ingredient selection
 - BeerXML import/export
 - AI recipe optimization

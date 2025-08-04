@@ -1,111 +1,114 @@
-import Constants from 'expo-constants';
+import Constants from "expo-constants";
 
 // API Configuration
 export const API_CONFIG = {
   // Use environment variable or fallback to local development
-  BASE_URL: process.env.EXPO_PUBLIC_API_URL || 'http://127.0.0.1:5000/api',
+  BASE_URL: process.env.EXPO_PUBLIC_API_URL || "http://127.0.0.1:5000/api",
   TIMEOUT: 10000, // 10 seconds
   MAX_RETRIES: 3,
   RETRY_DELAY: 1000, // 1 second
-  DEBUG_MODE: process.env.EXPO_PUBLIC_DEBUG_MODE === 'true',
-  LOG_LEVEL: process.env.EXPO_PUBLIC_LOG_LEVEL || 'info',
+  DEBUG_MODE: process.env.EXPO_PUBLIC_DEBUG_MODE === "true",
+  LOG_LEVEL: process.env.EXPO_PUBLIC_LOG_LEVEL || "info",
 };
 
 // Storage keys for secure storage
 export const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'access_token',
-  USER_DATA: 'user_data',
-  USER_SETTINGS: 'user_settings',
-  OFFLINE_RECIPES: 'offline_recipes',
-  CACHED_INGREDIENTS: 'cached_ingredients',
-  LAST_SYNC: 'last_sync',
+  ACCESS_TOKEN: "access_token",
+  USER_DATA: "user_data",
+  USER_SETTINGS: "user_settings",
+  OFFLINE_RECIPES: "offline_recipes",
+  CACHED_INGREDIENTS: "cached_ingredients",
+  LAST_SYNC: "last_sync",
 } as const;
 
 // API Endpoints
 export const ENDPOINTS = {
   // Auth
   AUTH: {
-    LOGIN: '/auth/login',
-    REGISTER: '/auth/register',
-    GOOGLE_AUTH: '/auth/google',
-    PROFILE: '/auth/profile',
-    VERIFY_EMAIL: '/auth/verify-email',
-    RESEND_VERIFICATION: '/auth/resend-verification',
-    VALIDATE_USERNAME: '/auth/validate-username',
+    LOGIN: "/auth/login",
+    REGISTER: "/auth/register",
+    GOOGLE_AUTH: "/auth/google",
+    PROFILE: "/auth/profile",
+    VERIFY_EMAIL: "/auth/verify-email",
+    RESEND_VERIFICATION: "/auth/resend-verification",
+    VALIDATE_USERNAME: "/auth/validate-username",
   },
-  
+
   // User
   USER: {
-    SETTINGS: '/user/settings',
-    PROFILE: '/user/profile',
-    CHANGE_PASSWORD: '/user/change-password',
-    DELETE_ACCOUNT: '/user/delete-account',
+    SETTINGS: "/user/settings",
+    PROFILE: "/user/profile",
+    CHANGE_PASSWORD: "/user/change-password",
+    DELETE_ACCOUNT: "/user/delete-account",
   },
-  
+
   // Recipes
   RECIPES: {
-    LIST: '/recipes',
+    LIST: "/recipes",
     DETAIL: (id: string) => `/recipes/${id}`,
-    CREATE: '/recipes',
+    CREATE: "/recipes",
     UPDATE: (id: string) => `/recipes/${id}`,
     DELETE: (id: string) => `/recipes/${id}`,
     CLONE: (id: string) => `/recipes/${id}/clone`,
     CLONE_PUBLIC: (id: string) => `/recipes/${id}/clone-public`,
     METRICS: (id: string) => `/recipes/${id}/metrics`,
-    CALCULATE_PREVIEW: '/recipes/calculate-metrics-preview',
+    CALCULATE_PREVIEW: "/recipes/calculate-metrics-preview",
     VERSIONS: (id: string) => `/recipes/${id}/versions`,
     BREW_SESSIONS: (id: string) => `/recipes/${id}/brew-sessions`,
-    PUBLIC: '/recipes/public',
+    PUBLIC: "/recipes/public",
   },
-  
+
   // Beer Styles
   BEER_STYLES: {
-    LIST: '/beer-styles',
+    LIST: "/beer-styles",
     DETAIL: (id: string) => `/beer-styles/${id}`,
-    SEARCH: '/beer-styles/search',
+    SEARCH: "/beer-styles/search",
     SUGGESTIONS: (recipeId: string) => `/beer-styles/suggestions/${recipeId}`,
     ANALYSIS: (recipeId: string) => `/beer-styles/analysis/${recipeId}`,
   },
-  
+
   // Ingredients
   INGREDIENTS: {
-    LIST: '/ingredients',
+    LIST: "/ingredients",
     DETAIL: (id: string) => `/ingredients/${id}`,
-    CREATE: '/ingredients',
+    CREATE: "/ingredients",
     UPDATE: (id: string) => `/ingredients/${id}`,
     DELETE: (id: string) => `/ingredients/${id}`,
     RECIPES: (id: string) => `/ingredients/${id}/recipes`,
   },
-  
+
   // Brew Sessions
   BREW_SESSIONS: {
-    LIST: '/brew-sessions',
+    LIST: "/brew-sessions",
     DETAIL: (id: string) => `/brew-sessions/${id}`,
-    CREATE: '/brew-sessions',
+    CREATE: "/brew-sessions",
     UPDATE: (id: string) => `/brew-sessions/${id}`,
     DELETE: (id: string) => `/brew-sessions/${id}`,
     FERMENTATION: (id: string) => `/brew-sessions/${id}/fermentation`,
-    FERMENTATION_ENTRY: (id: string, index: number) => `/brew-sessions/${id}/fermentation/${index}`,
-    FERMENTATION_STATS: (id: string) => `/brew-sessions/${id}/fermentation/stats`,
-    ANALYZE_COMPLETION: (id: string) => `/brew-sessions/${id}/fermentation/analyze-completion`,
+    FERMENTATION_ENTRY: (id: string, index: number) =>
+      `/brew-sessions/${id}/fermentation/${index}`,
+    FERMENTATION_STATS: (id: string) =>
+      `/brew-sessions/${id}/fermentation/stats`,
+    ANALYZE_COMPLETION: (id: string) =>
+      `/brew-sessions/${id}/fermentation/analyze-completion`,
   },
-  
+
   // BeerXML
   BEERXML: {
     EXPORT: (recipeId: string) => `/beerxml/export/${recipeId}`,
-    PARSE: '/beerxml/parse',
-    MATCH_INGREDIENTS: '/beerxml/match-ingredients',
-    CREATE_INGREDIENTS: '/beerxml/create-ingredients',
+    PARSE: "/beerxml/parse",
+    MATCH_INGREDIENTS: "/beerxml/match-ingredients",
+    CREATE_INGREDIENTS: "/beerxml/create-ingredients",
   },
-  
+
   // AI
   AI: {
-    ANALYZE_RECIPE: '/ai/analyze-recipe',
-    HEALTH: '/ai/health',
+    ANALYZE_RECIPE: "/ai/analyze-recipe",
+    HEALTH: "/ai/health",
   },
-  
+
   // Dashboard
   DASHBOARD: {
-    DATA: '/dashboard',
+    DATA: "/dashboard",
   },
 } as const;

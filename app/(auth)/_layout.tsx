@@ -6,35 +6,35 @@ export default function AuthLayout() {
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#f4511e',
+          backgroundColor: "#f4511e",
         },
-        headerTintColor: '#fff',
+        headerTintColor: "#fff",
         headerTitleStyle: {
-          fontWeight: 'bold',
+          fontWeight: "bold",
         },
-        headerBackTitle: 'Back',
+        headerBackTitle: "Back",
       }}
     >
-      <Stack.Screen 
-        name="login" 
-        options={{ 
+      <Stack.Screen
+        name="login"
+        options={{
           title: "Sign In",
-          headerShown: false 
-        }} 
+          headerShown: false,
+        }}
       />
-      <Stack.Screen 
-        name="register" 
-        options={{ 
+      <Stack.Screen
+        name="register"
+        options={{
           title: "Create Account",
-          headerShown: false 
-        }} 
+          headerShown: false,
+        }}
       />
-      <Stack.Screen 
-        name="verify-email" 
-        options={{ 
+      <Stack.Screen
+        name="verify-email"
+        options={{
           title: "Verify Email",
-          headerShown: false 
-        }} 
+          headerShown: false,
+        }}
       />
     </Stack>
   );

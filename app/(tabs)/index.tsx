@@ -5,51 +5,319 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
+import { router } from "expo-router";
+import Constants from "expo-constants";
 import { useAuth } from "../../src/contexts/AuthContext";
+import ApiService from "../../src/services/API/apiService";
+import { Recipe, BrewSession } from "../../src/types";
 
 export default function DashboardScreen() {
   const { user } = useAuth();
 
+  // Query for dashboard data
+  const {
+    data: dashboardData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: async () => {
+      const response = await ApiService.dashboard.getData();
+      return response.data;
+    },
+    retry: 1, // Only retry once to avoid excessive API calls
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+
+  const handleCreateRecipe = () => {
+    // TODO: Navigate to recipe create screen when implemented
+    console.log("Navigate to create recipe");
+  };
+
+  const handleStartBrewSession = () => {
+    // TODO: Navigate to create brew session screen when implemented
+    console.log("Navigate to create brew session");
+  };
+
+  const handleBrowsePublicRecipes = () => {
+    router.push("/(tabs)/recipes");
+  };
+
+  const handleRecipePress = (recipe: Recipe) => {
+    // TODO: Navigate to recipe detail screen when implemented
+    console.log("Navigate to recipe:", recipe.id);
+  };
+
+  const handleBrewSessionPress = (brewSession: BrewSession) => {
+    // TODO: Navigate to brew session detail screen when implemented
+    console.log("Navigate to brew session:", brewSession.id);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  };
+
+  const getStatusColor = (status: BrewSession["status"]) => {
+    switch (status) {
+      case "active":
+        return "#4CAF50";
+      case "paused":
+        return "#FF9800";
+      case "completed":
+        return "#2196F3";
+      case "failed":
+        return "#f44336";
+      default:
+        return "#666";
+    }
+  };
+
+  const renderRecentRecipe = (recipe: Recipe) => {
+    if (!recipe || !recipe.id || !recipe.name) {
+      return null;
+    }
+
+    return (
+      <TouchableOpacity
+        key={recipe.id}
+        style={styles.recentCard}
+        onPress={() => handleRecipePress(recipe)}
+      >
+        <View style={styles.recentHeader}>
+          <MaterialIcons name="menu-book" size={20} color="#f4511e" />
+          <Text style={styles.recentTitle} numberOfLines={1}>
+            {recipe.name}
+          </Text>
+        </View>
+        <Text style={styles.recentSubtitle}>
+          {recipe.style || "Unknown Style"}
+        </Text>
+        <Text style={styles.recentDate}>
+          Created{" "}
+          {recipe.created_at ? formatDate(recipe.created_at) : "Unknown date"}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderActiveBrewSession = (brewSession: BrewSession) => {
+    if (
+      !brewSession ||
+      !brewSession.id ||
+      !brewSession.name ||
+      !brewSession.recipe
+    ) {
+      return null;
+    }
+
+    return (
+      <TouchableOpacity
+        key={brewSession.id}
+        style={styles.recentCard}
+        onPress={() => handleBrewSessionPress(brewSession)}
+      >
+        <View style={styles.recentHeader}>
+          <MaterialIcons
+            name="science"
+            size={20}
+            color={getStatusColor(brewSession.status)}
+          />
+          <Text style={styles.recentTitle} numberOfLines={1}>
+            {brewSession.name}
+          </Text>
+        </View>
+        <Text style={styles.recentSubtitle}>
+          {brewSession.recipe.name || "Unknown Recipe"}
+        </Text>
+        <Text style={styles.recentDate}>
+          Day{" "}
+          {brewSession.brew_date
+            ? Math.floor(
+                (new Date().getTime() -
+                  new Date(brewSession.brew_date).getTime()) /
+                  (1000 * 60 * 60 * 24)
+              )
+            : 0}{" "}
+          • {brewSession.current_stage || "Unknown Stage"}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#f4511e" />
+        <Text style={styles.loadingText}>Loading dashboard...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    // Show fallback dashboard when backend is not available
+    const fallbackStats = {
+      total_recipes: 0,
+      public_recipes: 0,
+      total_brew_sessions: 0,
+      active_brew_sessions: 0,
+    };
+
+    return (
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.greeting}>Welcome back, {user?.username}!</Text>
+          <Text style={styles.subtitle}>Ready to brew something amazing?</Text>
+        </View>
+
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <MaterialIcons name="menu-book" size={32} color="#f4511e" />
+            <Text style={styles.statNumber}>{fallbackStats.total_recipes}</Text>
+            <Text style={styles.statLabel}>Recipes</Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <MaterialIcons name="science" size={32} color="#f4511e" />
+            <Text style={styles.statNumber}>
+              {fallbackStats.active_brew_sessions}
+            </Text>
+            <Text style={styles.statLabel}>Active Brews</Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <MaterialIcons name="public" size={32} color="#f4511e" />
+            <Text style={styles.statNumber}>
+              {fallbackStats.public_recipes}
+            </Text>
+            <Text style={styles.statLabel}>Public</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={handleCreateRecipe}
+          >
+            <MaterialIcons name="add" size={24} color="#f4511e" />
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>Create New Recipe</Text>
+              <Text style={styles.actionSubtitle}>
+                Start building your next brew
+              </Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#ccc" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={handleStartBrewSession}
+          >
+            <MaterialIcons name="play-arrow" size={24} color="#f4511e" />
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>Start Brew Session</Text>
+              <Text style={styles.actionSubtitle}>
+                Begin tracking a new brew
+              </Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#ccc" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={handleBrowsePublicRecipes}
+          >
+            <MaterialIcons name="public" size={24} color="#f4511e" />
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>Browse Public Recipes</Text>
+              <Text style={styles.actionSubtitle}>
+                Discover community favorites
+              </Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#ccc" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Backend Status</Text>
+          <View style={styles.emptyState}>
+            <MaterialIcons name="cloud-off" size={48} color="#ccc" />
+            <Text style={styles.emptyText}>Backend Not Connected</Text>
+            <Text style={styles.emptySubtext}>
+              Start the Flask backend to see real brewing data
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.versionFooter}>
+          <Text style={styles.versionText}>
+            BrewTracker Mobile v{Constants.expoConfig?.version || "0.1.0"}
+          </Text>
+        </View>
+      </ScrollView>
+    );
+  }
+
+  const stats = dashboardData?.data.user_stats;
+  const recentRecipes = dashboardData?.data.recent_recipes || [];
+  const activeBrewSessions = dashboardData?.data.active_brew_sessions || [];
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.greeting}>
-          Welcome back, {user?.username}!
-        </Text>
-        <Text style={styles.subtitle}>
-          Ready to brew something amazing?
-        </Text>
+        <Text style={styles.greeting}>Welcome back, {user?.username}!</Text>
+        <Text style={styles.subtitle}>Ready to brew something amazing?</Text>
       </View>
 
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
           <MaterialIcons name="menu-book" size={32} color="#f4511e" />
-          <Text style={styles.statNumber}>0</Text>
+          <Text style={styles.statNumber}>{stats?.total_recipes || 0}</Text>
           <Text style={styles.statLabel}>Recipes</Text>
         </View>
-        
+
         <View style={styles.statCard}>
           <MaterialIcons name="science" size={32} color="#f4511e" />
-          <Text style={styles.statNumber}>0</Text>
+          <Text style={styles.statNumber}>
+            {stats?.active_brew_sessions || 0}
+          </Text>
           <Text style={styles.statLabel}>Active Brews</Text>
+        </View>
+
+        <View style={styles.statCard}>
+          <MaterialIcons name="public" size={32} color="#f4511e" />
+          <Text style={styles.statNumber}>{stats?.public_recipes || 0}</Text>
+          <Text style={styles.statLabel}>Public</Text>
         </View>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Quick Actions</Text>
-        
-        <TouchableOpacity style={styles.actionCard}>
+
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={handleCreateRecipe}
+        >
           <MaterialIcons name="add" size={24} color="#f4511e" />
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>Create New Recipe</Text>
-            <Text style={styles.actionSubtitle}>Start building your next brew</Text>
+            <Text style={styles.actionSubtitle}>
+              Start building your next brew
+            </Text>
           </View>
           <MaterialIcons name="chevron-right" size={24} color="#ccc" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionCard}>
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={handleStartBrewSession}
+        >
           <MaterialIcons name="play-arrow" size={24} color="#f4511e" />
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>Start Brew Session</Text>
@@ -58,23 +326,67 @@ export default function DashboardScreen() {
           <MaterialIcons name="chevron-right" size={24} color="#ccc" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionCard}>
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={handleBrowsePublicRecipes}
+        >
           <MaterialIcons name="public" size={24} color="#f4511e" />
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>Browse Public Recipes</Text>
-            <Text style={styles.actionSubtitle}>Discover community favorites</Text>
+            <Text style={styles.actionSubtitle}>
+              Discover community favorites
+            </Text>
           </View>
           <MaterialIcons name="chevron-right" size={24} color="#ccc" />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
-        <View style={styles.emptyState}>
-          <MaterialIcons name="local-bar" size={48} color="#ccc" />
-          <Text style={styles.emptyText}>No recent activity</Text>
-          <Text style={styles.emptySubtext}>Your brewing journey starts here!</Text>
+      {/* Recent Recipes */}
+      {recentRecipes.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Recipes</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.horizontalList}>
+              {recentRecipes
+                .filter(recipe => recipe && recipe.id)
+                .map(renderRecentRecipe)}
+            </View>
+          </ScrollView>
         </View>
+      )}
+
+      {/* Active Brew Sessions */}
+      {activeBrewSessions.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Active Brew Sessions</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.horizontalList}>
+              {activeBrewSessions
+                .filter(session => session && session.id)
+                .map(renderActiveBrewSession)}
+            </View>
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Empty state for no activity */}
+      {recentRecipes.length === 0 && activeBrewSessions.length === 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <View style={styles.emptyState}>
+            <MaterialIcons name="local-bar" size={48} color="#ccc" />
+            <Text style={styles.emptyText}>No recent activity</Text>
+            <Text style={styles.emptySubtext}>
+              Your brewing journey starts here!
+            </Text>
+          </View>
+        </View>
+      )}
+
+      <View style={styles.versionFooter}>
+        <Text style={styles.versionText}>
+          BrewTracker Mobile v{Constants.expoConfig?.version || "0.1.0"}
+        </Text>
       </View>
     </ScrollView>
   );
@@ -84,6 +396,37 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f5f5f5",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#666",
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+    padding: 32,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#f44336",
+    marginTop: 16,
+    textAlign: "center",
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 8,
+    textAlign: "center",
   },
   header: {
     backgroundColor: "#fff",
@@ -104,7 +447,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingHorizontal: 16,
     marginBottom: 16,
-    gap: 12,
+    gap: 8,
   },
   statCard: {
     flex: 1,
@@ -169,6 +512,39 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 2,
   },
+  horizontalList: {
+    flexDirection: "row",
+    paddingHorizontal: 0,
+    gap: 12,
+  },
+  recentCard: {
+    backgroundColor: "#f8f8f8",
+    borderRadius: 8,
+    padding: 12,
+    width: 200,
+    marginRight: 12,
+  },
+  recentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 8,
+  },
+  recentTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    flex: 1,
+  },
+  recentSubtitle: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 4,
+  },
+  recentDate: {
+    fontSize: 12,
+    color: "#999",
+  },
   emptyState: {
     alignItems: "center",
     paddingVertical: 32,
@@ -182,5 +558,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#999",
     marginTop: 4,
+  },
+  versionFooter: {
+    alignItems: "center",
+    paddingVertical: 16,
+    marginTop: 8,
+  },
+  versionText: {
+    fontSize: 12,
+    color: "#999",
+    fontWeight: "500",
   },
 });
