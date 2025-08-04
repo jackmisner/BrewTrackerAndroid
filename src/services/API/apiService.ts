@@ -1,0 +1,292 @@
+import axios, {
+  AxiosInstance,
+  AxiosResponse,
+  AxiosError,
+  InternalAxiosRequestConfig,
+} from "axios";
+import * as SecureStore from 'expo-secure-store';
+import { API_CONFIG, STORAGE_KEYS, ENDPOINTS } from '../config';
+import {
+  // Authentication types
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+  RegisterResponse,
+  ValidateUsernameRequest,
+  ValidateUsernameResponse,
+  ProfileResponse,
+  GoogleAuthRequest,
+  GoogleAuthResponse,
+  VerifyEmailRequest,
+  VerifyEmailResponse,
+  ResendVerificationResponse,
+  VerificationStatusResponse,
+
+  // User types
+  ChangePasswordRequest,
+  DeleteAccountRequest,
+  UserSettingsResponse,
+  UpdateSettingsRequest,
+  UpdateProfileRequest,
+
+  // Recipe types
+  RecipeResponse,
+  RecipesListResponse,
+  CreateRecipeRequest,
+  UpdateRecipeRequest,
+  CloneRecipeResponse,
+  ClonePublicRecipeResponse,
+  RecipeMetricsResponse,
+  CalculateMetricsPreviewRequest,
+  CalculateMetricsPreviewResponse,
+  RecipeVersionHistoryResponse,
+  PublicRecipesResponse,
+
+  // Common types
+  ID,
+} from "../../types";
+
+// Create typed axios instance
+const api: AxiosInstance = axios.create({
+  baseURL: API_CONFIG.BASE_URL,
+  timeout: API_CONFIG.TIMEOUT,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// Token management utilities
+class TokenManager {
+  static async getToken(): Promise<string | null> {
+    try {
+      return await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+    } catch (error) {
+      console.error('Error getting token:', error);
+      return null;
+    }
+  }
+
+  static async setToken(token: string): Promise<void> {
+    try {
+      await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, token);
+    } catch (error) {
+      console.error('Error setting token:', error);
+      throw error;
+    }
+  }
+
+  static async removeToken(): Promise<void> {
+    try {
+      await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+    } catch (error) {
+      console.error('Error removing token:', error);
+    }
+  }
+}
+
+// Request interceptor to add authentication token
+api.interceptors.request.use(
+  async (config: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> => {
+    const token = await TokenManager.getToken();
+    if (token && config.headers) {
+      config.headers["Authorization"] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error: AxiosError): Promise<AxiosError> => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for error handling
+api.interceptors.response.use(
+  (response: AxiosResponse): AxiosResponse => {
+    return response;
+  },
+  async (error: AxiosError): Promise<AxiosError> => {
+    // Handle token expiration
+    if (error.response?.status === 401) {
+      await TokenManager.removeToken();
+      // You might want to trigger a navigation to login screen here
+      // This would require passing a navigation callback or using a global event emitter
+    }
+
+    // Handle different error codes, including MongoDB-specific errors
+    if (
+      error.response?.data &&
+      typeof error.response.data === "object" &&
+      "error" in error.response.data
+    ) {
+      console.error("API Error:", (error.response.data as any).error);
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+// Recipe search filters interface
+interface RecipeSearchFilters {
+  style?: string;
+  search?: string;
+}
+
+// Type-safe API Service
+const ApiService = {
+  // Token management
+  token: TokenManager,
+
+  // Auth endpoints
+  auth: {
+    register: (
+      userData: RegisterRequest
+    ): Promise<AxiosResponse<RegisterResponse>> =>
+      api.post(ENDPOINTS.AUTH.REGISTER, userData),
+
+    login: (credentials: LoginRequest): Promise<AxiosResponse<LoginResponse>> =>
+      api.post(ENDPOINTS.AUTH.LOGIN, credentials),
+
+    googleAuth: (
+      googleData: GoogleAuthRequest
+    ): Promise<AxiosResponse<GoogleAuthResponse>> =>
+      api.post(ENDPOINTS.AUTH.GOOGLE_AUTH, googleData),
+
+    getProfile: (): Promise<AxiosResponse<ProfileResponse>> =>
+      api.get(ENDPOINTS.AUTH.PROFILE),
+
+    validateUsername: (
+      data: ValidateUsernameRequest
+    ): Promise<AxiosResponse<ValidateUsernameResponse>> =>
+      api.post(ENDPOINTS.AUTH.VALIDATE_USERNAME, data),
+
+    // Email verification endpoints
+    verifyEmail: (
+      data: VerifyEmailRequest
+    ): Promise<AxiosResponse<VerifyEmailResponse>> =>
+      api.post(ENDPOINTS.AUTH.VERIFY_EMAIL, data),
+
+    resendVerification: (): Promise<AxiosResponse<ResendVerificationResponse>> =>
+      api.post(ENDPOINTS.AUTH.RESEND_VERIFICATION),
+
+    getVerificationStatus: (): Promise<AxiosResponse<VerificationStatusResponse>> =>
+      api.get('/auth/verification-status'),
+  },
+
+  // User settings endpoints
+  user: {
+    getSettings: (): Promise<AxiosResponse<UserSettingsResponse>> =>
+      api.get(ENDPOINTS.USER.SETTINGS),
+
+    updateSettings: (
+      settingsData: UpdateSettingsRequest
+    ): Promise<AxiosResponse<UserSettingsResponse>> =>
+      api.put(ENDPOINTS.USER.SETTINGS, settingsData),
+
+    updateProfile: (
+      profileData: UpdateProfileRequest
+    ): Promise<AxiosResponse<ProfileResponse>> =>
+      api.put(ENDPOINTS.USER.PROFILE, profileData),
+
+    changePassword: (
+      passwordData: ChangePasswordRequest
+    ): Promise<AxiosResponse<{ message: string }>> =>
+      api.post(ENDPOINTS.USER.CHANGE_PASSWORD, passwordData),
+
+    deleteAccount: (
+      confirmationData: DeleteAccountRequest
+    ): Promise<AxiosResponse<{ message: string }>> =>
+      api.post(ENDPOINTS.USER.DELETE_ACCOUNT, confirmationData),
+  },
+
+  // Recipe endpoints
+  recipes: {
+    getAll: (
+      page: number = 1,
+      perPage: number = 10
+    ): Promise<AxiosResponse<RecipesListResponse>> =>
+      api.get(`${ENDPOINTS.RECIPES.LIST}?page=${page}&per_page=${perPage}`),
+
+    getById: (id: ID): Promise<AxiosResponse<RecipeResponse>> =>
+      api.get(ENDPOINTS.RECIPES.DETAIL(id)),
+
+    create: (
+      recipeData: CreateRecipeRequest
+    ): Promise<AxiosResponse<RecipeResponse>> =>
+      api.post(ENDPOINTS.RECIPES.CREATE, recipeData),
+
+    update: (
+      id: ID,
+      recipeData: UpdateRecipeRequest
+    ): Promise<AxiosResponse<RecipeResponse>> =>
+      api.put(ENDPOINTS.RECIPES.UPDATE(id), recipeData),
+
+    delete: (id: ID): Promise<AxiosResponse<{ message: string }>> =>
+      api.delete(ENDPOINTS.RECIPES.DELETE(id)),
+
+    search: (
+      query: string,
+      page: number = 1,
+      perPage: number = 10
+    ): Promise<AxiosResponse<RecipesListResponse>> =>
+      api.get(
+        `/search/recipes?q=${encodeURIComponent(
+          query
+        )}&page=${page}&per_page=${perPage}`
+      ),
+
+    calculateMetrics: (
+      recipeId: ID
+    ): Promise<AxiosResponse<RecipeMetricsResponse>> =>
+      api.get(ENDPOINTS.RECIPES.METRICS(recipeId)),
+
+    calculateMetricsPreview: (
+      recipeData: CalculateMetricsPreviewRequest
+    ): Promise<AxiosResponse<CalculateMetricsPreviewResponse>> =>
+      api.post(ENDPOINTS.RECIPES.CALCULATE_PREVIEW, recipeData),
+
+    clone: (id: ID): Promise<AxiosResponse<CloneRecipeResponse>> =>
+      api.post(ENDPOINTS.RECIPES.CLONE(id)),
+
+    clonePublic: (
+      id: ID,
+      originalAuthor: string
+    ): Promise<AxiosResponse<ClonePublicRecipeResponse>> =>
+      api.post(ENDPOINTS.RECIPES.CLONE_PUBLIC(id), { originalAuthor }),
+
+    getVersionHistory: (
+      id: ID
+    ): Promise<AxiosResponse<RecipeVersionHistoryResponse>> =>
+      api.get(ENDPOINTS.RECIPES.VERSIONS(id)),
+
+    getPublic: (
+      page: number = 1,
+      perPage: number = 10,
+      filters: RecipeSearchFilters = {}
+    ): Promise<AxiosResponse<PublicRecipesResponse>> => {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        per_page: perPage.toString(),
+        ...(filters.style && { style: filters.style }),
+        ...(filters.search && { search: filters.search }),
+      });
+      return api.get(`${ENDPOINTS.RECIPES.PUBLIC}?${params}`);
+    },
+  },
+
+  // Network status check
+  checkConnection: async (): Promise<boolean> => {
+    try {
+      const response = await api.get('/health', { timeout: 5000 });
+      return response.status === 200;
+    } catch (error) {
+      return false;
+    }
+  },
+
+  // Cancel all pending requests
+  cancelAllRequests: (): void => {
+    // Implementation would cancel all pending axios requests
+    // This is useful for cleanup when the app goes to background
+  },
+};
+
+export default ApiService;

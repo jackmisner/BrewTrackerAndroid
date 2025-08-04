@@ -1,50 +1,159 @@
-# Welcome to your Expo app 👋
+# BrewTracker Android
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native mobile app for the BrewTracker homebrewing platform, built with Expo.
 
-## Get started
+## Features
 
-1. Install dependencies
+- **Authentication**: Secure login/register with email verification
+- **Recipe Management**: Create, view, and manage brewing recipes
+- **Brew Session Tracking**: Monitor fermentation progress
+- **Offline Support**: Cache data for offline access
+- **Native Experience**: Touch-optimized UI designed for mobile
 
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ 
+- Expo CLI (`npm install -g @expo/cli`)
+- BrewTracker backend running (see main project README)
+
+### Installation
+
+1. Clone the project and navigate to the Android directory:
+   ```bash
+   cd BrewTrackerAndroid
+   ```
+
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-2. Start the app
-
+3. Configure environment variables:
    ```bash
-   npx expo start
+   cp .env.example .env
+   ```
+   
+   Update `.env` with your backend URL:
+   ```
+   EXPO_PUBLIC_API_URL=http://YOUR_BACKEND_IP:5000/api
    ```
 
-In the output, you'll find options to open the app in a
+4. Start the development server:
+   ```bash
+   npm start
+   ```
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+5. Use the Expo Go app on your Android device to scan the QR code, or use an Android emulator.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Architecture
 
-## Get a fresh project
+### Project Structure
 
-When you're ready, run:
+```
+src/
+├── components/         # Reusable UI components
+├── contexts/           # React contexts (Auth, etc.)
+├── hooks/              # Custom React hooks
+├── services/           # API services and business logic
+├── types/              # TypeScript type definitions
+├── utils/              # Utility functions
+└── styles/             # Global styles and theme
 
-```bash
-npm run reset-project
+app/
+├── (auth)/             # Authentication screens
+├── (tabs)/             # Main app tabs
+├── _layout.tsx         # Root layout with providers
+└── index.tsx           # Entry point with auth routing
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Key Technologies
 
-## Learn more
+- **Expo Router**: File-based navigation
+- **React Query**: Server state management with caching
+- **Expo Secure Store**: Secure token storage
+- **AsyncStorage**: Local data persistence
+- **Axios**: HTTP client with interceptors
 
-To learn more about developing your project with Expo, look at the following resources:
+### State Management
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- **Authentication**: React Context with secure storage
+- **Server Data**: React Query for caching and synchronization
+- **Local State**: React hooks (useState, useReducer)
 
-## Join the community
+## Development
 
-Join our community of developers creating universal apps.
+### Available Scripts
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- `npm start` - Start Expo development server
+- `npm run android` - Start with Android-specific options
+- `npm run lint` - Run ESLint
+
+### Environment Variables
+
+Configure in `.env`:
+
+- `EXPO_PUBLIC_API_URL` - Backend API URL
+- `EXPO_PUBLIC_DEBUG_MODE` - Enable debug logging
+- `EXPO_PUBLIC_ENABLE_OFFLINE_MODE` - Enable offline features
+
+### Backend Integration
+
+The app connects to the BrewTracker Flask backend. Ensure the backend is running and accessible from your mobile device's network.
+
+For local development, use your computer's IP address instead of `localhost`:
+```
+EXPO_PUBLIC_API_URL=http://192.168.1.100:5000/api
+```
+
+## Building for Production
+
+### Android APK/AAB
+
+1. Configure app.json with your app details
+2. Build for Android:
+   ```bash
+   expo build:android
+   ```
+
+### Google Play Store
+
+1. Create a Google Play Console account
+2. Configure signing keys and app details
+3. Build AAB for Play Store:
+   ```bash
+   expo build:android -t app-bundle
+   ```
+
+## Features Status
+
+### ✅ Completed (Phase 1)
+- Project setup with Expo and TypeScript
+- Authentication system with secure storage
+- Navigation structure with tab and stack navigation
+- Basic UI screens (Login, Register, Dashboard, etc.)
+- API service layer with React Query integration
+- Environment configuration
+
+### 🚧 In Progress (Phase 2)
+- Recipe management screens
+- Brew session tracking
+- User settings and preferences
+
+### 📋 Planned (Phase 3+)
+- Recipe builder with ingredient selection
+- BeerXML import/export
+- AI recipe optimization
+- Push notifications
+- Offline mode with SQLite
+- Camera integration for brew photos
+- Public recipe browsing
+
+## Contributing
+
+This is a companion app to the main BrewTracker project. Follow the same contribution guidelines as the main project.
+
+## License
+
+GPL-3.0-or-later - Same as the main BrewTracker project.
