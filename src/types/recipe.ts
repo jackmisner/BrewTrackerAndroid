@@ -92,7 +92,7 @@ export interface Recipe {
   updated_at: string;
 
   // User context
-  author?: string;
+  username?: string;
   author_id?: ID;
   clone_count?: number;
   brew_count?: number;

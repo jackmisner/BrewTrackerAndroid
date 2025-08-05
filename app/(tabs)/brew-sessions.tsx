@@ -35,7 +35,7 @@ export default function BrewSessionsScreen() {
 
   const allBrewSessions = brewSessionsData?.brew_sessions || [];
   const activeBrewSessions = allBrewSessions.filter(
-    session => session.status === "active" || session.status === "paused"
+    session => session.status !== "completed"
   );
   const completedBrewSessions = allBrewSessions.filter(
     session => session.status === "completed"
@@ -55,6 +55,8 @@ export default function BrewSessionsScreen() {
   };
 
   const getStatusColor = (status: BrewSession["status"]) => {
+    if (!status) return "#666";
+
     switch (status) {
       case "active":
         return "#4CAF50";
@@ -70,6 +72,8 @@ export default function BrewSessionsScreen() {
   };
 
   const getStatusIcon = (status: BrewSession["status"]) => {
+    if (!status) return "help-outline";
+
     switch (status) {
       case "active":
         return "play-circle-filled";
@@ -151,13 +155,18 @@ export default function BrewSessionsScreen() {
                 color="#fff"
               />
               <Text style={styles.statusText}>
-                {brewSession.status.charAt(0).toUpperCase() +
-                  brewSession.status.slice(1)}
+                {brewSession.status
+                  ? brewSession.status.charAt(0).toUpperCase() +
+                    brewSession.status.slice(1)
+                  : "Unknown"}
               </Text>
             </View>
           </View>
-          <Text style={styles.recipeName}>{brewSession.recipe.name}</Text>
-          <Text style={styles.recipeStyle}>{brewSession.recipe.style}</Text>
+          <Text style={styles.recipeStyle}>
+            Status:{" "}
+            {brewSession.status.charAt(0).toUpperCase() +
+              brewSession.status.slice(1)}
+          </Text>
         </View>
 
         <View style={styles.progressContainer}>
@@ -166,9 +175,13 @@ export default function BrewSessionsScreen() {
               Day {daysPassed} {totalDays && `of ${totalDays}`}
             </Text>
             <Text style={styles.stageText}>
-              {brewSession.current_stage.charAt(0).toUpperCase() +
-                brewSession.current_stage.slice(1)}{" "}
-              Fermentation
+              {brewSession.fermentation_start_date
+                ? `Started: ${formatDate(brewSession.fermentation_start_date)}`
+                : brewSession.current_stage
+                  ? brewSession.current_stage.charAt(0).toUpperCase() +
+                    brewSession.current_stage.slice(1) +
+                    " Fermentation"
+                  : "Status: " + (brewSession.status || "Unknown")}
             </Text>
           </View>
 

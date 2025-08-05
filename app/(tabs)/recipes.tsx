@@ -82,7 +82,7 @@ export default function RecipesScreen() {
     if (!recipe || !recipe.name) {
       return null;
     }
-
+    console.log("Rendering recipe:", recipe.username);
     return (
       <TouchableOpacity
         style={styles.recipeCard}
@@ -102,6 +102,18 @@ export default function RecipesScreen() {
         </Text>
 
         <View style={styles.recipeMetrics}>
+          <View style={styles.metric}>
+            <Text style={styles.metricLabel}>OG</Text>
+            <Text style={styles.metricValue}>
+              {recipe.estimated_og?.toFixed(3) || "—"}
+            </Text>
+          </View>
+          <View style={styles.metric}>
+            <Text style={styles.metricLabel}>FG</Text>
+            <Text style={styles.metricValue}>
+              {recipe.estimated_fg?.toFixed(3) || "—"}
+            </Text>
+          </View>
           <View style={styles.metric}>
             <Text style={styles.metricLabel}>ABV</Text>
             <Text style={styles.metricValue}>
@@ -124,7 +136,7 @@ export default function RecipesScreen() {
             <View style={styles.metric}>
               <MaterialIcons name="person" size={16} color="#666" />
               <Text style={styles.authorText}>
-                {recipe.author || "Unknown"}
+                {recipe.username === "Anonymous User" ? "Anonymous" : recipe.username}
               </Text>
             </View>
           )}

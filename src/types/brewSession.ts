@@ -2,7 +2,12 @@ import { ID } from "./common";
 import { Recipe } from "./recipe";
 
 // Brew session status types
-export type BrewSessionStatus = "active" | "completed" | "failed" | "paused";
+export type BrewSessionStatus =
+  | "active"
+  | "fermenting"
+  | "completed"
+  | "failed"
+  | "paused";
 export type FermentationStage =
   | "primary"
   | "secondary"
@@ -76,6 +81,12 @@ export interface BrewSession {
   brew_notes?: string;
   tasting_notes?: string;
   photo_urls?: string[];
+  photos_url?: string;
+
+  // Additional API fields
+  temperature_unit?: "C" | "F";
+  fermentation_data?: any[];
+  dry_hop_additions?: any[];
 
   // Timestamps
   created_at: string;
