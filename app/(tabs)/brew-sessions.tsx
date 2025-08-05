@@ -16,6 +16,17 @@ import { BrewSession } from "../../src/types";
 
 export default function BrewSessionsScreen() {
   const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Handle pull to refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Query for brew sessions
   const {
@@ -35,18 +46,19 @@ export default function BrewSessionsScreen() {
 
   const allBrewSessions = brewSessionsData?.brew_sessions || [];
   const activeBrewSessions = allBrewSessions.filter(
-    session => session.status === "active" || session.status === "paused"
+    session => session.status === "fermenting" || session.status === "paused"
   );
   const completedBrewSessions = allBrewSessions.filter(
     session => session.status === "completed"
   );
+
 
   const currentBrewSessions =
     activeTab === "active" ? activeBrewSessions : completedBrewSessions;
 
   const handleBrewSessionPress = (brewSession: BrewSession) => {
     // TODO: Navigate to brew session detail screen when implemented
-    console.log("Navigate to brew session:", brewSession.id);
+    console.log("Navigate to brew session:", brewSession.session_id);
   };
 
   const handleStartBrewing = () => {
@@ -55,8 +67,11 @@ export default function BrewSessionsScreen() {
   };
 
   const getStatusColor = (status: BrewSession["status"]) => {
+    if (!status) return "#666";
+    
     switch (status) {
       case "active":
+      case "fermenting":
         return "#4CAF50";
       case "paused":
         return "#FF9800";
@@ -70,9 +85,13 @@ export default function BrewSessionsScreen() {
   };
 
   const getStatusIcon = (status: BrewSession["status"]) => {
+    if (!status) return "help-outline";
+    
     switch (status) {
       case "active":
         return "play-circle-filled";
+      case "fermenting":
+        return "science";
       case "paused":
         return "pause-circle-filled";
       case "completed":
@@ -80,7 +99,7 @@ export default function BrewSessionsScreen() {
       case "failed":
         return "error";
       default:
-        return "help";
+        return "help-outline";
     }
   };
 
@@ -119,8 +138,8 @@ export default function BrewSessionsScreen() {
   }: {
     item: BrewSession;
   }) => {
-    // Add safety checks for brew session data
-    if (!brewSession || !brewSession.name || !brewSession.recipe) {
+    // Fix: The actual data has recipe_id and session_id, not recipe and id
+    if (!brewSession || !brewSession.name) {
       return null;
     }
 
@@ -151,13 +170,14 @@ export default function BrewSessionsScreen() {
                 color="#fff"
               />
               <Text style={styles.statusText}>
-                {brewSession.status.charAt(0).toUpperCase() +
-                  brewSession.status.slice(1)}
+                {brewSession.status 
+                  ? brewSession.status.charAt(0).toUpperCase() + brewSession.status.slice(1)
+                  : 'Unknown'}
               </Text>
             </View>
           </View>
-          <Text style={styles.recipeName}>{brewSession.recipe.name}</Text>
-          <Text style={styles.recipeStyle}>{brewSession.recipe.style}</Text>
+          <Text style={styles.recipeName}>Recipe ID: {brewSession.recipe_id}</Text>
+          <Text style={styles.recipeStyle}>Status: {brewSession.status}</Text>
         </View>
 
         <View style={styles.progressContainer}>
@@ -166,9 +186,11 @@ export default function BrewSessionsScreen() {
               Day {daysPassed} {totalDays && `of ${totalDays}`}
             </Text>
             <Text style={styles.stageText}>
-              {brewSession.current_stage.charAt(0).toUpperCase() +
-                brewSession.current_stage.slice(1)}{" "}
-              Fermentation
+              {brewSession.fermentation_start_date
+                ? `Started: ${formatDate(brewSession.fermentation_start_date)}`
+                : brewSession.current_stage
+                  ? brewSession.current_stage.charAt(0).toUpperCase() + brewSession.current_stage.slice(1) + " Fermentation"
+                  : 'Status: ' + (brewSession.status || 'Unknown')}
             </Text>
           </View>
 
@@ -316,11 +338,11 @@ export default function BrewSessionsScreen() {
           data={currentBrewSessions}
           renderItem={renderBrewSessionItem}
           keyExtractor={(item, index) =>
-            item.id?.toString() || `brew-session-${index}`
+            item.session_id?.toString() || `brew-session-${index}`
           }
           contentContainerStyle={styles.listContainer}
           refreshControl={
-            <RefreshControl refreshing={false} onRefresh={refetch} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           showsVerticalScrollIndicator={false}
         />
