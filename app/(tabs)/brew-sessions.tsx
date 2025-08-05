@@ -52,6 +52,7 @@ export default function BrewSessionsScreen() {
     session => session.status === "completed"
   );
 
+
   const currentBrewSessions =
     activeTab === "active" ? activeBrewSessions : completedBrewSessions;
 
@@ -94,6 +95,7 @@ export default function BrewSessionsScreen() {
         return "science";
       case "in-progress": // Handle API status
         return "science";
+
       case "paused":
         return "pause-circle-filled";
       case "completed":
@@ -140,7 +142,7 @@ export default function BrewSessionsScreen() {
   }: {
     item: BrewSession;
   }) => {
-    // Add safety checks for brew session data
+    // Fix: The actual data has recipe_id and session_id, not recipe and id
     if (!brewSession || !brewSession.name) {
       return null;
     }
@@ -186,6 +188,7 @@ export default function BrewSessionsScreen() {
                 brewSession.status.slice(1)
               : "Unknown"}
           </Text>
+
         </View>
 
         <View style={styles.progressContainer}>
@@ -201,6 +204,7 @@ export default function BrewSessionsScreen() {
                     brewSession.current_stage.slice(1) +
                     " Fermentation"
                   : "Status: " + (brewSession.status || "Unknown")}
+
             </Text>
           </View>
 

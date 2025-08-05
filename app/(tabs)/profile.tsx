@@ -25,6 +25,7 @@ export default function ProfileScreen() {
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
+
   };
 
   const handleLogout = async () => {

@@ -9,6 +9,7 @@ export type BrewSessionStatus =
   | "completed"
   | "failed"
   | "paused";
+
 export type FermentationStage =
   | "primary"
   | "secondary"
@@ -88,6 +89,7 @@ export interface BrewSession {
   tasting_notes?: string;
   photo_urls?: string[];
   photos_url?: string;
+
 
   // Additional API fields
   temperature_unit?: "C" | "F";

@@ -18,6 +18,21 @@ import { Recipe } from "../../src/types";
 export default function RecipesScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"my" | "public">("my");
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Handle pull to refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      if (activeTab === "my") {
+        await refetchMyRecipes();
+      } else {
+        await refetchPublicRecipes();
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Query for user's recipes
   const {
@@ -263,7 +278,7 @@ export default function RecipesScreen() {
           }
           contentContainerStyle={styles.listContainer}
           refreshControl={
-            <RefreshControl refreshing={false} onRefresh={handleRefresh} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           showsVerticalScrollIndicator={false}
         />

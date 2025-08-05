@@ -30,7 +30,7 @@ export default function DashboardScreen() {
     }
   };
 
-  // Query for dashboard data
+  // Query for dashboard data by combining multiple endpoints
   const {
     data: dashboardData,
     isLoading,
@@ -47,6 +47,7 @@ export default function DashboardScreen() {
             ApiService.brewSessions.getAll(1, 5), // Get first 5 brew sessions like original
             ApiService.recipes.getPublic(1, 1), // Get public recipes count (just need pagination info)
           ]);
+
 
         // Transform the data to match expected dashboard format - use same pattern as recipes tab
         // The recipes tab accesses response.data.recipes, brew sessions tab accesses response.data.brew_sessions
@@ -65,6 +66,7 @@ export default function DashboardScreen() {
           public_recipes: publicRecipesResponse.data.pagination?.total || 0,
           total_brew_sessions:
             brewSessionsResponse.data.pagination?.total || brewSessions.length,
+
           active_brew_sessions: activeBrewSessions.length,
         };
 
@@ -73,7 +75,9 @@ export default function DashboardScreen() {
             user_stats: userStats,
             recent_recipes: recipes.slice(0, 3), // Show 3 most recent
             active_brew_sessions: activeBrewSessions.slice(0, 3), // Show 3 most recent active sessions
+
           },
+
         };
       } catch (error) {
         console.error("Dashboard data fetch error:", error);
@@ -132,12 +136,14 @@ export default function DashboardScreen() {
 
   const renderRecentRecipe = (recipe: Recipe) => {
     if (!recipe || !recipe.name) {
+
       return null;
     }
 
     return (
       <TouchableOpacity
         key={recipe.id || recipe.name}
+
         style={styles.recentCard}
         onPress={() => handleRecipePress(recipe)}
       >
@@ -166,6 +172,7 @@ export default function DashboardScreen() {
     return (
       <TouchableOpacity
         key={brewSession.session_id}
+
         style={styles.recentCard}
         onPress={() => handleBrewSessionPress(brewSession)}
       >
@@ -180,6 +187,7 @@ export default function DashboardScreen() {
           </Text>
         </View>
         <Text style={styles.recentSubtitle}>Status: {brewSession.status}</Text>
+
         <Text style={styles.recentDate}>
           Day{" "}
           {brewSession.brew_date
@@ -398,6 +406,7 @@ export default function DashboardScreen() {
       </View>
 
       {/* Recent Recipes */}
+
       {recentRecipes.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Recipes</Text>
@@ -423,19 +432,27 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      {/* Empty state for no activity */}
-      {recentRecipes.length === 0 && activeBrewSessions.length === 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+
+      {/* Recent Brew Sessions */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Recent Brew Sessions</Text>
+        {activeBrewSessions.length > 0 ? (
+          <View style={styles.verticalList}>
+            {activeBrewSessions
+              .filter(session => session && session.session_id)
+              .map(renderActiveBrewSession)}
+          </View>
+        ) : (
           <View style={styles.emptyState}>
-            <MaterialIcons name="local-bar" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>No recent activity</Text>
+            <MaterialIcons name="science" size={48} color="#ccc" />
+            <Text style={styles.emptyText}>No brew sessions yet</Text>
             <Text style={styles.emptySubtext}>
-              Your brewing journey starts here!
+              Start your first brew session to track progress!
             </Text>
           </View>
-        </View>
-      )}
+        )}
+      </View>
+
 
       <View style={styles.versionFooter}>
         <Text style={styles.versionText}>
