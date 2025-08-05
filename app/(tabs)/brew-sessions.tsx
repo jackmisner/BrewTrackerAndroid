@@ -46,7 +46,7 @@ export default function BrewSessionsScreen() {
 
   const allBrewSessions = brewSessionsData?.brew_sessions || [];
   const activeBrewSessions = allBrewSessions.filter(
-    session => session.status === "fermenting" || session.status === "paused"
+    session => session.status !== "completed"
   );
   const completedBrewSessions = allBrewSessions.filter(
     session => session.status === "completed"
@@ -67,11 +67,12 @@ export default function BrewSessionsScreen() {
   };
 
   const getStatusColor = (status: BrewSession["status"]) => {
-    if (!status) return "#666";
-    
+    if (!status) return "#4CAF50"; // Default for non-completed
+
     switch (status) {
       case "active":
       case "fermenting":
+      case "in-progress": // Handle API status
         return "#4CAF50";
       case "paused":
         return "#FF9800";
@@ -80,18 +81,21 @@ export default function BrewSessionsScreen() {
       case "failed":
         return "#f44336";
       default:
-        return "#666";
+        return "#4CAF50"; // Default to active color for non-completed sessions
     }
   };
 
   const getStatusIcon = (status: BrewSession["status"]) => {
     if (!status) return "help-outline";
-    
+
     switch (status) {
       case "active":
         return "play-circle-filled";
       case "fermenting":
         return "science";
+      case "in-progress": // Handle API status
+        return "science";
+
       case "paused":
         return "pause-circle-filled";
       case "completed":
@@ -99,7 +103,7 @@ export default function BrewSessionsScreen() {
       case "failed":
         return "error";
       default:
-        return "help-outline";
+        return "science"; // Default to science icon for active sessions
     }
   };
 
@@ -170,14 +174,21 @@ export default function BrewSessionsScreen() {
                 color="#fff"
               />
               <Text style={styles.statusText}>
-                {brewSession.status 
-                  ? brewSession.status.charAt(0).toUpperCase() + brewSession.status.slice(1)
-                  : 'Unknown'}
+                {brewSession.status
+                  ? brewSession.status.charAt(0).toUpperCase() +
+                    brewSession.status.slice(1)
+                  : "Unknown"}
               </Text>
             </View>
           </View>
-          <Text style={styles.recipeName}>Recipe ID: {brewSession.recipe_id}</Text>
-          <Text style={styles.recipeStyle}>Status: {brewSession.status}</Text>
+          <Text style={styles.recipeStyle}>
+            Status:{" "}
+            {brewSession.status
+              ? brewSession.status.charAt(0).toUpperCase() +
+                brewSession.status.slice(1)
+              : "Unknown"}
+          </Text>
+
         </View>
 
         <View style={styles.progressContainer}>
@@ -186,11 +197,14 @@ export default function BrewSessionsScreen() {
               Day {daysPassed} {totalDays && `of ${totalDays}`}
             </Text>
             <Text style={styles.stageText}>
-              {brewSession.fermentation_start_date
-                ? `Started: ${formatDate(brewSession.fermentation_start_date)}`
+              {brewSession.brew_date
+                ? `Started: ${formatDate(brewSession.brew_date)}`
                 : brewSession.current_stage
-                  ? brewSession.current_stage.charAt(0).toUpperCase() + brewSession.current_stage.slice(1) + " Fermentation"
-                  : 'Status: ' + (brewSession.status || 'Unknown')}
+                  ? brewSession.current_stage.charAt(0).toUpperCase() +
+                    brewSession.current_stage.slice(1) +
+                    " Fermentation"
+                  : "Status: " + (brewSession.status || "Unknown")}
+
             </Text>
           </View>
 

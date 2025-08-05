@@ -18,15 +18,14 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
 
-  // Handle pull to refresh - could potentially refresh user profile
+  // Handle pull to refresh
   const onRefresh = async () => {
     setRefreshing(true);
-    try {
-      // For now, just simulate a refresh - could add user profile refetch here
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    } finally {
+    // Profile data is static, so just simulate refresh
+    setTimeout(() => {
       setRefreshing(false);
-    }
+    }, 1000);
+
   };
 
   const handleLogout = async () => {
@@ -44,7 +43,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

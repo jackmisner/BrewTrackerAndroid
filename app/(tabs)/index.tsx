@@ -41,27 +41,32 @@ export default function DashboardScreen() {
     queryFn: async () => {
       try {
         // Fetch data from multiple working endpoints - use same pattern as recipes tab
-        const [recipesResponse, brewSessionsResponse, publicRecipesResponse] = await Promise.all([
-          ApiService.recipes.getAll(1, 5), // Get first 5 recipes like original
-          ApiService.brewSessions.getAll(1, 5), // Get first 5 brew sessions like original
-          ApiService.recipes.getPublic(1, 1), // Get public recipes count (just need pagination info)
-        ]);
+        const [recipesResponse, brewSessionsResponse, publicRecipesResponse] =
+          await Promise.all([
+            ApiService.recipes.getAll(1, 5), // Get first 5 recipes like original
+            ApiService.brewSessions.getAll(1, 5), // Get first 5 brew sessions like original
+            ApiService.recipes.getPublic(1, 1), // Get public recipes count (just need pagination info)
+          ]);
+
 
         // Transform the data to match expected dashboard format - use same pattern as recipes tab
         // The recipes tab accesses response.data.recipes, brew sessions tab accesses response.data.brew_sessions
         const recipes = recipesResponse.data?.recipes || [];
         const brewSessions = brewSessionsResponse.data?.brew_sessions || [];
-        
+
         // Calculate user stats - use same status filtering as brew sessions tab
-        const activeBrewSessions = brewSessions.filter(session => 
-          session.status === 'fermenting' || session.status === 'paused'
+
+        const activeBrewSessions = brewSessions.filter(
+          session => session.status !== "completed"
         );
-        
-        
+
         const userStats = {
-          total_recipes: recipesResponse.data.pagination?.total || recipes.length,
+          total_recipes:
+            recipesResponse.data.pagination?.total || recipes.length,
           public_recipes: publicRecipesResponse.data.pagination?.total || 0,
-          total_brew_sessions: brewSessionsResponse.data.pagination?.total || brewSessions.length,
+          total_brew_sessions:
+            brewSessionsResponse.data.pagination?.total || brewSessions.length,
+
           active_brew_sessions: activeBrewSessions.length,
         };
 
@@ -70,7 +75,9 @@ export default function DashboardScreen() {
             user_stats: userStats,
             recent_recipes: recipes.slice(0, 3), // Show 3 most recent
             active_brew_sessions: activeBrewSessions.slice(0, 3), // Show 3 most recent active sessions
-          }
+
+          },
+
         };
       } catch (error) {
         console.error("Dashboard data fetch error:", error);
@@ -114,6 +121,7 @@ export default function DashboardScreen() {
     switch (status) {
       case "active":
       case "fermenting":
+      case "in-progress": // Handle API status
         return "#4CAF50";
       case "paused":
         return "#FF9800";
@@ -122,18 +130,20 @@ export default function DashboardScreen() {
       case "failed":
         return "#f44336";
       default:
-        return "#666";
+        return "#4CAF50"; // Default to active color for non-completed sessions
     }
   };
 
   const renderRecentRecipe = (recipe: Recipe) => {
-    if (!recipe || !(recipe.id || recipe.recipe_id) || !recipe.name) {
+    if (!recipe || !recipe.name) {
+
       return null;
     }
 
     return (
       <TouchableOpacity
-        key={recipe.id || recipe.recipe_id}
+        key={recipe.id || recipe.name}
+
         style={styles.recentCard}
         onPress={() => handleRecipePress(recipe)}
       >
@@ -155,14 +165,14 @@ export default function DashboardScreen() {
   };
 
   const renderActiveBrewSession = (brewSession: BrewSession) => {
-    // Fix: The actual data has recipe_id and session_id, not recipe and id
-    if (!brewSession || !brewSession.name) {
+    if (!brewSession || !brewSession.session_id || !brewSession.name) {
       return null;
     }
 
     return (
       <TouchableOpacity
-        key={brewSession.session_id || brewSession.name}
+        key={brewSession.session_id}
+
         style={styles.recentCard}
         onPress={() => handleBrewSessionPress(brewSession)}
       >
@@ -176,9 +186,8 @@ export default function DashboardScreen() {
             {brewSession.name}
           </Text>
         </View>
-        <Text style={styles.recentSubtitle}>
-          Status: {brewSession.status}
-        </Text>
+        <Text style={styles.recentSubtitle}>Status: {brewSession.status}</Text>
+
         <Text style={styles.recentDate}>
           Day{" "}
           {brewSession.brew_date
@@ -213,7 +222,7 @@ export default function DashboardScreen() {
     };
 
     return (
-      <ScrollView 
+      <ScrollView
         style={styles.container}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -319,7 +328,7 @@ export default function DashboardScreen() {
   const activeBrewSessions = dashboardData?.data.active_brew_sessions || [];
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -397,24 +406,32 @@ export default function DashboardScreen() {
       </View>
 
       {/* Recent Recipes */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Recipes</Text>
-        {recentRecipes.length > 0 ? (
+
+      {recentRecipes.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Recipes</Text>
           <View style={styles.verticalList}>
             {recentRecipes
-              .filter(recipe => recipe && (recipe.id || recipe.recipe_id))
+              .filter(recipe => recipe && recipe.name)
               .map(renderRecentRecipe)}
           </View>
-        ) : (
-          <View style={styles.emptyState}>
-            <MaterialIcons name="menu-book" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>No recipes yet</Text>
-            <Text style={styles.emptySubtext}>
-              Create your first recipe to get started!
-            </Text>
-          </View>
-        )}
-      </View>
+        </View>
+      )}
+
+      {/* Active Brew Sessions */}
+      {activeBrewSessions.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Active Brew Sessions</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.horizontalList}>
+              {activeBrewSessions
+                .filter(session => session && session.session_id)
+                .map(renderActiveBrewSession)}
+            </View>
+          </ScrollView>
+        </View>
+      )}
+
 
       {/* Recent Brew Sessions */}
       <View style={styles.section}>
@@ -572,7 +589,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   verticalList: {
-    flexDirection: "column",
     gap: 12,
   },
   recentCard: {

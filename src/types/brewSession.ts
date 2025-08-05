@@ -2,7 +2,14 @@ import { ID } from "./common";
 import { Recipe } from "./recipe";
 
 // Brew session status types
-export type BrewSessionStatus = "active" | "fermenting" | "completed" | "failed" | "paused";
+export type BrewSessionStatus =
+  | "active"
+  | "fermenting"
+  | "in-progress" // API status
+  | "completed"
+  | "failed"
+  | "paused";
+
 export type FermentationStage =
   | "primary"
   | "secondary"
@@ -40,7 +47,7 @@ export interface FermentationEntry {
 
 // Brew session interface
 export interface BrewSession {
-  session_id: ID;
+  session_id: ID; // API returns session_id, not id
   recipe_id: ID;
   recipe?: Recipe; // Optional since API doesn't always return the full recipe object
   name: string;
@@ -66,7 +73,7 @@ export interface BrewSession {
   actual_abv?: number;
 
   // Progress tracking
-  current_stage?: FermentationStage;
+  current_stage?: FermentationStage; // Optional since API doesn't always provide
   days_fermenting?: number;
   fermentation_entries?: FermentationEntry[];
 
@@ -82,7 +89,8 @@ export interface BrewSession {
   tasting_notes?: string;
   photo_urls?: string[];
   photos_url?: string;
-  
+
+
   // Additional API fields
   temperature_unit?: "C" | "F";
   fermentation_data?: any[];
