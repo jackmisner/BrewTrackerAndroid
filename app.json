@@ -2,13 +2,15 @@
   "expo": {
     "name": "BrewTracker",
     "slug": "brewtracker-android",
-    "version": "0.1.0",
     "orientation": "portrait",
+    "version": "0.2.1",
     "icon": "./assets/images/icon.png",
     "scheme": "brewtracker",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "platforms": ["android"],
+    "platforms": [
+      "android"
+    ],
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
