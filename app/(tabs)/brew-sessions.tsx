@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import { router } from "expo-router";
 import ApiService from "../../src/services/API/apiService";
 import { BrewSession } from "../../src/types";
 
@@ -51,7 +50,6 @@ export default function BrewSessionsScreen() {
   const completedBrewSessions = allBrewSessions.filter(
     session => session.status === "completed"
   );
-
 
   const currentBrewSessions =
     activeTab === "active" ? activeBrewSessions : completedBrewSessions;
@@ -188,7 +186,6 @@ export default function BrewSessionsScreen() {
                 brewSession.status.slice(1)
               : "Unknown"}
           </Text>
-
         </View>
 
         <View style={styles.progressContainer}>
@@ -204,7 +201,6 @@ export default function BrewSessionsScreen() {
                     brewSession.current_stage.slice(1) +
                     " Fermentation"
                   : "Status: " + (brewSession.status || "Unknown")}
-
             </Text>
           </View>
 

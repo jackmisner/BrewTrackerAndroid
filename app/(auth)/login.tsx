@@ -102,7 +102,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <View style={styles.divider}>
-            <Text style={styles.dividerText}>Don't have an account?</Text>
+            <Text style={styles.dividerText}>Don&apos;t have an account?</Text>
           </View>
 
           <TouchableOpacity

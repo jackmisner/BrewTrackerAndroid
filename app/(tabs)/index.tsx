@@ -48,7 +48,6 @@ export default function DashboardScreen() {
             ApiService.recipes.getPublic(1, 1), // Get public recipes count (just need pagination info)
           ]);
 
-
         // Transform the data to match expected dashboard format - use same pattern as recipes tab
         // The recipes tab accesses response.data.recipes, brew sessions tab accesses response.data.brew_sessions
         const recipes = recipesResponse.data?.recipes || [];
@@ -75,9 +74,7 @@ export default function DashboardScreen() {
             user_stats: userStats,
             recent_recipes: recipes.slice(0, 3), // Show 3 most recent
             active_brew_sessions: activeBrewSessions.slice(0, 3), // Show 3 most recent active sessions
-
           },
-
         };
       } catch (error) {
         console.error("Dashboard data fetch error:", error);
@@ -103,8 +100,10 @@ export default function DashboardScreen() {
   };
 
   const handleRecipePress = (recipe: Recipe) => {
-    // TODO: Navigate to recipe detail screen when implemented
-    console.log("Navigate to recipe:", recipe.id);
+    router.push({
+      pathname: "/(tabs)/viewRecipe",
+      params: { recipe_id: recipe.recipe_id },
+    });
   };
 
   const handleBrewSessionPress = (brewSession: BrewSession) => {
@@ -136,14 +135,12 @@ export default function DashboardScreen() {
 
   const renderRecentRecipe = (recipe: Recipe) => {
     if (!recipe || !recipe.name) {
-
       return null;
     }
 
     return (
       <TouchableOpacity
         key={recipe.id || recipe.name}
-
         style={styles.recentCard}
         onPress={() => handleRecipePress(recipe)}
       >
@@ -172,7 +169,6 @@ export default function DashboardScreen() {
     return (
       <TouchableOpacity
         key={brewSession.session_id}
-
         style={styles.recentCard}
         onPress={() => handleBrewSessionPress(brewSession)}
       >
@@ -418,21 +414,6 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      {/* Active Brew Sessions */}
-      {activeBrewSessions.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Active Brew Sessions</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.horizontalList}>
-              {activeBrewSessions
-                .filter(session => session && session.session_id)
-                .map(renderActiveBrewSession)}
-            </View>
-          </ScrollView>
-        </View>
-      )}
-
-
       {/* Recent Brew Sessions */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Recent Brew Sessions</Text>
@@ -452,7 +433,6 @@ export default function DashboardScreen() {
           </View>
         )}
       </View>
-
 
       <View style={styles.versionFooter}>
         <Text style={styles.versionText}>

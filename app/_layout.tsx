@@ -2,7 +2,7 @@ import React from "react";
 import { Stack } from "expo-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "../src/contexts/AuthContext";
-import queryClient from "../src/services/API/queryClient";
+import { queryClient } from "../src/services/API/queryClient";
 
 export default function RootLayout() {
   return (

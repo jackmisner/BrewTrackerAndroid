@@ -2,8 +2,8 @@ import { QueryClient } from "@tanstack/react-query";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 
-// Create async storage persister
-const asyncStoragePersister = createAsyncStoragePersister({
+// Create async storage persister (for future offline support)
+const _asyncStoragePersister = createAsyncStoragePersister({
   storage: AsyncStorage,
   key: "BREWTRACKER_CACHE",
   serialize: JSON.stringify,

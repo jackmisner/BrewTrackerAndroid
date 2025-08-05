@@ -50,9 +50,7 @@ export interface ValidateUsernameResponse {
   suggestions?: string[];
 }
 
-export interface ProfileResponse {
-  user: User;
-}
+export type ProfileResponse = User;
 
 export interface GoogleAuthRequest {
   token: string;
@@ -101,7 +99,7 @@ export interface UserSettingsResponse {
   settings: UserSettings;
 }
 
-export interface UpdateSettingsRequest extends Partial<UserSettings> {}
+export type UpdateSettingsRequest = Partial<UserSettings>;
 
 export interface UpdateProfileRequest {
   username?: string;
@@ -109,35 +107,51 @@ export interface UpdateProfileRequest {
 }
 
 // Recipe API types
-export interface RecipeResponse extends ApiResponse<Recipe> {}
+export type RecipeResponse = Recipe;
 
-export interface RecipesListResponse extends PaginatedResponse<Recipe> {
+export interface RecipesListResponse {
   recipes: Recipe[];
+  pagination: {
+    page: number;
+    pages: number;
+    per_page: number;
+    total: number;
+    has_prev: boolean;
+    has_next: boolean;
+    prev_num?: number;
+    next_num?: number;
+  };
 }
 
-export interface CreateRecipeRequest extends RecipeFormData {}
+export type CreateRecipeRequest = RecipeFormData;
 
-export interface UpdateRecipeRequest extends Partial<RecipeFormData> {}
+export type UpdateRecipeRequest = Partial<RecipeFormData>;
 
-export interface CloneRecipeResponse extends ApiResponse<Recipe> {}
+export interface CloneRecipeResponse {
+  message: string;
+  recipe: Recipe;
+  recipe_id: string;
+}
 
 export interface ClonePublicRecipeRequest {
   originalAuthor: string;
 }
 
-export interface ClonePublicRecipeResponse extends ApiResponse<Recipe> {}
+export interface ClonePublicRecipeResponse {
+  message: string;
+  recipe: Recipe;
+  recipe_id: string;
+}
 
-export interface RecipeMetricsResponse extends ApiResponse<RecipeMetrics> {
-  data: RecipeMetrics & {
-    og?: number;
-    avg_og?: number;
-    fg?: number;
-    avg_fg?: number;
-    abv?: number;
-    avg_abv?: number;
-    ibu?: number;
-    srm?: number;
-  };
+export interface RecipeMetricsResponse {
+  og?: number;
+  avg_og?: number;
+  fg?: number;
+  avg_fg?: number;
+  abv?: number;
+  avg_abv?: number;
+  ibu?: number;
+  srm?: number;
 }
 
 export interface CalculateMetricsPreviewRequest {
@@ -150,12 +164,11 @@ export interface CalculateMetricsPreviewRequest {
   mash_temp_unit?: "F" | "C";
 }
 
-export interface CalculateMetricsPreviewResponse
-  extends ApiResponse<RecipeMetrics> {}
+export type CalculateMetricsPreviewResponse = RecipeMetrics;
 
-export interface RecipeVersionHistoryResponse extends ApiResponse<Recipe[]> {}
+export type RecipeVersionHistoryResponse = Recipe[];
 
-export interface PublicRecipesResponse extends PaginatedResponse<Recipe> {
+export interface PublicRecipesResponse {
   recipes: Recipe[];
   pagination: {
     page: number;
@@ -176,7 +189,19 @@ export interface RecipeSearchRequest extends RecipeSearchFilters {
   per_page?: number;
 }
 
-export interface RecipeSearchResponse extends PaginatedResponse<Recipe> {}
+export interface RecipeSearchResponse {
+  recipes: Recipe[];
+  pagination: {
+    page: number;
+    pages: number;
+    per_page: number;
+    has_prev: boolean;
+    has_next: boolean;
+    total: number;
+    prev_num?: number;
+    next_num?: number;
+  };
+}
 
 // Generic API query parameters
 export interface PaginationParams {
@@ -217,36 +242,31 @@ export interface ApiCallOptions {
 }
 
 // Brew Session API types
-export interface BrewSessionResponse extends ApiResponse<BrewSession> {}
+export type BrewSessionResponse = ApiResponse<BrewSession>;
 
 export interface BrewSessionsListResponse
   extends PaginatedResponse<BrewSession> {
   brew_sessions: BrewSession[];
 }
 
-export interface CreateBrewSessionResponse extends ApiResponse<BrewSession> {}
+export type CreateBrewSessionResponse = ApiResponse<BrewSession>;
 
-export interface UpdateBrewSessionResponse extends ApiResponse<BrewSession> {}
+export type UpdateBrewSessionResponse = ApiResponse<BrewSession>;
 
-export interface FermentationEntryResponse
-  extends ApiResponse<FermentationEntry> {}
+export type FermentationEntryResponse = ApiResponse<FermentationEntry>;
 
 export interface FermentationEntriesResponse
   extends ApiResponse<FermentationEntry[]> {
   data: FermentationEntry[];
 }
 
-export interface CreateFermentationEntryResponse
-  extends ApiResponse<FermentationEntry> {}
+export type CreateFermentationEntryResponse = ApiResponse<FermentationEntry>;
 
-export interface UpdateFermentationEntryResponse
-  extends ApiResponse<FermentationEntry> {}
+export type UpdateFermentationEntryResponse = ApiResponse<FermentationEntry>;
 
-export interface FermentationStatsResponse
-  extends ApiResponse<FermentationStats> {}
+export type FermentationStatsResponse = ApiResponse<FermentationStats>;
 
-export interface BrewSessionSummaryResponse
-  extends ApiResponse<BrewSessionSummary> {}
+export type BrewSessionSummaryResponse = ApiResponse<BrewSessionSummary>;
 
 // Dashboard API types
 export interface DashboardData {
@@ -261,4 +281,4 @@ export interface DashboardData {
   brew_session_summary: BrewSessionSummary;
 }
 
-export interface DashboardResponse extends ApiResponse<DashboardData> {}
+export type DashboardResponse = ApiResponse<DashboardData>;

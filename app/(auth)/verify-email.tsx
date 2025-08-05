@@ -29,7 +29,7 @@ export default function VerifyEmailScreen() {
   useEffect(() => {
     // Check verification status on load
     checkVerificationStatus();
-  }, []);
+  }, [checkVerificationStatus]);
 
   useEffect(() => {
     // If user becomes verified, navigate to main app

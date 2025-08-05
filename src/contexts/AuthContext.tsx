@@ -5,7 +5,6 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import * as SecureStore from "expo-secure-store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User, LoginRequest, RegisterRequest } from "../types";
 import ApiService from "../services/API/apiService";
@@ -73,14 +72,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Try to get user profile with the stored token
       const response = await ApiService.auth.getProfile();
-      setUser(response.data.user);
+      setUser(response.data);
 
       // Also load cached user data if available
       const cachedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
       if (cachedUser) {
         const parsedUser = JSON.parse(cachedUser);
         // Use the fresh data from API, but fallback to cached if API fails
-        setUser(response.data.user || parsedUser);
+        setUser(response.data || parsedUser);
       }
     } catch (error: any) {
       console.error("Failed to initialize auth:", error);
@@ -213,7 +212,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!user) return;
 
       const response = await ApiService.auth.getProfile();
-      const userData = response.data.user;
+      const userData = response.data;
 
       // Update cached data
       await AsyncStorage.setItem(

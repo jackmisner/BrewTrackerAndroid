@@ -90,7 +90,6 @@ export interface BrewSession {
   photo_urls?: string[];
   photos_url?: string;
 
-
   // Additional API fields
   temperature_unit?: "C" | "F";
   fermentation_data?: any[];

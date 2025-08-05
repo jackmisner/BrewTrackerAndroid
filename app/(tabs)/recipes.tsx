@@ -83,8 +83,10 @@ export default function RecipesScreen() {
   };
 
   const handleRecipePress = (recipe: Recipe) => {
-    // TODO: Navigate to recipe detail screen when implemented
-    console.log("Navigate to recipe:", recipe.id);
+    router.push({
+      pathname: "/(tabs)/viewRecipe",
+      params: { recipe_id: recipe.recipe_id },
+    });
   };
 
   const handleCreateRecipe = () => {
