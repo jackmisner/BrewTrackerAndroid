@@ -16,6 +16,17 @@ import { BrewSession } from "../../src/types";
 
 export default function BrewSessionsScreen() {
   const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Handle pull to refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Query for brew sessions
   const {
@@ -46,7 +57,7 @@ export default function BrewSessionsScreen() {
 
   const handleBrewSessionPress = (brewSession: BrewSession) => {
     // TODO: Navigate to brew session detail screen when implemented
-    console.log("Navigate to brew session:", brewSession.id);
+    console.log("Navigate to brew session:", brewSession.session_id);
   };
 
   const handleStartBrewing = () => {
@@ -55,10 +66,12 @@ export default function BrewSessionsScreen() {
   };
 
   const getStatusColor = (status: BrewSession["status"]) => {
-    if (!status) return "#666";
+    if (!status) return "#4CAF50"; // Default for non-completed
 
     switch (status) {
       case "active":
+      case "fermenting":
+      case "in-progress": // Handle API status
         return "#4CAF50";
       case "paused":
         return "#FF9800";
@@ -67,7 +80,7 @@ export default function BrewSessionsScreen() {
       case "failed":
         return "#f44336";
       default:
-        return "#666";
+        return "#4CAF50"; // Default to active color for non-completed sessions
     }
   };
 
@@ -77,6 +90,10 @@ export default function BrewSessionsScreen() {
     switch (status) {
       case "active":
         return "play-circle-filled";
+      case "fermenting":
+        return "science";
+      case "in-progress": // Handle API status
+        return "science";
       case "paused":
         return "pause-circle-filled";
       case "completed":
@@ -84,7 +101,7 @@ export default function BrewSessionsScreen() {
       case "failed":
         return "error";
       default:
-        return "help";
+        return "science"; // Default to science icon for active sessions
     }
   };
 
@@ -124,7 +141,7 @@ export default function BrewSessionsScreen() {
     item: BrewSession;
   }) => {
     // Add safety checks for brew session data
-    if (!brewSession || !brewSession.name || !brewSession.recipe) {
+    if (!brewSession || !brewSession.name) {
       return null;
     }
 
@@ -164,8 +181,10 @@ export default function BrewSessionsScreen() {
           </View>
           <Text style={styles.recipeStyle}>
             Status:{" "}
-            {brewSession.status.charAt(0).toUpperCase() +
-              brewSession.status.slice(1)}
+            {brewSession.status
+              ? brewSession.status.charAt(0).toUpperCase() +
+                brewSession.status.slice(1)
+              : "Unknown"}
           </Text>
         </View>
 
@@ -175,8 +194,8 @@ export default function BrewSessionsScreen() {
               Day {daysPassed} {totalDays && `of ${totalDays}`}
             </Text>
             <Text style={styles.stageText}>
-              {brewSession.fermentation_start_date
-                ? `Started: ${formatDate(brewSession.fermentation_start_date)}`
+              {brewSession.brew_date
+                ? `Started: ${formatDate(brewSession.brew_date)}`
                 : brewSession.current_stage
                   ? brewSession.current_stage.charAt(0).toUpperCase() +
                     brewSession.current_stage.slice(1) +
@@ -329,11 +348,11 @@ export default function BrewSessionsScreen() {
           data={currentBrewSessions}
           renderItem={renderBrewSessionItem}
           keyExtractor={(item, index) =>
-            item.id?.toString() || `brew-session-${index}`
+            item.session_id?.toString() || `brew-session-${index}`
           }
           contentContainerStyle={styles.listContainer}
           refreshControl={
-            <RefreshControl refreshing={false} onRefresh={refetch} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           showsVerticalScrollIndicator={false}
         />

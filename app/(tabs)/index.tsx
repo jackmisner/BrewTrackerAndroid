@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -17,12 +18,24 @@ import { Recipe, BrewSession } from "../../src/types";
 
 export default function DashboardScreen() {
   const { user } = useAuth();
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Handle pull to refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Query for dashboard data
   const {
     data: dashboardData,
     isLoading,
     error,
+    refetch,
   } = useQuery({
     queryKey: ["dashboard"],
     queryFn: async () => {
@@ -41,9 +54,9 @@ export default function DashboardScreen() {
         const brewSessions = brewSessionsResponse.data?.brew_sessions || [];
 
         // Calculate user stats - use same status filtering as brew sessions tab
+
         const activeBrewSessions = brewSessions.filter(
-          session =>
-            session.status !== "completed"
+          session => session.status !== "completed"
         );
 
         const userStats = {
@@ -92,7 +105,7 @@ export default function DashboardScreen() {
 
   const handleBrewSessionPress = (brewSession: BrewSession) => {
     // TODO: Navigate to brew session detail screen when implemented
-    console.log("Navigate to brew session:", brewSession.id);
+    console.log("Navigate to brew session:", brewSession.session_id);
   };
 
   const formatDate = (dateString: string) => {
@@ -103,6 +116,8 @@ export default function DashboardScreen() {
   const getStatusColor = (status: BrewSession["status"]) => {
     switch (status) {
       case "active":
+      case "fermenting":
+      case "in-progress": // Handle API status
         return "#4CAF50";
       case "paused":
         return "#FF9800";
@@ -111,18 +126,18 @@ export default function DashboardScreen() {
       case "failed":
         return "#f44336";
       default:
-        return "#666";
+        return "#4CAF50"; // Default to active color for non-completed sessions
     }
   };
 
   const renderRecentRecipe = (recipe: Recipe) => {
-    if (!recipe || !recipe.id || !recipe.name) {
+    if (!recipe || !recipe.name) {
       return null;
     }
 
     return (
       <TouchableOpacity
-        key={recipe.id}
+        key={recipe.id || recipe.name}
         style={styles.recentCard}
         onPress={() => handleRecipePress(recipe)}
       >
@@ -144,18 +159,13 @@ export default function DashboardScreen() {
   };
 
   const renderActiveBrewSession = (brewSession: BrewSession) => {
-    if (
-      !brewSession ||
-      !brewSession.id ||
-      !brewSession.name ||
-      !brewSession.recipe
-    ) {
+    if (!brewSession || !brewSession.session_id || !brewSession.name) {
       return null;
     }
 
     return (
       <TouchableOpacity
-        key={brewSession.id}
+        key={brewSession.session_id}
         style={styles.recentCard}
         onPress={() => handleBrewSessionPress(brewSession)}
       >
@@ -391,13 +401,11 @@ export default function DashboardScreen() {
       {recentRecipes.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Recipes</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.horizontalList}>
-              {recentRecipes
-                .filter(recipe => recipe && recipe.id)
-                .map(renderRecentRecipe)}
-            </View>
-          </ScrollView>
+          <View style={styles.verticalList}>
+            {recentRecipes
+              .filter(recipe => recipe && recipe.name)
+              .map(renderRecentRecipe)}
+          </View>
         </View>
       )}
 
@@ -408,7 +416,7 @@ export default function DashboardScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.horizontalList}>
               {activeBrewSessions
-                .filter(session => session && session.id)
+                .filter(session => session && session.session_id)
                 .map(renderActiveBrewSession)}
             </View>
           </ScrollView>
@@ -426,8 +434,8 @@ export default function DashboardScreen() {
               Your brewing journey starts here!
             </Text>
           </View>
-        )}
-      </View>
+        </View>
+      )}
 
       <View style={styles.versionFooter}>
         <Text style={styles.versionText}>
@@ -563,12 +571,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     gap: 12,
   },
+  verticalList: {
+    gap: 12,
+  },
   recentCard: {
     backgroundColor: "#f8f8f8",
     borderRadius: 8,
     padding: 12,
-    width: 200,
-    marginRight: 12,
+    marginBottom: 8,
   },
   recentHeader: {
     flexDirection: "row",

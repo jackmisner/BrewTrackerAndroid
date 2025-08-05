@@ -82,7 +82,7 @@ export default function RecipesScreen() {
     if (!recipe || !recipe.name) {
       return null;
     }
-    console.log("Rendering recipe:", recipe.username);
+
     return (
       <TouchableOpacity
         style={styles.recipeCard}
@@ -136,7 +136,9 @@ export default function RecipesScreen() {
             <View style={styles.metric}>
               <MaterialIcons name="person" size={16} color="#666" />
               <Text style={styles.authorText}>
-                {recipe.username === "Anonymous User" ? "Anonymous" : recipe.username}
+                {recipe.username === "Anonymous User"
+                  ? "Anonymous"
+                  : recipe.username}
               </Text>
             </View>
           )}
