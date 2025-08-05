@@ -64,14 +64,19 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   ├── (auth)/                                       # Authentication flow screens
 │   │   ├── login.tsx                                 # Login screen with JWT authentication and navigation
 │   │   ├── register.tsx                              # User registration with real-time validation
-│   │   ├── verify-email.tsx                          # Email verification with token input and resend functionality
+│   │   ├── verifyEmail.tsx                           # Email verification with token input and resend functionality
 │   │   └── _layout.tsx                               # Authentication layout configuration
 │   ├── (tabs)/                                       # Main application tab navigation
 │   │   ├── index.tsx                                 # Dashboard/home screen with brewing overview
 │   │   ├── recipes.tsx                               # Recipe management and browsing
-│   │   ├── brew-sessions.tsx                         # Brew session tracking and management
+│   │   ├── brewSessions.tsx                          # Brew session tracking and management
 │   │   ├── profile.tsx                               # User profile and settings with secure logout
 │   │   └── _layout.tsx                               # Tab navigation layout with Material Icons
+│   ├── (modals)/                                     # Modal/detail screens (not in tab navigation)
+│   │   ├── (recipes)/                                # Recipe-related detail screens
+│   │   │   └── viewRecipe.tsx                        # Individual recipe detail view with ingredients and metrics
+│   │   └── (brewSessions)/                           # Brew session detail screens (future)
+│   │       └── (placeholder for brew session modals)
 │   ├── index.tsx                                     # Entry point with auth routing
 │   └── _layout.tsx                                   # Root layout with AuthProvider and QueryClient
 ├── src/                                              # Source code for React Native components and services
@@ -84,7 +89,21 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── apiService.ts                         # Complete API service layer with Axios configuration
 │   │   │   └── queryClient.ts                        # React Query client configuration
 │   │   └── config.ts                                 # Service configuration and constants
-│   ├── styles/                                       # Global styles and theme
+│   ├── styles/                                       # StyleSheet definitions organized by feature
+│   │   ├── auth/                                     # Authentication screen styles
+│   │   │   ├── loginStyles.ts                        # Login screen styling with common colors
+│   │   │   ├── registerStyles.ts                     # Registration screen styling
+│   │   │   └── verifyEmailStyles.ts                  # Email verification screen styling
+│   │   ├── tabs/                                     # Main tab navigation screen styles
+│   │   │   ├── dashboardStyles.ts                    # Dashboard/home screen styling
+│   │   │   ├── recipesStyles.ts                      # Recipe browsing screen styling
+│   │   │   ├── brewSessionsStyles.ts                 # Brew session tracking screen styling
+│   │   │   └── profileStyles.ts                      # User profile screen styling
+│   │   ├── modals/                                   # Modal/detail screen styles
+│   │   │   └── viewRecipeStyles.ts                   # Recipe detail view styling
+│   │   └── common/                                   # Shared style definitions
+│   │       ├── colors.ts                             # Centralized color constants for consistent theming
+│   │       └── buttons.ts                            # Reusable button styles using color constants
 │   ├── types/                                        # TypeScript type definitions for mobile app
 │   │   ├── api.ts                                    # API request/response interfaces
 │   │   ├── common.ts                                 # Shared utility types
@@ -101,17 +120,50 @@ BrewTrackerAndroid/                                   # React Native Android app
 
 ### Key Technologies
 
-- **Expo Router**: File-based navigation
+- **Expo Router**: File-based navigation with route groups
 - **React Query**: Server state management with caching
 - **Expo Secure Store**: Secure token storage
 - **AsyncStorage**: Local data persistence
 - **Axios**: HTTP client with interceptors
+
+### File Organization Conventions
+
+- **camelCase**: All TypeScript files use camelCase naming (e.g., `verifyEmail.tsx`, `brewSessions.tsx`)
+- **Route Groups**: Parentheses `()` create logical groupings without affecting URLs:
+  - `(auth)/` - Authentication screens
+  - `(tabs)/` - Main tab navigation screens
+  - `(modals)/` - Detail/overlay screens not in tab navigation
+- **Feature Grouping**: Modal screens are grouped by feature under `(modals)/(feature)/`
+- **Consistent Structure**: Follows TypeScript and React Native best practices
 
 ### State Management
 
 - **Authentication**: React Context with secure storage
 - **Server Data**: React Query for caching and synchronization
 - **Local State**: React hooks (useState, useReducer)
+
+### Styling Architecture
+
+The app uses a centralized styling system with external StyleSheet files:
+
+- **Feature-based Organization**: Styles are organized by screen type (auth, tabs, modals)
+- **Common Styles**: Shared colors and button styles for consistency
+- **TypeScript Integration**: All styles are fully typed and imported with descriptive names
+- **Centralized Colors**: Single source of truth for app colors in `src/styles/common/colors.ts`
+- **Reusable Components**: Button styles are extracted for reuse across screens
+
+#### Style Import Pattern:
+
+```typescript
+import { loginStyles as styles } from "../../src/styles/auth/loginStyles";
+```
+
+This approach provides:
+
+- **Maintainability**: Styles are separate from component logic
+- **Consistency**: Shared color constants prevent style drift
+- **Type Safety**: Full TypeScript support for all style properties
+- **Scalability**: Easy to add new screens and maintain existing ones
 
 ## Development
 

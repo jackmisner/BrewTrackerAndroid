@@ -44,7 +44,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="brew-sessions"
+        name="brewSessions"
         options={{
           title: "Brewing",
           tabBarIcon: ({ color, size }) => (
