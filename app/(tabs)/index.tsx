@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -17,12 +18,24 @@ import { Recipe, BrewSession } from "../../src/types";
 
 export default function DashboardScreen() {
   const { user } = useAuth();
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Handle pull to refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Query for dashboard data by combining multiple endpoints
   const {
     data: dashboardData,
     isLoading,
     error,
+    refetch,
   } = useQuery({
     queryKey: ["dashboard"],
     queryFn: async () => {
@@ -35,24 +48,28 @@ export default function DashboardScreen() {
         ]);
 
         // Transform the data to match expected dashboard format - use same pattern as recipes tab
-        // The recipes tab accesses response.data.recipes, not response.data.data
+        // The recipes tab accesses response.data.recipes, brew sessions tab accesses response.data.brew_sessions
         const recipes = recipesResponse.data?.recipes || [];
         const brewSessions = brewSessionsResponse.data?.brew_sessions || [];
         
-        // Calculate user stats
+        // Calculate user stats - use same status filtering as brew sessions tab
+        const activeBrewSessions = brewSessions.filter(session => 
+          session.status === 'fermenting' || session.status === 'paused'
+        );
+        
+        
         const userStats = {
           total_recipes: recipesResponse.data.pagination?.total || recipes.length,
           public_recipes: publicRecipesResponse.data.pagination?.total || 0,
           total_brew_sessions: brewSessionsResponse.data.pagination?.total || brewSessions.length,
-          active_brew_sessions: brewSessions.filter(session => session.status === 'active').length,
+          active_brew_sessions: activeBrewSessions.length,
         };
-
 
         return {
           data: {
             user_stats: userStats,
             recent_recipes: recipes.slice(0, 3), // Show 3 most recent
-            active_brew_sessions: brewSessions.filter(session => session.status === 'active').slice(0, 3),
+            active_brew_sessions: activeBrewSessions.slice(0, 3), // Show 3 most recent active sessions
           }
         };
       } catch (error) {
@@ -85,7 +102,7 @@ export default function DashboardScreen() {
 
   const handleBrewSessionPress = (brewSession: BrewSession) => {
     // TODO: Navigate to brew session detail screen when implemented
-    console.log("Navigate to brew session:", brewSession.id);
+    console.log("Navigate to brew session:", brewSession.session_id);
   };
 
   const formatDate = (dateString: string) => {
@@ -138,18 +155,14 @@ export default function DashboardScreen() {
   };
 
   const renderActiveBrewSession = (brewSession: BrewSession) => {
-    if (
-      !brewSession ||
-      !brewSession.id ||
-      !brewSession.name ||
-      !brewSession.recipe
-    ) {
+    // Fix: The actual data has recipe_id and session_id, not recipe and id
+    if (!brewSession || !brewSession.name) {
       return null;
     }
 
     return (
       <TouchableOpacity
-        key={brewSession.id}
+        key={brewSession.session_id || brewSession.name}
         style={styles.recentCard}
         onPress={() => handleBrewSessionPress(brewSession)}
       >
@@ -164,7 +177,7 @@ export default function DashboardScreen() {
           </Text>
         </View>
         <Text style={styles.recentSubtitle}>
-          {brewSession.recipe.name || "Unknown Recipe"}
+          Status: {brewSession.status}
         </Text>
         <Text style={styles.recentDate}>
           Day{" "}
@@ -200,7 +213,12 @@ export default function DashboardScreen() {
     };
 
     return (
-      <ScrollView style={styles.container}>
+      <ScrollView 
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <View style={styles.header}>
           <Text style={styles.greeting}>Welcome back, {user?.username}!</Text>
           <Text style={styles.subtitle}>Ready to brew something amazing?</Text>
@@ -301,7 +319,12 @@ export default function DashboardScreen() {
   const activeBrewSessions = dashboardData?.data.active_brew_sessions || [];
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
       <View style={styles.header}>
         <Text style={styles.greeting}>Welcome back, {user?.username}!</Text>
         <Text style={styles.subtitle}>Ready to brew something amazing?</Text>
@@ -399,7 +422,7 @@ export default function DashboardScreen() {
         {activeBrewSessions.length > 0 ? (
           <View style={styles.verticalList}>
             {activeBrewSessions
-              .filter(session => session && session.id)
+              .filter(session => session && session.session_id)
               .map(renderActiveBrewSession)}
           </View>
         ) : (
