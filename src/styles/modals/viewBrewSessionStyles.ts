@@ -1,7 +1,7 @@
 import { StyleSheet } from "react-native";
 import { ThemeContextValue } from "../../contexts/ThemeContext";
 
-export const viewRecipeStyles = (theme: ThemeContextValue) =>
+export const viewBrewSessionStyles = (theme: ThemeContextValue) =>
   StyleSheet.create({
     // Container and Layout
     container: {
@@ -12,7 +12,7 @@ export const viewRecipeStyles = (theme: ThemeContextValue) =>
       flex: 1,
     },
     scrollContent: {
-      paddingBottom: 100, // Space for FAB
+      paddingBottom: 32,
     },
 
     // Header and Navigation
@@ -41,33 +41,9 @@ export const viewRecipeStyles = (theme: ThemeContextValue) =>
       color: theme.colors.text,
       textAlign: "center",
     },
-    actionButton: {
-      padding: 8,
-      marginLeft: 8,
-    },
 
-    // Content Sections
-    section: {
-      backgroundColor: theme.colors.background,
-      marginHorizontal: 16,
-      marginTop: 16,
-      borderRadius: 12,
-      padding: 16,
-      shadowColor: theme.colors.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    sectionTitle: {
-      fontSize: 18,
-      fontWeight: "bold",
-      color: theme.colors.text,
-      marginBottom: 16,
-    },
-
-    // Recipe Card
-    recipeCard: {
+    // Title and Status
+    titleContainer: {
       backgroundColor: theme.colors.background,
       marginHorizontal: 16,
       marginTop: 16,
@@ -79,48 +55,59 @@ export const viewRecipeStyles = (theme: ThemeContextValue) =>
       shadowRadius: 4,
       elevation: 3,
     },
-    recipeName: {
+    title: {
       fontSize: 24,
       fontWeight: "bold",
       color: theme.colors.text,
-      marginBottom: 8,
-    },
-    recipeStyle: {
-      fontSize: 16,
-      color: theme.colors.primary,
-      fontWeight: "600",
       marginBottom: 12,
     },
-    recipeDescription: {
-      fontSize: 16,
-      color: theme.colors.textSecondary,
-      lineHeight: 22,
-      marginBottom: 16,
+    statusBadge: {
+      alignSelf: "flex-start",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+    },
+    statusText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "600",
+      textTransform: "uppercase",
     },
 
     // Metadata
     metadataContainer: {
-      borderTopWidth: 1,
-      borderTopColor: theme.colors.borderLight,
-      paddingTop: 16,
-      gap: 8,
-    },
-    metadataItem: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
+      backgroundColor: theme.colors.background,
+      marginHorizontal: 16,
+      marginTop: 8,
+      borderRadius: 12,
+      padding: 16,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
     },
     metadataText: {
       fontSize: 14,
       color: theme.colors.textSecondary,
+      marginBottom: 4,
     },
 
     // Metrics Grid
-    metricsGrid: {
+    metricsContainer: {
+      backgroundColor: theme.colors.background,
+      marginHorizontal: 16,
+      marginTop: 8,
+      borderRadius: 12,
+      padding: 16,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
       flexDirection: "row",
       flexWrap: "wrap",
       gap: 12,
-      justifyContent: "space-between",
     },
     metricCard: {
       backgroundColor: theme.colors.inputBackground,
@@ -135,92 +122,54 @@ export const viewRecipeStyles = (theme: ThemeContextValue) =>
       color: theme.colors.textSecondary,
       fontWeight: "500",
       marginBottom: 4,
+      textAlign: "center",
     },
     metricValue: {
       fontSize: 18,
       fontWeight: "bold",
       color: theme.colors.text,
+      textAlign: "center",
     },
 
-    // Details
+    // Details Sections
     detailsContainer: {
-      gap: 12,
-    },
-    detailRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      paddingVertical: 4,
-    },
-    detailLabel: {
-      fontSize: 16,
-      color: theme.colors.textSecondary,
-      fontWeight: "500",
-    },
-    detailValue: {
-      fontSize: 16,
-      color: theme.colors.text,
-      fontWeight: "600",
-    },
-
-    // Notes
-    notesContainer: {
-      backgroundColor: theme.colors.inputBackground,
-      borderRadius: 8,
+      backgroundColor: theme.colors.background,
+      marginHorizontal: 16,
+      marginTop: 8,
+      borderRadius: 12,
       padding: 16,
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
     },
-    notesText: {
+    detailsTitle: {
+      fontSize: 18,
+      fontWeight: "bold",
+      color: theme.colors.text,
+      marginBottom: 12,
+    },
+    detailsText: {
       fontSize: 15,
       color: theme.colors.text,
       lineHeight: 22,
     },
 
-    // Placeholder sections
-    ingredientNote: {
+    // Rating System
+    ratingContainer: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: theme.colors.inputBackground,
-      borderRadius: 8,
-      padding: 16,
-      gap: 12,
+      gap: 4,
     },
-    ingredientNoteText: {
-      flex: 1,
-      fontSize: 14,
-      color: theme.colors.textSecondary,
-      fontStyle: "italic",
+    ratingStar: {
+      marginRight: 2,
     },
-
-    // Ingredients styling
-    ingredientGroup: {
-      marginBottom: 20,
-    },
-    ingredientGroupHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginBottom: 12,
-      gap: 8,
-    },
-    ingredientGroupTitle: {
+    ratingText: {
       fontSize: 16,
       fontWeight: "600",
       color: theme.colors.text,
-    },
-    ingredientItem: {
-      backgroundColor: theme.colors.inputBackground,
-      borderRadius: 8,
-      padding: 12,
-      marginBottom: 8,
-    },
-    ingredientName: {
-      fontSize: 15,
-      fontWeight: "600",
-      color: theme.colors.text,
-      marginBottom: 4,
-    },
-    ingredientAmount: {
-      fontSize: 14,
-      color: theme.colors.textSecondary,
+      marginLeft: 8,
     },
 
     // Loading State
@@ -268,34 +217,5 @@ export const viewRecipeStyles = (theme: ThemeContextValue) =>
       color: theme.colors.primaryText,
       fontSize: 16,
       fontWeight: "600",
-    },
-
-    // Floating Action Button
-    fab: {
-      position: "absolute",
-      bottom: 24,
-      right: 24,
-      backgroundColor: theme.colors.primary,
-      borderRadius: 28,
-      paddingHorizontal: 20,
-      paddingVertical: 16,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      shadowColor: theme.colors.shadow,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 8,
-    },
-    fabText: {
-      color: theme.colors.primaryText,
-      fontSize: 16,
-      fontWeight: "600",
-    },
-
-    // Spacing
-    bottomSpacing: {
-      height: 32,
     },
   });

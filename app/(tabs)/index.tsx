@@ -110,8 +110,10 @@ export default function DashboardScreen() {
   };
 
   const handleBrewSessionPress = (brewSession: BrewSession) => {
-    // TODO: Navigate to brew session detail screen when implemented
-    console.log("Navigate to brew session:", brewSession.session_id);
+    router.push({
+      pathname: "/(modals)/(brewSessions)/viewBrewSession",
+      params: { brewSessionId: brewSession.session_id },
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -148,7 +150,11 @@ export default function DashboardScreen() {
         onPress={() => handleRecipePress(recipe)}
       >
         <View style={styles.recentHeader}>
-          <MaterialIcons name="menu-book" size={20} color={theme.colors.primary} />
+          <MaterialIcons
+            name="menu-book"
+            size={20}
+            color={theme.colors.primary}
+          />
           <Text style={styles.recentTitle} numberOfLines={1}>
             {recipe.name}
           </Text>
@@ -234,13 +240,21 @@ export default function DashboardScreen() {
 
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <MaterialIcons name="menu-book" size={32} color={theme.colors.primary} />
+            <MaterialIcons
+              name="menu-book"
+              size={32}
+              color={theme.colors.primary}
+            />
             <Text style={styles.statNumber}>{fallbackStats.total_recipes}</Text>
             <Text style={styles.statLabel}>Recipes</Text>
           </View>
 
           <View style={styles.statCard}>
-            <MaterialIcons name="science" size={32} color={theme.colors.primary} />
+            <MaterialIcons
+              name="science"
+              size={32}
+              color={theme.colors.primary}
+            />
             <Text style={styles.statNumber}>
               {fallbackStats.active_brew_sessions}
             </Text>
@@ -248,7 +262,11 @@ export default function DashboardScreen() {
           </View>
 
           <View style={styles.statCard}>
-            <MaterialIcons name="public" size={32} color={theme.colors.primary} />
+            <MaterialIcons
+              name="public"
+              size={32}
+              color={theme.colors.primary}
+            />
             <Text style={styles.statNumber}>
               {fallbackStats.public_recipes}
             </Text>
@@ -277,7 +295,11 @@ export default function DashboardScreen() {
             style={styles.actionCard}
             onPress={handleStartBrewSession}
           >
-            <MaterialIcons name="play-arrow" size={24} color={theme.colors.primary} />
+            <MaterialIcons
+              name="play-arrow"
+              size={24}
+              color={theme.colors.primary}
+            />
             <View style={styles.actionContent}>
               <Text style={styles.actionTitle}>Start Brew Session</Text>
               <Text style={styles.actionSubtitle}>
@@ -291,7 +313,11 @@ export default function DashboardScreen() {
             style={styles.actionCard}
             onPress={handleBrowsePublicRecipes}
           >
-            <MaterialIcons name="public" size={24} color={theme.colors.primary} />
+            <MaterialIcons
+              name="public"
+              size={24}
+              color={theme.colors.primary}
+            />
             <View style={styles.actionContent}>
               <Text style={styles.actionTitle}>Browse Public Recipes</Text>
               <Text style={styles.actionSubtitle}>
@@ -340,13 +366,21 @@ export default function DashboardScreen() {
 
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
-          <MaterialIcons name="menu-book" size={32} color={theme.colors.primary} />
+          <MaterialIcons
+            name="menu-book"
+            size={32}
+            color={theme.colors.primary}
+          />
           <Text style={styles.statNumber}>{stats?.total_recipes || 0}</Text>
           <Text style={styles.statLabel}>Recipes</Text>
         </View>
 
         <View style={styles.statCard}>
-          <MaterialIcons name="science" size={32} color={theme.colors.primary} />
+          <MaterialIcons
+            name="science"
+            size={32}
+            color={theme.colors.primary}
+          />
           <Text style={styles.statNumber}>
             {stats?.active_brew_sessions || 0}
           </Text>
@@ -381,7 +415,11 @@ export default function DashboardScreen() {
           style={styles.actionCard}
           onPress={handleStartBrewSession}
         >
-          <MaterialIcons name="play-arrow" size={24} color={theme.colors.primary} />
+          <MaterialIcons
+            name="play-arrow"
+            size={24}
+            color={theme.colors.primary}
+          />
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>Start Brew Session</Text>
             <Text style={styles.actionSubtitle}>Begin tracking a new brew</Text>

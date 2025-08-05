@@ -3,10 +3,13 @@ import { Recipe } from "./recipe";
 
 // Brew session status types
 export type BrewSessionStatus =
+  | "planned"
   | "active"
   | "fermenting"
   | "in-progress" // API status
+  | "conditioning"
   | "completed"
+  | "archived"
   | "failed"
   | "paused";
 
@@ -31,18 +34,14 @@ export interface GravityReading {
   notes?: string;
 }
 
-// Fermentation log entry
+// Fermentation log entry (matches backend API)
 export interface FermentationEntry {
-  id: ID;
-  date: string;
-  stage: FermentationStage;
-  temperature: number;
-  temperature_unit: TemperatureUnit;
-  gravity_reading?: GravityReading;
-  ph?: number;
-  notes: string;
-  photo_urls?: string[];
-  created_at: string;
+  entry_date?: string; // API field name
+  date?: string; // Legacy field name for compatibility
+  temperature?: number;
+  gravity?: number; // specific gravity (e.g., 1.010)
+  ph?: number; // pH value
+  notes?: string;
 }
 
 // Brew session interface
@@ -65,11 +64,13 @@ export interface BrewSession {
 
   // Initial readings
   original_gravity?: number;
+  actual_og?: number; // API field name
   target_og?: number;
   target_fg?: number;
 
   // Final readings
   final_gravity?: number;
+  actual_fg?: number; // API field name
   actual_abv?: number;
 
   // Progress tracking
@@ -90,9 +91,12 @@ export interface BrewSession {
   photo_urls?: string[];
   photos_url?: string;
 
+  // Brew day measurements
+  mash_temp?: number;
+
   // Additional API fields
   temperature_unit?: "C" | "F";
-  fermentation_data?: any[];
+  fermentation_data?: FermentationEntry[];
   dry_hop_additions?: any[];
 
   // Timestamps

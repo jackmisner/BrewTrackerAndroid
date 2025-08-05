@@ -9,11 +9,7 @@ import { queryClient } from "../src/services/API/queryClient";
 // Component to handle StatusBar with theme
 const ThemedStatusBar = () => {
   const { isDark } = useTheme();
-  return (
-    <StatusBar 
-      style={isDark ? "light" : "dark"} 
-    />
-  );
+  return <StatusBar style={isDark ? "light" : "dark"} />;
 };
 
 export default function RootLayout() {

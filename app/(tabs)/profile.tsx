@@ -63,7 +63,11 @@ export default function ProfileScreen() {
         <Text style={styles.email}>{user?.email}</Text>
         {!user?.email_verified && (
           <View style={styles.verificationBadge}>
-            <MaterialIcons name="warning" size={16} color={theme.colors.warning} />
+            <MaterialIcons
+              name="warning"
+              size={16}
+              color={theme.colors.warning}
+            />
             <Text style={styles.verificationText}>Email not verified</Text>
           </View>
         )}
@@ -71,21 +75,45 @@ export default function ProfileScreen() {
 
       <View style={styles.section}>
         <TouchableOpacity style={styles.menuItem} onPress={handleSettingsPress}>
-          <MaterialIcons name="settings" size={24} color={theme.colors.textSecondary} />
+          <MaterialIcons
+            name="settings"
+            size={24}
+            color={theme.colors.textSecondary}
+          />
           <Text style={styles.menuText}>Settings</Text>
-          <MaterialIcons name="chevron-right" size={24} color={theme.colors.textMuted} />
+          <MaterialIcons
+            name="chevron-right"
+            size={24}
+            color={theme.colors.textMuted}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem}>
-          <MaterialIcons name="help" size={24} color={theme.colors.textSecondary} />
+          <MaterialIcons
+            name="help"
+            size={24}
+            color={theme.colors.textSecondary}
+          />
           <Text style={styles.menuText}>Help & Support</Text>
-          <MaterialIcons name="chevron-right" size={24} color={theme.colors.textMuted} />
+          <MaterialIcons
+            name="chevron-right"
+            size={24}
+            color={theme.colors.textMuted}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem}>
-          <MaterialIcons name="info" size={24} color={theme.colors.textSecondary} />
+          <MaterialIcons
+            name="info"
+            size={24}
+            color={theme.colors.textSecondary}
+          />
           <Text style={styles.menuText}>About</Text>
-          <MaterialIcons name="chevron-right" size={24} color={theme.colors.textMuted} />
+          <MaterialIcons
+            name="chevron-right"
+            size={24}
+            color={theme.colors.textMuted}
+          />
         </TouchableOpacity>
       </View>
 

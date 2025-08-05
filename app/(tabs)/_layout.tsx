@@ -5,7 +5,7 @@ import { useTheme } from "../../src/contexts/ThemeContext";
 
 export default function TabLayout() {
   const theme = useTheme();
-  
+
   return (
     <Tabs
       screenOptions={{
