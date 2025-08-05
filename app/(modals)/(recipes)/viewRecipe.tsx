@@ -12,7 +12,8 @@ import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import ApiService from "../../../src/services/API/apiService";
 import { Recipe } from "../../../src/types";
-import { viewRecipeStyles as styles } from "../../../src/styles/modals/viewRecipeStyles";
+import { viewRecipeStyles } from "../../../src/styles/modals/viewRecipeStyles";
+import { useTheme } from "../../../src/contexts/ThemeContext";
 
 /**
  * ViewRecipe Screen Component
@@ -20,7 +21,7 @@ import { viewRecipeStyles as styles } from "../../../src/styles/modals/viewRecip
  * This screen displays detailed information about a specific recipe.
  * It receives a recipe_id through route parameters and fetches the full recipe data.
  *
- * Key Learning Points:
+ * *Key Concepts:*
  * 1. Route Parameters: Uses useLocalSearchParams() to get URL parameters
  * 2. Data Fetching: Uses React Query with recipe-specific query key
  * 3. Error Handling: Comprehensive loading, error, and empty states
@@ -28,6 +29,8 @@ import { viewRecipeStyles as styles } from "../../../src/styles/modals/viewRecip
  * 5. TypeScript: Proper typing for parameters and data structures
  */
 export default function ViewRecipeScreen() {
+  const theme = useTheme();
+  const styles = viewRecipeStyles(theme);
   // State for pull-to-refresh functionality
   const [refreshing, setRefreshing] = useState(false);
 
@@ -43,7 +46,7 @@ export default function ViewRecipeScreen() {
   /**
    * React Query hook for fetching recipe data
    *
-   * Key concepts:
+   * *Key concepts:*
    * - queryKey includes recipe_id to make it unique per recipe
    * - queryFn is the actual API call function
    * - enabled ensures query only runs when we have a recipe_id

@@ -1,11 +1,12 @@
 import { StyleSheet } from "react-native";
-import { colors } from "../common/colors";
+import { ThemeContextValue } from "../../contexts/ThemeContext";
 
-export const viewRecipeStyles = StyleSheet.create({
+export const viewRecipeStyles = (theme: ThemeContextValue) =>
+  StyleSheet.create({
   // Container and Layout
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: theme.colors.backgroundSecondary,
   },
   scrollView: {
     flex: 1,
@@ -18,11 +19,11 @@ export const viewRecipeStyles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.background,
+    backgroundColor: theme.colors.background,
     paddingHorizontal: 16,
     paddingVertical: 12,
     paddingTop: 20, // Account for status bar
-    shadowColor: colors.shadow,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -37,7 +38,7 @@ export const viewRecipeStyles = StyleSheet.create({
     flex: 1,
     fontSize: 18,
     fontWeight: "600",
-    color: colors.text,
+    color: theme.colors.text,
     textAlign: "center",
   },
   actionButton: {
@@ -47,12 +48,12 @@ export const viewRecipeStyles = StyleSheet.create({
 
   // Content Sections
   section: {
-    backgroundColor: colors.background,
+    backgroundColor: theme.colors.background,
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 12,
     padding: 16,
-    shadowColor: colors.shadow,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -61,18 +62,18 @@ export const viewRecipeStyles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: colors.text,
+    color: theme.colors.text,
     marginBottom: 16,
   },
 
   // Recipe Card
   recipeCard: {
-    backgroundColor: colors.background,
+    backgroundColor: theme.colors.background,
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 12,
     padding: 20,
-    shadowColor: colors.shadow,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -81,18 +82,18 @@ export const viewRecipeStyles = StyleSheet.create({
   recipeName: {
     fontSize: 24,
     fontWeight: "bold",
-    color: colors.text,
+    color: theme.colors.text,
     marginBottom: 8,
   },
   recipeStyle: {
     fontSize: 16,
-    color: colors.primary,
+    color: theme.colors.primary,
     fontWeight: "600",
     marginBottom: 12,
   },
   recipeDescription: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: theme.colors.textSecondary,
     lineHeight: 22,
     marginBottom: 16,
   },
@@ -100,7 +101,7 @@ export const viewRecipeStyles = StyleSheet.create({
   // Metadata
   metadataContainer: {
     borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
+    borderTopColor: theme.colors.borderLight,
     paddingTop: 16,
     gap: 8,
   },
@@ -111,7 +112,7 @@ export const viewRecipeStyles = StyleSheet.create({
   },
   metadataText: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: theme.colors.textSecondary,
   },
 
   // Metrics Grid
@@ -122,7 +123,7 @@ export const viewRecipeStyles = StyleSheet.create({
     justifyContent: "space-between",
   },
   metricCard: {
-    backgroundColor: colors.inputBackground,
+    backgroundColor: theme.colors.inputBackground,
     borderRadius: 8,
     padding: 16,
     alignItems: "center",
@@ -131,14 +132,14 @@ export const viewRecipeStyles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: theme.colors.textSecondary,
     fontWeight: "500",
     marginBottom: 4,
   },
   metricValue: {
     fontSize: 18,
     fontWeight: "bold",
-    color: colors.text,
+    color: theme.colors.text,
   },
 
   // Details
@@ -153,24 +154,24 @@ export const viewRecipeStyles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: theme.colors.textSecondary,
     fontWeight: "500",
   },
   detailValue: {
     fontSize: 16,
-    color: colors.text,
+    color: theme.colors.text,
     fontWeight: "600",
   },
 
   // Notes
   notesContainer: {
-    backgroundColor: colors.inputBackground,
+    backgroundColor:theme.colors.inputBackground,
     borderRadius: 8,
     padding: 16,
   },
   notesText: {
     fontSize: 15,
-    color: colors.text,
+    color: theme.colors.text,
     lineHeight: 22,
   },
 
@@ -178,7 +179,7 @@ export const viewRecipeStyles = StyleSheet.create({
   ingredientNote: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.inputBackground,
+    backgroundColor:theme.colors.inputBackground,
     borderRadius: 8,
     padding: 16,
     gap: 12,
@@ -186,7 +187,7 @@ export const viewRecipeStyles = StyleSheet.create({
   ingredientNoteText: {
     flex: 1,
     fontSize: 14,
-    color: colors.textSecondary,
+    color: theme.colors.textSecondary,
     fontStyle: "italic",
   },
 
@@ -203,10 +204,10 @@ export const viewRecipeStyles = StyleSheet.create({
   ingredientGroupTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: colors.text,
+    color: theme.colors.text,
   },
   ingredientItem: {
-    backgroundColor: colors.inputBackground,
+    backgroundColor:theme.colors.inputBackground,
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -214,12 +215,12 @@ export const viewRecipeStyles = StyleSheet.create({
   ingredientName: {
     fontSize: 15,
     fontWeight: "600",
-    color: colors.text,
+    color: theme.colors.text,
     marginBottom: 4,
   },
   ingredientAmount: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: theme.colors.textSecondary,
   },
 
   // Loading State
@@ -231,7 +232,7 @@ export const viewRecipeStyles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: theme.colors.textSecondary,
     marginTop: 16,
   },
 
@@ -245,26 +246,26 @@ export const viewRecipeStyles = StyleSheet.create({
   errorTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: colors.text,
+    color: theme.colors.text,
     marginTop: 16,
     marginBottom: 8,
     textAlign: "center",
   },
   errorText: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: theme.colors.textSecondary,
     textAlign: "center",
     lineHeight: 22,
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: colors.primaryText,
+    color: theme.colors.primaryText,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -274,21 +275,21 @@ export const viewRecipeStyles = StyleSheet.create({
     position: "absolute",
     bottom: 24,
     right: 24,
-    backgroundColor: colors.primary,
+    backgroundColor: theme.colors.primary,
     borderRadius: 28,
     paddingHorizontal: 20,
     paddingVertical: 16,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    shadowColor: colors.shadow,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
   fabText: {
-    color: colors.primaryText,
+    color: theme.colors.primaryText,
     fontSize: 16,
     fontWeight: "600",
   },
