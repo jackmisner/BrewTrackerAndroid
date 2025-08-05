@@ -242,7 +242,7 @@ export interface ApiCallOptions {
 }
 
 // Brew Session API types
-export type BrewSessionResponse = ApiResponse<BrewSession>;
+export type BrewSessionResponse = BrewSession;
 
 export interface BrewSessionsListResponse
   extends PaginatedResponse<BrewSession> {

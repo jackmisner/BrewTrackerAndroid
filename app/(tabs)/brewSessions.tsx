@@ -9,10 +9,11 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import ApiService from "../../src/services/API/apiService";
-import { BrewSession } from "../../src/types";
-import { useTheme } from "../../src/contexts/ThemeContext";
-import { brewSessionsStyles } from "../../src/styles/tabs/brewSessionsStyles";
+import ApiService from "@services/API/apiService";
+import { BrewSession } from "@src/types";
+import { useTheme } from "@contexts/ThemeContext";
+import { brewSessionsStyles } from "@styles/tabs/brewSessionsStyles";
+import { router } from "expo-router";
 
 export default function BrewSessionsScreen() {
   const theme = useTheme();
@@ -58,8 +59,10 @@ export default function BrewSessionsScreen() {
     activeTab === "active" ? activeBrewSessions : completedBrewSessions;
 
   const handleBrewSessionPress = (brewSession: BrewSession) => {
-    // TODO: Navigate to brew session detail screen when implemented
-    console.log("Navigate to brew session:", brewSession.session_id);
+    router.push({
+      pathname: "/(modals)/(brewSessions)/viewBrewSession",
+      params: { brewSessionId: brewSession.session_id },
+    });
   };
 
   const handleStartBrewing = () => {

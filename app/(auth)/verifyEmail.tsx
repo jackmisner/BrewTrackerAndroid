@@ -8,8 +8,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useAuth } from "../../src/contexts/AuthContext";
-import { verifyEmailStyles as styles } from "../../src/styles/auth/verifyEmailStyles";
+import { useAuth } from "@contexts/AuthContext";
+import { verifyEmailStyles as styles } from "@styles/auth/verifyEmailStyles";
 
 export default function VerifyEmailScreen() {
   const [verificationCode, setVerificationCode] = useState("");

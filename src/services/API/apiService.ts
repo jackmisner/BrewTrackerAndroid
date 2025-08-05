@@ -5,7 +5,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 import * as SecureStore from "expo-secure-store";
-import { API_CONFIG, STORAGE_KEYS, ENDPOINTS } from "../config";
+import { API_CONFIG, STORAGE_KEYS, ENDPOINTS } from "@services/config";
 import {
   // Authentication types
   LoginRequest,
@@ -59,7 +59,7 @@ import {
 
   // Common types
   ID,
-} from "../../types";
+} from "@src/types";
 
 // Create typed axios instance
 const api: AxiosInstance = axios.create({

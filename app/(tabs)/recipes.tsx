@@ -11,10 +11,10 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import ApiService from "../../src/services/API/apiService";
-import { Recipe } from "../../src/types";
-import { useTheme } from "../../src/contexts/ThemeContext";
-import { recipesStyles } from "../../src/styles/tabs/recipesStyles";
+import ApiService from "@services/API/apiService";
+import { Recipe } from "@src/types";
+import { useTheme } from "@contexts/ThemeContext";
+import { recipesStyles } from "@styles/tabs/recipesStyles";
 
 export default function RecipesScreen() {
   const theme = useTheme();
@@ -154,7 +154,11 @@ export default function RecipesScreen() {
           </View>
           {activeTab === "public" && (
             <View style={styles.metric}>
-              <MaterialIcons name="person" size={16} color={theme.colors.textSecondary} />
+              <MaterialIcons
+                name="person"
+                size={16}
+                color={theme.colors.textSecondary}
+              />
               <Text style={styles.authorText}>
                 {recipe.username === "Anonymous User"
                   ? "Anonymous"
@@ -169,7 +173,11 @@ export default function RecipesScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <MaterialIcons name="menu-book" size={64} color={theme.colors.textMuted} />
+      <MaterialIcons
+        name="menu-book"
+        size={64}
+        color={theme.colors.textMuted}
+      />
       <Text style={styles.emptyTitle}>
         {activeTab === "my" ? "No Recipes Yet" : "No Public Recipes Found"}
       </Text>
@@ -227,7 +235,11 @@ export default function RecipesScreen() {
         {/* Search bar for public recipes */}
         {activeTab === "public" && (
           <View style={styles.searchContainer}>
-            <MaterialIcons name="search" size={20} color={theme.colors.textSecondary} />
+            <MaterialIcons
+              name="search"
+              size={20}
+              color={theme.colors.textSecondary}
+            />
             <TextInput
               style={styles.searchInput}
               placeholder="Search public recipes..."
@@ -237,7 +249,11 @@ export default function RecipesScreen() {
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery("")}>
-                <MaterialIcons name="clear" size={20} color={theme.colors.textSecondary} />
+                <MaterialIcons
+                  name="clear"
+                  size={20}
+                  color={theme.colors.textSecondary}
+                />
               </TouchableOpacity>
             )}
           </View>

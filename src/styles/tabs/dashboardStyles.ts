@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { ThemeContextValue } from "../../contexts/ThemeContext";
+import { ThemeContextValue } from "@contexts/ThemeContext";
 
 export const dashboardStyles = (theme: ThemeContextValue) =>
   StyleSheet.create({
