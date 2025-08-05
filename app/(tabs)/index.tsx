@@ -27,51 +27,32 @@ export default function DashboardScreen() {
     queryKey: ["dashboard"],
     queryFn: async () => {
       try {
-        // Fetch data from multiple working endpoints - start with smaller page sizes to test
+        // Fetch data from multiple working endpoints - use same pattern as recipes tab
         const [recipesResponse, brewSessionsResponse, publicRecipesResponse] = await Promise.all([
-          ApiService.recipes.getAll(1, 50), // Use smaller page size first
-          ApiService.brewSessions.getAll(1, 50), // Use smaller page size first
+          ApiService.recipes.getAll(1, 5), // Get first 5 recipes like original
+          ApiService.brewSessions.getAll(1, 5), // Get first 5 brew sessions like original
           ApiService.recipes.getPublic(1, 1), // Get public recipes count (just need pagination info)
         ]);
 
-        // Transform the data to match expected dashboard format
-        const recipes = recipesResponse.data.data || [];
-        const brewSessions = brewSessionsResponse.data.data || [];
+        // Transform the data to match expected dashboard format - use same pattern as recipes tab
+        // The recipes tab accesses response.data.recipes, not response.data.data
+        const recipes = recipesResponse.data?.recipes || [];
+        const brewSessions = brewSessionsResponse.data?.brew_sessions || [];
         
-        // Sort recipes by creation date (most recent first) if we have data
-        const sortedRecipes = recipes.length > 0 
-          ? recipes
-              .sort((a, b) => 
-                new Date(b.created_at || "").getTime() - new Date(a.created_at || "").getTime()
-              )
-              .slice(0, 3) // Show 3 most recent
-          : [];
-
-        // Sort brew sessions by brew date (most recent first) if we have data
-        const activeSessions = brewSessions.length > 0
-          ? brewSessions
-              .filter(session => session.status === 'active' || session.status === 'fermenting')
-              .sort((a, b) => 
-                new Date(b.brew_date || "").getTime() - new Date(a.brew_date || "").getTime()
-              )
-              .slice(0, 3) // Show 3 most recent active sessions
-          : [];
-
-        // Calculate user stats - use pagination totals if available, otherwise count actual data
+        // Calculate user stats
         const userStats = {
           total_recipes: recipesResponse.data.pagination?.total || recipes.length,
           public_recipes: publicRecipesResponse.data.pagination?.total || 0,
           total_brew_sessions: brewSessionsResponse.data.pagination?.total || brewSessions.length,
-          active_brew_sessions: brewSessions.filter(session => 
-            session.status === 'active' || session.status === 'fermenting'
-          ).length,
+          active_brew_sessions: brewSessions.filter(session => session.status === 'active').length,
         };
+
 
         return {
           data: {
             user_stats: userStats,
-            recent_recipes: sortedRecipes,
-            active_brew_sessions: activeSessions,
+            recent_recipes: recipes.slice(0, 3), // Show 3 most recent
+            active_brew_sessions: brewSessions.filter(session => session.status === 'active').slice(0, 3),
           }
         };
       } catch (error) {
@@ -129,13 +110,13 @@ export default function DashboardScreen() {
   };
 
   const renderRecentRecipe = (recipe: Recipe) => {
-    if (!recipe || !recipe.id || !recipe.name) {
+    if (!recipe || !(recipe.id || recipe.recipe_id) || !recipe.name) {
       return null;
     }
 
     return (
       <TouchableOpacity
-        key={recipe.id}
+        key={recipe.id || recipe.recipe_id}
         style={styles.recentCard}
         onPress={() => handleRecipePress(recipe)}
       >
@@ -393,46 +374,45 @@ export default function DashboardScreen() {
       </View>
 
       {/* Recent Recipes */}
-      {recentRecipes.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Recipes</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.horizontalList}>
-              {recentRecipes
-                .filter(recipe => recipe && recipe.id)
-                .map(renderRecentRecipe)}
-            </View>
-          </ScrollView>
-        </View>
-      )}
-
-      {/* Active Brew Sessions */}
-      {activeBrewSessions.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Active Brew Sessions</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.horizontalList}>
-              {activeBrewSessions
-                .filter(session => session && session.id)
-                .map(renderActiveBrewSession)}
-            </View>
-          </ScrollView>
-        </View>
-      )}
-
-      {/* Empty state for no activity */}
-      {recentRecipes.length === 0 && activeBrewSessions.length === 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Recent Recipes</Text>
+        {recentRecipes.length > 0 ? (
+          <View style={styles.verticalList}>
+            {recentRecipes
+              .filter(recipe => recipe && (recipe.id || recipe.recipe_id))
+              .map(renderRecentRecipe)}
+          </View>
+        ) : (
           <View style={styles.emptyState}>
-            <MaterialIcons name="local-bar" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>No recent activity</Text>
+            <MaterialIcons name="menu-book" size={48} color="#ccc" />
+            <Text style={styles.emptyText}>No recipes yet</Text>
             <Text style={styles.emptySubtext}>
-              Your brewing journey starts here!
+              Create your first recipe to get started!
             </Text>
           </View>
-        </View>
-      )}
+        )}
+      </View>
+
+      {/* Recent Brew Sessions */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Recent Brew Sessions</Text>
+        {activeBrewSessions.length > 0 ? (
+          <View style={styles.verticalList}>
+            {activeBrewSessions
+              .filter(session => session && session.id)
+              .map(renderActiveBrewSession)}
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <MaterialIcons name="science" size={48} color="#ccc" />
+            <Text style={styles.emptyText}>No brew sessions yet</Text>
+            <Text style={styles.emptySubtext}>
+              Start your first brew session to track progress!
+            </Text>
+          </View>
+        )}
+      </View>
+
 
       <View style={styles.versionFooter}>
         <Text style={styles.versionText}>
@@ -568,12 +548,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     gap: 12,
   },
+  verticalList: {
+    flexDirection: "column",
+    gap: 12,
+  },
   recentCard: {
     backgroundColor: "#f8f8f8",
     borderRadius: 8,
     padding: 12,
-    width: 200,
-    marginRight: 12,
+    marginBottom: 8,
   },
   recentHeader: {
     flexDirection: "row",
