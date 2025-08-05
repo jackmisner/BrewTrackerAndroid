@@ -1,17 +1,18 @@
 import { StyleSheet } from "react-native";
-import { colors } from "../common/colors";
+import { ThemeContextValue } from "../../contexts/ThemeContext";
 
-export const brewSessionsStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.backgroundSecondary,
+export const brewSessionsStyles = (theme: ThemeContextValue) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.backgroundSecondary,
   },
   header: {
-    backgroundColor: colors.background,
+    backgroundColor: theme.colors.background,
     paddingTop: 8,
     paddingBottom: 12,
     paddingHorizontal: 16,
-    shadowColor: colors.shadow,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -19,7 +20,7 @@ export const brewSessionsStyles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: "row",
-    backgroundColor: colors.borderLight,
+    backgroundColor: theme.colors.borderLight,
     borderRadius: 8,
     padding: 4,
   },
@@ -31,8 +32,8 @@ export const brewSessionsStyles = StyleSheet.create({
     alignItems: "center",
   },
   activeTab: {
-    backgroundColor: colors.background,
-    shadowColor: colors.shadow,
+    backgroundColor: theme.colors.background,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -41,10 +42,10 @@ export const brewSessionsStyles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     fontWeight: "500",
-    color: colors.textSecondary,
+    color: theme.colors.textSecondary,
   },
   activeTabText: {
-    color: colors.primary,
+    color: theme.colors.primary,
     fontWeight: "600",
   },
   floatingButton: {
@@ -54,10 +55,10 @@ export const brewSessionsStyles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.primary,
+    backgroundColor: theme.colors.primary,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: colors.shadow,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -69,11 +70,11 @@ export const brewSessionsStyles = StyleSheet.create({
     paddingBottom: 100,
   },
   brewSessionCard: {
-    backgroundColor: colors.background,
+    backgroundColor: theme.colors.background,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: colors.shadow,
+    shadowColor: theme.colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -91,7 +92,7 @@ export const brewSessionsStyles = StyleSheet.create({
   brewSessionName: {
     fontSize: 18,
     fontWeight: "bold",
-    color: colors.text,
+    color: theme.colors.text,
     flex: 1,
     marginRight: 8,
   },
@@ -104,18 +105,18 @@ export const brewSessionsStyles = StyleSheet.create({
     gap: 4,
   },
   statusText: {
-    color: colors.primaryText,
+    color: theme.colors.primaryText,
     fontSize: 12,
     fontWeight: "600",
   },
   recipeName: {
     fontSize: 16,
-    color: colors.text,
+    color: theme.colors.text,
     marginBottom: 2,
   },
   recipeStyle: {
     fontSize: 14,
-    color: colors.primary,
+    color: theme.colors.primary,
     fontWeight: "500",
   },
   progressContainer: {
@@ -130,22 +131,22 @@ export const brewSessionsStyles = StyleSheet.create({
   progressLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: colors.text,
+    color: theme.colors.text,
   },
   stageText: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: theme.colors.textSecondary,
     textTransform: "capitalize",
   },
   progressBar: {
     height: 4,
-    backgroundColor: colors.borderLight,
+    backgroundColor: theme.colors.borderLight,
     borderRadius: 2,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
-    backgroundColor: colors.success,
+    backgroundColor: theme.colors.success,
     borderRadius: 2,
   },
   brewSessionMetrics: {
@@ -159,13 +160,13 @@ export const brewSessionsStyles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 12,
-    color: colors.textMuted,
+    color: theme.colors.textMuted,
     marginBottom: 2,
   },
   metricValue: {
     fontSize: 14,
     fontWeight: "600",
-    color: colors.text,
+    color: theme.colors.text,
   },
   loadingContainer: {
     flex: 1,
@@ -175,7 +176,7 @@ export const brewSessionsStyles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: theme.colors.textSecondary,
     marginTop: 16,
   },
   errorContainer: {
@@ -186,26 +187,26 @@ export const brewSessionsStyles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: colors.error,
+    color: theme.colors.error,
     marginTop: 16,
     marginBottom: 8,
     textAlign: "center",
   },
   errorSubtext: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: theme.colors.textSecondary,
     marginBottom: 24,
     textAlign: "center",
     paddingHorizontal: 16,
   },
   retryButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: colors.primaryText,
+    color: theme.colors.primaryText,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -218,13 +219,13 @@ export const brewSessionsStyles = StyleSheet.create({
   emptyTitle: {
     fontSize: 24,
     fontWeight: "bold",
-    color: colors.text,
+    color: theme.colors.text,
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: theme.colors.textSecondary,
     textAlign: "center",
     lineHeight: 22,
     marginBottom: 32,
@@ -232,14 +233,14 @@ export const brewSessionsStyles = StyleSheet.create({
   createButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.primary,
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
   },
   createButtonText: {
-    color: colors.primaryText,
+    color: theme.colors.primaryText,
     fontSize: 16,
     fontWeight: "600",
   },

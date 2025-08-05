@@ -13,9 +13,12 @@ import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import ApiService from "../../src/services/API/apiService";
 import { Recipe } from "../../src/types";
-import { recipesStyles as styles } from "../../src/styles/tabs/recipesStyles";
+import { useTheme } from "../../src/contexts/ThemeContext";
+import { recipesStyles } from "../../src/styles/tabs/recipesStyles";
 
 export default function RecipesScreen() {
+  const theme = useTheme();
+  const styles = recipesStyles(theme);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"my" | "public">("my");
   const [refreshing, setRefreshing] = useState(false);
@@ -151,7 +154,7 @@ export default function RecipesScreen() {
           </View>
           {activeTab === "public" && (
             <View style={styles.metric}>
-              <MaterialIcons name="person" size={16} color="#666" />
+              <MaterialIcons name="person" size={16} color={theme.colors.textSecondary} />
               <Text style={styles.authorText}>
                 {recipe.username === "Anonymous User"
                   ? "Anonymous"
@@ -166,7 +169,7 @@ export default function RecipesScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <MaterialIcons name="menu-book" size={64} color="#ccc" />
+      <MaterialIcons name="menu-book" size={64} color={theme.colors.textMuted} />
       <Text style={styles.emptyTitle}>
         {activeTab === "my" ? "No Recipes Yet" : "No Public Recipes Found"}
       </Text>
@@ -224,7 +227,7 @@ export default function RecipesScreen() {
         {/* Search bar for public recipes */}
         {activeTab === "public" && (
           <View style={styles.searchContainer}>
-            <MaterialIcons name="search" size={20} color="#666" />
+            <MaterialIcons name="search" size={20} color={theme.colors.textSecondary} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search public recipes..."
@@ -234,7 +237,7 @@ export default function RecipesScreen() {
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery("")}>
-                <MaterialIcons name="clear" size={20} color="#666" />
+                <MaterialIcons name="clear" size={20} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             )}
           </View>
@@ -254,12 +257,12 @@ export default function RecipesScreen() {
       {/* Recipe list */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f4511e" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Loading recipes...</Text>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
-          <MaterialIcons name="error" size={48} color="#f44336" />
+          <MaterialIcons name="error" size={48} color={theme.colors.error} />
           <Text style={styles.errorText}>Backend Not Available</Text>
           <Text style={styles.errorSubtext}>
             Recipes require a backend connection. The app will show empty states

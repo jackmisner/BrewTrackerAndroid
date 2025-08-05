@@ -12,12 +12,15 @@ import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 import { useAuth } from "../../src/contexts/AuthContext";
+import { useTheme } from "../../src/contexts/ThemeContext";
 import ApiService from "../../src/services/API/apiService";
 import { Recipe, BrewSession } from "../../src/types";
-import { dashboardStyles as styles } from "../../src/styles/tabs/dashboardStyles";
+import { dashboardStyles } from "../../src/styles/tabs/dashboardStyles";
 
 export default function DashboardScreen() {
   const { user } = useAuth();
+  const theme = useTheme();
+  const styles = dashboardStyles(theme);
   const [refreshing, setRefreshing] = useState(false);
 
   // Handle pull to refresh
@@ -145,7 +148,7 @@ export default function DashboardScreen() {
         onPress={() => handleRecipePress(recipe)}
       >
         <View style={styles.recentHeader}>
-          <MaterialIcons name="menu-book" size={20} color="#f4511e" />
+          <MaterialIcons name="menu-book" size={20} color={theme.colors.primary} />
           <Text style={styles.recentTitle} numberOfLines={1}>
             {recipe.name}
           </Text>
@@ -202,7 +205,7 @@ export default function DashboardScreen() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#f4511e" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.loadingText}>Loading dashboard...</Text>
       </View>
     );
@@ -231,13 +234,13 @@ export default function DashboardScreen() {
 
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <MaterialIcons name="menu-book" size={32} color="#f4511e" />
+            <MaterialIcons name="menu-book" size={32} color={theme.colors.primary} />
             <Text style={styles.statNumber}>{fallbackStats.total_recipes}</Text>
             <Text style={styles.statLabel}>Recipes</Text>
           </View>
 
           <View style={styles.statCard}>
-            <MaterialIcons name="science" size={32} color="#f4511e" />
+            <MaterialIcons name="science" size={32} color={theme.colors.primary} />
             <Text style={styles.statNumber}>
               {fallbackStats.active_brew_sessions}
             </Text>
@@ -245,7 +248,7 @@ export default function DashboardScreen() {
           </View>
 
           <View style={styles.statCard}>
-            <MaterialIcons name="public" size={32} color="#f4511e" />
+            <MaterialIcons name="public" size={32} color={theme.colors.primary} />
             <Text style={styles.statNumber}>
               {fallbackStats.public_recipes}
             </Text>
@@ -260,7 +263,7 @@ export default function DashboardScreen() {
             style={styles.actionCard}
             onPress={handleCreateRecipe}
           >
-            <MaterialIcons name="add" size={24} color="#f4511e" />
+            <MaterialIcons name="add" size={24} color={theme.colors.primary} />
             <View style={styles.actionContent}>
               <Text style={styles.actionTitle}>Create New Recipe</Text>
               <Text style={styles.actionSubtitle}>
@@ -274,7 +277,7 @@ export default function DashboardScreen() {
             style={styles.actionCard}
             onPress={handleStartBrewSession}
           >
-            <MaterialIcons name="play-arrow" size={24} color="#f4511e" />
+            <MaterialIcons name="play-arrow" size={24} color={theme.colors.primary} />
             <View style={styles.actionContent}>
               <Text style={styles.actionTitle}>Start Brew Session</Text>
               <Text style={styles.actionSubtitle}>
@@ -288,7 +291,7 @@ export default function DashboardScreen() {
             style={styles.actionCard}
             onPress={handleBrowsePublicRecipes}
           >
-            <MaterialIcons name="public" size={24} color="#f4511e" />
+            <MaterialIcons name="public" size={24} color={theme.colors.primary} />
             <View style={styles.actionContent}>
               <Text style={styles.actionTitle}>Browse Public Recipes</Text>
               <Text style={styles.actionSubtitle}>
@@ -337,13 +340,13 @@ export default function DashboardScreen() {
 
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
-          <MaterialIcons name="menu-book" size={32} color="#f4511e" />
+          <MaterialIcons name="menu-book" size={32} color={theme.colors.primary} />
           <Text style={styles.statNumber}>{stats?.total_recipes || 0}</Text>
           <Text style={styles.statLabel}>Recipes</Text>
         </View>
 
         <View style={styles.statCard}>
-          <MaterialIcons name="science" size={32} color="#f4511e" />
+          <MaterialIcons name="science" size={32} color={theme.colors.primary} />
           <Text style={styles.statNumber}>
             {stats?.active_brew_sessions || 0}
           </Text>
@@ -351,7 +354,7 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.statCard}>
-          <MaterialIcons name="public" size={32} color="#f4511e" />
+          <MaterialIcons name="public" size={32} color={theme.colors.primary} />
           <Text style={styles.statNumber}>{stats?.public_recipes || 0}</Text>
           <Text style={styles.statLabel}>Public</Text>
         </View>
@@ -364,7 +367,7 @@ export default function DashboardScreen() {
           style={styles.actionCard}
           onPress={handleCreateRecipe}
         >
-          <MaterialIcons name="add" size={24} color="#f4511e" />
+          <MaterialIcons name="add" size={24} color={theme.colors.primary} />
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>Create New Recipe</Text>
             <Text style={styles.actionSubtitle}>
@@ -378,7 +381,7 @@ export default function DashboardScreen() {
           style={styles.actionCard}
           onPress={handleStartBrewSession}
         >
-          <MaterialIcons name="play-arrow" size={24} color="#f4511e" />
+          <MaterialIcons name="play-arrow" size={24} color={theme.colors.primary} />
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>Start Brew Session</Text>
             <Text style={styles.actionSubtitle}>Begin tracking a new brew</Text>
@@ -390,7 +393,7 @@ export default function DashboardScreen() {
           style={styles.actionCard}
           onPress={handleBrowsePublicRecipes}
         >
-          <MaterialIcons name="public" size={24} color="#f4511e" />
+          <MaterialIcons name="public" size={24} color={theme.colors.primary} />
           <View style={styles.actionContent}>
             <Text style={styles.actionTitle}>Browse Public Recipes</Text>
             <Text style={styles.actionSubtitle}>

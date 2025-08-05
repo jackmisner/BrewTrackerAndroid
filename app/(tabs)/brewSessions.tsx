@@ -11,9 +11,12 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import ApiService from "../../src/services/API/apiService";
 import { BrewSession } from "../../src/types";
-import { brewSessionsStyles as styles } from "../../src/styles/tabs/brewSessionsStyles";
+import { useTheme } from "../../src/contexts/ThemeContext";
+import { brewSessionsStyles } from "../../src/styles/tabs/brewSessionsStyles";
 
 export default function BrewSessionsScreen() {
+  const theme = useTheme();
+  const styles = brewSessionsStyles(theme);
   const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
   const [refreshing, setRefreshing] = useState(false);
 
