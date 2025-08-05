@@ -10,9 +10,9 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import Constants from "expo-constants";
-import { useAuth } from "../../src/contexts/AuthContext";
-import { useTheme } from "../../src/contexts/ThemeContext";
-import { profileStyles } from "../../src/styles/tabs/profileStyles";
+import { useAuth } from "@contexts/AuthContext";
+import { useTheme } from "@contexts/ThemeContext";
+import { profileStyles } from "@styles/tabs/profileStyles";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();

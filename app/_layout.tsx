@@ -2,9 +2,9 @@ import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { Stack } from "expo-router";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { AuthProvider } from "../src/contexts/AuthContext";
-import { ThemeProvider, useTheme } from "../src/contexts/ThemeContext";
-import { queryClient } from "../src/services/API/queryClient";
+import { AuthProvider } from "@contexts/AuthContext";
+import { ThemeProvider, useTheme } from "@contexts/ThemeContext";
+import { queryClient } from "@services/API/queryClient";
 
 // Component to handle StatusBar with theme
 const ThemedStatusBar = () => {

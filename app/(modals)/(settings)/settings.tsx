@@ -10,8 +10,8 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Constants from "expo-constants";
-import { useTheme, ThemeMode } from "../../../src/contexts/ThemeContext";
-import { settingsStyles } from "../../../src/styles/modals/settingsStyles";
+import { useTheme, ThemeMode } from "@contexts/ThemeContext";
+import { settingsStyles } from "@styles/modals/settingsStyles";
 
 export default function SettingsScreen() {
   const themeContext = useTheme();

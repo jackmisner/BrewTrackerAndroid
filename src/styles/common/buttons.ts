@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { colors } from "./colors";
+import { colors } from "@styles/common/colors";
 
 /**
  * Common button styles used throughout the app

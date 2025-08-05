@@ -9,10 +9,10 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import ApiService from "../../src/services/API/apiService";
-import { BrewSession } from "../../src/types";
-import { useTheme } from "../../src/contexts/ThemeContext";
-import { brewSessionsStyles } from "../../src/styles/tabs/brewSessionsStyles";
+import ApiService from "@services/API/apiService";
+import { BrewSession } from "@src/types";
+import { useTheme } from "@contexts/ThemeContext";
+import { brewSessionsStyles } from "@styles/tabs/brewSessionsStyles";
 import { router } from "expo-router";
 
 export default function BrewSessionsScreen() {

@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
-import { colors } from "../common/colors";
-import { buttonStyles } from "../common/buttons";
+import { colors } from "@styles/common/colors";
+import { buttonStyles } from "@styles/common/buttons";
 
 export const loginStyles = StyleSheet.create({
   container: {

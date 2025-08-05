@@ -11,8 +11,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useAuth } from "../../src/contexts/AuthContext";
-import { registerStyles as styles } from "../../src/styles/auth/registerStyles";
+import { useAuth } from "@contexts/AuthContext";
+import { registerStyles as styles } from "@styles/auth/registerStyles";
 
 export default function RegisterScreen() {
   const [username, setUsername] = useState("");

@@ -11,10 +11,10 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import ApiService from "../../src/services/API/apiService";
-import { Recipe } from "../../src/types";
-import { useTheme } from "../../src/contexts/ThemeContext";
-import { recipesStyles } from "../../src/styles/tabs/recipesStyles";
+import ApiService from "@services/API/apiService";
+import { Recipe } from "@src/types";
+import { useTheme } from "@contexts/ThemeContext";
+import { recipesStyles } from "@styles/tabs/recipesStyles";
 
 export default function RecipesScreen() {
   const theme = useTheme();

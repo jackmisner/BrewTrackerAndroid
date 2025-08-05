@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { ThemeContextValue } from "../../contexts/ThemeContext";
+import { ThemeContextValue } from "@contexts/ThemeContext";
 
 export const viewBrewSessionStyles = (theme: ThemeContextValue) =>
   StyleSheet.create({
@@ -114,7 +114,8 @@ export const viewBrewSessionStyles = (theme: ThemeContextValue) =>
       borderRadius: 8,
       padding: 16,
       alignItems: "center",
-      minWidth: "30%",
+      // Use flexBasis for percentage sizing
+      flexBasis: "30%",
       flex: 1,
     },
     metricLabel: {
@@ -160,10 +161,9 @@ export const viewBrewSessionStyles = (theme: ThemeContextValue) =>
     ratingContainer: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 4,
     },
     ratingStar: {
-      marginRight: 2,
+      marginRight: 4,
     },
     ratingText: {
       fontSize: 16,

@@ -11,11 +11,11 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import Constants from "expo-constants";
-import { useAuth } from "../../src/contexts/AuthContext";
-import { useTheme } from "../../src/contexts/ThemeContext";
-import ApiService from "../../src/services/API/apiService";
-import { Recipe, BrewSession } from "../../src/types";
-import { dashboardStyles } from "../../src/styles/tabs/dashboardStyles";
+import { useAuth } from "@contexts/AuthContext";
+import { useTheme } from "@contexts/ThemeContext";
+import ApiService from "@services/API/apiService";
+import { Recipe, BrewSession } from "@src/types";
+import { dashboardStyles } from "@styles/tabs/dashboardStyles";
 
 export default function DashboardScreen() {
   const { user } = useAuth();

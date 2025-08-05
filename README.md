@@ -170,8 +170,8 @@ The app uses a centralized styling system with theme support:
 #### Theme-Aware Style Pattern:
 
 ```typescript
-import { useTheme } from "../../../src/contexts/ThemeContext";
-import { viewBrewSessionStyles } from "../../../src/styles/modals/viewBrewSessionStyles";
+import { useTheme } from "@contexts/ThemeContext";
+import { viewBrewSessionStyles } from "@styles/modals/viewBrewSessionStyles";
 
 const theme = useTheme();
 const styles = viewBrewSessionStyles(theme);
@@ -211,18 +211,32 @@ Configure in `.env`:
 
 The app connects to the BrewTracker Flask backend. Ensure the backend is running and accessible from your mobile device's network.
 
-For local development, use your computer's network IP address instead of `localhost`:
+#### Network Configuration
+
+Flask defaults to port 5000. If you've changed the backend port, update both the Flask command and API URL accordingly.
+
+**For Physical Devices:** Use your computer's network IP address instead of `localhost`:
 
 ```
 EXPO_PUBLIC_API_URL=http://192.168.1.100:5000/api
 ```
 
-**Important:** The backend must be started with `--host=0.0.0.0` to accept connections from mobile devices:
+**For Android Emulators:** You can use the special IP address `10.0.2.2` which maps to the host machine's `localhost`:
+
+```
+EXPO_PUBLIC_API_URL=http://10.0.2.2:5000/api
+```
+
+**Important Setup Steps:**
+
+1. Start the backend with `--host=0.0.0.0` to accept connections from mobile devices:
 
 ```bash
 # In the BrewTracker backend directory
 flask run --host=0.0.0.0
 ```
+
+2. **Firewall Configuration:** When testing on physical devices, ensure port 5000 (or your custom port) is open in your computer's firewall settings to allow incoming connections from mobile devices on your network.
 
 ## Building for Production
 

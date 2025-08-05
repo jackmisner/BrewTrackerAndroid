@@ -10,10 +10,10 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import ApiService from "../../../src/services/API/apiService";
+import ApiService from "@services/API/apiService";
 import { BrewSession, BrewSessionStatus } from "@/src/types";
-import { viewBrewSessionStyles } from "../../../src/styles/modals/viewBrewSessionStyles";
-import { useTheme } from "../../../src/contexts/ThemeContext";
+import { viewBrewSessionStyles } from "@styles/modals/viewBrewSessionStyles";
+import { useTheme } from "@contexts/ThemeContext";
 
 export default function ViewBrewSession() {
   const { brewSessionId } = useLocalSearchParams<{ brewSessionId: string }>();
@@ -68,6 +68,7 @@ export default function ViewBrewSession() {
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return "Not set";
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid date";
     return date.toLocaleDateString();
   };
 
@@ -106,7 +107,7 @@ export default function ViewBrewSession() {
   /**
    * Render a metric section (ABV, OG, FG, etc.)
    * Reusable component for displaying brewing metrics
-   */
+   * **/
   const renderMetric = (
     label: string,
     value: string | number | undefined,
@@ -115,13 +116,17 @@ export default function ViewBrewSession() {
     <View style={styles.metricCard}>
       <Text style={styles.metricLabel}>{label}</Text>
       <Text style={styles.metricValue}>
-        {value !== undefined && value !== null
-          ? `${typeof value === "number" ? formatMetric(value, label === "ABV" ? 1 : label.includes("G") ? 3 : 0) : value}${unit || ""}`
-          : "—"}
+        {(() => {
+          if (value === undefined || value === null) return "—";
+          if (typeof value === "number") {
+            const decimals = label === "ABV" ? 1 : label.includes("G") ? 3 : 0;
+            return `${formatMetric(value, decimals)}${unit || ""}`;
+          }
+          return `${value}${unit || ""}`;
+        })()}
       </Text>
     </View>
   );
-
   /**
    * Loading State
    * Show spinner and loading text while fetching data
@@ -312,7 +317,9 @@ export default function ViewBrewSession() {
                   name="star"
                   size={24}
                   color={
-                    star <= brewSession.batch_rating! ? "#FFD700" : "#E0E0E0"
+                    star <= (brewSession.batch_rating || 0)
+                      ? "#FFD700"
+                      : "#E0E0E0"
                   }
                   style={styles.ratingStar}
                 />
@@ -335,9 +342,11 @@ export default function ViewBrewSession() {
               <Text style={styles.metadataText}>
                 Latest reading:{" "}
                 {formatDate(
-                  brewSession.fermentation_data[
-                    brewSession.fermentation_data.length - 1
-                  ]?.date
+                  brewSession.fermentation_data.length > 0
+                    ? brewSession.fermentation_data[
+                        brewSession.fermentation_data.length - 1
+                      ]?.date
+                    : undefined
                 )}
               </Text>
             </View>
