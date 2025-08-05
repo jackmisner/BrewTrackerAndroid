@@ -18,7 +18,7 @@ import { Recipe, BrewSession } from "../../src/types";
 export default function DashboardScreen() {
   const { user } = useAuth();
 
-  // Query for dashboard data
+  // Query for dashboard data by combining multiple endpoints
   const {
     data: dashboardData,
     isLoading,
@@ -26,8 +26,58 @@ export default function DashboardScreen() {
   } = useQuery({
     queryKey: ["dashboard"],
     queryFn: async () => {
-      const response = await ApiService.dashboard.getData();
-      return response.data;
+      try {
+        // Fetch data from multiple working endpoints - start with smaller page sizes to test
+        const [recipesResponse, brewSessionsResponse, publicRecipesResponse] = await Promise.all([
+          ApiService.recipes.getAll(1, 50), // Use smaller page size first
+          ApiService.brewSessions.getAll(1, 50), // Use smaller page size first
+          ApiService.recipes.getPublic(1, 1), // Get public recipes count (just need pagination info)
+        ]);
+
+        // Transform the data to match expected dashboard format
+        const recipes = recipesResponse.data.data || [];
+        const brewSessions = brewSessionsResponse.data.data || [];
+        
+        // Sort recipes by creation date (most recent first) if we have data
+        const sortedRecipes = recipes.length > 0 
+          ? recipes
+              .sort((a, b) => 
+                new Date(b.created_at || "").getTime() - new Date(a.created_at || "").getTime()
+              )
+              .slice(0, 3) // Show 3 most recent
+          : [];
+
+        // Sort brew sessions by brew date (most recent first) if we have data
+        const activeSessions = brewSessions.length > 0
+          ? brewSessions
+              .filter(session => session.status === 'active' || session.status === 'fermenting')
+              .sort((a, b) => 
+                new Date(b.brew_date || "").getTime() - new Date(a.brew_date || "").getTime()
+              )
+              .slice(0, 3) // Show 3 most recent active sessions
+          : [];
+
+        // Calculate user stats - use pagination totals if available, otherwise count actual data
+        const userStats = {
+          total_recipes: recipesResponse.data.pagination?.total || recipes.length,
+          public_recipes: publicRecipesResponse.data.pagination?.total || 0,
+          total_brew_sessions: brewSessionsResponse.data.pagination?.total || brewSessions.length,
+          active_brew_sessions: brewSessions.filter(session => 
+            session.status === 'active' || session.status === 'fermenting'
+          ).length,
+        };
+
+        return {
+          data: {
+            user_stats: userStats,
+            recent_recipes: sortedRecipes,
+            active_brew_sessions: activeSessions,
+          }
+        };
+      } catch (error) {
+        console.error("Dashboard data fetch error:", error);
+        throw error;
+      }
     },
     retry: 1, // Only retry once to avoid excessive API calls
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
@@ -65,6 +115,7 @@ export default function DashboardScreen() {
   const getStatusColor = (status: BrewSession["status"]) => {
     switch (status) {
       case "active":
+      case "fermenting":
         return "#4CAF50";
       case "paused":
         return "#FF9800";

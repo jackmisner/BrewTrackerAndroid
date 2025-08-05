@@ -2,7 +2,7 @@ import { ID } from "./common";
 import { Recipe } from "./recipe";
 
 // Brew session status types
-export type BrewSessionStatus = "active" | "completed" | "failed" | "paused";
+export type BrewSessionStatus = "active" | "fermenting" | "completed" | "failed" | "paused";
 export type FermentationStage =
   | "primary"
   | "secondary"
