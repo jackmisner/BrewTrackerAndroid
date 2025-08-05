@@ -4,12 +4,12 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Alert,
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../src/contexts/AuthContext";
+import { verifyEmailStyles as styles } from "../../src/styles/auth/verifyEmailStyles";
 
 export default function VerifyEmailScreen() {
   const [verificationCode, setVerificationCode] = useState("");
@@ -29,7 +29,7 @@ export default function VerifyEmailScreen() {
   useEffect(() => {
     // Check verification status on load
     checkVerificationStatus();
-  }, []);
+  }, [checkVerificationStatus]);
 
   useEffect(() => {
     // If user becomes verified, navigate to main app
@@ -164,96 +164,3 @@ export default function VerifyEmailScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    padding: 20,
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#f4511e",
-    marginBottom: 16,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  email: {
-    fontWeight: "600",
-    color: "#333",
-  },
-  form: {
-    width: "100%",
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 16,
-    fontSize: 18,
-    backgroundColor: "#f9f9f9",
-    letterSpacing: 1,
-  },
-  button: {
-    borderRadius: 8,
-    padding: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  primaryButton: {
-    backgroundColor: "#f4511e",
-  },
-  secondaryButton: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#f4511e",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  secondaryButtonText: {
-    color: "#f4511e",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  divider: {
-    alignItems: "center",
-    marginVertical: 20,
-  },
-  dividerText: {
-    color: "#666",
-    fontSize: 14,
-  },
-  errorText: {
-    color: "#ff4444",
-    fontSize: 14,
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  linkButton: {
-    alignItems: "center",
-    paddingVertical: 12,
-    marginBottom: 8,
-  },
-  linkText: {
-    color: "#f4511e",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-});

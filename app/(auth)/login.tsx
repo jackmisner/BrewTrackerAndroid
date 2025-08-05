@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -13,6 +12,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../src/contexts/AuthContext";
+import { loginStyles as styles } from "../../src/styles/auth/loginStyles";
 
 export default function LoginScreen() {
   const [username, setUsername] = useState("");
@@ -102,7 +102,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <View style={styles.divider}>
-            <Text style={styles.dividerText}>Don't have an account?</Text>
+            <Text style={styles.dividerText}>Don&apos;t have an account?</Text>
           </View>
 
           <TouchableOpacity
@@ -117,82 +117,3 @@ export default function LoginScreen() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: "center",
-    padding: 20,
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#f4511e",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-  },
-  form: {
-    width: "100%",
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: "#f9f9f9",
-  },
-  button: {
-    borderRadius: 8,
-    padding: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  primaryButton: {
-    backgroundColor: "#f4511e",
-  },
-  secondaryButton: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#f4511e",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  secondaryButtonText: {
-    color: "#f4511e",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  divider: {
-    alignItems: "center",
-    marginVertical: 20,
-  },
-  dividerText: {
-    color: "#666",
-    fontSize: 14,
-  },
-  errorText: {
-    color: "#ff4444",
-    fontSize: 14,
-    marginBottom: 12,
-    textAlign: "center",
-  },
-});

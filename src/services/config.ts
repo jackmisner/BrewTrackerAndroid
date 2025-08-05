@@ -1,5 +1,3 @@
-import Constants from "expo-constants";
-
 // API Configuration
 export const API_CONFIG = {
   // Use environment variable or fallback to local development

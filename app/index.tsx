@@ -19,7 +19,7 @@ export default function Index() {
       if (user.email_verified) {
         router.replace("/(tabs)");
       } else {
-        router.replace("/(auth)/verify-email");
+        router.replace("/(auth)/verifyEmail");
       }
     } else {
       router.replace("/(auth)/login");

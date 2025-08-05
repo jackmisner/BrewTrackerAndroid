@@ -1,7 +1,7 @@
 import { ID } from "./common";
 
 // Recipe types
-export type IngredientType = "fermentable" | "hop" | "yeast" | "other";
+export type IngredientType = "grain" | "hop" | "yeast" | "other";
 export type BatchSizeUnit = "gal" | "l";
 export type IngredientUnit =
   | "lb"
@@ -23,7 +23,7 @@ export interface RecipeIngredient {
   amount: number;
   unit: IngredientUnit;
 
-  // Fermentable-specific
+  // Grain-specific
   potential?: number;
   color?: number;
   grain_type?: string;
@@ -67,10 +67,12 @@ export interface Recipe {
   description: string;
   batch_size: number;
   batch_size_unit: BatchSizeUnit;
+  unit_system: "imperial" | "metric";
   boil_time: number;
   efficiency: number;
   mash_temperature: number;
   mash_temp_unit: "F" | "C";
+  mash_time?: number;
   is_public: boolean;
   notes: string;
   ingredients: RecipeIngredient[];
@@ -93,7 +95,7 @@ export interface Recipe {
 
   // User context
   username?: string;
-  author_id?: ID;
+  user_id?: ID;
   clone_count?: number;
   brew_count?: number;
 }
@@ -105,10 +107,12 @@ export interface RecipeFormData {
   description: string;
   batch_size: number;
   batch_size_unit: BatchSizeUnit;
+  unit_system: "imperial" | "metric";
   boil_time: number;
   efficiency: number;
   mash_temperature: number;
   mash_temp_unit: "F" | "C";
+  mash_time?: number;
   is_public: boolean;
   notes: string;
   ingredients: RecipeIngredient[];
@@ -130,7 +134,7 @@ export interface RecipeSearchFilters {
 
 // Ingredients grouped by type
 export interface IngredientsByType {
-  fermentable: RecipeIngredient[];
+  grain: RecipeIngredient[];
   hop: RecipeIngredient[];
   yeast: RecipeIngredient[];
   other: RecipeIngredient[];

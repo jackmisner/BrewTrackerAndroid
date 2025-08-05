@@ -30,7 +30,7 @@ export default function AuthLayout() {
         }}
       />
       <Stack.Screen
-        name="verify-email"
+        name="verifyEmail"
         options={{
           title: "Verify Email",
           headerShown: false,

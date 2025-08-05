@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -12,6 +11,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import Constants from "expo-constants";
 import { useAuth } from "../../src/contexts/AuthContext";
+import { profileStyles as styles } from "../../src/styles/tabs/profileStyles";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -25,7 +25,6 @@ export default function ProfileScreen() {
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
-
   };
 
   const handleLogout = async () => {
@@ -99,91 +98,3 @@ export default function ProfileScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  header: {
-    backgroundColor: "#fff",
-    alignItems: "center",
-    padding: 24,
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#f0f0f0",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  username: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 4,
-  },
-  email: {
-    fontSize: 16,
-    color: "#666",
-  },
-  verificationBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff3e0",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginTop: 8,
-    gap: 4,
-  },
-  verificationText: {
-    fontSize: 12,
-    color: "#ff9800",
-    fontWeight: "500",
-  },
-  section: {
-    backgroundColor: "#fff",
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  menuText: {
-    flex: 1,
-    fontSize: 16,
-    color: "#333",
-    marginLeft: 12,
-  },
-  logoutText: {
-    color: "#f44336",
-  },
-  footer: {
-    alignItems: "center",
-    padding: 24,
-    marginTop: 16,
-  },
-  version: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 4,
-  },
-  copyright: {
-    fontSize: 12,
-    color: "#999",
-  },
-});

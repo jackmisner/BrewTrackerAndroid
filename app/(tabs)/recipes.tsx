@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   FlatList,
   RefreshControl,
@@ -14,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import ApiService from "../../src/services/API/apiService";
 import { Recipe } from "../../src/types";
+import { recipesStyles as styles } from "../../src/styles/tabs/recipesStyles";
 
 export default function RecipesScreen() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -83,8 +83,10 @@ export default function RecipesScreen() {
   };
 
   const handleRecipePress = (recipe: Recipe) => {
-    // TODO: Navigate to recipe detail screen when implemented
-    console.log("Navigate to recipe:", recipe.id);
+    router.push({
+      pathname: "/(modals)/(recipes)/viewRecipe",
+      params: { recipe_id: recipe.recipe_id },
+    });
   };
 
   const handleCreateRecipe = () => {
@@ -286,218 +288,3 @@ export default function RecipesScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  header: {
-    backgroundColor: "#fff",
-    paddingTop: 8,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  tabContainer: {
-    flexDirection: "row",
-    backgroundColor: "#f0f0f0",
-    borderRadius: 8,
-    padding: 4,
-    marginBottom: 12,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-    alignItems: "center",
-  },
-  activeTab: {
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#666",
-  },
-  activeTabText: {
-    color: "#f4511e",
-    fontWeight: "600",
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f8f8f8",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: "#333",
-  },
-  floatingButton: {
-    position: "absolute",
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#f4511e",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    zIndex: 1000,
-  },
-  listContainer: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  recipeCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  recipeHeader: {
-    marginBottom: 8,
-  },
-  recipeName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 4,
-  },
-  recipeStyle: {
-    fontSize: 14,
-    color: "#f4511e",
-    fontWeight: "500",
-  },
-  recipeDescription: {
-    fontSize: 14,
-    color: "#666",
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  recipeMetrics: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  metric: {
-    alignItems: "center",
-    minWidth: 50,
-  },
-  metricLabel: {
-    fontSize: 12,
-    color: "#999",
-    marginBottom: 2,
-  },
-  metricValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-  },
-  authorText: {
-    fontSize: 12,
-    color: "#666",
-    marginLeft: 4,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: "#666",
-    marginTop: 16,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#f44336",
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  errorSubtext: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 24,
-    textAlign: "center",
-    paddingHorizontal: 16,
-  },
-  retryButton: {
-    backgroundColor: "#f4511e",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-  },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 32,
-  },
-  createButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f4511e",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  createButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});
