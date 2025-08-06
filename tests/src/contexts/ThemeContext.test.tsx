@@ -19,40 +19,41 @@ jest.mock('react-native', () => ({
 }));
 
 // Mock color imports
+// Mock color imports with actual values
 jest.mock('@styles/common/colors', () => ({
   lightColors: {
-    primary: '#007AFF',
-    primaryText: '#FFFFFF',
-    background: '#FFFFFF',
-    backgroundSecondary: '#F8F9FA',
-    text: '#000000',
-    textSecondary: '#666666',
-    textMuted: '#999999',
-    border: '#E1E4E8',
-    borderLight: '#F1F3F4',
-    error: '#FF3B30',
-    success: '#34C759',
-    warning: '#FF9500',
-    info: '#007AFF',
-    inputBackground: '#F8F9FA',
-    shadow: 'rgba(0,0,0,0.1)',
+    primary: '#f4511e',
+    primaryText: '#fff',
+    background: '#fff',
+    backgroundSecondary: '#f9f9f9',
+    text: '#333',
+    textSecondary: '#666',
+    textMuted: '#999',
+    border: '#ddd',
+    borderLight: '#e0e0e0',
+    error: '#ff4444',
+    success: '#4caf50',
+    warning: '#ff9800',
+    info: '#2196f3',
+    inputBackground: '#f9f9f9',
+    shadow: '#000',
   },
   darkColors: {
-    primary: '#0A84FF',
-    primaryText: '#FFFFFF',
-    background: '#000000',
-    backgroundSecondary: '#1C1C1E',
-    text: '#FFFFFF',
-    textSecondary: '#8E8E93',
-    textMuted: '#636366',
-    border: '#38383A',
-    borderLight: '#2C2C2E',
-    error: '#FF453A',
-    success: '#32D74B',
-    warning: '#FF9F0A',
-    info: '#64D2FF',
-    inputBackground: '#1C1C1E',
-    shadow: 'rgba(255,255,255,0.1)',
+    primary: '#f4511e',
+    primaryText: '#fff',
+    background: '#121212',
+    backgroundSecondary: '#1e1e1e',
+    text: '#ffffff',
+    textSecondary: '#cccccc',
+    textMuted: '#999999',
+    border: '#333333',
+    borderLight: '#444444',
+    error: '#ff6b6b',
+    success: '#51cf66',
+    warning: '#ffa726',
+    info: '#42a5f5',
+    inputBackground: '#242424',
+    shadow: '#000',
   },
 }));
 
@@ -83,11 +84,11 @@ describe('ThemeContext', () => {
       expect(lightColors).toBeDefined();
       expect(darkColors).toBeDefined();
       
-      expect(lightColors.primary).toBe('#007AFF');
-      expect(darkColors.primary).toBe('#0A84FF');
-      
-      expect(lightColors.background).toBe('#FFFFFF');
-      expect(darkColors.background).toBe('#000000');
+      expect(lightColors.primary).toBe('#f4511e');
+      expect(darkColors.primary).toBe('#f4511e');
+
+      expect(lightColors.background).toBe('#fff');
+      expect(darkColors.background).toBe('#121212');
     });
   });
 
@@ -160,11 +161,11 @@ describe('ThemeContext', () => {
       const lightThemeColors = getThemeColors('light');
       const darkThemeColors = getThemeColors('dark');
       
-      expect(lightThemeColors.background).toBe('#FFFFFF');
-      expect(darkThemeColors.background).toBe('#000000');
-      
-      expect(lightThemeColors.text).toBe('#000000');
-      expect(darkThemeColors.text).toBe('#FFFFFF');
+      expect(lightThemeColors.background).toBe('#fff');
+      expect(darkThemeColors.background).toBe('#121212');
+
+      expect(lightThemeColors.text).toBe('#333');
+      expect(darkThemeColors.text).toBe('#ffffff');
     });
   });
 
