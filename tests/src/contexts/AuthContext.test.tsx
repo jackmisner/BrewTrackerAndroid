@@ -1,290 +1,484 @@
-// Mock dependencies first
-import React from 'react';
-import ApiService from '@services/API/apiService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React from "react";
+import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
+import { Text, TouchableOpacity } from "react-native";
 
-jest.mock('@services/API/apiService', () => ({
-  default: {
-    token: {
-      getToken: jest.fn(),
-      setToken: jest.fn(),
-      removeToken: jest.fn(),
-    },
-    auth: {
-      login: jest.fn(),
-      register: jest.fn(),
-      getProfile: jest.fn(),
-      googleAuth: jest.fn(),
-      verifyEmail: jest.fn(),
-      resendVerification: jest.fn(),
-      getVerificationStatus: jest.fn(),
-      validateUsername: jest.fn(),
-    },
-  },
-}));
+// Mock ApiService using manual mock file
+jest.mock("@services/API/apiService");
 
-jest.mock('@react-native-async-storage/async-storage', () => ({
+jest.mock("@react-native-async-storage/async-storage", () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
   removeItem: jest.fn(),
   multiRemove: jest.fn(),
 }));
 
-const mockApiService = ApiService as jest.Mocked<typeof ApiService>;
-const mockAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
+jest.mock("@services/config", () => ({
+  API_CONFIG: {
+    BASE_URL: "http://localhost:5000/api",
+    TIMEOUT: 10000,
+    MAX_RETRIES: 3,
+    RETRY_DELAY: 1000,
+    DEBUG_MODE: false,
+    LOG_LEVEL: "info",
+  },
+  STORAGE_KEYS: {
+    ACCESS_TOKEN: "access_token",
+    USER_DATA: "user_data",
+    USER_SETTINGS: "user_settings",
+    OFFLINE_RECIPES: "offline_recipes",
+    CACHED_INGREDIENTS: "cached_ingredients",
+    LAST_SYNC: "last_sync",
+  },
+  ENDPOINTS: {
+    AUTH: {
+      LOGIN: "/auth/login",
+      REGISTER: "/auth/register",
+      GOOGLE_AUTH: "/auth/google",
+      PROFILE: "/auth/profile",
+      VERIFY_EMAIL: "/auth/verify-email",
+      RESEND_VERIFICATION: "/auth/resend-verification",
+      VALIDATE_USERNAME: "/auth/validate-username",
+    },
+  },
+}));
 
-// Simple mock data for testing
+// Now import the modules after mocking
+import { AuthProvider, useAuth } from "@src/contexts/AuthContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import ApiService from "@services/API/apiService";
+
+const mockAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
+const mockApiService = ApiService as jest.Mocked<typeof ApiService>;
+
+// Get direct references to the mock functions for easier access
+const mockTokenService = mockApiService.token;
+const mockAuthService = mockApiService.auth;
+
+// Test component that uses AuthContext
+interface TestComponentProps {
+  onAuthStateChange?: (isAuthenticated: boolean) => void;
+}
+
+const TestComponent: React.FC<TestComponentProps> = ({ onAuthStateChange }) => {
+  const {
+    user,
+    isLoading,
+    isAuthenticated,
+    error,
+    login,
+    register,
+    logout,
+    refreshUser,
+    clearError,
+    signInWithGoogle,
+    verifyEmail,
+    resendVerification,
+    checkVerificationStatus,
+  } = useAuth();
+
+  React.useEffect(() => {
+    onAuthStateChange?.(isAuthenticated);
+  }, [isAuthenticated, onAuthStateChange]);
+
+  return (
+    <>
+      <Text testID="loading">{isLoading ? "loading" : "not-loading"}</Text>
+      <Text testID="authenticated">
+        {isAuthenticated ? "authenticated" : "not-authenticated"}
+      </Text>
+      <Text testID="user">{user ? user.username : "no-user"}</Text>
+      <Text testID="error">{error || "no-error"}</Text>
+      <TouchableOpacity
+        testID="login-button"
+        onPress={() => login({ username: "testuser", password: "password123" })}
+      >
+        <Text>Login</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        testID="register-button"
+        onPress={() =>
+          register({
+            username: "newuser",
+            email: "new@example.com",
+            password: "password",
+          })
+        }
+      >
+        <Text>Register</Text>
+      </TouchableOpacity>
+      <TouchableOpacity testID="logout-button" onPress={() => logout()}>
+        <Text>Logout</Text>
+      </TouchableOpacity>
+      <TouchableOpacity testID="refresh-button" onPress={() => refreshUser()}>
+        <Text>Refresh</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        testID="clear-error-button"
+        onPress={() => clearError()}
+      >
+        <Text>Clear Error</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        testID="google-login-button"
+        onPress={() => signInWithGoogle("google-token")}
+      >
+        <Text>Google Login</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        testID="verify-email-button"
+        onPress={() => verifyEmail("verification-token")}
+      >
+        <Text>Verify Email</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        testID="resend-verification-button"
+        onPress={() => resendVerification()}
+      >
+        <Text>Resend Verification</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        testID="check-verification-button"
+        onPress={() => checkVerificationStatus()}
+      >
+        <Text>Check Verification</Text>
+      </TouchableOpacity>
+    </>
+  );
+};
+
+// Test data
 const mockUser = {
-  user_id: 'test-user-id',
-  username: 'testuser',
-  email: 'test@example.com',
+  user_id: "test-user-id",
+  username: "testuser",
+  email: "test@example.com",
   email_verified: true,
 };
 
 const mockCredentials = {
-  username: 'testuser',
-  email: 'test@example.com',
-  password: 'password123',
+  username: "testuser",
+  password: "password123",
 };
 
 const mockRegistrationData = {
-  username: 'newuser',
-  email: 'new@example.com',
-  password: 'password',
+  username: "newuser",
+  email: "new@example.com",
+  password: "password",
 };
 
-describe('AuthContext', () => {
+describe("AuthContext", () => {
+  const renderTestComponent = (
+    onAuthStateChange?: (isAuthenticated: boolean) => void
+  ) => {
+    return render(
+      <AuthProvider>
+        <TestComponent onAuthStateChange={onAuthStateChange} />
+      </AuthProvider>
+    );
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    // Setup default mock implementations - need to ensure the mock structure exists
-    if (!mockApiService.token) {
-      mockApiService.token = {
-        getToken: jest.fn(),
-        setToken: jest.fn(),
-        removeToken: jest.fn(),
-      } as any;
-    }
-    
-    if (!mockApiService.auth) {
-      mockApiService.auth = {
-        login: jest.fn(),
-        register: jest.fn(),
-        getProfile: jest.fn(),
-        googleAuth: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        getVerificationStatus: jest.fn(),
-        validateUsername: jest.fn(),
-      } as any;
-    }
-    
-    (mockApiService.token.getToken as jest.Mock).mockResolvedValue(null);
-    (mockApiService.token.setToken as jest.Mock).mockResolvedValue(undefined);
-    (mockApiService.token.removeToken as jest.Mock).mockResolvedValue(undefined);
-    
-    (mockApiService.auth.login as jest.Mock).mockRejectedValue(new Error('Not mocked'));
-    (mockApiService.auth.register as jest.Mock).mockRejectedValue(new Error('Not mocked'));
-    (mockApiService.auth.getProfile as jest.Mock).mockRejectedValue(new Error('Not mocked'));
-    (mockApiService.auth.googleAuth as jest.Mock).mockRejectedValue(new Error('Not mocked'));
-    (mockApiService.auth.verifyEmail as jest.Mock).mockRejectedValue(new Error('Not mocked'));
-    (mockApiService.auth.resendVerification as jest.Mock).mockRejectedValue(new Error('Not mocked'));
-    (mockApiService.auth.getVerificationStatus as jest.Mock).mockRejectedValue(new Error('Not mocked'));
-    (mockApiService.auth.validateUsername as jest.Mock).mockResolvedValue({ valid: true });
-    
+
+    // Initialize mock implementations
+    mockTokenService.getToken.mockResolvedValue(null);
+    mockTokenService.setToken.mockResolvedValue(undefined);
+    mockTokenService.removeToken.mockResolvedValue(undefined);
+
+    // Mock auth service methods with safe default implementations
+    mockAuthService.login.mockImplementation(() =>
+      Promise.reject(new Error("Mock not configured for this test"))
+    );
+    mockAuthService.register.mockImplementation(() =>
+      Promise.reject(new Error("Mock not configured for this test"))
+    );
+    mockAuthService.getProfile.mockImplementation(() =>
+      Promise.reject(new Error("Mock not configured for this test"))
+    );
+    mockAuthService.googleAuth.mockImplementation(() =>
+      Promise.reject(new Error("Mock not configured for this test"))
+    );
+    mockAuthService.verifyEmail.mockImplementation(() =>
+      Promise.reject(new Error("Mock not configured for this test"))
+    );
+    mockAuthService.resendVerification.mockImplementation(() =>
+      Promise.reject(new Error("Mock not configured for this test"))
+    );
+    mockAuthService.getVerificationStatus.mockImplementation(() =>
+      Promise.reject(new Error("Mock not configured for this test"))
+    );
+    mockAuthService.validateUsername.mockResolvedValue({
+      data: { valid: true },
+    });
+
     mockAsyncStorage.getItem.mockResolvedValue(null);
     mockAsyncStorage.setItem.mockResolvedValue(undefined);
     mockAsyncStorage.removeItem.mockResolvedValue(undefined);
     mockAsyncStorage.multiRemove.mockResolvedValue(undefined);
   });
 
-  describe('API Service Integration', () => {
-    it('should have token management methods', () => {
-      expect(mockApiService.token.getToken).toBeDefined();
-      expect(mockApiService.token.setToken).toBeDefined();
-      expect(mockApiService.token.removeToken).toBeDefined();
+  describe("Initial State", () => {
+    it("should initialize with unauthenticated state", async () => {
+      const { getByTestId } = renderTestComponent();
+
+      await waitFor(() => {
+        expect(getByTestId("loading")).toHaveTextContent("not-loading");
+        expect(getByTestId("authenticated")).toHaveTextContent(
+          "not-authenticated"
+        );
+        expect(getByTestId("user")).toHaveTextContent("no-user");
+        expect(getByTestId("error")).toHaveTextContent("no-error");
+      });
     });
 
-    it('should have auth API methods', () => {
-      expect(mockApiService.auth.login).toBeDefined();
-      expect(mockApiService.auth.register).toBeDefined();
-      expect(mockApiService.auth.getProfile).toBeDefined();
-      expect(mockApiService.auth.googleAuth).toBeDefined();
-      expect(mockApiService.auth.verifyEmail).toBeDefined();
-      expect(mockApiService.auth.resendVerification).toBeDefined();
-      expect(mockApiService.auth.getVerificationStatus).toBeDefined();
-    });
-  });
+    it("should restore authenticated state from stored token", async () => {
+      mockTokenService.getToken.mockResolvedValue("stored-token");
+      mockAuthService.getProfile.mockResolvedValue({ data: mockUser });
 
-  describe('Token Management', () => {
-    it('should call getToken when checking authentication', async () => {
-      (mockApiService.token.getToken as jest.Mock).mockResolvedValue(null);
+      const { getByTestId } = renderTestComponent();
 
-      // Just test that the service method is available and callable
-      const result = await mockApiService.token.getToken();
-      expect(result).toBeNull();
-      expect(mockApiService.token.getToken).toHaveBeenCalled();
-    });
-
-    it('should call setToken when storing token', async () => {
-      const token = 'test-token';
-      await mockApiService.token.setToken(token);
-      
-      expect(mockApiService.token.setToken).toHaveBeenCalledWith(token);
-    });
-
-    it('should call removeToken when logging out', async () => {
-      await mockApiService.token.removeToken();
-      
-      expect(mockApiService.token.removeToken).toHaveBeenCalled();
-    });
-  });
-
-  describe('Login API calls', () => {
-    it('should call login API with credentials', async () => {
-      (mockApiService.auth.login as jest.Mock).mockResolvedValue({
-        data: { access_token: 'new-token', user: mockUser },
+      await waitFor(() => {
+        expect(getByTestId("authenticated")).toHaveTextContent("authenticated");
+        expect(getByTestId("user")).toHaveTextContent("testuser");
       });
 
-      const result = await mockApiService.auth.login(mockCredentials);
-      
-      expect(mockApiService.auth.login).toHaveBeenCalledWith(mockCredentials);
-      expect(result.data.access_token).toBe('new-token');
-      expect(result.data.user).toEqual(mockUser);
-    });
-
-    it('should handle login API failure', async () => {
-      const error = { response: { data: { message: 'Invalid credentials' } } };
-      (mockApiService.auth.login as jest.Mock).mockRejectedValue(error);
-
-      await expect(mockApiService.auth.login(mockCredentials)).rejects.toEqual(error);
-      expect(mockApiService.auth.login).toHaveBeenCalledWith(mockCredentials);
+      expect(mockTokenService.getToken).toHaveBeenCalled();
+      expect(mockAuthService.getProfile).toHaveBeenCalled();
     });
   });
 
-  describe('Registration API calls', () => {
-    it('should call register API with user data', async () => {
-      (mockApiService.auth.register as jest.Mock).mockResolvedValue({
+  describe("Login Flow", () => {
+    it("should successfully log in user and update state", async () => {
+      mockAuthService.login.mockResolvedValue({
+        data: { access_token: "new-token", user: mockUser },
+      });
+
+      const authStateChangeSpy = jest.fn();
+      const { getByTestId } = renderTestComponent(authStateChangeSpy);
+
+      await act(async () => {
+        fireEvent.press(getByTestId("login-button"));
+      });
+
+      await waitFor(() => {
+        expect(getByTestId("authenticated")).toHaveTextContent("authenticated");
+        expect(getByTestId("user")).toHaveTextContent("testuser");
+      });
+
+      expect(mockAuthService.login).toHaveBeenCalledWith(mockCredentials);
+      expect(mockTokenService.setToken).toHaveBeenCalledWith("new-token");
+      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
+        "user_data",
+        JSON.stringify(mockUser)
+      );
+      expect(authStateChangeSpy).toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe("Registration Flow", () => {
+    it("should successfully register user", async () => {
+      mockAuthService.register.mockResolvedValue({
         data: { user: mockUser },
       });
 
-      const result = await mockApiService.auth.register(mockRegistrationData);
-      
-      expect(mockApiService.auth.register).toHaveBeenCalledWith(mockRegistrationData);
-      expect(result.data.user).toEqual(mockUser);
-    });
+      const { getByTestId } = renderTestComponent();
 
-    it('should handle registration API failure', async () => {
-      const error = { response: { data: { message: 'Invalid email format' } } };
-      (mockApiService.auth.register as jest.Mock).mockRejectedValue(error);
-
-      await expect(mockApiService.auth.register(mockRegistrationData)).rejects.toEqual(error);
-      expect(mockApiService.auth.register).toHaveBeenCalledWith(mockRegistrationData);
-    });
-  });
-
-  describe('Logout operations', () => {
-    it('should call token removal and storage cleanup', async () => {
-      // Test the logout operations directly
-      await mockApiService.token.removeToken();
-      await mockAsyncStorage.multiRemove(['user_data', 'user_settings']);
-      
-      expect(mockApiService.token.removeToken).toHaveBeenCalled();
-      expect(mockAsyncStorage.multiRemove).toHaveBeenCalledWith(['user_data', 'user_settings']);
-    });
-  });
-
-  describe('Google authentication API calls', () => {
-    it('should call Google auth API with token', async () => {
-      const googleToken = 'google-token';
-      (mockApiService.auth.googleAuth as jest.Mock).mockResolvedValue({
-        data: { access_token: 'new-token', user: mockUser },
+      await act(async () => {
+        fireEvent.press(getByTestId("register-button"));
       });
 
-      const result = await mockApiService.auth.googleAuth({ token: googleToken });
-      
-      expect(mockApiService.auth.googleAuth).toHaveBeenCalledWith({ token: googleToken });
-      expect(result.data.access_token).toBe('new-token');
-      expect(result.data.user).toEqual(mockUser);
-    });
-  });
-
-  describe('Email verification API calls', () => {
-    it('should call verify email API with token', async () => {
-      const verificationToken = 'verification-token';
-      (mockApiService.auth.verifyEmail as jest.Mock).mockResolvedValue({
-        data: { access_token: 'new-token', user: mockUser },
+      await waitFor(() => {
+        expect(getByTestId("user")).toHaveTextContent("testuser");
       });
 
-      const result = await mockApiService.auth.verifyEmail({ token: verificationToken });
-      
-      expect(mockApiService.auth.verifyEmail).toHaveBeenCalledWith({ token: verificationToken });
-      expect(result.data.access_token).toBe('new-token');
-      expect(result.data.user).toEqual(mockUser);
-    });
-
-    it('should call resend verification API', async () => {
-      (mockApiService.auth.resendVerification as jest.Mock).mockResolvedValue({ data: {} });
-
-      const result = await mockApiService.auth.resendVerification();
-      
-      expect(mockApiService.auth.resendVerification).toHaveBeenCalled();
-      expect(result.data).toEqual({});
+      expect(mockAuthService.register).toHaveBeenCalledWith(
+        mockRegistrationData
+      );
     });
   });
 
-  describe('Profile API calls', () => {
-    it('should call get profile API', async () => {
-      (mockApiService.auth.getProfile as jest.Mock).mockResolvedValue({ data: mockUser });
+  describe("Logout Flow", () => {
+    it("should successfully log out user and clear state", async () => {
+      // First log in
+      mockAuthService.login.mockResolvedValue({
+        data: { access_token: "token", user: mockUser },
+      });
 
-      const result = await mockApiService.auth.getProfile();
-      
-      expect(mockApiService.auth.getProfile).toHaveBeenCalled();
-      expect(result.data).toEqual(mockUser);
-    });
+      const authStateChangeSpy = jest.fn();
+      const { getByTestId } = renderTestComponent(authStateChangeSpy);
 
-    it('should handle profile API error', async () => {
-      const error = { response: { status: 401 } };
-      (mockApiService.auth.getProfile as jest.Mock).mockRejectedValue(error);
+      await act(async () => {
+        fireEvent.press(getByTestId("login-button"));
+      });
 
-      await expect(mockApiService.auth.getProfile()).rejects.toEqual(error);
-      expect(mockApiService.auth.getProfile).toHaveBeenCalled();
-    });
-  });
+      await waitFor(() => {
+        expect(getByTestId("authenticated")).toHaveTextContent("authenticated");
+      });
 
-  describe('Storage operations', () => {
-    it('should store user data in AsyncStorage', async () => {
-      await mockAsyncStorage.setItem('user_data', JSON.stringify(mockUser));
-      
-      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith('user_data', JSON.stringify(mockUser));
-    });
+      // Then log out
+      await act(async () => {
+        fireEvent.press(getByTestId("logout-button"));
+      });
 
-    it('should retrieve user data from AsyncStorage', async () => {
-      (mockAsyncStorage.getItem as jest.Mock).mockResolvedValue(JSON.stringify(mockUser));
-      
-      const result = await mockAsyncStorage.getItem('user_data');
-      
-      expect(mockAsyncStorage.getItem).toHaveBeenCalledWith('user_data');
-      if (result) {
-        expect(JSON.parse(result)).toEqual(mockUser);
-      }
-    });
+      await waitFor(() => {
+        expect(getByTestId("authenticated")).toHaveTextContent(
+          "not-authenticated"
+        );
+        expect(getByTestId("user")).toHaveTextContent("no-user");
+      });
 
-    it('should remove user data from AsyncStorage', async () => {
-      await mockAsyncStorage.multiRemove(['user_data', 'user_settings']);
-      
-      expect(mockAsyncStorage.multiRemove).toHaveBeenCalledWith(['user_data', 'user_settings']);
+      expect(mockTokenService.removeToken).toHaveBeenCalled();
+      expect(mockAsyncStorage.multiRemove).toHaveBeenCalledWith([
+        "user_data",
+        "user_settings",
+        "offline_recipes",
+        "cached_ingredients",
+      ]);
+      expect(authStateChangeSpy).toHaveBeenCalledWith(false);
     });
   });
 
-  describe('Verification status', () => {
-    it('should call get verification status API', async () => {
-      (mockApiService.auth.getVerificationStatus as jest.Mock).mockResolvedValue({ data: { email_verified: true } });
+  describe("Google Authentication", () => {
+    it("should successfully sign in with Google", async () => {
+      mockAuthService.googleAuth.mockResolvedValue({
+        data: { access_token: "google-token", user: mockUser },
+      });
 
-      const result = await mockApiService.auth.getVerificationStatus();
-      
-      expect(mockApiService.auth.getVerificationStatus).toHaveBeenCalled();
-      expect(result.data.email_verified).toBe(true);
+      const { getByTestId } = renderTestComponent();
+
+      await act(async () => {
+        fireEvent.press(getByTestId("google-login-button"));
+      });
+
+      await waitFor(() => {
+        expect(getByTestId("authenticated")).toHaveTextContent("authenticated");
+        expect(getByTestId("user")).toHaveTextContent("testuser");
+      });
+
+      expect(mockAuthService.googleAuth).toHaveBeenCalledWith({
+        token: "google-token",
+      });
+      expect(mockTokenService.setToken).toHaveBeenCalledWith("google-token");
+    });
+  });
+
+  describe("Email Verification", () => {
+    it("should successfully verify email with auto-login", async () => {
+      mockAuthService.verifyEmail.mockResolvedValue({
+        data: { access_token: "verify-token", user: mockUser },
+      });
+
+      const { getByTestId } = renderTestComponent();
+
+      await act(async () => {
+        fireEvent.press(getByTestId("verify-email-button"));
+      });
+
+      await waitFor(() => {
+        expect(getByTestId("authenticated")).toHaveTextContent("authenticated");
+      });
+
+      expect(mockAuthService.verifyEmail).toHaveBeenCalledWith({
+        token: "verification-token",
+      });
+      expect(mockTokenService.setToken).toHaveBeenCalledWith("verify-token");
+    });
+
+    it("should resend verification email", async () => {
+      mockAuthService.resendVerification.mockResolvedValue({ data: {} });
+
+      const { getByTestId } = renderTestComponent();
+
+      await act(async () => {
+        fireEvent.press(getByTestId("resend-verification-button"));
+      });
+
+      expect(mockAuthService.resendVerification).toHaveBeenCalled();
+    });
+  });
+
+  describe("User Refresh", () => {
+    it("should refresh user profile when logged in", async () => {
+      // First log in
+      mockAuthService.login.mockResolvedValue({
+        data: { access_token: "token", user: mockUser },
+      });
+
+      const { getByTestId } = renderTestComponent();
+
+      await act(async () => {
+        fireEvent.press(getByTestId("login-button"));
+      });
+
+      await waitFor(() => {
+        expect(getByTestId("authenticated")).toHaveTextContent("authenticated");
+      });
+
+      // Setup refresh response
+      const updatedUser = { ...mockUser, username: "updated-user" };
+      mockAuthService.getProfile.mockResolvedValue({ data: updatedUser });
+
+      // Refresh user
+      await act(async () => {
+        fireEvent.press(getByTestId("refresh-button"));
+      });
+
+      await waitFor(() => {
+        expect(getByTestId("user")).toHaveTextContent("updated-user");
+      });
+
+      expect(mockAsyncStorage.setItem).toHaveBeenLastCalledWith(
+        "user_data",
+        JSON.stringify(updatedUser)
+      );
+    });
+  });
+
+  describe("Context Provider", () => {
+    it("should throw error when useAuth is used outside AuthProvider", () => {
+      const TestOutsideProvider = () => {
+        const auth = useAuth();
+        return (
+          <Text>
+            {auth.isAuthenticated ? "authenticated" : "not-authenticated"}
+          </Text>
+        );
+      };
+
+      expect(() => render(<TestOutsideProvider />)).toThrow(
+        "useAuth must be used within an AuthProvider"
+      );
+    });
+  });
+
+  describe("Verification Status", () => {
+    it("should check and update verification status", async () => {
+      // First log in with unverified user
+      const unverifiedUser = { ...mockUser, email_verified: false };
+      mockAuthService.login.mockResolvedValue({
+        data: { access_token: "token", user: unverifiedUser },
+      });
+
+      const { getByTestId } = renderTestComponent();
+
+      await act(async () => {
+        fireEvent.press(getByTestId("login-button"));
+      });
+
+      // Setup verification status response
+      mockAuthService.getVerificationStatus.mockResolvedValue({
+        data: { email_verified: true },
+      });
+
+      // Check verification status
+      await act(async () => {
+        fireEvent.press(getByTestId("check-verification-button"));
+      });
+
+      expect(mockAuthService.getVerificationStatus).toHaveBeenCalled();
+      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
+        "user_data",
+        JSON.stringify({ ...unverifiedUser, email_verified: true })
+      );
     });
   });
 });

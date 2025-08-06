@@ -53,6 +53,8 @@ export function renderWithProviders(
 
 // Mock data factories for Android app
 export const mockData = {
+  // Counter for deterministic ingredient IDs
+  _ingredientCounter: 0,
   recipe: (overrides: Record<string, any> = {}) => ({
     id: 'test-id',
     recipe_id: 'test-recipe-id',
@@ -92,28 +94,33 @@ export const mockData = {
     ...overrides,
   }),
 
-  ingredient: (type: string = 'grain', overrides: Record<string, any> = {}) => ({
-    id: `test-ingredient-${Math.random().toString(36).substr(2, 9)}`,
-    ingredient_id: 1,
-    name: 'Test Ingredient',
-    type,
-    amount: 1,
-    unit: type === 'grain' ? 'lb' : type === 'hop' ? 'oz' : 'pkg',
-    ...(type === 'grain' && {
-      grain_type: 'base_malt',
-      potential: 1.037,
-      color: 2,
-    }),
-    ...(type === 'hop' && {
-      alpha_acid: 5.5,
-      use: 'boil',
-      time: 60,
-    }),
-    ...(type === 'yeast' && {
-      attenuation: 81,
-    }),
-    ...overrides,
-  }),
+  ingredient: (type: string = 'grain', overrides: Record<string, any> = {}) => {
+    // Use deterministic counter for consistent test IDs
+    mockData._ingredientCounter++;
+    
+    return {
+      id: `test-ingredient-${mockData._ingredientCounter}`,
+      ingredient_id: 1,
+      name: 'Test Ingredient',
+      type,
+      amount: 1,
+      unit: type === 'grain' ? 'lb' : type === 'hop' ? 'oz' : 'pkg',
+      ...(type === 'grain' && {
+        grain_type: 'base_malt',
+        potential: 1.037,
+        color: 2,
+      }),
+      ...(type === 'hop' && {
+        alpha_acid: 5.5,
+        use: 'boil',
+        time: 60,
+      }),
+      ...(type === 'yeast' && {
+        attenuation: 81,
+      }),
+      ...overrides,
+    };
+  },
 
   user: (overrides: Record<string, any> = {}) => ({
     user_id: 'test-user-id',
@@ -229,6 +236,11 @@ export const testUtils = {
     user: null,
     token: null,
   }),
+
+  // Helper to reset mock data counters for deterministic tests
+  resetCounters: () => {
+    mockData._ingredientCounter = 0;
+  },
 };
 
 // Re-export testing library utilities
