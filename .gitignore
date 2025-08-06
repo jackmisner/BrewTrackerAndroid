@@ -8,8 +8,6 @@ node_modules/
 dist/
 web-build/
 expo-env.d.ts
-app-example
-app-example/*   
 
 # Native
 .kotlin/
@@ -27,6 +25,7 @@ app-example/*
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+coverage/*
 
 # macOS
 .DS_Store
@@ -38,5 +37,3 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
-
-app-example
