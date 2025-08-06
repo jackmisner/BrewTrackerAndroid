@@ -102,11 +102,27 @@ export default function DashboardScreen() {
     router.push("/(tabs)/recipes");
   };
 
+  const handleViewRecipes = () => {
+    // Always navigate to "my recipes" tab with explicit parameter
+    router.push({ pathname: "/(tabs)/recipes", params: { activeTab: "my" } });
+  };
+
+
+  const handleViewPublicRecipes = () => {
+    // Always navigate to public recipes tab with explicit parameter
+    router.push({ pathname: "/(tabs)/recipes", params: { activeTab: "public" } });
+  };
+
   const handleRecipePress = (recipe: Recipe) => {
     router.push({
       pathname: "/(modals)/(recipes)/viewRecipe",
       params: { recipe_id: recipe.recipe_id },
     });
+  };
+
+  const handleViewBrewSessions = () => {
+    // Always navigate to "active" tab with explicit parameter
+    router.push({ pathname: "/(tabs)/brewSessions", params: { activeTab: "active" } });
   };
 
   const handleBrewSessionPress = (brewSession: BrewSession) => {
@@ -239,7 +255,10 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
+          <TouchableOpacity
+            style={styles.statCard}
+            onPress={handleViewRecipes}
+          >
             <MaterialIcons
               name="menu-book"
               size={32}
@@ -247,9 +266,12 @@ export default function DashboardScreen() {
             />
             <Text style={styles.statNumber}>{fallbackStats.total_recipes}</Text>
             <Text style={styles.statLabel}>Recipes</Text>
-          </View>
+          </TouchableOpacity>
 
-          <View style={styles.statCard}>
+          <TouchableOpacity
+            style={styles.statCard}
+            onPress={handleViewBrewSessions}
+          >
             <MaterialIcons
               name="science"
               size={32}
@@ -259,9 +281,12 @@ export default function DashboardScreen() {
               {fallbackStats.active_brew_sessions}
             </Text>
             <Text style={styles.statLabel}>Active Brews</Text>
-          </View>
+          </TouchableOpacity>
 
-          <View style={styles.statCard}>
+          <TouchableOpacity
+            style={styles.statCard}
+            onPress={handleViewPublicRecipes}
+          >
             <MaterialIcons
               name="public"
               size={32}
@@ -271,7 +296,7 @@ export default function DashboardScreen() {
               {fallbackStats.public_recipes}
             </Text>
             <Text style={styles.statLabel}>Public</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
@@ -311,7 +336,7 @@ export default function DashboardScreen() {
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={handleBrowsePublicRecipes}
+            onPress={handleViewPublicRecipes}
           >
             <MaterialIcons
               name="public"
@@ -365,7 +390,10 @@ export default function DashboardScreen() {
       </View>
 
       <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
+        <TouchableOpacity
+          style={styles.statCard}
+          onPress={handleViewRecipes}
+        >
           <MaterialIcons
             name="menu-book"
             size={32}
@@ -373,9 +401,12 @@ export default function DashboardScreen() {
           />
           <Text style={styles.statNumber}>{stats?.total_recipes || 0}</Text>
           <Text style={styles.statLabel}>Recipes</Text>
-        </View>
+        </TouchableOpacity>
 
-        <View style={styles.statCard}>
+        <TouchableOpacity
+          style={styles.statCard}
+          onPress={handleViewBrewSessions}
+        >
           <MaterialIcons
             name="science"
             size={32}
@@ -385,13 +416,16 @@ export default function DashboardScreen() {
             {stats?.active_brew_sessions || 0}
           </Text>
           <Text style={styles.statLabel}>Active Brews</Text>
-        </View>
+        </TouchableOpacity>
 
-        <View style={styles.statCard}>
+        <TouchableOpacity
+          style={styles.statCard}
+          onPress={handleViewPublicRecipes}
+        >
           <MaterialIcons name="public" size={32} color={theme.colors.primary} />
           <Text style={styles.statNumber}>{stats?.public_recipes || 0}</Text>
           <Text style={styles.statLabel}>Public</Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.section}>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import ApiService from "@services/API/apiService";
 import { Recipe } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
@@ -19,9 +19,27 @@ import { recipesStyles } from "@styles/tabs/recipesStyles";
 export default function RecipesScreen() {
   const theme = useTheme();
   const styles = recipesStyles(theme);
+  const params = useLocalSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"my" | "public">("my");
   const [refreshing, setRefreshing] = useState(false);
+  const lastParamsRef = useRef<string | undefined>(undefined);
+
+  // Set active tab from URL parameters
+  // Always respond to navigation with explicit activeTab parameters
+  useEffect(() => {
+    const currentActiveTabParam = params.activeTab as string | undefined;
+
+    // Always set the tab based on the URL parameter
+    if (currentActiveTabParam === "public") {
+      setActiveTab("public");
+    } else if (currentActiveTabParam === "my") {
+      setActiveTab("my");
+    }
+    // If no parameter, don't change current state (for manual tab changes)
+
+    lastParamsRef.current = currentActiveTabParam;
+  }, [params.activeTab]);
 
   // Handle pull to refresh
   const onRefresh = async () => {
@@ -206,7 +224,15 @@ export default function RecipesScreen() {
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tab, activeTab === "my" && styles.activeTab]}
-            onPress={() => setActiveTab("my")}
+            onPress={() => {
+              // Only navigate if not already on my tab
+              if (activeTab !== "my") {
+                router.push({
+                  pathname: "/(tabs)/recipes",
+                  params: { activeTab: "my" },
+                });
+              }
+            }}
           >
             <Text
               style={[
@@ -219,7 +245,15 @@ export default function RecipesScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, activeTab === "public" && styles.activeTab]}
-            onPress={() => setActiveTab("public")}
+            onPress={() => {
+              // Only navigate if not already on public tab
+              if (activeTab !== "public") {
+                router.push({
+                  pathname: "/(tabs)/recipes",
+                  params: { activeTab: "public" },
+                });
+              }
+            }}
           >
             <Text
               style={[
