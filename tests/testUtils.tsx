@@ -7,9 +7,9 @@ import { ThemeProvider } from '../src/contexts/ThemeContext';
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   queryClient?: QueryClient;
   initialAuthState?: {
-    isAuthenticated: boolean;
-    user: any | null;
-    token: string | null;
+    isAuthenticated?: boolean;
+    user?: any | null;
+    error?: string | null;
   };
 }
 
@@ -26,11 +26,7 @@ export function renderWithProviders(
     }),
 
     // Initial auth state
-    initialAuthState = {
-      isAuthenticated: false,
-      user: null,
-      token: null,
-    },
+    initialAuthState,
 
     // Other options
     ...renderOptions
@@ -40,7 +36,7 @@ export function renderWithProviders(
     return (
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <AuthProvider>
+          <AuthProvider initialAuthState={initialAuthState}>
             {children}
           </AuthProvider>
         </ThemeProvider>
