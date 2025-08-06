@@ -70,16 +70,6 @@
     "jsdom": "^26.1.0",
     "metro-react-native-babel-preset": "^0.77.0",
     "prettier": "^3.4.2",
-   "dependencies": {
-     // ... other dependencies
-+    "react-native-gesture-handler": "^2.27.2",
-     // ... other dependencies
-   },
-   "devDependencies": {
-     // ... other devDependencies
--    "react-native-gesture-handler": "^2.27.2",
-     // ... other devDependencies
-   }
     "typescript": "~5.8.3"
   },
   "jest": {
