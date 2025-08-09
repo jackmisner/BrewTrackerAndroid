@@ -173,7 +173,7 @@ export default function ViewRecipeScreen() {
           {ingredients.map((ingredient, index) => (
             <View key={ingredient.id || index} style={styles.ingredientItem}>
               <Text style={styles.ingredientName}>{ingredient.name}</Text>
-                <Text style={styles.ingredientAmount}>
+              <Text style={styles.ingredientAmount}>
                 {ingredient.amount} {ingredient.unit}
                 {/* Only show time if hops */}
                 {ingredient.type === "hop" &&
@@ -183,7 +183,7 @@ export default function ViewRecipeScreen() {
                 {ingredient.alpha_acid && ` • ${ingredient.alpha_acid}% AA`}
                 {ingredient.attenuation &&
                   ` • ${ingredient.attenuation}% Attenuation`}
-                </Text>
+              </Text>
             </View>
           ))}
         </View>

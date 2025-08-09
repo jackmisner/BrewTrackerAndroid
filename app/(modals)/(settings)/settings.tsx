@@ -6,16 +6,20 @@ import {
   ScrollView,
   Switch,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 import { useTheme, ThemeMode } from "@contexts/ThemeContext";
+import { useUnits } from "@contexts/UnitContext";
+import { UnitSystem } from "@src/types";
 import { settingsStyles } from "@styles/modals/settingsStyles";
 
 export default function SettingsScreen() {
   const themeContext = useTheme();
   const { theme, isDark, setTheme } = themeContext;
+  const { unitSystem, updateUnitSystem, loading: unitsLoading } = useUnits();
   const styles = settingsStyles(themeContext);
 
   const handleGoBack = () => {
@@ -24,6 +28,18 @@ export default function SettingsScreen() {
 
   const handleThemeChange = async (selectedTheme: ThemeMode) => {
     await setTheme(selectedTheme);
+  };
+
+  const handleUnitSystemChange = async (selectedUnitSystem: UnitSystem) => {
+    try {
+      await updateUnitSystem(selectedUnitSystem);
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        "Failed to update unit preferences. Please try again.",
+        [{ text: "OK" }]
+      );
+    }
   };
 
   const handlePlaceholderAction = (feature: string) => {
@@ -57,6 +73,41 @@ export default function SettingsScreen() {
           />
         )}
         {theme !== themeMode && (
+          <MaterialIcons
+            name="radio-button-unchecked"
+            size={24}
+            color={themeContext.colors.textMuted}
+          />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderUnitSystemOption = (
+    unitSystemMode: UnitSystem,
+    title: string,
+    subtitle: string
+  ) => (
+    <TouchableOpacity
+      key={unitSystemMode}
+      style={styles.optionItem}
+      onPress={() => handleUnitSystemChange(unitSystemMode)}
+      disabled={unitsLoading}
+    >
+      <View style={styles.optionContent}>
+        <Text style={styles.optionTitle}>{title}</Text>
+        <Text style={styles.optionSubtitle}>{subtitle}</Text>
+      </View>
+      <View style={styles.radioButton}>
+        {unitsLoading ? (
+          <ActivityIndicator size="small" color={themeContext.colors.primary} />
+        ) : unitSystem === unitSystemMode ? (
+          <MaterialIcons
+            name="check-circle"
+            size={24}
+            color={themeContext.colors.primary}
+          />
+        ) : (
           <MaterialIcons
             name="radio-button-unchecked"
             size={24}
@@ -101,25 +152,21 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Brewing</Text>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => handlePlaceholderAction("Unit preferences")}
-          >
-            <MaterialIcons
-              name="straighten"
-              size={24}
-              color={themeContext.colors.textSecondary}
-            />
-            <View style={styles.menuContent}>
-              <Text style={styles.menuText}>Unit Preferences</Text>
-              <Text style={styles.menuSubtext}>Imperial, Metric</Text>
+          <View style={styles.settingGroup}>
+            <Text style={styles.groupTitle}>Unit System</Text>
+            <View style={styles.groupContent}>
+              {renderUnitSystemOption(
+                "imperial",
+                "Imperial",
+                "Fahrenheit, pounds, gallons"
+              )}
+              {renderUnitSystemOption(
+                "metric",
+                "Metric",
+                "Celsius, kilograms, liters"
+              )}
             </View>
-            <MaterialIcons
-              name="chevron-right"
-              size={24}
-              color={themeContext.colors.textMuted}
-            />
-          </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
             style={styles.menuItem}

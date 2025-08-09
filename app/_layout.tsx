@@ -4,6 +4,7 @@ import { Stack } from "expo-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@contexts/AuthContext";
 import { ThemeProvider, useTheme } from "@contexts/ThemeContext";
+import { UnitProvider } from "@contexts/UnitContext";
 import { queryClient } from "@services/API/queryClient";
 
 // Component to handle StatusBar with theme
@@ -17,46 +18,48 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <ThemedStatusBar />
-        <AuthProvider>
-          <Stack
-            screenOptions={{
-              headerStyle: {
-                backgroundColor: "#f4511e",
-              },
-              headerTintColor: "#fff",
-              headerTitleStyle: {
-                fontWeight: "bold",
-              },
-            }}
-          >
-            <Stack.Screen
-              name="index"
-              options={{
-                title: "BrewTracker",
-                headerShown: false,
+        <UnitProvider>
+          <AuthProvider>
+            <Stack
+              screenOptions={{
+                headerStyle: {
+                  backgroundColor: "#f4511e",
+                },
+                headerTintColor: "#fff",
+                headerTitleStyle: {
+                  fontWeight: "bold",
+                },
               }}
-            />
-            <Stack.Screen
-              name="(auth)"
-              options={{
-                headerShown: false,
-              }}
-            />
-            <Stack.Screen
-              name="(tabs)"
-              options={{
-                headerShown: false,
-              }}
-            />
-            <Stack.Screen
-              name="(modals)"
-              options={{
-                headerShown: false,
-                presentation: "modal",
-              }}
-            />
-          </Stack>
-        </AuthProvider>
+            >
+              <Stack.Screen
+                name="index"
+                options={{
+                  title: "BrewTracker",
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="(auth)"
+                options={{
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="(tabs)"
+                options={{
+                  headerShown: false,
+                }}
+              />
+              <Stack.Screen
+                name="(modals)"
+                options={{
+                  headerShown: false,
+                  presentation: "modal",
+                }}
+              />
+            </Stack>
+          </AuthProvider>
+        </UnitProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

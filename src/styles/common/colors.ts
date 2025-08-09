@@ -30,6 +30,10 @@ export const lightColors = {
   // Component specific
   inputBackground: "#f9f9f9",
   shadow: "#000",
+
+  // Chart colors
+  gravityLine: "#4A90E2",
+  temperatureLine: "#FF6B35",
 } as const;
 
 export const darkColors = {
@@ -59,6 +63,10 @@ export const darkColors = {
   // Component specific
   inputBackground: "#242424",
   shadow: "#000",
+
+  // Chart colors
+  gravityLine: "#4A90E2",
+  temperatureLine: "#FF6B35",
 } as const;
 
 // Legacy export for backward compatibility (will be replaced by useTheme hook)

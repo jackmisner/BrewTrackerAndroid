@@ -28,6 +28,8 @@ export interface ThemeColors {
   info: string;
   inputBackground: string;
   shadow: string;
+  gravityLine: string;
+  temperatureLine: string;
 }
 
 // Theme context interface

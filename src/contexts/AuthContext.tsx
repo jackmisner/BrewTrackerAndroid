@@ -37,7 +37,9 @@ interface AuthContextValue {
 // Provider props interface
 interface AuthProviderProps {
   children: ReactNode;
-  initialAuthState?: Partial<Pick<AuthContextValue, 'user' | 'isAuthenticated' | 'error'>>;
+  initialAuthState?: Partial<
+    Pick<AuthContextValue, "user" | "isAuthenticated" | "error">
+  >;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -50,10 +52,17 @@ export const useAuth = (): AuthContextValue => {
   return context;
 };
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children, initialAuthState }) => {
+export const AuthProvider: React.FC<AuthProviderProps> = ({
+  children,
+  initialAuthState,
+}) => {
   const [user, setUser] = useState<User | null>(initialAuthState?.user || null);
-  const [isLoading, setIsLoading] = useState<boolean>(initialAuthState ? false : true);
-  const [error, setError] = useState<string | null>(initialAuthState?.error || null);
+  const [isLoading, setIsLoading] = useState<boolean>(
+    initialAuthState ? false : true
+  );
+  const [error, setError] = useState<string | null>(
+    initialAuthState?.error || null
+  );
 
   // Initialize authentication state on app start (skip if initial state provided for testing)
   useEffect(() => {
