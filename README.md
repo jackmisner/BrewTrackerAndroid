@@ -345,7 +345,7 @@ Based on comprehensive analysis, BrewTrackerAndroid is missing ~75% of web featu
 
 #### 🔥 **HIGH PRIORITY - Core Functionality Gaps**
 
-##### **1. Recipe Creation & Editing System** ❌ **MISSING ENTIRELY**
+##### **1. Recipe Creation & Editing System** 🟡 **IN PROGRESS (Creation v1)**
 **Web Features:**
 - ✅ Advanced Recipe Builder with real-time calculations
 - ✅ Interactive ingredient addition with autocomplete
@@ -355,8 +355,14 @@ Based on comprehensive analysis, BrewTrackerAndroid is missing ~75% of web featu
 - ✅ Recipe templates and defaults
 - ✅ BeerXML export functionality
 
-**Android Status:** Can only VIEW recipes, cannot create/edit
+**Android Status:** Creation flow (multi-step modal) implemented (v1). Editing, validations, scaling, versioning, and calculations pending.
 
+Linked implementation:
+- app/(modals)/(recipes)/createRecipe.tsx
+- src/components/recipes/RecipeForm/BasicInfoForm.tsx
+- src/components/recipes/RecipeForm/ParametersForm.tsx
+- src/components/recipes/RecipeForm/IngredientsForm.tsx
+- src/components/recipes/RecipeForm/ReviewForm.tsx
 ##### **2. Brew Session Creation & Management** ❌ **MISSING ENTIRELY**
 **Web Features:**
 - ✅ Create brew sessions from recipes
@@ -494,11 +500,10 @@ Based on comprehensive analysis, BrewTrackerAndroid is missing ~75% of web featu
 - Gesture-based navigation for complex features
 
 ### **Backend Capabilities:**
-- ✅ All APIs exist for missing features
+- ✅ Most APIs exist for missing features (verify relevant endpoints per feature)
 - ✅ Mobile-optimized endpoints available
 - ✅ Comprehensive data models support all features
 - ✅ No backend changes required for Phase 4-5
-
 ### **Architecture Readiness:**
 - ✅ React Query caching supports complex features
 🔶 Offline Write Strategy:
