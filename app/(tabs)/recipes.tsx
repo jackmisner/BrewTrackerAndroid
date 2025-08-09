@@ -111,8 +111,7 @@ export default function RecipesScreen() {
   };
 
   const handleCreateRecipe = () => {
-    // TODO: Navigate to recipe create screen when implemented
-    console.log("Navigate to create recipe");
+    router.push("/(modals)/(recipes)/createRecipe");
   };
 
   const renderRecipeItem = ({ item: recipe }: { item: Recipe }) => {
