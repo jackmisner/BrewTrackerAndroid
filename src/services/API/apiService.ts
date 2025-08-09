@@ -6,6 +6,7 @@ import axios, {
 } from "axios";
 import * as SecureStore from "expo-secure-store";
 import { API_CONFIG, STORAGE_KEYS, ENDPOINTS } from "@services/config";
+import { setupIDInterceptors } from "./idInterceptor";
 import {
   // Authentication types
   LoginRequest,
@@ -42,6 +43,11 @@ import {
   RecipeVersionHistoryResponse,
   PublicRecipesResponse,
 
+  // Additional types needed
+  RecipeIngredient,
+  CreateRecipeIngredientData,
+  Recipe,
+
   // Brew Session types
   BrewSessionResponse,
   BrewSessionsListResponse,
@@ -69,6 +75,9 @@ const api: AxiosInstance = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+// Setup automatic ID normalization interceptors
+setupIDInterceptors(api);
 
 // Token management utilities
 class TokenManager {
@@ -361,6 +370,84 @@ const ApiService = {
         completion_probability: number;
       }>
     > => api.get(ENDPOINTS.BREW_SESSIONS.ANALYZE_COMPLETION(brewSessionId)),
+  },
+
+  // Ingredients endpoints
+  ingredients: {
+    getAll: (
+      type?: string,
+      search?: string
+    ): Promise<AxiosResponse<RecipeIngredient[]>> => {
+      const params = new URLSearchParams();
+      if (type) params.append("type", type);
+      if (search) params.append("search", search);
+      const queryString = params.toString();
+      const url = `${ENDPOINTS.INGREDIENTS.LIST}${queryString ? `?${queryString}` : ""}`;
+
+      // ID interceptors will automatically handle response transformation
+      return api
+        .get(url)
+        .then(response => {
+          // Handle wrapped response format: {ingredients: [...], unit_system: "...", unit_preferences: {...}}
+          if (
+            response.data?.ingredients &&
+            Array.isArray(response.data.ingredients)
+          ) {
+            // Add default values for picker ingredients (ID normalization already handled by interceptor)
+            const ingredients = response.data.ingredients.map(
+              (ingredient: any) => ({
+                ...ingredient,
+                amount: 0, // Default amount for picker ingredients
+                unit: ingredient.suggested_unit || ingredient.unit || "lb", // Use suggested unit or default
+              })
+            );
+
+            // Return with processed ingredients
+            return {
+              ...response,
+              data: ingredients,
+            };
+          } else if (Array.isArray(response.data)) {
+            // Handle direct array response (already ID normalized by interceptor)
+            const ingredients = response.data.map((ingredient: any) => ({
+              ...ingredient,
+              amount: 0,
+              unit: ingredient.suggested_unit || ingredient.unit || "lb",
+            }));
+
+            return {
+              ...response,
+              data: ingredients,
+            };
+          }
+
+          // Return response as-is if no special processing needed
+          return response;
+        })
+        .catch(error => {
+          throw error;
+        });
+    },
+
+    getById: (id: ID): Promise<AxiosResponse<RecipeIngredient>> =>
+      api.get(ENDPOINTS.INGREDIENTS.DETAIL(id)),
+
+    create: (
+      ingredientData: CreateRecipeIngredientData
+    ): Promise<AxiosResponse<RecipeIngredient>> =>
+      api.post(ENDPOINTS.INGREDIENTS.CREATE, ingredientData),
+
+    update: (
+      id: ID,
+      ingredientData: Partial<CreateRecipeIngredientData>
+    ): Promise<AxiosResponse<RecipeIngredient>> =>
+      api.put(ENDPOINTS.INGREDIENTS.UPDATE(id), ingredientData),
+
+    delete: (id: ID): Promise<AxiosResponse<{ message: string }>> =>
+      api.delete(ENDPOINTS.INGREDIENTS.DELETE(id)),
+
+    getRecipesUsingIngredient: (id: ID): Promise<AxiosResponse<Recipe[]>> =>
+      api.get(ENDPOINTS.INGREDIENTS.RECIPES(id)),
   },
 
   // Dashboard endpoints

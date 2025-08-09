@@ -2,8 +2,7 @@ import { UnitSystem, ID } from "./common";
 
 // User interface
 export interface User {
-  id: ID;
-  user_id: ID;
+  id: ID; // Normalized by API interceptors
   username: string;
   email: string;
   email_verified: boolean;

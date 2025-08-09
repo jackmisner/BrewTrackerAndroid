@@ -1,4 +1,4 @@
-import React, { useState, useReducer, useCallback } from 'react';
+import React, { useState, useReducer, useCallback } from "react";
 import {
   View,
   ScrollView,
@@ -7,20 +7,20 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { MaterialIcons } from '@expo/vector-icons';
+} from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { MaterialIcons } from "@expo/vector-icons";
 
-import { useTheme } from '@contexts/ThemeContext';
-import { useUnits } from '@contexts/UnitContext';
-import ApiService from '@services/API/apiService';
-import { RecipeFormData, RecipeIngredient, IngredientType } from '@src/types';
-import { createRecipeStyles } from '@styles/modals/createRecipeStyles';
-import { BasicInfoForm } from '@src/components/recipes/RecipeForm/BasicInfoForm';
-import { ParametersForm } from '@src/components/recipes/RecipeForm/ParametersForm';
-import { IngredientsForm } from '@src/components/recipes/RecipeForm/IngredientsForm';
-import { ReviewForm } from '@src/components/recipes/RecipeForm/ReviewForm';
+import { useTheme } from "@contexts/ThemeContext";
+import { useUnits } from "@contexts/UnitContext";
+import ApiService from "@services/API/apiService";
+import { RecipeFormData, RecipeIngredient, IngredientType } from "@src/types";
+import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
+import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
+import { ParametersForm } from "@src/components/recipes/RecipeForm/ParametersForm";
+import { IngredientsForm } from "@src/components/recipes/RecipeForm/IngredientsForm";
+import { ReviewForm } from "@src/components/recipes/RecipeForm/ReviewForm";
 
 // Recipe builder steps
 enum RecipeStep {
@@ -30,61 +30,61 @@ enum RecipeStep {
   REVIEW = 3,
 }
 
-const STEP_TITLES = [
-  'Basic Info',
-  'Parameters', 
-  'Ingredients',
-  'Review',
-];
+const STEP_TITLES = ["Basic Info", "Parameters", "Ingredients", "Review"];
 
 // Initial recipe state
 const initialRecipeState: RecipeFormData = {
-  name: '',
-  style: '',
-  description: '',
+  name: "",
+  style: "",
+  description: "",
   batch_size: 5,
-  batch_size_unit: 'gal',
-  unit_system: 'imperial',
+  batch_size_unit: "gal",
+  unit_system: "imperial",
   boil_time: 60,
   efficiency: 75,
   mash_temperature: 152,
-  mash_temp_unit: 'F',
+  mash_temp_unit: "F",
   mash_time: 60,
   is_public: false,
-  notes: '',
+  notes: "",
   ingredients: [],
 };
 
 // Recipe builder reducer
 type RecipeBuilderAction =
-  | { type: 'UPDATE_FIELD'; field: keyof RecipeFormData; value: any }
-  | { type: 'ADD_INGREDIENT'; ingredient: RecipeIngredient }
-  | { type: 'REMOVE_INGREDIENT'; index: number }
-  | { type: 'UPDATE_INGREDIENT'; index: number; ingredient: RecipeIngredient }
-  | { type: 'RESET' };
+  | { type: "UPDATE_FIELD"; field: keyof RecipeFormData; value: any }
+  | { type: "ADD_INGREDIENT"; ingredient: RecipeIngredient }
+  | { type: "REMOVE_INGREDIENT"; index: number }
+  | { type: "UPDATE_INGREDIENT"; index: number; ingredient: RecipeIngredient }
+  | { type: "RESET" };
 
 function recipeBuilderReducer(
   state: RecipeFormData,
   action: RecipeBuilderAction
 ): RecipeFormData {
   switch (action.type) {
-    case 'UPDATE_FIELD':
+    case "UPDATE_FIELD":
       return { ...state, [action.field]: action.value };
-    case 'ADD_INGREDIENT':
-      return { ...state, ingredients: [...state.ingredients, action.ingredient] };
-    case 'REMOVE_INGREDIENT':
+    case "ADD_INGREDIENT":
       return {
         ...state,
-        ingredients: state.ingredients.filter((_, index) => index !== action.index),
+        ingredients: [...state.ingredients, action.ingredient],
       };
-    case 'UPDATE_INGREDIENT':
+    case "REMOVE_INGREDIENT":
+      return {
+        ...state,
+        ingredients: state.ingredients.filter(
+          (_, index) => index !== action.index
+        ),
+      };
+    case "UPDATE_INGREDIENT":
       return {
         ...state,
         ingredients: state.ingredients.map((ingredient, index) =>
           index === action.index ? action.ingredient : ingredient
         ),
       };
-    case 'RESET':
+    case "RESET":
       return initialRecipeState;
     default:
       return state;
@@ -96,50 +96,46 @@ export default function CreateRecipeScreen() {
   const { unitSystem } = useUnits();
   const queryClient = useQueryClient();
   const styles = createRecipeStyles(theme);
-  
+
   const [currentStep, setCurrentStep] = useState(RecipeStep.BASIC_INFO);
   const [recipeState, dispatch] = useReducer(recipeBuilderReducer, {
     ...initialRecipeState,
     unit_system: unitSystem,
-    batch_size_unit: unitSystem === 'imperial' ? 'gal' : 'l',
-    mash_temp_unit: unitSystem === 'imperial' ? 'F' : 'C',
-    mash_temperature: unitSystem === 'imperial' ? 152 : 67,
+    batch_size_unit: unitSystem === "imperial" ? "gal" : "l",
+    mash_temp_unit: unitSystem === "imperial" ? "F" : "C",
+    mash_temperature: unitSystem === "imperial" ? 152 : 67,
   });
 
   // Create recipe mutation
   const createRecipeMutation = useMutation({
-    mutationFn: (recipeData: RecipeFormData) => 
+    mutationFn: (recipeData: RecipeFormData) =>
       ApiService.recipes.create(recipeData),
-    onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ['userRecipes'] });
-      Alert.alert(
-        'Success',
-        'Recipe created successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              router.back();
+    onSuccess: response => {
+      queryClient.invalidateQueries({ queryKey: ["userRecipes"] });
+      Alert.alert("Success", "Recipe created successfully!", [
+        {
+          text: "OK",
+          onPress: () => {
+            router.back();
 
-              router.push({
-                pathname: "/(modals)/(recipes)/viewRecipe",
-                params: { recipe_id: response.data.id },
-              });
-            },
+            router.push({
+              pathname: "/(modals)/(recipes)/viewRecipe",
+              params: { recipe_id: response.data.id },
+            });
           },
-        ]
-      );
+        },
+      ]);
     },
     onError: (error: any) => {
       Alert.alert(
-        'Error',
-        error.response?.data?.message || 'Failed to create recipe'
+        "Error",
+        error.response?.data?.message || "Failed to create recipe"
       );
     },
   });
 
   const updateField = useCallback((field: keyof RecipeFormData, value: any) => {
-    dispatch({ type: 'UPDATE_FIELD', field, value });
+    dispatch({ type: "UPDATE_FIELD", field, value });
   }, []);
 
   const handleNext = () => {
@@ -156,13 +152,13 @@ export default function CreateRecipeScreen() {
 
   const handleCancel = () => {
     Alert.alert(
-      'Cancel Recipe Creation',
-      'Are you sure you want to cancel? All progress will be lost.',
+      "Cancel Recipe Creation",
+      "Are you sure you want to cancel? All progress will be lost.",
       [
-        { text: 'Keep Editing', style: 'cancel' },
-        { 
-          text: 'Cancel', 
-          style: 'destructive',
+        { text: "Keep Editing", style: "cancel" },
+        {
+          text: "Cancel",
+          style: "destructive",
           onPress: () => router.back(),
         },
       ]
@@ -172,15 +168,15 @@ export default function CreateRecipeScreen() {
   const handleSave = () => {
     // Basic validation
     if (!recipeState.name.trim()) {
-      Alert.alert('Error', 'Recipe name is required');
+      Alert.alert("Error", "Recipe name is required");
       return;
     }
     if (!recipeState.style.trim()) {
-      Alert.alert('Error', 'Recipe style is required');
+      Alert.alert("Error", "Recipe style is required");
       return;
     }
     if (recipeState.ingredients.length === 0) {
-      Alert.alert('Error', 'At least one ingredient is required');
+      Alert.alert("Error", "At least one ingredient is required");
       return;
     }
 
@@ -240,10 +236,7 @@ export default function CreateRecipeScreen() {
     switch (currentStep) {
       case RecipeStep.BASIC_INFO:
         return (
-          <BasicInfoForm
-            recipeData={recipeState}
-            onUpdateField={updateField}
-          />
+          <BasicInfoForm recipeData={recipeState} onUpdateField={updateField} />
         );
       case RecipeStep.PARAMETERS:
         return (
@@ -260,11 +253,7 @@ export default function CreateRecipeScreen() {
           />
         );
       case RecipeStep.REVIEW:
-        return (
-          <ReviewForm
-            recipeData={recipeState}
-          />
-        );
+        return <ReviewForm recipeData={recipeState} />;
       default:
         return null;
     }
@@ -273,7 +262,7 @@ export default function CreateRecipeScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -299,20 +288,26 @@ export default function CreateRecipeScreen() {
           style={[
             styles.navigationButton,
             styles.navigationButtonSecondary,
-            currentStep === RecipeStep.BASIC_INFO && styles.navigationButtonDisabled,
+            currentStep === RecipeStep.BASIC_INFO &&
+              styles.navigationButtonDisabled,
           ]}
           disabled={currentStep === RecipeStep.BASIC_INFO}
         >
-          <MaterialIcons 
-            name="arrow-back" 
-            size={20} 
-            color={currentStep === RecipeStep.BASIC_INFO ? theme.colors.textMuted : theme.colors.text} 
+          <MaterialIcons
+            name="arrow-back"
+            size={20}
+            color={
+              currentStep === RecipeStep.BASIC_INFO
+                ? theme.colors.textMuted
+                : theme.colors.text
+            }
           />
           <Text
             style={[
               styles.navigationButtonText,
               styles.navigationButtonSecondaryText,
-              currentStep === RecipeStep.BASIC_INFO && styles.navigationButtonDisabledText,
+              currentStep === RecipeStep.BASIC_INFO &&
+                styles.navigationButtonDisabledText,
             ]}
           >
             Previous
@@ -338,10 +333,14 @@ export default function CreateRecipeScreen() {
             >
               Next
             </Text>
-            <MaterialIcons 
-              name="arrow-forward" 
-              size={20} 
-              color={!canProceed() ? theme.colors.textMuted : theme.colors.primaryText} 
+            <MaterialIcons
+              name="arrow-forward"
+              size={20}
+              color={
+                !canProceed()
+                  ? theme.colors.textMuted
+                  : theme.colors.primaryText
+              }
             />
           </TouchableOpacity>
         ) : (
@@ -360,12 +359,12 @@ export default function CreateRecipeScreen() {
                 styles.navigationButtonPrimaryText,
               ]}
             >
-              {createRecipeMutation.isPending ? 'Creating...' : 'Create Recipe'}
+              {createRecipeMutation.isPending ? "Creating..." : "Create Recipe"}
             </Text>
-            <MaterialIcons 
-              name="check" 
-              size={20} 
-              color={theme.colors.primaryText} 
+            <MaterialIcons
+              name="check"
+              size={20}
+              color={theme.colors.primaryText}
             />
           </TouchableOpacity>
         )}

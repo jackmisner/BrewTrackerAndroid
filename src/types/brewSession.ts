@@ -46,8 +46,8 @@ export interface FermentationEntry {
 
 // Brew session interface
 export interface BrewSession {
-  session_id: ID; // API returns session_id, not id
-  recipe_id: ID;
+  id: ID; // Normalized by API interceptors (was session_id)
+  recipe_id: ID; // Foreign key - remains domain-specific
   recipe?: Recipe; // Optional since API doesn't always return the full recipe object
   name: string;
   status: BrewSessionStatus;

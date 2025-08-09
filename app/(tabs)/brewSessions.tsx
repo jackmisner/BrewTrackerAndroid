@@ -79,7 +79,7 @@ export default function BrewSessionsScreen() {
   const handleBrewSessionPress = (brewSession: BrewSession) => {
     router.push({
       pathname: "/(modals)/(brewSessions)/viewBrewSession",
-      params: { brewSessionId: brewSession.session_id },
+      params: { brewSessionId: brewSession.id },
     });
   };
 
@@ -388,7 +388,7 @@ export default function BrewSessionsScreen() {
           data={currentBrewSessions}
           renderItem={renderBrewSessionItem}
           keyExtractor={(item, index) =>
-            item.session_id?.toString() || `brew-session-${index}`
+            item.id?.toString() || `brew-session-${index}`
           }
           contentContainerStyle={styles.listContainer}
           refreshControl={

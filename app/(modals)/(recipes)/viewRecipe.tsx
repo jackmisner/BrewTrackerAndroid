@@ -368,9 +368,7 @@ export default function ViewRecipeScreen() {
 
             <View style={styles.metadataItem}>
               <MaterialIcons name="person" size={16} color="#666" />
-              <Text style={styles.metadataText}>
-                Recipe ID: {recipe.recipe_id}
-              </Text>
+              <Text style={styles.metadataText}>Recipe ID: {recipe.id}</Text>
             </View>
           </View>
         </View>

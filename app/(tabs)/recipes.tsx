@@ -106,7 +106,7 @@ export default function RecipesScreen() {
   const handleRecipePress = (recipe: Recipe) => {
     router.push({
       pathname: "/(modals)/(recipes)/viewRecipe",
-      params: { recipe_id: recipe.recipe_id },
+      params: { id: recipe.id },
     });
   };
 

@@ -1,5 +1,5 @@
-import { StyleSheet } from 'react-native';
-import { ThemeContextValue } from '@contexts/ThemeContext';
+import { StyleSheet } from "react-native";
+import { ThemeContextValue } from "@contexts/ThemeContext";
 
 export const createRecipeStyles = (theme: ThemeContextValue) =>
   StyleSheet.create({
@@ -10,9 +10,9 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
 
     // Header styles
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       paddingTop: 60, // Account for status bar
       paddingBottom: 16,
       paddingHorizontal: 16,
@@ -23,12 +23,12 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     headerButton: {
       width: 44,
       height: 44,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
     },
     headerTitle: {
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: "600",
       color: theme.colors.text,
     },
 
@@ -39,12 +39,12 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       backgroundColor: theme.colors.backgroundSecondary,
     },
     progressBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
     },
     progressStep: {
-      alignItems: 'center',
+      alignItems: "center",
       flex: 1,
     },
     progressCircle: {
@@ -52,8 +52,8 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       height: 44,
       borderRadius: 22,
       backgroundColor: theme.colors.border,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       marginBottom: 8,
     },
     progressCircleActive: {
@@ -61,7 +61,7 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     },
     progressStepText: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: theme.colors.textMuted,
     },
     progressStepTextActive: {
@@ -70,11 +70,11 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     progressStepLabel: {
       fontSize: 12,
       color: theme.colors.textMuted,
-      textAlign: 'center',
+      textAlign: "center",
     },
     progressStepLabelActive: {
       color: theme.colors.text,
-      fontWeight: '500',
+      fontWeight: "500",
     },
 
     // Content styles
@@ -85,15 +85,15 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     placeholderText: {
       fontSize: 16,
       color: theme.colors.textMuted,
-      textAlign: 'center',
+      textAlign: "center",
       marginTop: 50,
     },
 
     // Navigation styles
     navigationContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       paddingHorizontal: 16,
       paddingVertical: 20,
       backgroundColor: theme.colors.background,
@@ -101,9 +101,9 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       borderTopColor: theme.colors.border,
     },
     navigationButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
       paddingHorizontal: 24,
       paddingVertical: 12,
       borderRadius: 8,
@@ -114,7 +114,7 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       backgroundColor: theme.colors.primary,
     },
     navigationButtonSecondary: {
-      backgroundColor: 'transparent',
+      backgroundColor: "transparent",
       borderWidth: 1,
       borderColor: theme.colors.border,
     },
@@ -123,7 +123,7 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     },
     navigationButtonText: {
       fontSize: 16,
-      fontWeight: '500',
+      fontWeight: "500",
     },
     navigationButtonPrimaryText: {
       color: theme.colors.primaryText,
@@ -141,7 +141,7 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     },
     sectionTitle: {
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: "600",
       color: theme.colors.text,
       marginBottom: 16,
     },
@@ -150,7 +150,7 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     },
     inputLabel: {
       fontSize: 14,
-      fontWeight: '500',
+      fontWeight: "500",
       color: theme.colors.text,
       marginBottom: 8,
     },
@@ -170,7 +170,7 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     },
     textInputMultiline: {
       minHeight: 100,
-      textAlignVertical: 'top',
+      textAlignVertical: "top",
     },
     textInputError: {
       borderColor: theme.colors.error,
@@ -188,12 +188,12 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       borderColor: theme.colors.border,
       borderRadius: 8,
       minHeight: 48,
-      justifyContent: 'center',
+      justifyContent: "center",
     },
     pickerButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       paddingHorizontal: 12,
       paddingVertical: 12,
     },
@@ -207,15 +207,15 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
 
     // Switch styles
     switchContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       paddingVertical: 12,
     },
     switchLabel: {
       fontSize: 16,
       color: theme.colors.text,
-      fontWeight: '500',
+      fontWeight: "500",
     },
     switchLabelContainer: {
       flex: 1,
@@ -231,7 +231,7 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     characterCount: {
       fontSize: 12,
       color: theme.colors.textMuted,
-      textAlign: 'right',
+      textAlign: "right",
       marginTop: 4,
     },
 
@@ -242,19 +242,19 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
 
     // Batch size specific
     batchSizeContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: 12,
     },
     batchSizeInput: {
       flex: 1,
     },
     unitPicker: {
-      flexDirection: 'row',
+      flexDirection: "row",
       borderRadius: 8,
       borderWidth: 1,
       borderColor: theme.colors.border,
-      overflow: 'hidden',
+      overflow: "hidden",
     },
     unitButton: {
       paddingHorizontal: 16,
@@ -267,7 +267,7 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     unitButtonText: {
       fontSize: 14,
       color: theme.colors.text,
-      fontWeight: '500',
+      fontWeight: "500",
     },
     unitButtonTextActive: {
       color: theme.colors.primaryText,
@@ -275,7 +275,7 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
 
     // Style picker
     stylePickerContainer: {
-      position: 'absolute',
+      position: "absolute",
       top: 0,
       left: -16,
       right: -16,
@@ -284,9 +284,9 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       zIndex: 1000,
     },
     stylePickerHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       paddingHorizontal: 16,
       paddingVertical: 16,
       borderBottomWidth: 1,
@@ -294,7 +294,7 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     },
     stylePickerTitle: {
       fontSize: 18,
-      fontWeight: '600',
+      fontWeight: "600",
       color: theme.colors.text,
     },
     stylePickerContent: {
@@ -316,7 +316,7 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       fontSize: 12,
       color: theme.colors.textMuted,
       marginTop: 4,
-      fontStyle: 'italic',
+      fontStyle: "italic",
     },
 
     // Presets
@@ -329,8 +329,8 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       marginBottom: 8,
     },
     presetsRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
+      flexDirection: "row",
+      flexWrap: "wrap",
       gap: 8,
     },
     presetButton: {
@@ -348,7 +348,7 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     presetButtonText: {
       fontSize: 12,
       color: theme.colors.text,
-      fontWeight: '500',
+      fontWeight: "500",
     },
     presetButtonTextActive: {
       color: theme.colors.primaryText,
@@ -362,14 +362,14 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       marginTop: 24,
     },
     infoHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       marginBottom: 8,
       gap: 8,
     },
     infoTitle: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: theme.colors.text,
     },
     infoText: {
@@ -391,19 +391,19 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       marginBottom: 24,
     },
     ingredientSectionHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       marginBottom: 12,
     },
     ingredientSectionTitle: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: theme.colors.text,
     },
     addIngredientButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       paddingHorizontal: 12,
       paddingVertical: 6,
       gap: 4,
@@ -411,29 +411,29 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     addIngredientText: {
       fontSize: 14,
       color: theme.colors.primary,
-      fontWeight: '500',
+      fontWeight: "500",
     },
     emptyIngredientContainer: {
       padding: 20,
-      alignItems: 'center',
+      alignItems: "center",
       backgroundColor: theme.colors.backgroundSecondary,
       borderRadius: 8,
-      borderStyle: 'dashed',
+      borderStyle: "dashed",
       borderWidth: 1,
       borderColor: theme.colors.border,
     },
     emptyIngredientText: {
       fontSize: 14,
       color: theme.colors.textMuted,
-      textAlign: 'center',
+      textAlign: "center",
     },
     ingredientsList: {
       gap: 8,
     },
     ingredientItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       padding: 12,
       backgroundColor: theme.colors.backgroundSecondary,
       borderRadius: 8,
@@ -445,7 +445,7 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     },
     ingredientName: {
       fontSize: 14,
-      fontWeight: '500',
+      fontWeight: "500",
       color: theme.colors.text,
     },
     ingredientAmount: {
@@ -466,27 +466,27 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     },
     reviewSectionTitle: {
       fontSize: 16,
-      fontWeight: '600',
+      fontWeight: "600",
       color: theme.colors.text,
       marginBottom: 12,
     },
     reviewRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
       paddingVertical: 6,
     },
     reviewLabel: {
       fontSize: 14,
       color: theme.colors.textSecondary,
-      fontWeight: '500',
+      fontWeight: "500",
       flex: 1,
     },
     reviewValue: {
       fontSize: 14,
       color: theme.colors.text,
       flex: 2,
-      textAlign: 'right',
+      textAlign: "right",
     },
 
     // Ingredient type sections in review
@@ -495,14 +495,14 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     },
     ingredientTypeTitle: {
       fontSize: 14,
-      fontWeight: '600',
+      fontWeight: "600",
       color: theme.colors.text,
       marginBottom: 8,
     },
     ingredientReviewItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       paddingVertical: 4,
       paddingHorizontal: 12,
     },
@@ -514,35 +514,35 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     ingredientReviewAmount: {
       fontSize: 13,
       color: theme.colors.textSecondary,
-      fontWeight: '500',
+      fontWeight: "500",
     },
 
     // Metrics display in review
     metricsContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
+      flexDirection: "row",
+      flexWrap: "wrap",
       gap: 16,
       marginBottom: 12,
     },
     metricItem: {
-      alignItems: 'center',
+      alignItems: "center",
       minWidth: 60,
     },
     metricLabel: {
       fontSize: 12,
       color: theme.colors.textMuted,
-      fontWeight: '500',
+      fontWeight: "500",
       marginBottom: 4,
     },
     metricValue: {
       fontSize: 18,
       color: theme.colors.text,
-      fontWeight: '600',
+      fontWeight: "600",
     },
     metricsNote: {
       fontSize: 11,
       color: theme.colors.textMuted,
-      fontStyle: 'italic',
-      textAlign: 'center',
+      fontStyle: "italic",
+      textAlign: "center",
     },
   });
