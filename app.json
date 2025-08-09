@@ -3,7 +3,7 @@
     "name": "BrewTracker",
     "slug": "brewtracker-android",
     "orientation": "portrait",
-    "version": "0.6.2",
+    "version": "0.6.3",
     "icon": "./assets/images/icon.png",
     "scheme": "brewtracker",
     "userInterfaceStyle": "automatic",
@@ -18,7 +18,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.brewtracker.android",
-      "versionCode": 8,
+      "versionCode": 9,
       "permissions": [
         "CAMERA",
         "WRITE_EXTERNAL_STORAGE",
@@ -28,6 +28,7 @@
     },
     "plugins": [
       "expo-router",
+      "@shopify/react-native-skia",
       "expo-secure-store",
       [
         "expo-splash-screen",

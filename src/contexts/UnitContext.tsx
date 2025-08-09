@@ -60,7 +60,8 @@ interface UnitContextValue {
 
   // Temperature specific utilities
   getTemperatureSymbol: () => string;
-  formatTemperature: (value: number, precision?: number) => string;
+  formatTemperature: (value: number, fromSystem: UnitSystem, precision?: number) => string;
+  formatCurrentTemperature: (value: number, precision?: number) => string;
   convertTemperature: (
     value: number,
     fromSystem: UnitSystem,
@@ -104,15 +105,14 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
 
   // Load user's unit preference on mount
   useEffect(() => {
+    let isMounted = true;
     if (initialUnitSystem) {
       setLoading(false);
       return;
     }
-
     const loadUnitPreference = async (): Promise<void> => {
       try {
         setLoading(true);
-
         // Try to load from cached user settings first
         const cachedSettings = await AsyncStorage.getItem(
           STORAGE_KEYS.USER_SETTINGS
@@ -121,9 +121,8 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
           const settings: UserSettings = JSON.parse(cachedSettings);
           const preferredUnits: UnitSystem =
             settings.preferred_units || "imperial";
-          setUnitSystem(preferredUnits);
-          setLoading(false);
-
+          if (isMounted) setUnitSystem(preferredUnits);
+          if (isMounted) setLoading(false);
           // Still fetch fresh data in background
           try {
             const freshSettings = await ApiService.user.getSettings();
@@ -141,13 +140,11 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
           }
           return;
         }
-
         // If no cache, fetch from API
         const settings = await ApiService.user.getSettings();
         const preferredUnits: UnitSystem =
           settings.data.settings.preferred_units || "imperial";
         setUnitSystem(preferredUnits);
-
         // Cache for offline use
         await AsyncStorage.setItem(
           STORAGE_KEYS.USER_SETTINGS,
@@ -160,8 +157,10 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
         setLoading(false);
       }
     };
-
     loadUnitPreference();
+    return () => {
+      isMounted = false;
+    };
   }, [initialUnitSystem]);
 
   // Update unit system and persist to backend
@@ -174,8 +173,9 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
       setLoading(true);
       setError(null);
       setUnitSystem(newSystem);
-
-      // Update cached settings
+      // Persist to backend first
+      await ApiService.user.updateSettings({ preferred_units: newSystem });
+      // Update cache only after success
       const cachedSettings = await AsyncStorage.getItem(
         STORAGE_KEYS.USER_SETTINGS
       );
@@ -187,9 +187,6 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
           JSON.stringify(updatedSettings)
         );
       }
-
-      // Persist to backend
-      await ApiService.user.updateSettings({ preferred_units: newSystem });
     } catch (err) {
       console.error("Failed to update unit system:", err);
       setError("Failed to save unit preference");
@@ -349,8 +346,23 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
 
   /**
    * Format temperature value with current unit system
+   * Converts the input value to the current unit system before formatting
    */
-  const formatTemperature = (value: number, precision: number = 1): string => {
+  const formatTemperature = (
+    value: number, 
+    fromSystem: UnitSystem, 
+    precision: number = 1
+  ): string => {
+    const convertedValue = convertTemperature(value, fromSystem, unitSystem);
+    const symbol = getTemperatureSymbol();
+    return `${convertedValue.toFixed(precision)}${symbol}`;
+  };
+
+  /**
+   * Format temperature value that is already in the current unit system
+   * Use this when you know the value is already converted to the current units
+   */
+  const formatCurrentTemperature = (value: number, precision: number = 1): string => {
     const symbol = getTemperatureSymbol();
     return `${value.toFixed(precision)}${symbol}`;
   };
@@ -485,6 +497,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
       // Temperature specific utilities
       getTemperatureSymbol,
       formatTemperature,
+      formatCurrentTemperature,
       convertTemperature,
       getTemperatureAxisConfig,
 
