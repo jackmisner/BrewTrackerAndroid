@@ -46,12 +46,8 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
   // Get temperature symbol based on session-specific unit, fallback to user preference
   const getSessionTemperatureSymbol = (): string => {
     if (temperatureUnit) {
-      console.log(
-        `Using session-specific temperature unit: ${temperatureUnit}`
-      );
       return temperatureUnit === "C" ? "°C" : "°F";
     }
-    console.log("Using user preference for temperature unit");
     return units.getTemperatureSymbol(); // Fallback to user preference
   };
 
@@ -61,7 +57,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     precision: number = 1
   ): string => {
     const symbol = getSessionTemperatureSymbol();
-    console.log(`Formatting temperature: ${value} ${symbol}`);
+
     return `${value.toFixed(precision)}${symbol}`;
   };
 
