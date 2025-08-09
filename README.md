@@ -337,17 +337,184 @@ flask run --host=0.0.0.0
 - Performance optimizations and bundle size reduction
 - Improved offline functionality with data persistence
 
-### 📋 Planned (Phase 5+)
+## 📋 Feature Disparity Analysis & Implementation Roadmap
 
-**Advanced Features:**
-- BeerXML import/export functionality
-- AI recipe optimization integration
-- Push notifications for brew milestones
-- Camera integration for brew session photos
-- Public recipe browsing and community features
-- Advanced analytics and brew statistics
-- Social features and recipe sharing
-- Advanced offline mode with local database
+### 🔍 Missing Features from BrewTracker Web Application
+
+Based on comprehensive analysis, BrewTrackerAndroid is missing ~75% of web features across 11 functional areas:
+
+#### 🔥 **HIGH PRIORITY - Core Functionality Gaps**
+
+##### **1. Recipe Creation & Editing System** 🟡 **IN PROGRESS (Creation v1)**
+**Web Features:**
+- ✅ Advanced Recipe Builder with real-time calculations
+- ✅ Interactive ingredient addition with autocomplete
+- ✅ Recipe validation with brewing logic
+- ✅ Recipe scaling with automatic recalculations
+- ✅ Recipe versioning and change tracking
+- ✅ Recipe templates and defaults
+- ✅ BeerXML export functionality
+
+**Android Status:** Creation flow (multi-step modal) implemented (v1). Editing, validations, scaling, versioning, and calculations pending.
+
+Linked implementation:
+- app/(modals)/(recipes)/createRecipe.tsx
+- src/components/recipes/RecipeForm/BasicInfoForm.tsx
+- src/components/recipes/RecipeForm/ParametersForm.tsx
+- src/components/recipes/RecipeForm/IngredientsForm.tsx
+- src/components/recipes/RecipeForm/ReviewForm.tsx
+##### **2. Brew Session Creation & Management** ❌ **MISSING ENTIRELY**
+**Web Features:**
+- ✅ Create brew sessions from recipes
+- ✅ Interactive brew session workflow
+- ✅ Real-time efficiency calculations
+- ✅ Fermentation data entry and tracking
+- ✅ Dry hop addition scheduling
+- ✅ Session status management (Planned → Active → Completed)
+- ✅ Brewing notes and observations
+
+**Android Status:** Can only VIEW brew sessions
+
+##### **3. Ingredient Management System** ❌ **MISSING ENTIRELY**
+**Web Features:**
+- ✅ Complete ingredient database CRUD
+- ✅ Custom ingredient creation
+- ✅ Ingredient usage analytics
+- ✅ Ingredient performance tracking
+- ✅ Advanced ingredient search and filtering
+
+**Android Status:** No ingredient management capabilities
+
+#### 🤖 **MEDIUM PRIORITY - Advanced Features**
+
+##### **4. AI-Powered Recipe Optimization** ❌ **COMPLETELY MISSING**
+- Flowchart-based optimization engine
+- Style compliance analysis
+- Cascading effects understanding
+- Multi-iteration optimization
+- AI-powered suggestions and improvements
+
+#### **5. BeerXML Import/Export System** ❌ **COMPLETELY MISSING**
+- BeerXML file import with parsing
+- Intelligent ingredient matching
+- Automatic ingredient creation
+- Recipe format conversion
+- Import validation and error handling
+
+#### **6. Advanced Analytics & Performance Tracking** ❌ **MOSTLY MISSING**
+- Yeast attenuation analytics
+- Real-world vs. theoretical performance comparison
+- System-wide brewing statistics
+- Recipe performance metrics
+- Brewing efficiency tracking
+- Historical data analysis
+
+**Current:** Has basic fermentation charts only
+
+### 📱 **MEDIUM-LOW PRIORITY - User Experience Features**
+
+#### **7. Advanced Search & Discovery** ⚠️ **BASIC IMPLEMENTATION**
+- Fuzzy search with advanced algorithms
+- Advanced filtering by multiple criteria
+- Recipe sorting and organization
+- Tag-based organization
+- Saved searches
+
+**Current:** Has basic search only
+
+#### **8. Recipe Sharing & Social Features** ⚠️ **VIEW-ONLY**
+- Public recipe sharing
+- Recipe rating system
+- Community features
+- Recipe cloning from public library
+- Privacy controls
+
+**Current:** Can browse but not share/rate
+
+#### **9. Advanced Brewing Calculations** ❌ **MISSING**
+- Real-time brewing calculations (IBU, ABV, SRM)
+- Temperature corrections
+- Hop utilization calculations
+- Gravity calculations with efficiency
+- Water chemistry calculations
+
+### 🔧 **LOW PRIORITY - Technical & Admin Features**
+
+#### **10. Data Management & Export** ❌ **MISSING**
+- Complete data export capabilities
+- Recipe backup and restore
+- Data migration tools
+- Bulk operations
+
+#### **11. Advanced User Settings** ⚠️ **BASIC SETTINGS**
+- Comprehensive brewing preferences
+- Advanced unit system customization
+- Calculation preferences
+- Default recipe templates
+- Brewing profile customization
+
+**Current:** Basic theme/unit preferences only
+
+#### **12. Help & Documentation System** ❌ **MISSING**
+- Interactive help system
+- Feature tutorials
+- Brewing guides and references
+- Troubleshooting guides
+
+---
+
+## 🎯 **Implementation Priority Roadmap**
+
+### **Phase 4 (Immediate - Core Functionality)**
+1. **Recipe Builder** - Mobile recipe creation interface
+2. **Ingredient Selection** - Mobile ingredient picker and management
+3. **Brew Session Creation** - Start new sessions from recipes
+4. **Basic Data Entry** - Fermentation logging interface
+
+### **Phase 5 (Short-term - Enhanced UX)**
+1. **Recipe Editing** - Full CRUD operations for recipes
+2. **Advanced Search** - Filtering and sorting improvements
+3. **Session Management** - Edit sessions, update status
+4. **Recipe Sharing** - Basic sharing capabilities
+
+### **Phase 6 (Medium-term - Advanced Features)**
+1. **BeerXML Import/Export** - File handling and format support
+2. **Recipe Calculations** - Real-time brewing math
+3. **Basic Analytics** - Performance tracking
+4. **Recipe Cloning** - Clone from public library
+
+### **Phase 7 (Long-term - AI & Advanced)**
+1. **AI Optimization** - Mobile AI features
+2. **Advanced Analytics** - Performance comparison
+3. **Community Features** - Rating, reviews
+4. **Data Export** - Backup and export capabilities
+
+---
+
+## 💡 **Strategic Considerations**
+
+### **Mobile-First Adaptations Needed:**
+- Touch-optimized ingredient selection
+- Simplified recipe builder for mobile screens
+- Mobile-friendly file import/export
+- Gesture-based navigation for complex features
+
+### **Backend Capabilities:**
+- ✅ Most APIs exist for missing features (verify relevant endpoints per feature)
+- ✅ Mobile-optimized endpoints available
+- ✅ Comprehensive data models support all features
+- ✅ No backend changes required for Phase 4-5
+### **Architecture Readiness:**
+- ✅ React Query caching supports complex features
+🔶 Offline Write Strategy:
+  - Pending mutation queue with retry/backoff
+  - Conflict resolution policy (last-write-wins or server-merged)
+  - Idempotency keys for create/edit to prevent duplicates
+  - User feedback for out-of-sync edits
+- ✅ Type definitions exist for all data models
+- ✅ Theme system can handle complex UIs
+- ✅ Navigation structure supports modal workflows
+**Current Status:** Phase 3 Complete (85% Feature Complete for viewing), Phase 4 focuses on bringing core creation/editing capabilities to achieve feature parity with web application.
 
 ## Contributing
 
