@@ -38,7 +38,11 @@ export const FRONTEND_TO_BACKEND_MAPPING = Object.fromEntries(
 ) as Record<string, EntityType>;
 
 /**
- * Extract ID from entity regardless of field name format
+ * Retrieves the ID value from an entity object, checking the backend-specific ID field, "id", and "_id" in order.
+ *
+ * @param entity - The entity object from which to extract the ID
+ * @param entityType - The type of entity, used to determine the backend-specific ID field
+ * @returns The first non-null, non-undefined ID value found, or null if none is present
  */
 export function extractEntityId(
   entity: any,
@@ -60,7 +64,14 @@ export function extractEntityId(
 }
 
 /**
- * Normalize a single entity by converting backend ID field to generic 'id'
+ * Converts an entity's backend-specific ID field to a generic `id` field for frontend consistency.
+ *
+ * Throws an error if the input is not an object or if a valid ID cannot be found. Optionally preserves the original backend ID field if `preserveOriginalId` is true; otherwise, removes it.
+ *
+ * @param entity - The entity object to normalize
+ * @param entityType - The type of entity, used to determine the backend ID field
+ * @param preserveOriginalId - If true, retains the original backend ID field; otherwise, removes it
+ * @returns The entity with a normalized `id` field
  */
 export function normalizeEntityId<T extends Record<string, any>>(
   entity: T,
@@ -95,7 +106,14 @@ export function normalizeEntityId<T extends Record<string, any>>(
 }
 
 /**
- * Normalize an array of entities
+ * Normalizes an array of entities by converting their backend-specific ID fields to a generic `id` field.
+ *
+ * Applies ID normalization to each entity in the array. Returns an empty array if the input is not an array.
+ *
+ * @param entities - The array of entities to normalize
+ * @param entityType - The type of entity to determine the backend ID field
+ * @param preserveOriginalId - If true, retains the original backend ID field in each entity
+ * @returns An array of entities with a normalized `id` field
  */
 export function normalizeEntityIds<T extends Record<string, any>>(
   entities: T[],
@@ -113,7 +131,9 @@ export function normalizeEntityIds<T extends Record<string, any>>(
 }
 
 /**
- * Convert frontend entity back to backend format (for API submissions)
+ * Converts a frontend-normalized entity with a generic `id` field into backend format by replacing `id` with the backend-specific ID field.
+ *
+ * @returns The entity object with the backend-specific ID field and without the generic `id` field.
  */
 export function denormalizeEntityId<T extends Record<string, any> & { id: ID }>(
   entity: T,
@@ -133,7 +153,12 @@ export function denormalizeEntityId<T extends Record<string, any> & { id: ID }>(
 }
 
 /**
- * Detect entity type from API endpoint URL
+ * Determines the entity type based on patterns found in an API endpoint URL.
+ *
+ * Returns the corresponding EntityType if the URL matches a known entity pattern, or null if no match is found.
+ *
+ * @param url - The API endpoint URL to analyze
+ * @returns The detected EntityType, or null if the URL does not match any known entity type
  */
 export function detectEntityTypeFromUrl(url: string): EntityType | null {
   const normalizedUrl = url.toLowerCase();
@@ -158,7 +183,9 @@ export function detectEntityTypeFromUrl(url: string): EntityType | null {
 }
 
 /**
- * Smart normalization that handles various response formats
+ * Normalizes response data by converting backend-specific ID fields to a generic `id` field, handling arrays, wrapped arrays, and single entity objects.
+ *
+ * Supports direct arrays, objects containing an "ingredients" or "data" array, and single entities with an ID. Returns the input unchanged if no normalization is applicable.
  */
 export function normalizeResponseData(data: any, entityType: EntityType): any {
   if (!data) {
@@ -200,7 +227,12 @@ export function normalizeResponseData(data: any, entityType: EntityType): any {
 }
 
 /**
- * Debug utility to log ID fields in an entity
+ * Collects all ID-related fields and their values from an entity for debugging purposes.
+ *
+ * Does nothing if the input is not an object.
+ *
+ * @param entity - The object from which to extract ID fields
+ * @param label - Optional label for debugging context
  */
 export function debugEntityIds(entity: any, label: string = "Entity"): void {
   if (!entity || typeof entity !== "object") {

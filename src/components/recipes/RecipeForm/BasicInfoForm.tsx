@@ -37,6 +37,16 @@ interface BasicInfoFormProps {
   onUpdateField: (field: keyof RecipeFormData, value: any) => void;
 }
 
+/**
+ * Renders a form for entering and validating basic information about a beer recipe.
+ *
+ * The form includes fields for recipe name, beer style (with a selectable list of common styles), batch size with unit conversion between gallons and liters, an optional description, and a toggle for public visibility. Inline validation is performed for required fields and value constraints, with error messages displayed next to the relevant inputs. All changes are propagated to the parent component via the provided update callback.
+ *
+ * @param recipeData - The current values for the recipe form fields
+ * @param onUpdateField - Callback to update a specific field in the recipe data
+ *
+ * @returns A React element representing the basic info form UI
+ */
 export function BasicInfoForm({
   recipeData,
   onUpdateField,

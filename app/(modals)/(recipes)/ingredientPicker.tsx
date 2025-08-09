@@ -69,6 +69,11 @@ const UNITS_BY_TYPE = {
   other: ["tsp", "tbsp", "cup", "oz", "g", "ml", "l"],
 };
 
+/**
+ * Displays a modal screen for selecting an ingredient by type, with filtering, searching, sorting, and quantity/unit input.
+ *
+ * Allows users to browse, search, and filter ingredients by category, select an ingredient, specify its quantity and unit, and confirm the selection. Integrates with navigation to return the selected ingredient and amount to the previous screen. Handles loading, error, and empty states for ingredient data.
+ */
 export default function IngredientPickerScreen() {
   const theme = useTheme();
   const { unitSystem } = useUnits();

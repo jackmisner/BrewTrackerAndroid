@@ -12,6 +12,16 @@ interface IngredientsFormProps {
   onUpdateField: (field: keyof RecipeFormData, value: any) => void;
 }
 
+/**
+ * Displays and manages a categorized ingredient list for a recipe, allowing users to add or remove ingredients by type.
+ *
+ * Handles ingredient addition via navigation parameters, categorizes ingredients into grains, hops, yeast, and other, and updates the recipe data through a callback when changes occur.
+ *
+ * @param recipeData - The current recipe form data containing the ingredients list.
+ * @param onUpdateField - Callback to update fields in the recipe data when ingredients are added or removed.
+ *
+ * @returns A React element rendering the ingredient form UI.
+ */
 export function IngredientsForm({
   recipeData,
   onUpdateField,
