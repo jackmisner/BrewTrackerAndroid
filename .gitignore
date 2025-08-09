@@ -26,6 +26,7 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 coverage/*
+temp/*
 
 # macOS
 .DS_Store

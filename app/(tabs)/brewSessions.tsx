@@ -27,7 +27,7 @@ export default function BrewSessionsScreen() {
   // Always respond to navigation with explicit activeTab parameters
   useEffect(() => {
     const currentActiveTabParam = params.activeTab as string | undefined;
-    
+
     // Always set the tab based on the URL parameter
     if (currentActiveTabParam === "completed") {
       setActiveTab("completed");
@@ -35,7 +35,7 @@ export default function BrewSessionsScreen() {
       setActiveTab("active");
     }
     // If no parameter, don't change current state (for manual tab changes)
-    
+
     lastParamsRef.current = currentActiveTabParam;
   }, [params.activeTab]);
 
@@ -310,7 +310,10 @@ export default function BrewSessionsScreen() {
             onPress={() => {
               // Only navigate if not already on active tab
               if (activeTab !== "active") {
-                router.push({ pathname: "/(tabs)/brewSessions", params: { activeTab: "active" } });
+                router.push({
+                  pathname: "/(tabs)/brewSessions",
+                  params: { activeTab: "active" },
+                });
               }
             }}
           >
@@ -328,7 +331,10 @@ export default function BrewSessionsScreen() {
             onPress={() => {
               // Only navigate if not already on completed tab
               if (activeTab !== "completed") {
-                router.push({ pathname: "/(tabs)/brewSessions", params: { activeTab: "completed" } });
+                router.push({
+                  pathname: "/(tabs)/brewSessions",
+                  params: { activeTab: "completed" },
+                });
               }
             }}
           >

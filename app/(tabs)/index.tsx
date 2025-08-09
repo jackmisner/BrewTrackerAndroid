@@ -107,10 +107,12 @@ export default function DashboardScreen() {
     router.push({ pathname: "/(tabs)/recipes", params: { activeTab: "my" } });
   };
 
-
   const handleViewPublicRecipes = () => {
     // Always navigate to public recipes tab with explicit parameter
-    router.push({ pathname: "/(tabs)/recipes", params: { activeTab: "public" } });
+    router.push({
+      pathname: "/(tabs)/recipes",
+      params: { activeTab: "public" },
+    });
   };
 
   const handleRecipePress = (recipe: Recipe) => {
@@ -122,7 +124,10 @@ export default function DashboardScreen() {
 
   const handleViewBrewSessions = () => {
     // Always navigate to "active" tab with explicit parameter
-    router.push({ pathname: "/(tabs)/brewSessions", params: { activeTab: "active" } });
+    router.push({
+      pathname: "/(tabs)/brewSessions",
+      params: { activeTab: "active" },
+    });
   };
 
   const handleBrewSessionPress = (brewSession: BrewSession) => {
@@ -255,10 +260,7 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.statsContainer}>
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={handleViewRecipes}
-          >
+          <TouchableOpacity style={styles.statCard} onPress={handleViewRecipes}>
             <MaterialIcons
               name="menu-book"
               size={32}
@@ -390,10 +392,7 @@ export default function DashboardScreen() {
       </View>
 
       <View style={styles.statsContainer}>
-        <TouchableOpacity
-          style={styles.statCard}
-          onPress={handleViewRecipes}
-        >
+        <TouchableOpacity style={styles.statCard} onPress={handleViewRecipes}>
           <MaterialIcons
             name="menu-book"
             size={32}

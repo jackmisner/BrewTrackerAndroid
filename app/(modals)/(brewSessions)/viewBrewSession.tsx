@@ -14,6 +14,7 @@ import ApiService from "@services/API/apiService";
 import { BrewSession, BrewSessionStatus } from "@/src/types";
 import { viewBrewSessionStyles } from "@styles/modals/viewBrewSessionStyles";
 import { useTheme } from "@contexts/ThemeContext";
+import { FermentationChart } from "@src/components/brewSessions/FermentationChart";
 
 export default function ViewBrewSession() {
   const { brewSessionId } = useLocalSearchParams<{ brewSessionId: string }>();
@@ -282,9 +283,9 @@ export default function ViewBrewSession() {
 
         {/* Brew Session Metrics */}
         <View style={styles.metricsContainer}>
-          {renderMetric("ABV", brewSession.actual_abv, "%")}
           {renderMetric("OG", brewSession.actual_og)}
           {renderMetric("FG", brewSession.actual_fg)}
+          {renderMetric("ABV", brewSession.actual_abv, "%")}
           {renderMetric("Efficiency", brewSession.actual_efficiency, "%")}
           {brewSession.mash_temp &&
             renderMetric("Mash Temp", brewSession.mash_temp, "°F")}
@@ -331,26 +332,13 @@ export default function ViewBrewSession() {
           </View>
         )}
 
-        {/* Fermentation Data Summary */}
-        {brewSession.fermentation_data &&
-          brewSession.fermentation_data.length > 0 && (
-            <View style={styles.detailsContainer}>
-              <Text style={styles.detailsTitle}>Fermentation Tracking</Text>
-              <Text style={styles.detailsText}>
-                {brewSession.fermentation_data.length} readings recorded
-              </Text>
-              <Text style={styles.metadataText}>
-                Latest reading:{" "}
-                {formatDate(
-                  brewSession.fermentation_data.length > 0
-                    ? brewSession.fermentation_data[
-                        brewSession.fermentation_data.length - 1
-                      ]?.date
-                    : undefined
-                )}
-              </Text>
-            </View>
-          )}
+        {/* Fermentation Chart */}
+        <FermentationChart
+          fermentationData={brewSession.fermentation_data || []}
+          expectedFG={brewSession.target_fg}
+          actualOG={brewSession.actual_og}
+          temperatureUnit={brewSession.temperature_unit}
+        />
       </ScrollView>
     </View>
   );
