@@ -1,13 +1,38 @@
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { RecipeFormData } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
+import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
+import { formatHopTime } from "@src/utils/timeUtils";
+
+// Hop usage display mapping (database value -> display value)
+const HOP_USAGE_DISPLAY_MAPPING: Record<string, string> = {
+  boil: "Boil",
+  whirlpool: "Whirlpool",
+  "dry-hop": "Dry Hop",
+};
+
+const GRAIN_TYPE_DISPLAY_MAPPING: Record<string, string> = {
+  base_malt: "Base Malt",
+  smoked: "Smoked",
+  roasted: "Roasted",
+  caramel_crystal: "Caramel/Crystal",
+  specialty_malt: "Specialty",
+  adjunct_grain: "Adjunct",
+};
 
 interface ReviewFormProps {
   recipeData: RecipeFormData;
+  calculatedMetrics?: {
+    og?: number;
+    fg?: number;
+    abv?: number;
+    ibu?: number;
+    srm?: number;
+  } | null;
 }
 
 /**
@@ -17,7 +42,7 @@ interface ReviewFormProps {
  *
  * @param recipeData - The brewing recipe data to be reviewed
  */
-export function ReviewForm({ recipeData }: ReviewFormProps) {
+export function ReviewForm({ recipeData, calculatedMetrics }: ReviewFormProps) {
   const theme = useTheme();
   const styles = createRecipeStyles(theme);
 
@@ -42,7 +67,9 @@ export function ReviewForm({ recipeData }: ReviewFormProps) {
       <View style={styles.reviewRow}>
         <Text style={styles.reviewLabel}>Batch Size:</Text>
         <Text style={styles.reviewValue}>
-          {recipeData.batch_size} {recipeData.batch_size_unit}
+          {recipeData.batch_size}{" "}
+          {recipeData.batch_size_unit[0].toUpperCase() +
+            recipeData.batch_size_unit.slice(1)}
         </Text>
       </View>
       {recipeData.description && (
@@ -112,9 +139,40 @@ export function ReviewForm({ recipeData }: ReviewFormProps) {
             </Text>
             {ingredients.map((ingredient, index) => (
               <View key={index} style={styles.ingredientReviewItem}>
-                <Text style={styles.ingredientReviewName}>
-                  {ingredient.name}
-                </Text>
+                <View style={styles.ingredientReviewInfo}>
+                  <Text style={styles.ingredientReviewName}>
+                    {ingredient.name}
+                  </Text>
+                  {/* Show hop-specific details */}
+                  {ingredient.type === "hop" &&
+                    (ingredient.use || ingredient.time) && (
+                      <Text style={styles.ingredientReviewDetails}>
+                        {ingredient.use &&
+                          `${HOP_USAGE_DISPLAY_MAPPING[ingredient.use] || ingredient.use}`}
+                        {ingredient.time &&
+                          ingredient.time > 0 &&
+                          ` • ${formatHopTime(ingredient.time, ingredient.use || "")}`}
+                        {ingredient.alpha_acid &&
+                          ` • ${ingredient.alpha_acid}% AA`}
+                      </Text>
+                    )}
+                  {/* Show grain-specific details */}
+                  {ingredient.type === "grain" && ingredient.grain_type && (
+                    <Text style={styles.ingredientReviewDetails}>
+                      {ingredient.grain_type &&
+                        `${GRAIN_TYPE_DISPLAY_MAPPING[ingredient.grain_type] || ingredient.grain_type}`}
+                    </Text>
+                  )}
+                  {/* Show yeast-specific details */}
+                  {ingredient.type === "yeast" &&
+                    (ingredient.yeast_type || ingredient.manufacturer) && (
+                      <Text style={styles.ingredientReviewDetails}>
+                        {ingredient.manufacturer && ingredient.manufacturer}
+                        {ingredient.attenuation &&
+                          ` • ${ingredient.attenuation}% Attenuation`}
+                      </Text>
+                    )}
+                </View>
                 <Text style={styles.ingredientReviewAmount}>
                   {ingredient.amount} {ingredient.unit}
                 </Text>
@@ -135,34 +193,15 @@ export function ReviewForm({ recipeData }: ReviewFormProps) {
   );
 
   const renderEstimatedMetrics = () => (
-    <View style={styles.reviewSection}>
-      <Text style={styles.reviewSectionTitle}>Estimated Metrics</Text>
-      <View style={styles.metricsContainer}>
-        <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>OG</Text>
-          <Text style={styles.metricValue}>--</Text>
-        </View>
-        <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>FG</Text>
-          <Text style={styles.metricValue}>--</Text>
-        </View>
-        <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>ABV</Text>
-          <Text style={styles.metricValue}>--%</Text>
-        </View>
-        <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>IBU</Text>
-          <Text style={styles.metricValue}>--</Text>
-        </View>
-        <View style={styles.metricItem}>
-          <Text style={styles.metricLabel}>SRM</Text>
-          <Text style={styles.metricValue}>--</Text>
-        </View>
-      </View>
-      <Text style={styles.metricsNote}>
-        * Metrics will be calculated when the recipe is created
-      </Text>
-    </View>
+    <BrewingMetricsDisplay
+      metrics={calculatedMetrics || undefined}
+      mash_temperature={recipeData.mash_temperature}
+      mash_temp_unit={recipeData.mash_temp_unit}
+      loading={false}
+      error={null}
+      compact={false}
+      showTitle={true}
+    />
   );
 
   return (
@@ -188,9 +227,9 @@ export function ReviewForm({ recipeData }: ReviewFormProps) {
           <Text style={styles.infoTitle}>Ready to Create</Text>
         </View>
         <Text style={styles.infoText}>
-          Your recipe looks good! Click "Create Recipe" to save it to your
-          recipe collection. You can always edit the recipe later or use it to
-          start a new brew session.
+          Your recipe looks good! Click &quot;Create Recipe&quot; to save it to
+          your recipe collection. You can always edit the recipe later or use it
+          to start a new brew session.
         </Text>
       </View>
     </View>

@@ -51,10 +51,15 @@ export const ingredientPickerStyles = (theme: ThemeContextValue) =>
     },
 
     // Category filter styles
+    categorySection: {
+      paddingBottom: 16,
+    },
+    categoryScrollView: {
+      flexGrow: 0,
+    },
     categoryContainer: {
       flexDirection: "row",
       paddingHorizontal: 16,
-      paddingBottom: 16,
       gap: 8,
     },
     categoryChip: {

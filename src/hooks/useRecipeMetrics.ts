@@ -53,12 +53,15 @@ export function useRecipeMetrics(
             attenuation: ing.attenuation,
             name: (ing as any)?.name, // optional tie-breaker if no id
           }))
-          .sort((a, b) =>
-            (a.type ?? "").localeCompare(b.type ?? "") ||
-            String(a.id ?? a.name ?? "").localeCompare(String(b.id ?? b.name ?? "")) ||
-            (a.amount ?? 0) - (b.amount ?? 0)
+          .sort(
+            (a, b) =>
+              (a.type ?? "").localeCompare(b.type ?? "") ||
+              String(a.id ?? a.name ?? "").localeCompare(
+                String(b.id ?? b.name ?? "")
+              ) ||
+              (a.amount ?? 0) - (b.amount ?? 0)
           )
-      )
+      ),
     ],
     queryFn: async (): Promise<RecipeMetrics> => {
       const response = await ApiService.recipes.calculateMetricsPreview({

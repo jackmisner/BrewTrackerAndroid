@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 /**
  * Hook that returns a debounced version of the provided value
- * 
+ *
  * @param value - The value to debounce
  * @param delay - Delay in milliseconds
  * @returns The debounced value

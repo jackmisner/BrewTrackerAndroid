@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Platform,
+  ScrollView,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -20,6 +20,7 @@ import ApiService from "@services/API/apiService";
 import { useDebounce } from "@src/hooks/useDebounce";
 import { RecipeIngredient, IngredientType, IngredientUnit } from "@src/types";
 import { ingredientPickerStyles } from "@styles/modals/ingredientPickerStyles";
+import { convertHopTimeForStorage } from "@src/utils/timeUtils";
 
 // Ingredient categories for filtering (matching backend grain_type values)
 const INGREDIENT_CATEGORIES = {
@@ -58,9 +59,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   "Dual Purpose": "Dual Purpose",
   Noble: "Noble",
   // Yeast types
-  american_ale: "American Ale",
-  belgian_ale: "Belgian Ale",
-  english_ale: "English Ale",
+  american_ale: "American",
+  belgian_ale: "Belgian",
+  english_ale: "English",
   lager: "Lager",
   wheat: "Wheat",
   wild: "Wild/Sour",
@@ -79,8 +80,21 @@ const UNITS_BY_TYPE = {
   other: ["tsp", "tbsp", "cup", "oz", "g", "ml", "l"],
 };
 
-// Hop usage types
-const HOP_USAGE_TYPES = ["Boil", "Dry Hop", "Whirlpool", "First Wort", "Mash"];
+// Hop usage types - display values
+const HOP_USAGE_TYPES = ["Boil", "Dry Hop", "Whirlpool"];
+
+// Mapping between display values and database values
+const HOP_USAGE_MAPPING = {
+  // Display value -> Database value
+  Boil: "boil",
+  "Dry Hop": "dry-hop",
+  Whirlpool: "whirlpool",
+} as const;
+
+// Reverse mapping for display (database value -> display value)
+const HOP_USAGE_DISPLAY_MAPPING = Object.fromEntries(
+  Object.entries(HOP_USAGE_MAPPING).map(([display, db]) => [db, display])
+) as Record<string, string>;
 
 /**
  * Displays a modal screen for selecting an ingredient by type, with filtering, searching, sorting, and quantity/unit input.
@@ -110,8 +124,8 @@ export default function IngredientPickerScreen() {
     // Set appropriate default time based on usage type
     const defaultTimes = {
       Boil: "60",
-      "Dry Hop": "5",
-      Whirlpool: "20",
+      "Dry Hop": "3",
+      Whirlpool: "15",
       "First Wort": "60",
       Mash: "60",
     };
@@ -153,7 +167,7 @@ export default function IngredientPickerScreen() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Set default unit based on ingredient type and unit system
+  // Set default unit and amount based on ingredient type and unit system
   useEffect(() => {
     const defaultUnits = {
       grain: unitSystem === "imperial" ? "lb" : "kg",
@@ -161,7 +175,16 @@ export default function IngredientPickerScreen() {
       yeast: "pkg",
       other: unitSystem === "imperial" ? "oz" : "g",
     };
+
+    const defaultAmounts = {
+      grain: unitSystem === "imperial" ? "1" : "1",
+      hop: unitSystem === "imperial" ? "1" : "30",
+      yeast: "1", // 1 package regardless of unit system
+      other: unitSystem === "imperial" ? "1" : "15", // 1 oz ≈ 14 grams
+    };
+
     setSelectedUnit(defaultUnits[ingredientType] as IngredientUnit);
+    setAmount(defaultAmounts[ingredientType]);
   }, [ingredientType, unitSystem]);
 
   // Custom sorting function for ingredients with special handling for caramel malts and candi syrups
@@ -261,7 +284,7 @@ export default function IngredientPickerScreen() {
       return;
     }
 
-    // Validate hop time for all hop usage types
+    // Enhanced hop time validation based on usage type
     if (ingredientType === "hop") {
       const numTime = parseFloat(hopTime);
       if (isNaN(numTime) || numTime < 0) {
@@ -269,7 +292,55 @@ export default function IngredientPickerScreen() {
         Alert.alert("Invalid Time", `Please enter a valid time in ${timeUnit}`);
         return;
       }
+
+      // Usage-specific validation ranges (using display names for validation)
+      const validationRules = {
+        Boil: { min: 0, max: 120, unit: "minutes", warning: 90 },
+        "Dry Hop": { min: 1, max: 14, unit: "days", warning: 7 },
+        Whirlpool: { min: 0, max: 60, unit: "minutes", warning: 45 },
+        "First Wort": { min: 30, max: 120, unit: "minutes", warning: 90 },
+        Mash: { min: 30, max: 90, unit: "minutes", warning: 75 },
+      };
+
+      const rule = validationRules[hopUse as keyof typeof validationRules];
+      if (rule) {
+        if (numTime < rule.min || numTime > rule.max) {
+          Alert.alert(
+            "Unusual Time Value",
+            `${hopUse} time is typically between ${rule.min}-${rule.max} ${rule.unit}. Are you sure you want to continue?`,
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Continue Anyway",
+                onPress: () => proceedWithIngredient(),
+              },
+            ]
+          );
+          return;
+        } else if (numTime > rule.warning) {
+          Alert.alert(
+            "High Time Value",
+            `${hopUse} time of ${numTime} ${rule.unit} is higher than typical. Continue?`,
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Continue", onPress: () => proceedWithIngredient() },
+            ]
+          );
+          return;
+        }
+      }
     }
+
+    proceedWithIngredient();
+  };
+
+  // Separate function to handle the actual ingredient creation
+  const proceedWithIngredient = () => {
+    if (!selectedIngredient) {
+      return;
+    }
+
+    const numAmount = parseFloat(amount);
 
     // Create the ingredient with quantity and hop-specific fields
     const ingredientWithQuantity: RecipeIngredient = {
@@ -277,8 +348,12 @@ export default function IngredientPickerScreen() {
       amount: numAmount,
       unit: selectedUnit,
       ...(ingredientType === "hop" && {
-        use: hopUse,
-        time: parseFloat(hopTime),
+        use:
+          HOP_USAGE_MAPPING[hopUse as keyof typeof HOP_USAGE_MAPPING] ||
+          hopUse.toLowerCase(),
+        // Convert hop time to minutes for consistent database storage
+        // Dry hops: days -> minutes, others: minutes -> minutes
+        time: convertHopTimeForStorage(parseFloat(hopTime), hopUse),
       }),
     };
 
@@ -355,7 +430,8 @@ export default function IngredientPickerScreen() {
   );
 
   const renderCategoryFilter = () => {
-    const categories = INGREDIENT_CATEGORIES[ingredientType] || [];
+    const categories =
+      (INGREDIENT_CATEGORIES as Record<string, string[]>)[ingredientType] || [];
 
     // Don't render category filter for 'other' ingredients or 'hop' (no hop_type field in backend)
     if (ingredientType === "other" || ingredientType === "hop") {
@@ -363,45 +439,55 @@ export default function IngredientPickerScreen() {
     }
 
     return (
-      <View style={styles.categoryContainer}>
-        <TouchableOpacity
-          style={[
-            styles.categoryChip,
-            !selectedCategory && styles.categoryChipActive,
-          ]}
-          onPress={() => setSelectedCategory("")}
+      <View style={styles.categorySection}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryScrollView}
+          contentContainerStyle={styles.categoryContainer}
         >
-          <Text
-            style={[
-              styles.categoryChipText,
-              !selectedCategory && styles.categoryChipTextActive,
-            ]}
-          >
-            All
-          </Text>
-        </TouchableOpacity>
-
-        {categories.map(category => (
           <TouchableOpacity
-            key={category}
             style={[
               styles.categoryChip,
-              selectedCategory === category && styles.categoryChipActive,
+              !selectedCategory && styles.categoryChipActive,
             ]}
-            onPress={() =>
-              setSelectedCategory(selectedCategory === category ? "" : category)
-            }
+            onPress={() => setSelectedCategory("")}
           >
             <Text
               style={[
                 styles.categoryChipText,
-                selectedCategory === category && styles.categoryChipTextActive,
+                !selectedCategory && styles.categoryChipTextActive,
               ]}
             >
-              {CATEGORY_LABELS[category] || category || "Unknown"}
+              All
             </Text>
           </TouchableOpacity>
-        ))}
+
+          {categories.map(category => (
+            <TouchableOpacity
+              key={category}
+              style={[
+                styles.categoryChip,
+                selectedCategory === category && styles.categoryChipActive,
+              ]}
+              onPress={() =>
+                setSelectedCategory(
+                  selectedCategory === category ? "" : category
+                )
+              }
+            >
+              <Text
+                style={[
+                  styles.categoryChipText,
+                  selectedCategory === category &&
+                    styles.categoryChipTextActive,
+                ]}
+              >
+                {CATEGORY_LABELS[category] || category || "Unknown"}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
     );
   };
@@ -430,7 +516,20 @@ export default function IngredientPickerScreen() {
               value={amount}
               onChangeText={setAmount}
               keyboardType="decimal-pad"
-              placeholder="1.0"
+              placeholder={(() => {
+                switch (ingredientType) {
+                  case "grain":
+                    return unitSystem === "imperial" ? "8.0" : "3.6";
+                  case "hop":
+                    return unitSystem === "imperial" ? "1.0" : "28";
+                  case "yeast":
+                    return "1";
+                  case "other":
+                    return unitSystem === "imperial" ? "0.5" : "14";
+                  default:
+                    return "1.0";
+                }
+              })()}
               placeholderTextColor={theme.colors.textMuted}
               selectTextOnFocus
             />
@@ -540,10 +639,7 @@ export default function IngredientPickerScreen() {
 
   if (showQuantityInput) {
     return (
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
+      <KeyboardAvoidingView style={styles.container} behavior="height">
         {renderQuantityInput()}
       </KeyboardAvoidingView>
     );

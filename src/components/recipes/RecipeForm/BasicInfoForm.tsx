@@ -6,31 +6,15 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { RecipeFormData, BatchSizeUnit } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
-
-// Common beer styles for quick selection
-const COMMON_BEER_STYLES = [
-  "American IPA",
-  "Pale Ale",
-  "American Wheat",
-  "Porter",
-  "Stout",
-  "American Lager",
-  "Pilsner",
-  "Hefeweizen",
-  "Belgian Dubbel",
-  "Saison",
-  "Brown Ale",
-  "Imperial IPA",
-  "Witbier",
-  "Barleywine",
-  "Amber Ale",
-];
+import { useBeerStyles } from "@src/hooks/useBeerStyles";
 
 interface BasicInfoFormProps {
   recipeData: RecipeFormData;
@@ -56,6 +40,14 @@ export function BasicInfoForm({
 
   const [showStylePicker, setShowStylePicker] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [styleSearchQuery, setStyleSearchQuery] = React.useState("");
+
+  // Fetch beer styles from API with fallback to common styles
+  const {
+    data: beerStyles,
+    isLoading: stylesLoading,
+    error: stylesError,
+  } = useBeerStyles();
 
   const validateField = (field: keyof RecipeFormData, value: any) => {
     const newErrors = { ...errors };
@@ -123,30 +115,99 @@ export function BasicInfoForm({
   const renderStylePicker = () => {
     if (!showStylePicker) return null;
 
+    const displayStyles = beerStyles || [];
+
+    // Filter styles based on search query
+    const filteredStyles = displayStyles.filter(
+      style =>
+        style.name.toLowerCase().includes(styleSearchQuery.toLowerCase()) ||
+        style.styleId.toLowerCase().includes(styleSearchQuery.toLowerCase())
+    );
+
     return (
-      <View style={styles.stylePickerContainer}>
+      <KeyboardAvoidingView
+        style={styles.stylePickerContainer}
+        behavior="height"
+      >
         <View style={styles.stylePickerHeader}>
-          <Text style={styles.stylePickerTitle}>Select Beer Style</Text>
-          <TouchableOpacity onPress={() => setShowStylePicker(false)}>
+          <Text style={styles.stylePickerTitle}>
+            Select Beer Style {stylesLoading && "(Loading...)"}
+          </Text>
+          <TouchableOpacity
+            onPress={() => {
+              setShowStylePicker(false);
+              setStyleSearchQuery("");
+            }}
+          >
             <MaterialIcons name="close" size={24} color={theme.colors.text} />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.stylePickerContent}>
-          {COMMON_BEER_STYLES.map(style => (
+        {/* Search Input */}
+        <View style={styles.searchContainer}>
+          <MaterialIcons
+            name="search"
+            size={20}
+            color={theme.colors.textMuted}
+          />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search beer styles or IDs..."
+            value={styleSearchQuery}
+            onChangeText={setStyleSearchQuery}
+            placeholderTextColor={theme.colors.textMuted}
+            returnKeyType="search"
+          />
+          {styleSearchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setStyleSearchQuery("")}>
+              <MaterialIcons
+                name="clear"
+                size={20}
+                color={theme.colors.textMuted}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <ScrollView
+          style={styles.stylePickerContent}
+          showsVerticalScrollIndicator={true}
+          keyboardShouldPersistTaps="handled"
+        >
+          {!!stylesError && (
+            <View style={styles.infoSection}>
+              <Text style={styles.infoText}>
+                Unable to load beer styles from server. Showing common styles.
+              </Text>
+            </View>
+          )}
+          {filteredStyles.map(style => (
             <TouchableOpacity
-              key={style}
+              key={`${style.styleId}-${style.name}`}
               style={styles.stylePickerItem}
               onPress={() => {
-                handleFieldChange("style", style);
+                handleFieldChange("style", style.name);
                 setShowStylePicker(false);
+                setStyleSearchQuery("");
               }}
             >
-              <Text style={styles.stylePickerItemText}>{style}</Text>
+              <View style={styles.stylePickerItemRow}>
+                <Text style={styles.stylePickerItemId}>{style.styleId}</Text>
+                <Text style={styles.stylePickerItemText}>{style.name}</Text>
+              </View>
             </TouchableOpacity>
           ))}
-        </View>
-      </View>
+          {filteredStyles.length === 0 && !stylesLoading && (
+            <View style={styles.infoSection}>
+              <Text style={styles.infoText}>
+                {styleSearchQuery
+                  ? "No beer styles match your search"
+                  : "No beer styles available. Try again later."}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     );
   };
 
