@@ -165,14 +165,13 @@ export function ReviewForm({ recipeData, calculatedMetrics }: ReviewFormProps) {
                   )}
                   {/* Show yeast-specific details */}
                   {ingredient.type === "yeast" &&
-                    (ingredient.yeast_type || ingredient.manufacturer) && (
+                    (ingredient.manufacturer || ingredient.attenuation != null) && (
                       <Text style={styles.ingredientReviewDetails}>
                         {ingredient.manufacturer && ingredient.manufacturer}
-                        {ingredient.attenuation &&
+                        {ingredient.attenuation != null &&
                           ` • ${ingredient.attenuation}% Attenuation`}
                       </Text>
                     )}
-                </View>
                 <Text style={styles.ingredientReviewAmount}>
                   {ingredient.amount} {ingredient.unit}
                 </Text>
