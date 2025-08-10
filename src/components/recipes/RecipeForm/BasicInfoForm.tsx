@@ -19,6 +19,7 @@ import { useBeerStyles } from "@src/hooks/useBeerStyles";
 interface BasicInfoFormProps {
   recipeData: RecipeFormData;
   onUpdateField: (field: keyof RecipeFormData, value: any) => void;
+  isEditing?: boolean;
 }
 
 /**
@@ -34,6 +35,7 @@ interface BasicInfoFormProps {
 export function BasicInfoForm({
   recipeData,
   onUpdateField,
+  isEditing = false,
 }: BasicInfoFormProps) {
   const theme = useTheme();
   const styles = createRecipeStyles(theme);

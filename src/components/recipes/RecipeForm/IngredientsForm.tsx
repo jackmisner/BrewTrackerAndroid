@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useGlobalSearchParams } from "expo-router";
@@ -7,6 +7,7 @@ import { useTheme } from "@contexts/ThemeContext";
 import { RecipeFormData, RecipeIngredient } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
+import { IngredientDetailEditor } from "@src/components/recipes/IngredientEditor/IngredientDetailEditor";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 import { formatHopTime } from "@src/utils/timeUtils";
 
@@ -29,6 +30,7 @@ const GRAIN_TYPE_DISPLAY_MAPPING: Record<string, string> = {
 interface IngredientsFormProps {
   recipeData: RecipeFormData;
   onUpdateField: (field: keyof RecipeFormData, value: any) => void;
+  isEditing?: boolean;
 }
 
 /**
@@ -44,6 +46,7 @@ interface IngredientsFormProps {
 export function IngredientsForm({
   recipeData,
   onUpdateField,
+  isEditing = false,
 }: IngredientsFormProps) {
   const theme = useTheme();
   const styles = createRecipeStyles(theme);
@@ -55,6 +58,11 @@ export function IngredientsForm({
     : [];
 
   const processedParamRef = useRef<string | null>(null);
+
+  // State for ingredient editing
+  const [editingIngredient, setEditingIngredient] =
+    useState<RecipeIngredient | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
 
   // Real-time recipe metrics calculation
   const {
@@ -101,6 +109,70 @@ export function IngredientsForm({
     router.push(`/(modals)/(recipes)/ingredientPicker?type=${type}`);
   };
 
+  /**
+   * Handles editing an existing ingredient
+   */
+  const handleEditIngredient = (ingredient: RecipeIngredient) => {
+    setEditingIngredient(ingredient);
+    setShowEditor(true);
+  };
+
+  /**
+   * Updates an ingredient in the recipe
+   */
+  const handleUpdateIngredient = (updatedIngredient: RecipeIngredient) => {
+    const ingredientIndex = safeIngredients.findIndex(
+      ing =>
+        (updatedIngredient.id != null && ing.id === updatedIngredient.id) ||
+        (updatedIngredient.id == null &&
+          ing.name === editingIngredient?.name &&
+          ing.type === editingIngredient?.type)
+    );
+
+    if (ingredientIndex !== -1) {
+      const newIngredients = [...safeIngredients];
+      newIngredients[ingredientIndex] = updatedIngredient;
+
+      onUpdateField("ingredients", newIngredients);
+    }
+
+    setShowEditor(false);
+    setEditingIngredient(null);
+  };
+
+  /**
+   * Removes an ingredient from the recipe
+   */
+  const handleRemoveIngredient = (ingredientToRemove: RecipeIngredient) => {
+    const globalIndex = safeIngredients.findIndex(
+      ing =>
+        (ingredientToRemove.id != null && ing.id === ingredientToRemove.id) ||
+        (ingredientToRemove.id == null &&
+          ing.name === ingredientToRemove.name &&
+          ing.type === ingredientToRemove.type &&
+          ing.amount === ingredientToRemove.amount &&
+          ing.unit === ingredientToRemove.unit)
+    );
+
+    if (globalIndex !== -1) {
+      const newIngredients = safeIngredients.filter(
+        (_, i) => i !== globalIndex
+      );
+      onUpdateField("ingredients", newIngredients);
+    }
+
+    setShowEditor(false);
+    setEditingIngredient(null);
+  };
+
+  /**
+   * Cancels editing
+   */
+  const handleCancelEdit = () => {
+    setShowEditor(false);
+    setEditingIngredient(null);
+  };
+
   const renderIngredientSection = (
     type: "grain" | "hop" | "yeast" | "other",
     title: string
@@ -129,7 +201,12 @@ export function IngredientsForm({
         ) : (
           <View style={styles.ingredientsList}>
             {ingredients.map((ingredient, index) => (
-              <View key={index} style={styles.ingredientItem}>
+              <TouchableOpacity
+                key={index}
+                style={styles.ingredientItem}
+                onPress={() => handleEditIngredient(ingredient)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.ingredientInfo}>
                   <Text style={styles.ingredientName}>{ingredient.name}</Text>
                   <Text style={styles.ingredientAmount}>
@@ -165,42 +242,39 @@ export function IngredientsForm({
                         {ingredient.attenuation &&
                           ` • ${ingredient.attenuation}% Attenuation`}
                       </Text>
-                    )}{" "}
+                    )}
                 </View>
-                <TouchableOpacity
-                  style={styles.ingredientRemoveButton}
-                  onPress={() => {
-                    // Find the ingredient in the full safe ingredients array
-                    const globalIndex = safeIngredients.findIndex(
-                      ing =>
-                        (ingredient.id != null && ing.id === ingredient.id) ||
-                        (ingredient.id == null &&
-                          ing.name === ingredient.name &&
-                          ing.type === ingredient.type &&
-                          ing.amount === ingredient.amount &&
-                          ing.unit === ingredient.unit)
-                    );
 
-                    if (globalIndex !== -1) {
-                      const newIngredients = safeIngredients.filter(
-                        (_, i) => i !== globalIndex
-                      );
-
-                      onUpdateField("ingredients", newIngredients);
-                    } else {
-                      console.error(
-                        "❌ IngredientsForm - Could not find ingredient to remove"
-                      );
-                    }
-                  }}
-                >
-                  <MaterialIcons
-                    name="close"
-                    size={18}
-                    color={theme.colors.error}
-                  />
-                </TouchableOpacity>
-              </View>
+                {/* Action buttons */}
+                <View style={styles.ingredientActions}>
+                  <TouchableOpacity
+                    style={styles.ingredientEditButton}
+                    onPress={e => {
+                      e.stopPropagation();
+                      handleEditIngredient(ingredient);
+                    }}
+                  >
+                    <MaterialIcons
+                      name="edit"
+                      size={16}
+                      color={theme.colors.primary}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.ingredientRemoveButton}
+                    onPress={e => {
+                      e.stopPropagation();
+                      handleRemoveIngredient(ingredient);
+                    }}
+                  >
+                    <MaterialIcons
+                      name="close"
+                      size={16}
+                      color={theme.colors.error}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -253,6 +327,17 @@ export function IngredientsForm({
             strain, and any other ingredients like spices or clarifying agents.
           </Text>
         </View>
+      )}
+
+      {/* Ingredient Detail Editor */}
+      {editingIngredient && (
+        <IngredientDetailEditor
+          ingredient={editingIngredient}
+          onUpdate={handleUpdateIngredient}
+          onCancel={handleCancelEdit}
+          onRemove={() => handleRemoveIngredient(editingIngredient)}
+          isVisible={showEditor}
+        />
       )}
     </View>
   );

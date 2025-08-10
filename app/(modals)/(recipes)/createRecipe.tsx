@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   KeyboardAvoidingView,
+  ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -288,10 +289,7 @@ export default function CreateRecipeScreen() {
         );
       case RecipeStep.REVIEW:
         return (
-          <ReviewForm
-            recipeData={recipeState}
-            calculatedMetrics={calculatedMetrics}
-          />
+          <ReviewForm recipeData={recipeState} metrics={calculatedMetrics} />
         );
       default:
         return null;
@@ -318,92 +316,65 @@ export default function CreateRecipeScreen() {
       </ScrollView>
 
       {/* Navigation Buttons */}
-      <View style={styles.navigationContainer}>
-        <TouchableOpacity
-          onPress={handlePrevious}
-          style={[
-            styles.navigationButton,
-            styles.navigationButtonSecondary,
-            currentStep === RecipeStep.BASIC_INFO &&
-              styles.navigationButtonDisabled,
-          ]}
-          disabled={currentStep === RecipeStep.BASIC_INFO}
-        >
-          <MaterialIcons
-            name="arrow-back"
-            size={20}
-            color={
-              currentStep === RecipeStep.BASIC_INFO
-                ? theme.colors.textMuted
-                : theme.colors.text
-            }
-          />
-          <Text
-            style={[
-              styles.navigationButtonText,
-              styles.navigationButtonSecondaryText,
-              currentStep === RecipeStep.BASIC_INFO &&
-                styles.navigationButtonDisabledText,
-            ]}
-          >
-            Previous
-          </Text>
-        </TouchableOpacity>
-
-        {currentStep < RecipeStep.REVIEW ? (
-          <TouchableOpacity
-            onPress={handleNext}
-            style={[
-              styles.navigationButton,
-              styles.navigationButtonPrimary,
-              !canProceed() && styles.navigationButtonDisabled,
-            ]}
-            disabled={!canProceed()}
-          >
-            <Text
-              style={[
-                styles.navigationButtonText,
-                styles.navigationButtonPrimaryText,
-                !canProceed() && styles.navigationButtonDisabledText,
-              ]}
-            >
-              Next
-            </Text>
+      <View style={styles.navigation}>
+        {currentStep > RecipeStep.BASIC_INFO && (
+          <TouchableOpacity style={styles.backButton} onPress={handlePrevious}>
             <MaterialIcons
-              name="arrow-forward"
+              name="arrow-back"
               size={20}
-              color={
-                !canProceed()
-                  ? theme.colors.textMuted
-                  : theme.colors.primaryText
-              }
+              color={theme.colors.text}
             />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            onPress={handleSave}
-            style={[
-              styles.navigationButton,
-              styles.navigationButtonPrimary,
-              createRecipeMutation.isPending && styles.navigationButtonDisabled,
-            ]}
-            disabled={createRecipeMutation.isPending}
-          >
-            <Text
-              style={[
-                styles.navigationButtonText,
-                styles.navigationButtonPrimaryText,
-              ]}
-            >
-              {createRecipeMutation.isPending ? "Creating..." : "Create Recipe"}
-            </Text>
-            <MaterialIcons
-              name="check"
-              size={20}
-              color={theme.colors.primaryText}
-            />
+            <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
         )}
+
+        <View style={styles.navigationRight}>
+          {currentStep < RecipeStep.REVIEW ? (
+            <TouchableOpacity
+              style={[
+                styles.nextButton,
+                !canProceed() && styles.nextButtonDisabled,
+              ]}
+              onPress={handleNext}
+              disabled={!canProceed()}
+            >
+              <Text
+                style={[
+                  styles.nextButtonText,
+                  !canProceed() && styles.nextButtonTextDisabled,
+                ]}
+              >
+                Next
+              </Text>
+              <MaterialIcons
+                name="arrow-forward"
+                size={20}
+                color={canProceed() ? "#fff" : theme.colors.textMuted}
+              />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.saveButton,
+                createRecipeMutation.isPending && styles.saveButtonDisabled,
+              ]}
+              onPress={handleSave}
+              disabled={createRecipeMutation.isPending}
+            >
+              {createRecipeMutation.isPending ? (
+                <>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.saveButtonText}>Creating...</Text>
+                </>
+              ) : (
+                <>
+                  <MaterialIcons name="check" size={20} color="#fff" />
+                  <Text style={styles.saveButtonText}>Create Recipe</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </KeyboardAvoidingView>
   );

@@ -32,20 +32,12 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       color: theme.colors.text,
     },
 
-    // Progress bar styles
-    progressContainer: {
-      paddingHorizontal: 16,
-      paddingVertical: 20,
-      backgroundColor: theme.colors.backgroundSecondary,
-    },
+    // Old progress styles - replaced by comprehensive styles at bottom
+    // Content styles - replaced by comprehensive styles at bottom
     progressBar: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-    },
-    progressStep: {
-      alignItems: "center",
-      flex: 1,
     },
     progressCircle: {
       width: 44,
@@ -75,12 +67,6 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     progressStepLabelActive: {
       color: theme.colors.text,
       fontWeight: "500",
-    },
-
-    // Content styles
-    content: {
-      flex: 1,
-      padding: 16,
     },
     placeholderText: {
       fontSize: 16,
@@ -491,8 +477,19 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       marginTop: 1,
       fontStyle: "italic",
     },
+    ingredientActions: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    ingredientEditButton: {
+      padding: 6,
+      borderRadius: 4,
+      backgroundColor: theme.colors.backgroundSecondary,
+    },
     ingredientRemoveButton: {
-      padding: 4,
+      padding: 6,
+      borderRadius: 4,
+      backgroundColor: theme.colors.backgroundSecondary,
     },
 
     // Review form
@@ -592,5 +589,194 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       color: theme.colors.textMuted,
       fontStyle: "italic",
       textAlign: "center",
+    },
+
+    // Loading and error states
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 20,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      marginTop: 16,
+      textAlign: "center",
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 20,
+    },
+    errorTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: theme.colors.error,
+      marginTop: 16,
+      textAlign: "center",
+    },
+    errorText: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      marginTop: 8,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    retryButton: {
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 8,
+      marginTop: 20,
+    },
+    retryButtonText: {
+      color: "#fff",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+
+    // Additional styles for editRecipe
+    cancelButton: {
+      padding: 8,
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: "bold",
+      color: theme.colors.text,
+      flex: 1,
+      textAlign: "center",
+    },
+    placeholder: {
+      width: 40,
+    },
+    saveButton: {
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    saveButtonDisabled: {
+      backgroundColor: theme.colors.backgroundSecondary,
+      opacity: 0.6,
+    },
+    saveButtonText: {
+      color: "#fff",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+
+    // Progress indicator styles
+    progressContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: theme.colors.backgroundSecondary,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.borderLight,
+    },
+    progressStep: {
+      alignItems: "center",
+      flex: 1,
+    },
+    progressDot: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: theme.colors.backgroundSecondary,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    progressDotActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    progressDotCompleted: {
+      backgroundColor: theme.colors.success,
+      borderColor: theme.colors.success,
+    },
+    progressDotText: {
+      fontSize: 12,
+      fontWeight: "600",
+      color: theme.colors.textSecondary,
+    },
+    progressDotTextActive: {
+      color: "#fff",
+    },
+    progressLabel: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      textAlign: "center",
+    },
+    progressLabelActive: {
+      color: theme.colors.primary,
+      fontWeight: "600",
+    },
+
+    // Navigation styles
+    navigation: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: theme.colors.backgroundSecondary,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.borderLight,
+    },
+    backButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: theme.colors.background,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      gap: 8,
+    },
+    backButtonText: {
+      fontSize: 16,
+      color: theme.colors.text,
+      fontWeight: "500",
+    },
+    navigationRight: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    nextButton: {
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    nextButtonDisabled: {
+      backgroundColor: theme.colors.backgroundSecondary,
+      opacity: 0.6,
+    },
+    nextButtonText: {
+      color: "#fff",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    nextButtonTextDisabled: {
+      color: theme.colors.textMuted,
+    },
+
+    // Content area
+    content: {
+      flex: 1,
+      paddingHorizontal: 20,
     },
   });

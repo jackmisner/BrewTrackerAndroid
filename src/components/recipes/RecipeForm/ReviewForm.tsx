@@ -26,13 +26,17 @@ const GRAIN_TYPE_DISPLAY_MAPPING: Record<string, string> = {
 
 interface ReviewFormProps {
   recipeData: RecipeFormData;
-  calculatedMetrics?: {
+  metrics?: {
     og?: number;
     fg?: number;
     abv?: number;
     ibu?: number;
     srm?: number;
   } | null;
+  metricsLoading?: boolean;
+  metricsError?: unknown;
+  onRetryMetrics?: () => void;
+  isEditing?: boolean;
 }
 
 /**
@@ -42,7 +46,14 @@ interface ReviewFormProps {
  *
  * @param recipeData - The brewing recipe data to be reviewed
  */
-export function ReviewForm({ recipeData, calculatedMetrics }: ReviewFormProps) {
+export function ReviewForm({
+  recipeData,
+  metrics,
+  metricsLoading,
+  metricsError,
+  onRetryMetrics,
+  isEditing = false,
+}: ReviewFormProps) {
   const theme = useTheme();
   const styles = createRecipeStyles(theme);
 
@@ -165,7 +176,8 @@ export function ReviewForm({ recipeData, calculatedMetrics }: ReviewFormProps) {
                   )}
                   {/* Show yeast-specific details */}
                   {ingredient.type === "yeast" &&
-                    (ingredient.manufacturer || ingredient.attenuation != null) && (
+                    (ingredient.manufacturer ||
+                      ingredient.attenuation != null) && (
                       <Text style={styles.ingredientReviewDetails}>
                         {ingredient.manufacturer && ingredient.manufacturer}
                         {ingredient.attenuation != null &&
@@ -194,11 +206,16 @@ export function ReviewForm({ recipeData, calculatedMetrics }: ReviewFormProps) {
 
   const renderEstimatedMetrics = () => (
     <BrewingMetricsDisplay
-      metrics={calculatedMetrics || undefined}
+      metrics={metrics || undefined}
       mash_temperature={recipeData.mash_temperature}
       mash_temp_unit={recipeData.mash_temp_unit}
-      loading={false}
-      error={null}
+      loading={metricsLoading || false}
+      error={
+        metricsError
+          ? (metricsError as any)?.message || "Metrics calculation error"
+          : null
+      }
+      onRetry={onRetryMetrics}
       compact={false}
       showTitle={true}
     />
@@ -228,9 +245,9 @@ export function ReviewForm({ recipeData, calculatedMetrics }: ReviewFormProps) {
         </View>
         <Text style={styles.infoText}>
           {/* eslint-disable-next-line react/no-unescaped-entities */}
-          Your recipe looks good! Click "Create Recipe" to save it to
-          your recipe collection. You can always edit the recipe later or use it
-          to start a new brew session.
+          Your recipe looks good! Click "Create Recipe" to save it to your
+          recipe collection. You can always edit the recipe later or use it to
+          start a new brew session.
         </Text>
       </View>
     </View>
