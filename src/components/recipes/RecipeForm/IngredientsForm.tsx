@@ -249,8 +249,7 @@ export function IngredientsForm({
                 <View style={styles.ingredientActions}>
                   <TouchableOpacity
                     style={styles.ingredientEditButton}
-                    onPress={e => {
-                      e.stopPropagation();
+                    onPress={() => {
                       handleEditIngredient(ingredient);
                     }}
                   >
@@ -262,8 +261,7 @@ export function IngredientsForm({
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.ingredientRemoveButton}
-                    onPress={e => {
-                      e.stopPropagation();
+                    onPress={() => {
                       handleRemoveIngredient(ingredient);
                     }}
                   >
