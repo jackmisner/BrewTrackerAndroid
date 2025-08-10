@@ -17,6 +17,7 @@ export default function RecipesModalsLayout() {
     >
       <Stack.Screen name="viewRecipe" />
       <Stack.Screen name="createRecipe" />
+      <Stack.Screen name="editRecipe" />
       <Stack.Screen name="ingredientPicker" />
     </Stack>
   );

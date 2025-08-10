@@ -95,6 +95,7 @@ export interface Recipe {
   // User context
   username?: string;
   user_id?: ID;
+  is_owner?: boolean;
   clone_count?: number;
   brew_count?: number;
 }

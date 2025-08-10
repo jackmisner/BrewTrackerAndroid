@@ -8,7 +8,10 @@ export interface BeerStyleOption {
 }
 
 interface BeerStylesResponse {
-  categories?: Record<string, { styles?: Array<{ name?: string; style_id?: string }> }>;
+  categories?: Record<
+    string,
+    { styles?: Array<{ name?: string; style_id?: string }> }
+  >;
 }
 
 /**
@@ -79,6 +82,5 @@ export function useBeerStyles() {
         return aId.letter.localeCompare(bId.letter);
       });
     },
-
   });
 }

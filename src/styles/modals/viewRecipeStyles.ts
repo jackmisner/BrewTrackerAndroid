@@ -41,6 +41,10 @@ export const viewRecipeStyles = (theme: ThemeContextValue) =>
       color: theme.colors.text,
       textAlign: "center",
     },
+    headerActions: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
     actionButton: {
       padding: 8,
       marginLeft: 8,

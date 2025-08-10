@@ -97,6 +97,18 @@ export default function ViewRecipeScreen() {
   };
 
   /**
+   * Navigation handler for editing the recipe
+   */
+  const handleEditRecipe = () => {
+    if (recipe_id) {
+      router.push({
+        pathname: "/(modals)/(recipes)/editRecipe",
+        params: { recipe_id: recipe_id },
+      });
+    }
+  };
+
+  /**
    * Format date strings for display
    * Converts ISO date strings to readable format
    */
@@ -302,13 +314,21 @@ export default function ViewRecipeScreen() {
         <Text style={styles.headerTitle} numberOfLines={1}>
           {recipe.name || "Recipe Details"}
         </Text>
-        {/* Action button for starting a brew session */}
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={handleStartBrewing}
-        >
-          <MaterialIcons name="play-arrow" size={24} color="#f4511e" />
-        </TouchableOpacity>
+        {/* Action buttons */}
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleEditRecipe}
+          >
+            <MaterialIcons name="edit" size={22} color="#f4511e" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleStartBrewing}
+          >
+            <MaterialIcons name="play-arrow" size={24} color="#f4511e" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Scrollable Content */}

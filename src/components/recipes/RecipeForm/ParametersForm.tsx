@@ -10,6 +10,7 @@ import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 interface ParametersFormProps {
   recipeData: RecipeFormData;
   onUpdateField: (field: keyof RecipeFormData, value: any) => void;
+  isEditing?: boolean;
 }
 
 /**
@@ -25,6 +26,7 @@ interface ParametersFormProps {
 export function ParametersForm({
   recipeData,
   onUpdateField,
+  isEditing = false,
 }: ParametersFormProps) {
   const theme = useTheme();
   const { unitSystem } = useUnits();
@@ -112,13 +114,13 @@ export function ParametersForm({
     onUpdateField("mash_temperature", newTemp);
   };
 
-  // Preset efficiency values based on brewing method
+  // Preset efficiency values based on brewing method (ordered by increasing efficiency)
   const efficiencyPresets = [
+    { label: "Partial Mash", value: 60 },
     { label: "All Grain (Beginner)", value: 65 },
     { label: "All Grain (Intermediate)", value: 75 },
-    { label: "All Grain (Advanced)", value: 85 },
-    { label: "Partial Mash", value: 60 },
     { label: "Extract", value: 80 },
+    { label: "All Grain (Advanced)", value: 85 },
   ];
 
   return (
