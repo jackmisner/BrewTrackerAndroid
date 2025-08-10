@@ -13,7 +13,7 @@ export const brewingMetricsStyles = (theme: ThemeContextValue, compact: boolean 
       flexDirection: "row",
       flexWrap: "wrap",
       gap: compact ? 8 : 12,
-      justifyContent: "space-between",
+      justifyContent: "flex-start",
     },
     
     // Individual metric card
@@ -23,7 +23,8 @@ export const brewingMetricsStyles = (theme: ThemeContextValue, compact: boolean 
       padding: compact ? 12 : 16,
       alignItems: "center",
       flexBasis: "30%",
-      flex: 1,
+      flexGrow: 0,
+      flexShrink: 1,
       shadowColor: theme.colors.shadow,
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.05,
