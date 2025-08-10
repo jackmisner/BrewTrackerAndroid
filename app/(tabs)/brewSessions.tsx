@@ -15,6 +15,11 @@ import { useTheme } from "@contexts/ThemeContext";
 import { brewSessionsStyles } from "@styles/tabs/brewSessionsStyles";
 import { router, useLocalSearchParams } from "expo-router";
 
+/**
+ * Displays a tabbed interface for viewing, refreshing, and navigating brew sessions.
+ *
+ * Shows lists of active and completed brew sessions, allows switching between tabs, supports pull-to-refresh, and provides navigation to session details or starting a new brew session. Handles loading, error, and empty states with appropriate UI feedback.
+ */
 export default function BrewSessionsScreen() {
   const theme = useTheme();
   const styles = brewSessionsStyles(theme);
@@ -79,7 +84,7 @@ export default function BrewSessionsScreen() {
   const handleBrewSessionPress = (brewSession: BrewSession) => {
     router.push({
       pathname: "/(modals)/(brewSessions)/viewBrewSession",
-      params: { brewSessionId: brewSession.session_id },
+      params: { brewSessionId: brewSession.id },
     });
   };
 
@@ -164,7 +169,6 @@ export default function BrewSessionsScreen() {
   }: {
     item: BrewSession;
   }) => {
-    // Fix: The actual data has recipe_id and session_id, not recipe and id
     if (!brewSession || !brewSession.name) {
       return null;
     }
@@ -388,7 +392,7 @@ export default function BrewSessionsScreen() {
           data={currentBrewSessions}
           renderItem={renderBrewSessionItem}
           keyExtractor={(item, index) =>
-            item.session_id?.toString() || `brew-session-${index}`
+            item.id?.toString() || `brew-session-${index}`
           }
           contentContainerStyle={styles.listContainer}
           refreshControl={

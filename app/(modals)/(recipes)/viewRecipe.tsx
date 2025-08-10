@@ -16,17 +16,9 @@ import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
 import { useTheme } from "@contexts/ThemeContext";
 
 /**
- * ViewRecipe Screen Component
+ * Displays detailed information about a specific brewing recipe, including metrics, ingredients, and instructions.
  *
- * This screen displays detailed information about a specific recipe.
- * It receives a recipe_id through route parameters and fetches the full recipe data.
- *
- * *Key Concepts:*
- * 1. Route Parameters: Uses useLocalSearchParams() to get URL parameters
- * 2. Data Fetching: Uses React Query with recipe-specific query key
- * 3. Error Handling: Comprehensive loading, error, and empty states
- * 4. ScrollView Layout: Proper detail screen layout with sections
- * 5. TypeScript: Proper typing for parameters and data structures
+ * Fetches recipe data based on the provided `recipe_id` from route parameters, and presents loading, error, and empty states as appropriate. Supports pull-to-refresh and navigation controls. Some sections, such as brewing instructions and brew session creation, are placeholders for future implementation.
  */
 export default function ViewRecipeScreen() {
   const theme = useTheme();
@@ -171,7 +163,10 @@ export default function ViewRecipeScreen() {
             <Text style={styles.ingredientGroupTitle}>{title}</Text>
           </View>
           {ingredients.map((ingredient, index) => (
-            <View key={ingredient.id || index} style={styles.ingredientItem}>
+            <View
+              key={`${ingredient.id || "no-id"}-${ingredient.type}-${index}`}
+              style={styles.ingredientItem}
+            >
               <Text style={styles.ingredientName}>{ingredient.name}</Text>
               <Text style={styles.ingredientAmount}>
                 {ingredient.amount} {ingredient.unit}
@@ -368,9 +363,7 @@ export default function ViewRecipeScreen() {
 
             <View style={styles.metadataItem}>
               <MaterialIcons name="person" size={16} color="#666" />
-              <Text style={styles.metadataText}>
-                Recipe ID: {recipe.recipe_id}
-              </Text>
+              <Text style={styles.metadataText}>Recipe ID: {recipe.id}</Text>
             </View>
           </View>
         </View>

@@ -17,6 +17,11 @@ import ApiService from "@services/API/apiService";
 import { Recipe, BrewSession } from "@src/types";
 import { dashboardStyles } from "@styles/tabs/dashboardStyles";
 
+/**
+ * Displays the main dashboard screen for the brewing app, showing user stats, recent recipes, and active brew sessions.
+ *
+ * Fetches and presents personalized brewing data, including recipe and brew session statistics, with support for pull-to-refresh and navigation to related screens. Handles loading and error states with appropriate UI feedback.
+ */
 export default function DashboardScreen() {
   const { user } = useAuth();
   const theme = useTheme();
@@ -89,8 +94,7 @@ export default function DashboardScreen() {
   });
 
   const handleCreateRecipe = () => {
-    // TODO: Navigate to recipe create screen when implemented
-    console.log("Navigate to create recipe");
+    router.push("/(modals)/(recipes)/createRecipe");
   };
 
   const handleStartBrewSession = () => {
@@ -118,7 +122,7 @@ export default function DashboardScreen() {
   const handleRecipePress = (recipe: Recipe) => {
     router.push({
       pathname: "/(modals)/(recipes)/viewRecipe",
-      params: { recipe_id: recipe.recipe_id },
+      params: { recipe_id: recipe.id },
     });
   };
 
@@ -133,7 +137,7 @@ export default function DashboardScreen() {
   const handleBrewSessionPress = (brewSession: BrewSession) => {
     router.push({
       pathname: "/(modals)/(brewSessions)/viewBrewSession",
-      params: { brewSessionId: brewSession.session_id },
+      params: { brewSessionId: brewSession.id },
     });
   };
 
@@ -192,13 +196,13 @@ export default function DashboardScreen() {
   };
 
   const renderActiveBrewSession = (brewSession: BrewSession) => {
-    if (!brewSession || !brewSession.session_id || !brewSession.name) {
+    if (!brewSession || !brewSession.id || !brewSession.name) {
       return null;
     }
 
     return (
       <TouchableOpacity
-        key={brewSession.session_id}
+        key={brewSession.id}
         style={styles.recentCard}
         onPress={() => handleBrewSessionPress(brewSession)}
       >
@@ -494,7 +498,7 @@ export default function DashboardScreen() {
         {activeBrewSessions.length > 0 ? (
           <View style={styles.verticalList}>
             {activeBrewSessions
-              .filter(session => session && session.session_id)
+              .filter(session => session && session.id)
               .map(renderActiveBrewSession)}
           </View>
         ) : (

@@ -60,8 +60,7 @@ export interface RecipeMetrics {
 
 // Main recipe interface
 export interface Recipe {
-  id: ID;
-  recipe_id: ID;
+  id: ID; // Normalized by API interceptors
   name: string;
   style: string;
   description: string;

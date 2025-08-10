@@ -1,40 +1,85 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  FlatList,
-} from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import React, { useEffect, useRef } from "react";
+import { View, Text, TouchableOpacity } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
+import { router, useGlobalSearchParams } from "expo-router";
 
-import { useTheme } from '@contexts/ThemeContext';
-import { RecipeFormData, RecipeIngredient } from '@src/types';
-import { createRecipeStyles } from '@styles/modals/createRecipeStyles';
+import { useTheme } from "@contexts/ThemeContext";
+import { RecipeFormData, RecipeIngredient } from "@src/types";
+import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 
 interface IngredientsFormProps {
   recipeData: RecipeFormData;
   onUpdateField: (field: keyof RecipeFormData, value: any) => void;
 }
 
-export function IngredientsForm({ recipeData, onUpdateField }: IngredientsFormProps) {
+/**
+ * Displays and manages a categorized ingredient list for a recipe, allowing users to add or remove ingredients by type.
+ *
+ * Handles ingredient addition via navigation parameters, categorizes ingredients into grains, hops, yeast, and other, and updates the recipe data through a callback when changes occur.
+ *
+ * @param recipeData - The current recipe form data containing the ingredients list.
+ * @param onUpdateField - Callback to update fields in the recipe data when ingredients are added or removed.
+ *
+ * @returns A React element rendering the ingredient form UI.
+ */
+export function IngredientsForm({
+  recipeData,
+  onUpdateField,
+}: IngredientsFormProps) {
   const theme = useTheme();
   const styles = createRecipeStyles(theme);
+  const params = useGlobalSearchParams();
+
+  // Ensure ingredients is always an array to prevent crashes
+  const safeIngredients = Array.isArray(recipeData.ingredients)
+    ? recipeData.ingredients
+    : [];
+
+  const processedParamRef = useRef<string | null>(null);
 
   const ingredientsByType = {
-    grain: recipeData.ingredients.filter(ing => ing.type === 'grain'),
-    hop: recipeData.ingredients.filter(ing => ing.type === 'hop'),
-    yeast: recipeData.ingredients.filter(ing => ing.type === 'yeast'),
-    other: recipeData.ingredients.filter(ing => ing.type === 'other'),
+    grain: safeIngredients.filter(ing => ing.type === "grain"),
+    hop: safeIngredients.filter(ing => ing.type === "hop"),
+    yeast: safeIngredients.filter(ing => ing.type === "yeast"),
+    other: safeIngredients.filter(ing => ing.type === "other"),
   };
 
-  const handleAddIngredient = (type: 'grain' | 'hop' | 'yeast' | 'other') => {
-    // TODO: Navigate to ingredient picker
-    console.log(`Add ${type} ingredient`);
+  // Handle ingredient selection from picker
+  useEffect(() => {
+    const raw = params.selectedIngredient;
+    const serialized = Array.isArray(raw) ? raw[0] : raw;
+    if (!serialized) return;
+    // Skip if already processed
+    if (processedParamRef.current === serialized) return;
+    try {
+      let ingredient: RecipeIngredient;
+      try {
+        ingredient = JSON.parse(serialized) as RecipeIngredient;
+      } catch {
+        ingredient = JSON.parse(
+          decodeURIComponent(serialized)
+        ) as RecipeIngredient;
+      }
+      const newIngredients = [...safeIngredients, ingredient];
+      onUpdateField("ingredients", newIngredients);
+      processedParamRef.current = serialized;
+      // Clear the parameter to prevent re-adding
+      router.setParams({ selectedIngredient: undefined });
+    } catch (error) {
+      console.error("Error parsing selectedIngredient param:", error);
+      console.error("Raw param value:", raw);
+    }
+  }, [params.selectedIngredient, safeIngredients]);
+  const handleAddIngredient = (type: "grain" | "hop" | "yeast" | "other") => {
+    router.push(`/(modals)/(recipes)/ingredientPicker?type=${type}`);
   };
 
-  const renderIngredientSection = (type: 'grain' | 'hop' | 'yeast' | 'other', title: string) => {
+  const renderIngredientSection = (
+    type: "grain" | "hop" | "yeast" | "other",
+    title: string
+  ) => {
     const ingredients = ingredientsByType[type];
-    
+
     return (
       <View style={styles.ingredientSection} key={type}>
         <View style={styles.ingredientSectionHeader}>
@@ -67,13 +112,35 @@ export function IngredientsForm({ recipeData, onUpdateField }: IngredientsFormPr
                 <TouchableOpacity
                   style={styles.ingredientRemoveButton}
                   onPress={() => {
-                    const newIngredients = recipeData.ingredients.filter(
-                      (_, i) => i !== index
+                    // Find the ingredient in the full safe ingredients array
+                    const globalIndex = safeIngredients.findIndex(
+                      ing =>
+                        (ingredient.id != null && ing.id === ingredient.id) ||
+                        (ingredient.id == null &&
+                          ing.name === ingredient.name &&
+                          ing.type === ingredient.type &&
+                          ing.amount === ingredient.amount &&
+                          ing.unit === ingredient.unit)
                     );
-                    onUpdateField('ingredients', newIngredients);
+
+                    if (globalIndex !== -1) {
+                      const newIngredients = safeIngredients.filter(
+                        (_, i) => i !== globalIndex
+                      );
+
+                      onUpdateField("ingredients", newIngredients);
+                    } else {
+                      console.error(
+                        "❌ IngredientsForm - Could not find ingredient to remove"
+                      );
+                    }
                   }}
                 >
-                  <MaterialIcons name="close" size={18} color={theme.colors.error} />
+                  <MaterialIcons
+                    name="close"
+                    size={18}
+                    color={theme.colors.error}
+                  />
                 </TouchableOpacity>
               </View>
             ))}
@@ -87,24 +154,29 @@ export function IngredientsForm({ recipeData, onUpdateField }: IngredientsFormPr
     <View style={styles.formContainer}>
       <Text style={styles.sectionTitle}>Recipe Ingredients</Text>
       <Text style={styles.sectionDescription}>
-        Add ingredients to build your recipe. Start with grains, then add hops, yeast, and any other ingredients.
+        Add ingredients to build your recipe. Start with grains, then add hops,
+        yeast, and any other ingredients.
       </Text>
 
-      {renderIngredientSection('grain', 'Grains & Fermentables')}
-      {renderIngredientSection('hop', 'Hops')}
-      {renderIngredientSection('yeast', 'Yeast')}
-      {renderIngredientSection('other', 'Other Ingredients')}
+      {renderIngredientSection("grain", "Grains & Fermentables")}
+      {renderIngredientSection("hop", "Hops")}
+      {renderIngredientSection("yeast", "Yeast")}
+      {renderIngredientSection("other", "Other Ingredients")}
 
-      {recipeData.ingredients.length === 0 && (
+      {safeIngredients.length === 0 && (
         <View style={styles.infoSection}>
           <View style={styles.infoHeader}>
-            <MaterialIcons name="lightbulb-outline" size={20} color={theme.colors.warning} />
+            <MaterialIcons
+              name="lightbulb-outline"
+              size={20}
+              color={theme.colors.warning}
+            />
             <Text style={styles.infoTitle}>Getting Started</Text>
           </View>
           <Text style={styles.infoText}>
-            Start by adding your base grains, then specialty grains for flavor and color. 
-            Add hops for bitterness and aroma, choose your yeast strain, and any other ingredients 
-            like spices or clarifying agents.
+            Start by adding your base grains, then specialty grains for flavour
+            and colour. Add hops for bitterness and aroma, choose your yeast
+            strain, and any other ingredients like spices or clarifying agents.
           </Text>
         </View>
       )}

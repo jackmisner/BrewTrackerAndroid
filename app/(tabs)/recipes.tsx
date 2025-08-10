@@ -16,6 +16,13 @@ import { Recipe } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { recipesStyles } from "@styles/tabs/recipesStyles";
 
+/**
+ * Displays a tabbed interface for browsing and managing recipes, allowing users to view their own recipes or search public recipes.
+ *
+ * Provides features such as tab navigation, search for public recipes, pull-to-refresh, error and empty states, and navigation to recipe detail or creation screens. Integrates with backend APIs for data fetching and handles loading and error conditions gracefully.
+ *
+ * @returns The rendered recipes screen component.
+ */
 export default function RecipesScreen() {
   const theme = useTheme();
   const styles = recipesStyles(theme);
@@ -106,7 +113,7 @@ export default function RecipesScreen() {
   const handleRecipePress = (recipe: Recipe) => {
     router.push({
       pathname: "/(modals)/(recipes)/viewRecipe",
-      params: { recipe_id: recipe.recipe_id },
+      params: { recipe_id: recipe.id },
     });
   };
 

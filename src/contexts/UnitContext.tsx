@@ -60,7 +60,11 @@ interface UnitContextValue {
 
   // Temperature specific utilities
   getTemperatureSymbol: () => string;
-  formatTemperature: (value: number, fromSystem: UnitSystem, precision?: number) => string;
+  formatTemperature: (
+    value: number,
+    fromSystem: UnitSystem,
+    precision?: number
+  ) => string;
   formatCurrentTemperature: (value: number, precision?: number) => string;
   convertTemperature: (
     value: number,
@@ -349,22 +353,29 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
    * Converts the input value to the current unit system before formatting
    */
   const formatTemperature = (
-    value: number, 
-    fromSystem: UnitSystem, 
+    value: number,
+    fromSystem: UnitSystem,
     precision: number = 1
   ): string => {
     const convertedValue = convertTemperature(value, fromSystem, unitSystem);
     const symbol = getTemperatureSymbol();
-    return `${convertedValue.toFixed(precision)}${symbol}`;
+    const p = Math.min(100, Math.max(0, precision));
+    const rounded = convertedValue.toFixed(p);
+    return `${parseFloat(rounded).toString()}${symbol}`;
   };
 
   /**
    * Format temperature value that is already in the current unit system
    * Use this when you know the value is already converted to the current units
    */
-  const formatCurrentTemperature = (value: number, precision: number = 1): string => {
+  const formatCurrentTemperature = (
+    value: number,
+    precision: number = 1
+  ): string => {
     const symbol = getTemperatureSymbol();
-    return `${value.toFixed(precision)}${symbol}`;
+    const p = Math.min(100, Math.max(0, precision));
+    const rounded = value.toFixed(p);
+    return `${parseFloat(rounded).toString()}${symbol}`;
   };
 
   /**
