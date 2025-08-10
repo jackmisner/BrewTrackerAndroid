@@ -14,6 +14,7 @@ import ApiService from "@services/API/apiService";
 import { Recipe } from "@src/types";
 import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
 import { useTheme } from "@contexts/ThemeContext";
+import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
 
 /**
  * Displays detailed information about a specific brewing recipe, including metrics, ingredients, and instructions.
@@ -103,24 +104,6 @@ export default function ViewRecipeScreen() {
     return date.toLocaleDateString();
   };
 
-  /**
-   * Render a metric section (ABV, IBU, etc.)
-   * Reusable component for displaying brewing metrics
-   */
-  const renderMetric = (
-    label: string,
-    value: string | number | undefined,
-    unit?: string
-  ) => (
-    <View style={styles.metricCard}>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricValue}>
-        {value
-          ? `${typeof value === "number" ? value.toFixed(label === "ABV" ? 1 : label === "OG" || label === "FG" ? 3 : 0) : value}${unit || ""}`
-          : "—"}
-      </Text>
-    </View>
-  );
 
   /**
    * Render ingredients section
@@ -368,23 +351,20 @@ export default function ViewRecipeScreen() {
           </View>
         </View>
 
-        {/* Brewing Metrics Grid */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Brewing Metrics</Text>
-          <View style={styles.metricsGrid}>
-            {renderMetric("OG", recipe.estimated_og)}
-            {renderMetric("FG", recipe.estimated_fg)}
-            {renderMetric("ABV", recipe.estimated_abv, "%")}
-            {renderMetric("IBU", recipe.estimated_ibu)}
-            {renderMetric("SRM", recipe.estimated_srm)}
-            {renderMetric(
-              "Mash Temp",
-              recipe.mash_temperature,
-              "°" + recipe.mash_temp_unit
-            )}
-            {/* TODO get unit system for recipe */}
-          </View>
-        </View>
+        {/* Brewing Metrics - Using Reusable Component */}
+        <BrewingMetricsDisplay
+          metrics={{
+            og: recipe.estimated_og,
+            fg: recipe.estimated_fg,
+            abv: recipe.estimated_abv,
+            ibu: recipe.estimated_ibu,
+            srm: recipe.estimated_srm,
+          }}
+          mash_temperature={recipe.mash_temperature}
+          mash_temp_unit={recipe.mash_temp_unit}
+          compact={false}
+          showTitle={true}
+        />
 
         {/* Recipe Details Section */}
         <View style={styles.section}>

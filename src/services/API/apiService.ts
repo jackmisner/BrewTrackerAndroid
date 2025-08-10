@@ -377,11 +377,13 @@ const ApiService = {
   ingredients: {
     getAll: (
       type?: IngredientType,
-      search?: string
+      search?: string,
+      category?: string
     ): Promise<AxiosResponse<RecipeIngredient[]>> => {
       const params = new URLSearchParams();
       if (type) params.append("type", type);
       if (search) params.append("search", search);
+      if (category) params.append("category", category);
       const queryString = params.toString();
       const url = `${ENDPOINTS.INGREDIENTS.LIST}${queryString ? `?${queryString}` : ""}`;
 

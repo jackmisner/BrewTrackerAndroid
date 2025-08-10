@@ -6,6 +6,8 @@ import { router, useGlobalSearchParams } from "expo-router";
 import { useTheme } from "@contexts/ThemeContext";
 import { RecipeFormData, RecipeIngredient } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
+import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
+import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 
 interface IngredientsFormProps {
   recipeData: RecipeFormData;
@@ -36,6 +38,14 @@ export function IngredientsForm({
     : [];
 
   const processedParamRef = useRef<string | null>(null);
+
+  // Real-time recipe metrics calculation
+  const { 
+    data: metricsData, 
+    isLoading: metricsLoading, 
+    error: metricsError,
+    refetch: retryMetrics 
+  } = useRecipeMetrics(recipeData);
 
   const ingredientsByType = {
     grain: safeIngredients.filter(ing => ing.type === "grain"),
@@ -157,6 +167,18 @@ export function IngredientsForm({
         Add ingredients to build your recipe. Start with grains, then add hops,
         yeast, and any other ingredients.
       </Text>
+
+      {/* Real-time recipe metrics */}
+      <BrewingMetricsDisplay
+        metrics={metricsData}
+        mash_temperature={recipeData.mash_temperature}
+        mash_temp_unit={recipeData.mash_temp_unit}
+        loading={metricsLoading}
+        error={metricsError?.message || null}
+        compact={true}
+        showTitle={true}
+        onRetry={retryMetrics}
+      />
 
       {renderIngredientSection("grain", "Grains & Fermentables")}
       {renderIngredientSection("hop", "Hops")}
