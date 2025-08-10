@@ -17,6 +17,11 @@ import ApiService from "@services/API/apiService";
 import { Recipe, BrewSession } from "@src/types";
 import { dashboardStyles } from "@styles/tabs/dashboardStyles";
 
+/**
+ * Displays the main dashboard screen for the brewing app, showing user stats, recent recipes, and active brew sessions.
+ *
+ * Fetches and presents personalized brewing data, including recipe and brew session statistics, with support for pull-to-refresh and navigation to related screens. Handles loading and error states with appropriate UI feedback.
+ */
 export default function DashboardScreen() {
   const { user } = useAuth();
   const theme = useTheme();

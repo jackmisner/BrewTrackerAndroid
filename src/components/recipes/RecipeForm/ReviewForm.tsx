@@ -10,6 +10,13 @@ interface ReviewFormProps {
   recipeData: RecipeFormData;
 }
 
+/**
+ * Displays a comprehensive review of a brewing recipe's details before creation.
+ *
+ * Organizes and presents the recipe's basic information, brewing parameters, categorized ingredients, and placeholder estimated metrics. Intended for users to verify all recipe data prior to finalizing creation, with clear sectioning and contextual notes.
+ *
+ * @param recipeData - The brewing recipe data to be reviewed
+ */
 export function ReviewForm({ recipeData }: ReviewFormProps) {
   const theme = useTheme();
   const styles = createRecipeStyles(theme);

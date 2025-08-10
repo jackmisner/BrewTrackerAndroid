@@ -12,6 +12,16 @@ interface ParametersFormProps {
   onUpdateField: (field: keyof RecipeFormData, value: any) => void;
 }
 
+/**
+ * Renders a form for entering and validating brewing recipe parameters, including boil time, brewhouse efficiency, mash temperature (with unit selection), and optional mash time.
+ *
+ * Displays validation errors and helper text for each field, provides quick-select efficiency presets, and converts mash temperature when the unit is changed. Calls the provided callback to update recipe data on field changes.
+ *
+ * @param recipeData - The current values for the recipe parameters to display and edit
+ * @param onUpdateField - Callback invoked with updated field values when any parameter changes
+ *
+ * @returns A React element containing the brewing parameters form UI
+ */
 export function ParametersForm({
   recipeData,
   onUpdateField,

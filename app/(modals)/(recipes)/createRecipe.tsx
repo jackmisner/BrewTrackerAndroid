@@ -58,6 +58,15 @@ type RecipeBuilderAction =
   | { type: "UPDATE_INGREDIENT"; index: number; ingredient: RecipeIngredient }
   | { type: "RESET" };
 
+/**
+ * Updates the recipe form state based on the specified action.
+ *
+ * Handles field updates, ingredient management (add, remove, update), and state reset for the recipe creation form.
+ *
+ * @param state - The current recipe form state
+ * @param action - The action describing the state change
+ * @returns The updated recipe form state
+ */
 function recipeBuilderReducer(
   state: RecipeFormData,
   action: RecipeBuilderAction
@@ -91,6 +100,11 @@ function recipeBuilderReducer(
   }
 }
 
+/**
+ * Displays a multi-step form for creating a new recipe, guiding the user through basic information, parameters, ingredients, and review steps.
+ *
+ * Handles form state, validation, and submission, including navigation between steps and cancellation confirmation. On successful creation, navigates to the newly created recipe's detail view.
+ */
 export default function CreateRecipeScreen() {
   const theme = useTheme();
   const { unitSystem } = useUnits();

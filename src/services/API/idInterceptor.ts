@@ -23,7 +23,9 @@ import {
 } from "@utils/idNormalization";
 
 /**
- * Setup API interceptors for automatic ID normalization
+ * Attaches Axios interceptors to automatically normalize and denormalize ID fields in API requests and responses.
+ *
+ * The response interceptor converts backend-specific ID fields (e.g., `recipe_id`) to a generic `id` field in the response data, while the request interceptor transforms generic `id` fields in outgoing data to backend-specific formats. Errors during normalization or denormalization are logged but do not interrupt the API call flow.
  */
 export function setupIDInterceptors(apiInstance: AxiosInstance): void {
   // Response interceptor - normalize backend IDs to frontend format
@@ -151,7 +153,9 @@ export function setupIDInterceptors(apiInstance: AxiosInstance): void {
 }
 
 /**
- * Remove ID interceptors (for testing or debugging)
+ * Removes all request and response interceptors from the given Axios instance.
+ *
+ * Useful for resetting the API instance during testing or debugging to ensure no ID normalization logic is applied.
  */
 export function removeIDInterceptors(apiInstance: AxiosInstance): void {
   // Clear interceptors
@@ -160,7 +164,9 @@ export function removeIDInterceptors(apiInstance: AxiosInstance): void {
 }
 
 /**
- * Get interceptor status information
+ * Returns the current status of request and response interceptors attached to the given Axios instance.
+ *
+ * @returns An object indicating whether request and response interceptors are present.
  */
 export function getInterceptorStatus(apiInstance: AxiosInstance): {
   requestInterceptors: boolean;

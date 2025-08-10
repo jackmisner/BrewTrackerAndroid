@@ -16,17 +16,9 @@ import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
 import { useTheme } from "@contexts/ThemeContext";
 
 /**
- * ViewRecipe Screen Component
+ * Displays detailed information about a specific brewing recipe, including metrics, ingredients, and instructions.
  *
- * This screen displays detailed information about a specific recipe.
- * It receives a recipe_id through route parameters and fetches the full recipe data.
- *
- * *Key Concepts:*
- * 1. Route Parameters: Uses useLocalSearchParams() to get URL parameters
- * 2. Data Fetching: Uses React Query with recipe-specific query key
- * 3. Error Handling: Comprehensive loading, error, and empty states
- * 4. ScrollView Layout: Proper detail screen layout with sections
- * 5. TypeScript: Proper typing for parameters and data structures
+ * Fetches recipe data based on the provided `recipe_id` from route parameters, and presents loading, error, and empty states as appropriate. Supports pull-to-refresh and navigation controls. Some sections, such as brewing instructions and brew session creation, are placeholders for future implementation.
  */
 export default function ViewRecipeScreen() {
   const theme = useTheme();

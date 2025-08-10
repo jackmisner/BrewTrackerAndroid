@@ -15,6 +15,11 @@ import { useTheme } from "@contexts/ThemeContext";
 import { brewSessionsStyles } from "@styles/tabs/brewSessionsStyles";
 import { router, useLocalSearchParams } from "expo-router";
 
+/**
+ * Displays a tabbed interface for viewing, refreshing, and navigating brew sessions.
+ *
+ * Shows lists of active and completed brew sessions, allows switching between tabs, supports pull-to-refresh, and provides navigation to session details or starting a new brew session. Handles loading, error, and empty states with appropriate UI feedback.
+ */
 export default function BrewSessionsScreen() {
   const theme = useTheme();
   const styles = brewSessionsStyles(theme);
