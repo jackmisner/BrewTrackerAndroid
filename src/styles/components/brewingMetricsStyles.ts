@@ -22,7 +22,7 @@ export const brewingMetricsStyles = (theme: ThemeContextValue, compact: boolean 
       borderRadius: compact ? 6 : 8,
       padding: compact ? 12 : 16,
       alignItems: "center",
-      minWidth: "30%",
+      flexBasis: "30%",
       flex: 1,
       shadowColor: theme.colors.shadow,
       shadowOffset: { width: 0, height: 1 },
