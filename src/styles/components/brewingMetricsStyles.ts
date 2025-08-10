@@ -1,13 +1,16 @@
 import { StyleSheet } from "react-native";
 import { ThemeContextValue } from "@contexts/ThemeContext";
 
-export const brewingMetricsStyles = (theme: ThemeContextValue, compact: boolean = false) =>
+export const brewingMetricsStyles = (
+  theme: ThemeContextValue,
+  compact: boolean = false
+) =>
   StyleSheet.create({
     // Main container for metrics
     container: {
       marginVertical: compact ? 8 : 16,
     },
-    
+
     // Grid layout for metric cards
     metricsGrid: {
       flexDirection: "row",
@@ -15,7 +18,7 @@ export const brewingMetricsStyles = (theme: ThemeContextValue, compact: boolean 
       gap: compact ? 8 : 12,
       justifyContent: "flex-start",
     },
-    
+
     // Individual metric card
     metricCard: {
       backgroundColor: theme.colors.inputBackground,
@@ -31,7 +34,7 @@ export const brewingMetricsStyles = (theme: ThemeContextValue, compact: boolean 
       shadowRadius: 2,
       elevation: 1,
     },
-    
+
     // Metric label styling
     metricLabel: {
       fontSize: compact ? 10 : 12,
@@ -40,7 +43,7 @@ export const brewingMetricsStyles = (theme: ThemeContextValue, compact: boolean 
       marginBottom: compact ? 2 : 4,
       textAlign: "center",
     },
-    
+
     // Metric value styling
     metricValue: {
       fontSize: compact ? 16 : 18,
@@ -48,7 +51,7 @@ export const brewingMetricsStyles = (theme: ThemeContextValue, compact: boolean 
       color: theme.colors.text,
       textAlign: "center",
     },
-    
+
     // Loading skeleton for metric values
     loadingSkeleton: {
       width: compact ? 40 : 50,
@@ -57,7 +60,7 @@ export const brewingMetricsStyles = (theme: ThemeContextValue, compact: boolean 
       opacity: 0.2,
       borderRadius: 4,
     },
-    
+
     // SRM color indicator (for beer color visualization)
     srmColorIndicator: {
       width: compact ? 20 : 24,
@@ -67,7 +70,7 @@ export const brewingMetricsStyles = (theme: ThemeContextValue, compact: boolean 
       borderWidth: 1,
       borderColor: theme.colors.border,
     },
-    
+
     // Error state styling
     errorContainer: {
       backgroundColor: theme.colors.inputBackground,
@@ -77,27 +80,27 @@ export const brewingMetricsStyles = (theme: ThemeContextValue, compact: boolean 
       borderWidth: 1,
       borderColor: theme.colors.error,
     },
-    
+
     errorText: {
       fontSize: compact ? 12 : 14,
       color: theme.colors.error,
       textAlign: "center",
       marginBottom: 8,
     },
-    
+
     retryButton: {
       backgroundColor: theme.colors.error,
       paddingHorizontal: 16,
       paddingVertical: 8,
       borderRadius: 6,
     },
-    
+
     retryButtonText: {
       color: theme.colors.background,
       fontSize: 12,
       fontWeight: "600",
     },
-    
+
     // Empty state when no metrics available
     emptyState: {
       backgroundColor: theme.colors.inputBackground,
@@ -106,14 +109,14 @@ export const brewingMetricsStyles = (theme: ThemeContextValue, compact: boolean 
       alignItems: "center",
       opacity: 0.7,
     },
-    
+
     emptyStateText: {
       fontSize: compact ? 12 : 14,
       color: theme.colors.textSecondary,
       textAlign: "center",
       fontStyle: "italic",
     },
-    
+
     // Section title for metrics (when used independently)
     sectionTitle: {
       fontSize: 18,

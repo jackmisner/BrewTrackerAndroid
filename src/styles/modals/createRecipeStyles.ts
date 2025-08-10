@@ -306,9 +306,41 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.borderLight,
     },
+    stylePickerItemRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    stylePickerItemId: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: theme.colors.primary,
+      width: 50,
+      marginRight: 12,
+    },
     stylePickerItemText: {
       fontSize: 16,
       color: theme.colors.text,
+      flex: 1,
+    },
+    // Search container for style picker
+    searchContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: theme.colors.backgroundSecondary,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      marginHorizontal: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 16,
+      color: theme.colors.text,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
     },
 
     // Input helpers and info
@@ -453,6 +485,12 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       color: theme.colors.textSecondary,
       marginTop: 2,
     },
+    ingredientDetails: {
+      fontSize: 11,
+      color: theme.colors.textMuted,
+      marginTop: 1,
+      fontStyle: "italic",
+    },
     ingredientRemoveButton: {
       padding: 4,
     },
@@ -502,14 +540,24 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     ingredientReviewItem: {
       flexDirection: "row",
       justifyContent: "space-between",
-      alignItems: "center",
-      paddingVertical: 4,
+      alignItems: "flex-start",
+      paddingVertical: 6,
       paddingHorizontal: 12,
+    },
+    ingredientReviewInfo: {
+      flex: 1,
+      marginRight: 12,
     },
     ingredientReviewName: {
       fontSize: 13,
       color: theme.colors.text,
-      flex: 1,
+      fontWeight: "500",
+    },
+    ingredientReviewDetails: {
+      fontSize: 11,
+      color: theme.colors.textMuted,
+      fontStyle: "italic",
+      marginTop: 2,
     },
     ingredientReviewAmount: {
       fontSize: 13,

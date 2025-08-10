@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Alert,
   KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,6 +20,7 @@ import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm"
 import { ParametersForm } from "@src/components/recipes/RecipeForm/ParametersForm";
 import { IngredientsForm } from "@src/components/recipes/RecipeForm/IngredientsForm";
 import { ReviewForm } from "@src/components/recipes/RecipeForm/ReviewForm";
+import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 
 // Recipe builder steps
 enum RecipeStep {
@@ -32,23 +32,25 @@ enum RecipeStep {
 
 const STEP_TITLES = ["Basic Info", "Parameters", "Ingredients", "Review"];
 
-// Initial recipe state
-const initialRecipeState: RecipeFormData = {
+// Create unit-aware initial recipe state
+const createInitialRecipeState = (
+  unitSystem: "imperial" | "metric"
+): RecipeFormData => ({
   name: "",
   style: "",
   description: "",
-  batch_size: 5,
-  batch_size_unit: "gal",
-  unit_system: "imperial",
+  batch_size: unitSystem === "imperial" ? 5 : 19, // 5 gallons ≈ 19 liters
+  batch_size_unit: unitSystem === "imperial" ? "gal" : "l",
+  unit_system: unitSystem,
   boil_time: 60,
   efficiency: 75,
-  mash_temperature: 152,
-  mash_temp_unit: "F",
+  mash_temperature: unitSystem === "imperial" ? 152 : 67, // 152°F ≈ 67°C
+  mash_temp_unit: unitSystem === "imperial" ? "F" : "C",
   mash_time: 60,
   is_public: false,
   notes: "",
   ingredients: [],
-};
+});
 
 // Recipe builder reducer
 type RecipeBuilderAction =
@@ -56,7 +58,7 @@ type RecipeBuilderAction =
   | { type: "ADD_INGREDIENT"; ingredient: RecipeIngredient }
   | { type: "REMOVE_INGREDIENT"; index: number }
   | { type: "UPDATE_INGREDIENT"; index: number; ingredient: RecipeIngredient }
-  | { type: "RESET" };
+  | { type: "RESET"; unitSystem: "imperial" | "metric" };
 
 /**
  * Updates the recipe form state based on the specified action.
@@ -94,7 +96,7 @@ function recipeBuilderReducer(
         ),
       };
     case "RESET":
-      return initialRecipeState;
+      return createInitialRecipeState(action.unitSystem);
     default:
       return state;
   }
@@ -112,29 +114,30 @@ export default function CreateRecipeScreen() {
   const styles = createRecipeStyles(theme);
 
   const [currentStep, setCurrentStep] = useState(RecipeStep.BASIC_INFO);
-  const [recipeState, dispatch] = useReducer(recipeBuilderReducer, {
-    ...initialRecipeState,
-    unit_system: unitSystem,
-    batch_size_unit: unitSystem === "imperial" ? "gal" : "l",
-    mash_temp_unit: unitSystem === "imperial" ? "F" : "C",
-    mash_temperature: unitSystem === "imperial" ? 152 : 67,
-  });
+  const [recipeState, dispatch] = useReducer(
+    recipeBuilderReducer,
+    createInitialRecipeState(unitSystem)
+  );
+
+  // Get calculated recipe metrics for saving
+  const { data: calculatedMetrics } = useRecipeMetrics(recipeState);
 
   // Create recipe mutation
   const createRecipeMutation = useMutation({
     mutationFn: (recipeData: RecipeFormData) =>
       ApiService.recipes.create(recipeData),
     onSuccess: response => {
+      // Invalidate relevant recipe caches to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["userRecipes"] });
+      queryClient.invalidateQueries({ queryKey: ["recipes"] }); // AllRecipes cache
       Alert.alert("Success", "Recipe created successfully!", [
         {
-          text: "OK",
+          text: "View Recipe",
           onPress: () => {
-            router.back();
-
-            router.push({
+            // Replace current modal with ViewRecipe modal
+            router.replace({
               pathname: "/(modals)/(recipes)/viewRecipe",
-              params: { id: response.data.id },
+              params: { recipe_id: response.data.id },
             });
           },
         },
@@ -151,6 +154,10 @@ export default function CreateRecipeScreen() {
   const updateField = useCallback((field: keyof RecipeFormData, value: any) => {
     dispatch({ type: "UPDATE_FIELD", field, value });
   }, []);
+
+  const handleReset = useCallback(() => {
+    dispatch({ type: "RESET", unitSystem });
+  }, [unitSystem]);
 
   const handleNext = () => {
     if (currentStep < RecipeStep.REVIEW) {
@@ -194,7 +201,20 @@ export default function CreateRecipeScreen() {
       return;
     }
 
-    createRecipeMutation.mutate(recipeState);
+    // Include calculated metrics in the recipe data
+    const recipeWithMetrics = {
+      ...recipeState,
+      // Add calculated metrics if available
+      ...(calculatedMetrics && {
+        estimated_og: calculatedMetrics.og,
+        estimated_fg: calculatedMetrics.fg,
+        estimated_abv: calculatedMetrics.abv,
+        estimated_ibu: calculatedMetrics.ibu,
+        estimated_srm: calculatedMetrics.srm,
+      }),
+    };
+
+    createRecipeMutation.mutate(recipeWithMetrics);
   };
 
   const canProceed = () => {
@@ -267,17 +287,19 @@ export default function CreateRecipeScreen() {
           />
         );
       case RecipeStep.REVIEW:
-        return <ReviewForm recipeData={recipeState} />;
+        return (
+          <ReviewForm
+            recipeData={recipeState}
+            calculatedMetrics={calculatedMetrics}
+          />
+        );
       default:
         return null;
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior="height">
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleCancel} style={styles.headerButton}>

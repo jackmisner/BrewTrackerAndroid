@@ -373,6 +373,16 @@ const ApiService = {
     > => api.get(ENDPOINTS.BREW_SESSIONS.ANALYZE_COMPLETION(brewSessionId)),
   },
 
+  // Beer styles endpoints
+  beerStyles: {
+    getAll: (): Promise<AxiosResponse<any>> =>
+      api.get(ENDPOINTS.BEER_STYLES.LIST),
+    getById: (id: ID): Promise<AxiosResponse<any>> =>
+      api.get(ENDPOINTS.BEER_STYLES.DETAIL(id)),
+    search: (query: string): Promise<AxiosResponse<any>> =>
+      api.get(`${ENDPOINTS.BEER_STYLES.SEARCH}?q=${encodeURIComponent(query)}`),
+  },
+
   // Ingredients endpoints
   ingredients: {
     getAll: (

@@ -15,6 +15,7 @@ import { Recipe } from "@src/types";
 import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
 import { useTheme } from "@contexts/ThemeContext";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
+import { formatHopTime } from "@src/utils/timeUtils";
 
 /**
  * Displays detailed information about a specific brewing recipe, including metrics, ingredients, and instructions.
@@ -104,7 +105,6 @@ export default function ViewRecipeScreen() {
     return date.toLocaleDateString();
   };
 
-
   /**
    * Render ingredients section
    * Display all recipe ingredients organized by type
@@ -157,7 +157,7 @@ export default function ViewRecipeScreen() {
                 {ingredient.type === "hop" &&
                   ingredient.time &&
                   ingredient.time > 0 &&
-                  ` • ${ingredient.time} min`}
+                  ` • ${formatHopTime(ingredient.time, ingredient.use || "")}`}
                 {ingredient.alpha_acid && ` • ${ingredient.alpha_acid}% AA`}
                 {ingredient.attenuation &&
                   ` • ${ingredient.attenuation}% Attenuation`}
@@ -343,11 +343,14 @@ export default function ViewRecipeScreen() {
                 </Text>
               </View>
             )}
-
-            <View style={styles.metadataItem}>
-              <MaterialIcons name="person" size={16} color="#666" />
-              <Text style={styles.metadataText}>Recipe ID: {recipe.id}</Text>
-            </View>
+            {recipe.updated_at && (
+              <View style={styles.metadataItem}>
+                <MaterialIcons name="update" size={16} color="#666" />
+                <Text style={styles.metadataText}>
+                  Updated {formatDate(recipe.updated_at)}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 

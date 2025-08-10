@@ -8,6 +8,23 @@ import { RecipeFormData, RecipeIngredient } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
+import { formatHopTime } from "@src/utils/timeUtils";
+
+// Hop usage display mapping (database value -> display value)
+const HOP_USAGE_DISPLAY_MAPPING: Record<string, string> = {
+  boil: "Boil",
+  whirlpool: "Whirlpool",
+  "dry-hop": "Dry Hop",
+};
+
+const GRAIN_TYPE_DISPLAY_MAPPING: Record<string, string> = {
+  base_malt: "Base Malt",
+  smoked: "Smoked",
+  roasted: "Roasted",
+  caramel_crystal: "Caramel/Crystal",
+  specialty_malt: "Specialty",
+  adjunct_grain: "Adjunct",
+};
 
 interface IngredientsFormProps {
   recipeData: RecipeFormData;
@@ -40,11 +57,11 @@ export function IngredientsForm({
   const processedParamRef = useRef<string | null>(null);
 
   // Real-time recipe metrics calculation
-  const { 
-    data: metricsData, 
-    isLoading: metricsLoading, 
+  const {
+    data: metricsData,
+    isLoading: metricsLoading,
     error: metricsError,
-    refetch: retryMetrics 
+    refetch: retryMetrics,
   } = useRecipeMetrics(recipeData);
 
   const ingredientsByType = {
@@ -79,7 +96,7 @@ export function IngredientsForm({
       console.error("Error parsing selectedIngredient param:", error);
       console.error("Raw param value:", raw);
     }
-  }, [params.selectedIngredient, safeIngredients]);
+  }, [onUpdateField, params.selectedIngredient, safeIngredients]);
   const handleAddIngredient = (type: "grain" | "hop" | "yeast" | "other") => {
     router.push(`/(modals)/(recipes)/ingredientPicker?type=${type}`);
   };
@@ -118,6 +135,37 @@ export function IngredientsForm({
                   <Text style={styles.ingredientAmount}>
                     {ingredient.amount} {ingredient.unit}
                   </Text>
+                  {/* Show hop-specific details */}
+                  {ingredient.type === "hop" &&
+                    (ingredient.use || ingredient.time != null) && (
+                      <Text style={styles.ingredientDetails}>
+                        {ingredient.use &&
+                          `${HOP_USAGE_DISPLAY_MAPPING[ingredient.use] || ingredient.use}`}
+                        {ingredient.time != null &&
+                          ` • ${formatHopTime(ingredient.time, ingredient.use || "")}`}
+                        {ingredient.alpha_acid &&
+                          ` • ${ingredient.alpha_acid}% AA`}
+                      </Text>
+                    )}
+                  {/* Show grain-specific details */}
+                  {ingredient.type === "grain" && ingredient.grain_type && (
+                    <Text style={styles.ingredientDetails}>
+                      {ingredient.grain_type &&
+                        `${GRAIN_TYPE_DISPLAY_MAPPING[ingredient.grain_type] || ingredient.grain_type}`}
+                    </Text>
+                  )}
+                  {/* Show yeast-specific details */}
+                  {ingredient.type === "yeast" &&
+                    (ingredient.yeast_type ||
+                      ingredient.manufacturer ||
+                      ingredient.attenuation) && (
+                      <Text style={styles.ingredientDetails}>
+                        {ingredient.manufacturer &&
+                          `Brand: ${ingredient.manufacturer}`}
+                        {ingredient.attenuation &&
+                          ` • ${ingredient.attenuation}% Attenuation`}
+                      </Text>
+                    )}{" "}
                 </View>
                 <TouchableOpacity
                   style={styles.ingredientRemoveButton}
@@ -174,7 +222,11 @@ export function IngredientsForm({
         mash_temperature={recipeData.mash_temperature}
         mash_temp_unit={recipeData.mash_temp_unit}
         loading={metricsLoading}
-        error={metricsError?.message || null}
+        error={
+          metricsError
+            ? (metricsError as any)?.message || "Metrics calculation error"
+            : null
+        }
         compact={true}
         showTitle={true}
         onRetry={retryMetrics}
