@@ -65,6 +65,7 @@ import {
 
   // Common types
   ID,
+  IngredientType,
 } from "@src/types";
 
 // Create typed axios instance
@@ -375,7 +376,7 @@ const ApiService = {
   // Ingredients endpoints
   ingredients: {
     getAll: (
-      type?: string,
+      type?: IngredientType,
       search?: string
     ): Promise<AxiosResponse<RecipeIngredient[]>> => {
       const params = new URLSearchParams();

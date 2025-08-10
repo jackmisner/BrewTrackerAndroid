@@ -164,7 +164,6 @@ export default function BrewSessionsScreen() {
   }: {
     item: BrewSession;
   }) => {
-    // Fix: The actual data has recipe_id and session_id, not recipe and id
     if (!brewSession || !brewSession.name) {
       return null;
     }

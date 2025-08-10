@@ -171,7 +171,10 @@ export default function ViewRecipeScreen() {
             <Text style={styles.ingredientGroupTitle}>{title}</Text>
           </View>
           {ingredients.map((ingredient, index) => (
-            <View key={ingredient.id || index} style={styles.ingredientItem}>
+            <View
+              key={`${ingredient.id || "no-id"}-${ingredient.type}-${index}`}
+              style={styles.ingredientItem}
+            >
               <Text style={styles.ingredientName}>{ingredient.name}</Text>
               <Text style={styles.ingredientAmount}>
                 {ingredient.amount} {ingredient.unit}

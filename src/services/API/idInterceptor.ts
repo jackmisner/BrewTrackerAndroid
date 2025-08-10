@@ -19,6 +19,7 @@ import {
   denormalizeEntityId,
   EntityType,
   debugEntityIds,
+  denormalizeEntityIdDeep,
 } from "@utils/idNormalization";
 
 /**
@@ -122,16 +123,10 @@ export function setupIDInterceptors(apiInstance: AxiosInstance): void {
     (config: InternalAxiosRequestConfig) => {
       const entityType = detectEntityTypeFromUrl(config.url || "");
 
-      if (
-        entityType &&
-        config.data &&
-        typeof config.data === "object" &&
-        config.data.id
-      ) {
+      if (entityType && config.data && typeof config.data === "object") {
         try {
           debugEntityIds(config.data, `Original request data (${entityType})`);
-
-          config.data = denormalizeEntityId(config.data, entityType);
+          config.data = denormalizeEntityIdDeep(config.data, entityType);
 
           debugEntityIds(
             config.data,

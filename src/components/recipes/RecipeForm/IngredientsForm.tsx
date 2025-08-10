@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { View, Text, TouchableOpacity, FlatList } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { View, Text, TouchableOpacity } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useGlobalSearchParams } from "expo-router";
 
@@ -25,6 +25,8 @@ export function IngredientsForm({
     ? recipeData.ingredients
     : [];
 
+  const processedParamRef = useRef<string | null>(null);
+
   const ingredientsByType = {
     grain: safeIngredients.filter(ing => ing.type === "grain"),
     hop: safeIngredients.filter(ing => ing.type === "hop"),
@@ -37,19 +39,27 @@ export function IngredientsForm({
     const raw = params.selectedIngredient;
     const serialized = Array.isArray(raw) ? raw[0] : raw;
     if (!serialized) return;
+    // Skip if already processed
+    if (processedParamRef.current === serialized) return;
     try {
-      const decoded = decodeURIComponent(serialized);
-      const ingredient = JSON.parse(decoded) as RecipeIngredient;
+      let ingredient: RecipeIngredient;
+      try {
+        ingredient = JSON.parse(serialized) as RecipeIngredient;
+      } catch {
+        ingredient = JSON.parse(
+          decodeURIComponent(serialized)
+        ) as RecipeIngredient;
+      }
       const newIngredients = [...safeIngredients, ingredient];
-
       onUpdateField("ingredients", newIngredients);
+      processedParamRef.current = serialized;
       // Clear the parameter to prevent re-adding
       router.setParams({ selectedIngredient: undefined });
     } catch (error) {
       console.error("Error parsing selectedIngredient param:", error);
       console.error("Raw param value:", raw);
     }
-  }, [params.selectedIngredient, safeIngredients, onUpdateField]);
+  }, [params.selectedIngredient, safeIngredients]);
   const handleAddIngredient = (type: "grain" | "hop" | "yeast" | "other") => {
     router.push(`/(modals)/(recipes)/ingredientPicker?type=${type}`);
   };
@@ -95,10 +105,12 @@ export function IngredientsForm({
                     // Find the ingredient in the full safe ingredients array
                     const globalIndex = safeIngredients.findIndex(
                       ing =>
-                        ing.name === ingredient.name &&
-                        ing.type === ingredient.type &&
-                        ing.amount === ingredient.amount &&
-                        ing.unit === ingredient.unit
+                        (ingredient.id != null && ing.id === ingredient.id) ||
+                        (ingredient.id == null &&
+                          ing.name === ingredient.name &&
+                          ing.type === ingredient.type &&
+                          ing.amount === ingredient.amount &&
+                          ing.unit === ingredient.unit)
                     );
 
                     if (globalIndex !== -1) {

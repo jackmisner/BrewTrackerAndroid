@@ -67,7 +67,7 @@ export function BasicInfoForm({
           delete newErrors.style;
         }
         break;
-      case "batch_size":
+      case "batch_size": {
         const numValue = parseFloat(value);
         if (isNaN(numValue) || numValue <= 0) {
           newErrors.batch_size = "Batch size must be greater than 0";
@@ -77,6 +77,7 @@ export function BasicInfoForm({
           delete newErrors.batch_size;
         }
         break;
+      }
       case "description":
         if (value && value.toString().length > 500) {
           newErrors.description =

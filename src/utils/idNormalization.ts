@@ -51,11 +51,7 @@ export function extractEntityId(
   const backendIdField = BACKEND_ID_FIELD_MAPPING[entityType];
 
   // Try multiple ID field possibilities
-  const candidates = [
-    entity[backendIdField],
-    entity.id,
-    entity._id,
-  ];
+  const candidates = [entity[backendIdField], entity.id, entity._id];
   return candidates.find(v => v !== undefined && v !== null) ?? null;
 }
 
@@ -140,14 +136,17 @@ export function detectEntityTypeFromUrl(url: string): EntityType | null {
 
   // Endpoint patterns to entity type mapping
   const patterns: Array<{ pattern: RegExp; entityType: EntityType }> = [
-    { pattern: /\/recipes/i, entityType: "recipe" },
-    { pattern: /\/ingredients/i, entityType: "ingredient" },
-    { pattern: /\/brew-sessions/i, entityType: "brewSession" },
-    { pattern: /\/users/i, entityType: "user" },
-    { pattern: /\/fermentation/i, entityType: "fermentationEntry" },
-    { pattern: /\/styles/i, entityType: "style" },
+    // Specific sub-resources first
+    { pattern: /\/fermentation(\/|\?|$)/i, entityType: "fermentationEntry" },
+    // Then general resources - allow query parameters
+    { pattern: /\/recipes(\/|\?|$)/i, entityType: "recipe" },
+    { pattern: /\/ingredients(\/|\?|$)/i, entityType: "ingredient" },
+    { pattern: /\/brew-sessions(\/|\?|$)/i, entityType: "brewSession" },
+    { pattern: /\/users(\/|\?|$)/i, entityType: "user" },
+    { pattern: /\/styles(\/|\?|$)/i, entityType: "style" },
   ];
 
+  // Check patterns in order (most specific first)
   for (const { pattern, entityType } of patterns) {
     if (pattern.test(normalizedUrl)) {
       return entityType;
@@ -175,6 +174,22 @@ export function normalizeResponseData(data: any, entityType: EntityType): any {
     return {
       ...data,
       ingredients: normalizeEntityIds(data.ingredients, "ingredient"),
+    };
+  }
+
+  // Handle wrapped recipe response (e.g., { recipes: [...], total: 10, page: 1 })
+  if (data.recipes && Array.isArray(data.recipes)) {
+    return {
+      ...data,
+      recipes: normalizeEntityIds(data.recipes, "recipe"),
+    };
+  }
+
+  // Handle wrapped brew sessions response (e.g., { brew_sessions: [...], total: 5, page: 1 })
+  if (data.brew_sessions && Array.isArray(data.brew_sessions)) {
+    return {
+      ...data,
+      brew_sessions: normalizeEntityIds(data.brew_sessions, "brewSession"),
     };
   }
 
@@ -218,4 +233,95 @@ export function debugEntityIds(entity: any, label: string = "Entity"): void {
     },
     {} as Record<string, any>
   );
+}
+/**
+ * Detect entity type based on object properties instead of unreliable URL field
+ */
+function detectEntityTypeFromProperties(obj: any): EntityType | null {
+  if (!obj || typeof obj !== "object") return null;
+
+  // Check for specific backend ID field patterns
+  if (
+    "recipe_id" in obj ||
+    ("name" in obj && "ingredients" in obj && "style" in obj)
+  ) {
+    return "recipe";
+  }
+  if (
+    "ingredient_id" in obj ||
+    ("name" in obj &&
+      "type" in obj &&
+      ("alpha_acid" in obj || "color" in obj || "potential" in obj))
+  ) {
+    return "ingredient";
+  }
+  if ("session_id" in obj || ("brew_date" in obj && "recipe" in obj)) {
+    return "brewSession";
+  }
+  if ("user_id" in obj || ("email" in obj && "username" in obj)) {
+    return "user";
+  }
+  if (
+    "entry_id" in obj ||
+    ("temperature" in obj && "gravity" in obj && "date" in obj)
+  ) {
+    return "fermentationEntry";
+  }
+
+  return null;
+}
+
+export function denormalizeEntityIdDeep(
+  data: any,
+  rootEntityType: EntityType,
+  visited: WeakSet<object> = new WeakSet(),
+  depth: number = 0
+): any {
+  // Prevent stack overflow with recursion depth limit
+  const MAX_DEPTH = 50;
+  if (depth > MAX_DEPTH) {
+    console.warn("denormalizeEntityIdDeep: Maximum recursion depth exceeded");
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.map(d =>
+      denormalizeEntityIdDeep(d, rootEntityType, visited, depth + 1)
+    );
+  }
+
+  if (data && typeof data === "object") {
+    // Prevent infinite recursion with circular reference detection
+    if (visited.has(data)) {
+      console.warn(
+        "denormalizeEntityIdDeep: Circular reference detected, skipping object"
+      );
+      return data;
+    }
+    visited.add(data);
+
+    let copy: any = { ...data };
+
+    // Use property-based entity type detection instead of unreliable URL field
+    const detected = detectEntityTypeFromProperties(copy) || rootEntityType;
+
+    if ("id" in copy) {
+      copy = denormalizeEntityId(copy, detected);
+    }
+
+    for (const k of Object.keys(copy)) {
+      copy[k] = denormalizeEntityIdDeep(
+        copy[k],
+        rootEntityType,
+        visited,
+        depth + 1
+      );
+    }
+
+    // Remove from visited set after processing to allow the object to be processed again in different branches
+    visited.delete(data);
+    return copy;
+  }
+
+  return data;
 }

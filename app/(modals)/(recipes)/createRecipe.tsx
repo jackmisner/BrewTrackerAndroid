@@ -120,7 +120,7 @@ export default function CreateRecipeScreen() {
 
             router.push({
               pathname: "/(modals)/(recipes)/viewRecipe",
-              params: { recipe_id: response.data.id },
+              params: { id: response.data.id },
             });
           },
         },
