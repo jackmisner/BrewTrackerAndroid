@@ -165,14 +165,13 @@ export function ReviewForm({ recipeData, calculatedMetrics }: ReviewFormProps) {
                   )}
                   {/* Show yeast-specific details */}
                   {ingredient.type === "yeast" &&
-                    (ingredient.yeast_type || ingredient.manufacturer) && (
+                    (ingredient.manufacturer || ingredient.attenuation != null) && (
                       <Text style={styles.ingredientReviewDetails}>
                         {ingredient.manufacturer && ingredient.manufacturer}
-                        {ingredient.attenuation &&
+                        {ingredient.attenuation != null &&
                           ` • ${ingredient.attenuation}% Attenuation`}
                       </Text>
                     )}
-                </View>
                 <Text style={styles.ingredientReviewAmount}>
                   {ingredient.amount} {ingredient.unit}
                 </Text>
@@ -227,7 +226,7 @@ export function ReviewForm({ recipeData, calculatedMetrics }: ReviewFormProps) {
           <Text style={styles.infoTitle}>Ready to Create</Text>
         </View>
         <Text style={styles.infoText}>
-          Your recipe looks good! Click &quot;Create Recipe&quot; to save it to
+          Your recipe looks good! Click "Create Recipe" to save it to
           your recipe collection. You can always edit the recipe later or use it
           to start a new brew session.
         </Text>
