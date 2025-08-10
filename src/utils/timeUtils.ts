@@ -7,13 +7,22 @@
  * - Regular hops displayed in minutes
  */
 
+// Normalize hop use strings and centralize dry-hop detection
+const MINUTES_PER_DAY = 1440;
+const normalizeHopUse = (u: string) =>
+  u
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-");
+const isDryHop = (u: string) => normalizeHopUse(u) === "dry-hop";
+
 /**
  * Convert days to minutes for database storage
  * @param days Number of days
  * @returns Number of minutes (1440 minutes per day)
  */
 export function convertDaysToMinutes(days: number): number {
-  return Math.round(days * 1440);
+  return Math.round(days * MINUTES_PER_DAY);
 }
 
 /**
@@ -22,7 +31,7 @@ export function convertDaysToMinutes(days: number): number {
  * @returns Number of days (rounded to 1 decimal place)
  */
 export function convertMinutesToDays(minutes: number): number {
-  return Math.round((minutes / 1440) * 10) / 10;
+  return Math.round((minutes / MINUTES_PER_DAY) * 10) / 10;
 }
 
 /**
@@ -49,7 +58,7 @@ export function formatHopTime(
   }
 
   // Dry hops should be displayed in days
-  if (hopUse === "dry-hop") {
+  if (isDryHop(hopUse)) {
     const days = convertMinutesToDays(numTime);
     return `${days} day${days !== 1 ? "s" : ""}`;
   }
@@ -76,10 +85,12 @@ export function getDefaultHopTime(
     Mash: 60, // minutes
   };
 
-  const defaultTime = defaultTimes[hopUse as keyof typeof defaultTimes] || 0;
+  let defaultTime = defaultTimes[hopUse as keyof typeof defaultTimes] ?? 0;
+  // Support alternative labels (e.g., "dry-hop")
+  if (defaultTime === 0 && isDryHop(hopUse)) defaultTime = 3;
 
   // If it's dry hop and we need minutes for storage, convert
-  if (hopUse === "Dry Hop" && inMinutes) {
+  if (isDryHop(hopUse) && inMinutes) {
     return convertDaysToMinutes(defaultTime);
   }
 
@@ -92,7 +103,7 @@ export function getDefaultHopTime(
  * @returns Unit string ("days" for dry hop, "minutes" for others)
  */
 export function getHopTimeUnit(hopUse: string): string {
-  return hopUse === "Dry Hop" ? "days" : "minutes";
+  return isDryHop(hopUse) ? "days" : "minutes";
 }
 
 /**
@@ -104,7 +115,7 @@ export function convertHopTimeForStorage(
   inputTime: number,
   hopUse: string
 ): number {
-  if (hopUse === "Dry Hop") {
+  if (isDryHop(hopUse)) {
     return convertDaysToMinutes(inputTime);
   }
   return inputTime;

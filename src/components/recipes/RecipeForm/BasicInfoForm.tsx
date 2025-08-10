@@ -177,7 +177,7 @@ export function BasicInfoForm({
           {!!stylesError && (
             <View style={styles.infoSection}>
               <Text style={styles.infoText}>
-                Unable to load beer styles from server. Showing common styles.
+                Unable to load beer styles from server.
               </Text>
             </View>
           )}
