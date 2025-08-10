@@ -172,9 +172,10 @@ export function ReviewForm({ recipeData, calculatedMetrics }: ReviewFormProps) {
                           ` • ${ingredient.attenuation}% Attenuation`}
                       </Text>
                     )}
-                <Text style={styles.ingredientReviewAmount}>
-                  {ingredient.amount} {ingredient.unit}
-                </Text>
+                  <Text style={styles.ingredientReviewAmount}>
+                    {ingredient.amount} {ingredient.unit}
+                  </Text>
+                </View>
               </View>
             ))}
           </View>
@@ -226,6 +227,7 @@ export function ReviewForm({ recipeData, calculatedMetrics }: ReviewFormProps) {
           <Text style={styles.infoTitle}>Ready to Create</Text>
         </View>
         <Text style={styles.infoText}>
+          {/* eslint-disable-next-line react/no-unescaped-entities */}
           Your recipe looks good! Click "Create Recipe" to save it to
           your recipe collection. You can always edit the recipe later or use it
           to start a new brew session.
