@@ -6,7 +6,7 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Alert,
-  Dimensions
+  Dimensions,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -52,7 +52,6 @@ export function RecipeContextMenu({
   const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
   const menuWidth = 200; // Approximate menu width
   const menuHeight = 300; // Approximate menu height
-
 
   /**
    * Handles action press with haptic feedback
@@ -136,8 +135,14 @@ export function RecipeContextMenu({
               style={[
                 styles.menuContainer,
                 position && {
-                  top: Math.min(Math.max(position.y - 100, 50), screenHeight - menuHeight),
-                  left: Math.min(Math.max(position.x - menuWidth / 2, 20), screenWidth - menuWidth - 20),
+                  top: Math.min(
+                    Math.max(position.y - 100, 50),
+                    screenHeight - menuHeight
+                  ),
+                  left: Math.min(
+                    Math.max(position.x - menuWidth / 2, 20),
+                    screenWidth - menuWidth - 20
+                  ),
                 },
               ]}
             >

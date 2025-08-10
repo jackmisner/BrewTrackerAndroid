@@ -202,7 +202,7 @@ export function IngredientsForm({
           <View style={styles.ingredientsList}>
             {ingredients.map((ingredient, index) => (
               <TouchableOpacity
-                key={index}
+                key={ingredient.id ?? `${ingredient.name}-${type}-${index}`}
                 style={styles.ingredientItem}
                 onPress={() => handleEditIngredient(ingredient)}
                 activeOpacity={0.7}

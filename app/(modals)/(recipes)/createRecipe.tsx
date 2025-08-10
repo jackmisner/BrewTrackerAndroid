@@ -121,7 +121,12 @@ export default function CreateRecipeScreen() {
   );
 
   // Get calculated recipe metrics for saving
-  const { data: calculatedMetrics } = useRecipeMetrics(recipeState);
+  const {
+    data: calculatedMetrics,
+    isLoading: metricsLoading,
+    error: metricsError,
+    refetch: onRetryMetrics,
+  } = useRecipeMetrics(recipeState);
 
   // Create recipe mutation
   const createRecipeMutation = useMutation({
@@ -289,7 +294,13 @@ export default function CreateRecipeScreen() {
         );
       case RecipeStep.REVIEW:
         return (
-          <ReviewForm recipeData={recipeState} metrics={calculatedMetrics} />
+          <ReviewForm
+            recipeData={recipeState}
+            metrics={calculatedMetrics}
+            metricsLoading={metricsLoading}
+            metricsError={metricsError}
+            onRetryMetrics={onRetryMetrics}
+          />
         );
       default:
         return null;
