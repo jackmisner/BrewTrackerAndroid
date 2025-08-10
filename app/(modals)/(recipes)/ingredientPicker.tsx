@@ -391,7 +391,7 @@ export default function IngredientPickerScreen() {
           <View style={styles.ingredientSpecs}>
             {item.potential && (
               <Text style={styles.specText}>
-                {Math.round(item.potential * 46)} ppg
+                Potential: {Math.round(item.potential)} PPG
               </Text>
             )}
             {item.color && <Text style={styles.specText}>{item.color}°L</Text>}
