@@ -147,7 +147,6 @@ export function IngredientsForm({
                           ` • ${ingredient.alpha_acid}% AA`}
                       </Text>
                     )}
-                    )}
                   {/* Show grain-specific details */}
                   {ingredient.type === "grain" && ingredient.grain_type && (
                     <Text style={styles.ingredientDetails}>
