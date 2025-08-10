@@ -17,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import ApiService from "@services/API/apiService";
+import { useDebounce } from "@src/hooks/useDebounce";
 import { RecipeIngredient, IngredientType, IngredientUnit } from "@src/types";
 import { ingredientPickerStyles } from "@styles/modals/ingredientPickerStyles";
 
@@ -30,8 +31,15 @@ const INGREDIENT_CATEGORIES = {
     "adjunct_grain",
     "smoked",
   ],
-  hop: ["Bittering", "Aroma", "Dual Purpose", "Noble"],
-  yeast: ["Ale", "Lager", "Wild/Sour", "Belgian"],
+  // hop: ["Bittering", "Aroma", "Dual Purpose", "Noble"], // Disabled - no hop_type field in backend
+  yeast: [
+    "american_ale",
+    "belgian_ale",
+    "english_ale",
+    "lager",
+    "wheat",
+    "wild",
+  ], // Match backend yeast_type values
   other: ["Spice", "Fruit", "Clarifying Agent", "Water Treatment"],
 };
 
@@ -50,10 +58,12 @@ const CATEGORY_LABELS: Record<string, string> = {
   "Dual Purpose": "Dual Purpose",
   Noble: "Noble",
   // Yeast types
-  Ale: "Ale",
-  Lager: "Lager",
-  "Wild/Sour": "Wild/Sour",
-  Belgian: "Belgian",
+  american_ale: "American Ale",
+  belgian_ale: "Belgian Ale",
+  english_ale: "English Ale",
+  lager: "Lager",
+  wheat: "Wheat",
+  wild: "Wild/Sour",
   // Other types
   Spice: "Spice",
   Fruit: "Fruit",
@@ -69,6 +79,9 @@ const UNITS_BY_TYPE = {
   other: ["tsp", "tbsp", "cup", "oz", "g", "ml", "l"],
 };
 
+// Hop usage types
+const HOP_USAGE_TYPES = ["Boil", "Dry Hop", "Whirlpool", "First Wort", "Mash"];
+
 /**
  * Displays a modal screen for selecting an ingredient by type, with filtering, searching, sorting, and quantity/unit input.
  *
@@ -81,12 +94,29 @@ export default function IngredientPickerScreen() {
   const params = useLocalSearchParams();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedQuery = useDebounce(searchQuery, 300);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedIngredient, setSelectedIngredient] =
     useState<RecipeIngredient | null>(null);
   const [amount, setAmount] = useState("1");
   const [selectedUnit, setSelectedUnit] = useState<IngredientUnit>("lb");
+  const [hopUse, setHopUse] = useState("Boil");
+  const [hopTime, setHopTime] = useState("60");
   const [showQuantityInput, setShowQuantityInput] = useState(false);
+
+  // Update hop time default when hop usage changes
+  const handleHopUseChange = (usage: string) => {
+    setHopUse(usage);
+    // Set appropriate default time based on usage type
+    const defaultTimes = {
+      Boil: "60",
+      "Dry Hop": "5",
+      Whirlpool: "20",
+      "First Wort": "60",
+      Mash: "60",
+    };
+    setHopTime(defaultTimes[usage as keyof typeof defaultTimes] || "0");
+  };
 
   const ingredientType = (params.type as IngredientType) || "grain";
 
@@ -97,17 +127,13 @@ export default function IngredientPickerScreen() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["ingredients", ingredientType, searchQuery, selectedCategory],
+    queryKey: ["ingredients", ingredientType, debouncedQuery, selectedCategory],
     queryFn: async () => {
-      let searchTerm = searchQuery;
-      if (selectedCategory) {
-        searchTerm = selectedCategory + (searchQuery ? ` ${searchQuery}` : "");
-      }
-
       // API service now handles response transformation and error handling
       const response = await ApiService.ingredients.getAll(
         ingredientType,
-        searchTerm
+        debouncedQuery || undefined,
+        selectedCategory || undefined
       );
 
       return response;
@@ -201,7 +227,7 @@ export default function IngredientPickerScreen() {
     };
   }, []);
 
-  // Filter ingredients based on search and category
+  // Filter and sort ingredients (backend handles category/search filtering)
   const filteredIngredients = useMemo(() => {
     // Ensure ingredients is always an array
     const safeIngredients = Array.isArray(ingredients) ? ingredients : [];
@@ -210,49 +236,11 @@ export default function IngredientPickerScreen() {
       return [];
     }
 
-    let filtered = safeIngredients;
+    // Apply smart sorting (backend handles search and category filtering)
+    const sortedIngredients = sortIngredients(safeIngredients);
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-
-      filtered = filtered.filter(
-        ingredient =>
-          ingredient.name.toLowerCase().includes(query) ||
-          ingredient.description?.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply category filter
-    if (selectedCategory.trim()) {
-      filtered = filtered.filter(ingredient => {
-        if (ingredientType === "grain") {
-          // For grains, filter by grain_type field
-          const ingredientGrainType = ingredient.grain_type;
-          return ingredientGrainType === selectedCategory;
-        } else if (ingredientType === "hop") {
-          // For hops, filter by hop_type field
-          return ingredient.hop_type === selectedCategory;
-        } else if (ingredientType === "yeast") {
-          // For yeast, filter by yeast_type field
-          return ingredient.yeast_type === selectedCategory;
-        }
-        // For other types, no filtering is applied since category UI is disabled
-        return true;
-      });
-    }
-
-    // Apply smart sorting
-    const sortedFiltered = sortIngredients(filtered);
-
-    return sortedFiltered;
-  }, [
-    ingredientType,
-    ingredients,
-    searchQuery,
-    selectedCategory,
-    sortIngredients,
-  ]);
+    return sortedIngredients;
+  }, [ingredients, sortIngredients]);
 
   const handleIngredientSelect = (ingredient: RecipeIngredient) => {
     setSelectedIngredient(ingredient);
@@ -273,11 +261,25 @@ export default function IngredientPickerScreen() {
       return;
     }
 
-    // Create the ingredient with quantity
+    // Validate hop time for all hop usage types
+    if (ingredientType === "hop") {
+      const numTime = parseFloat(hopTime);
+      if (isNaN(numTime) || numTime < 0) {
+        const timeUnit = hopUse === "Dry Hop" ? "days" : "minutes";
+        Alert.alert("Invalid Time", `Please enter a valid time in ${timeUnit}`);
+        return;
+      }
+    }
+
+    // Create the ingredient with quantity and hop-specific fields
     const ingredientWithQuantity: RecipeIngredient = {
       ...selectedIngredient,
       amount: numAmount,
       unit: selectedUnit,
+      ...(ingredientType === "hop" && {
+        use: hopUse,
+        time: parseFloat(hopTime),
+      }),
     };
 
     // Navigate back with the selected ingredient as a parameter
@@ -355,8 +357,8 @@ export default function IngredientPickerScreen() {
   const renderCategoryFilter = () => {
     const categories = INGREDIENT_CATEGORIES[ingredientType] || [];
 
-    // Don't render category filter for 'other' ingredients since they don't have a dedicated type field
-    if (ingredientType === "other") {
+    // Don't render category filter for 'other' ingredients or 'hop' (no hop_type field in backend)
+    if (ingredientType === "other" || ingredientType === "hop") {
       return null;
     }
 
@@ -396,7 +398,7 @@ export default function IngredientPickerScreen() {
                 selectedCategory === category && styles.categoryChipTextActive,
               ]}
             >
-              {CATEGORY_LABELS[category] || category}
+              {CATEGORY_LABELS[category] || category || "Unknown"}
             </Text>
           </TouchableOpacity>
         ))}
@@ -413,7 +415,7 @@ export default function IngredientPickerScreen() {
       <View style={styles.quantityContainer}>
         <View style={styles.quantityHeader}>
           <Text style={styles.quantityTitle}>
-            Add {selectedIngredient.name}
+            Add {selectedIngredient.name || "Ingredient"}
           </Text>
           <TouchableOpacity onPress={handleCancel}>
             <MaterialIcons name="close" size={24} color={theme.colors.text} />
@@ -456,6 +458,64 @@ export default function IngredientPickerScreen() {
               ))}
             </View>
           </View>
+
+          {/* Hop-specific fields */}
+          {ingredientType === "hop" && (
+            <>
+              <Text style={styles.quantityLabel}>Usage</Text>
+              <View style={styles.unitPickerContainer}>
+                {HOP_USAGE_TYPES.map(usage => (
+                  <TouchableOpacity
+                    key={usage}
+                    style={[
+                      styles.unitButton,
+                      hopUse === usage && styles.unitButtonActive,
+                    ]}
+                    onPress={() => handleHopUseChange(usage)}
+                  >
+                    <Text
+                      style={[
+                        styles.unitButtonText,
+                        hopUse === usage && styles.unitButtonTextActive,
+                      ]}
+                    >
+                      {usage}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Time field for all hop usage types */}
+              <Text style={styles.quantityLabel}>
+                {hopUse === "Boil" && "Boil Time (minutes)"}
+                {hopUse === "Dry Hop" && "Contact Time (days)"}
+                {hopUse === "Whirlpool" && "Whirlpool Time (minutes)"}
+                {hopUse === "First Wort" && "Time (minutes)"}
+                {hopUse === "Mash" && "Mash Time (minutes)"}
+              </Text>
+              <TextInput
+                style={styles.quantityInput}
+                value={hopTime}
+                onChangeText={setHopTime}
+                keyboardType="decimal-pad"
+                placeholder={
+                  hopUse === "Boil"
+                    ? "60"
+                    : hopUse === "Dry Hop"
+                      ? "5"
+                      : hopUse === "Whirlpool"
+                        ? "20"
+                        : hopUse === "First Wort"
+                          ? "60"
+                          : hopUse === "Mash"
+                            ? "60"
+                            : "0"
+                }
+                placeholderTextColor={theme.colors.textMuted}
+                selectTextOnFocus
+              />
+            </>
+          )}
 
           <TouchableOpacity
             style={styles.confirmButton}
@@ -564,7 +624,7 @@ export default function IngredientPickerScreen() {
           />
           <Text style={styles.emptyTitle}>No ingredients found</Text>
           <Text style={styles.emptyMessage}>
-            {searchQuery
+            {searchQuery && searchQuery.trim()
               ? "Try adjusting your search terms"
               : "No ingredients available"}
           </Text>
