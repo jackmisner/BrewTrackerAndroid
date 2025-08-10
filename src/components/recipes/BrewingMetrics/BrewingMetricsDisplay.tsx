@@ -59,28 +59,30 @@ export const BrewingMetricsDisplay: React.FC<BrewingMetricsProps> = ({
     unit?: string
   ): string => {
     if (value === undefined || value === null) return "—";
-    if (!Number.isFinite(value)) return "—";
+    // Coerce strings like "1.050" to numbers safely
+    const num = typeof value === "number" ? value : Number(value);
+    if (!Number.isFinite(num)) return "—";
     let formattedValue: string;
     
     switch (label) {
       case "ABV":
-        formattedValue = value.toFixed(1);
+        formattedValue = num.toFixed(1);
         break;
       case "OG":
       case "FG":
-        formattedValue = value.toFixed(3);
+        formattedValue = num.toFixed(3);
         break;
       case "IBU":
-        formattedValue = Math.round(value).toString();
+        formattedValue = Math.round(num).toString();
         break;
       case "SRM":
-        formattedValue = value.toFixed(1);
+        formattedValue = num.toFixed(1);
         break;
       case "Mash Temp":
-        formattedValue = Math.round(value).toString();
+        formattedValue = Math.round(num).toString();
         break;
       default:
-        formattedValue = value.toString();
+        formattedValue = num.toString();
     }
 
     return `${formattedValue}${unit || ""}`;

@@ -37,18 +37,27 @@ export function useRecipeMetrics(
       debouncedRecipeData.mash_temperature,
       debouncedRecipeData.mash_temp_unit,
       // Serialize ingredients for cache key
-      JSON.stringify(debouncedRecipeData.ingredients.map(ing => ({
-        id: ing.id,
-        type: ing.type,
-        amount: ing.amount,
-        unit: ing.unit,
-        use: ing.use,
-        time: ing.time,
-        potential: ing.potential,
-        color: ing.color,
-        alpha_acid: ing.alpha_acid,
-        attenuation: ing.attenuation,
-      })))
+      JSON.stringify(
+        [...debouncedRecipeData.ingredients]
+          .map(ing => ({
+            id: ing.id,
+            type: ing.type,
+            amount: ing.amount,
+            unit: ing.unit,
+            use: ing.use,
+            time: ing.time,
+            potential: ing.potential,
+            color: ing.color,
+            alpha_acid: ing.alpha_acid,
+            attenuation: ing.attenuation,
+            name: (ing as any)?.name, // optional tie-breaker if no id
+          }))
+          .sort((a, b) =>
+            (a.type ?? "").localeCompare(b.type ?? "") ||
+            String(a.id ?? a.name ?? "").localeCompare(String(b.id ?? b.name ?? "")) ||
+            (a.amount ?? 0) - (b.amount ?? 0)
+          )
+      )
     ],
     queryFn: async (): Promise<RecipeMetrics> => {
       const response = await ApiService.recipes.calculateMetricsPreview({
