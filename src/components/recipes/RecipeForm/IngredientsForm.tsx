@@ -8,7 +8,7 @@ import { RecipeFormData, RecipeIngredient } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
-import { formatHopTime } from "@/src/utils/timeUtils";
+import { formatHopTime } from "@src/utils/timeUtils";
 
 // Hop usage display mapping (database value -> display value)
 const HOP_USAGE_DISPLAY_MAPPING: Record<string, string> = {
@@ -137,16 +137,16 @@ export function IngredientsForm({
                   </Text>
                   {/* Show hop-specific details */}
                   {ingredient.type === "hop" &&
-                    (ingredient.use || ingredient.time) && (
+                    (ingredient.use || ingredient.time != null) && (
                       <Text style={styles.ingredientDetails}>
                         {ingredient.use &&
                           `${HOP_USAGE_DISPLAY_MAPPING[ingredient.use] || ingredient.use}`}
-                        {ingredient.time &&
-                          ingredient.time > 0 &&
+                        {ingredient.time != null &&
                           ` • ${formatHopTime(ingredient.time, ingredient.use || "")}`}
                         {ingredient.alpha_acid &&
                           ` • ${ingredient.alpha_acid}% AA`}
                       </Text>
+                    )}
                     )}
                   {/* Show grain-specific details */}
                   {ingredient.type === "grain" && ingredient.grain_type && (

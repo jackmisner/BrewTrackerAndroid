@@ -15,7 +15,7 @@ import { Recipe } from "@src/types";
 import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
 import { useTheme } from "@contexts/ThemeContext";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
-import { formatHopTime } from "@/src/utils/timeUtils";
+import { formatHopTime } from "@src/utils/timeUtils";
 
 /**
  * Displays detailed information about a specific brewing recipe, including metrics, ingredients, and instructions.
