@@ -20,7 +20,9 @@ import ApiService from "@services/API/apiService";
 import { useDebounce } from "@src/hooks/useDebounce";
 import { RecipeIngredient, IngredientType, IngredientUnit } from "@src/types";
 import { ingredientPickerStyles } from "@styles/modals/ingredientPickerStyles";
-import { convertHopTimeForStorage } from "@src/utils/timeUtils";
+import { IngredientDetailEditor } from "@src/components/recipes/IngredientEditor/IngredientDetailEditor";
+import { HOP_USAGE_OPTIONS } from "@constants/hopConstants";
+import { formatIngredientDetails } from "@utils/formatUtils";
 
 // Ingredient categories for filtering (matching backend grain_type values)
 const INGREDIENT_CATEGORIES = {
@@ -72,29 +74,64 @@ const CATEGORY_LABELS: Record<string, string> = {
   "Water Treatment": "Water Treatment",
 };
 
-// Units by ingredient type
-const UNITS_BY_TYPE = {
-  grain: ["lb", "kg", "g", "oz"],
-  hop: ["oz", "g"],
-  yeast: ["pkg", "g"],
-  other: ["tsp", "tbsp", "cup", "oz", "g", "ml", "l"],
+// Legacy constants for basic quantity form removed - IngredientDetailEditor has its own unit/hop handling
+
+/**
+ * Creates a complete RecipeIngredient with sensible defaults for editing
+ */
+const createRecipeIngredientWithDefaults = (
+  baseIngredient: RecipeIngredient,
+  ingredientType: IngredientType,
+  unitSystem: "imperial" | "metric"
+): RecipeIngredient => {
+  // Default amounts by type and unit system
+  const getDefaultAmount = (type: IngredientType): number => {
+    switch (type) {
+      case "grain":
+        return unitSystem === "imperial" ? 1.0 : 1.0; //
+      case "hop":
+        return unitSystem === "imperial" ? 1.0 : 30; // 1 oz ≈ 28g
+      case "yeast":
+        return 1; // 1 package
+      case "other":
+        return unitSystem === "imperial" ? 1 : 15; // 0.5 oz ≈ 14g
+      default:
+        return 1.0;
+    }
+  };
+
+  // Default units by type and unit system
+  const getDefaultUnit = (type: IngredientType): IngredientUnit => {
+    switch (type) {
+      case "grain":
+        return unitSystem === "imperial" ? "lb" : "kg";
+      case "hop":
+        return unitSystem === "imperial" ? "oz" : "g";
+      case "yeast":
+        return "pkg";
+      case "other":
+        return unitSystem === "imperial" ? "oz" : "g";
+      default:
+        return "oz";
+    }
+  };
+
+  const recipeIngredient: RecipeIngredient = {
+    ...baseIngredient,
+    type: ingredientType, // Ensure the type is explicitly set
+    amount: getDefaultAmount(ingredientType),
+    unit: getDefaultUnit(ingredientType),
+  };
+
+  // Add hop-specific defaults
+  if (ingredientType === "hop") {
+    const defaultUsage = HOP_USAGE_OPTIONS[0]; // Default to boil
+    recipeIngredient.use = defaultUsage.value;
+    recipeIngredient.time = defaultUsage.defaultTime;
+  }
+
+  return recipeIngredient;
 };
-
-// Hop usage types - display values
-const HOP_USAGE_TYPES = ["Boil", "Dry Hop", "Whirlpool"];
-
-// Mapping between display values and database values
-const HOP_USAGE_MAPPING = {
-  // Display value -> Database value
-  Boil: "boil",
-  "Dry Hop": "dry-hop",
-  Whirlpool: "whirlpool",
-} as const;
-
-// Reverse mapping for display (database value -> display value)
-const HOP_USAGE_DISPLAY_MAPPING = Object.fromEntries(
-  Object.entries(HOP_USAGE_MAPPING).map(([display, db]) => [db, display])
-) as Record<string, string>;
 
 /**
  * Displays a modal screen for selecting an ingredient by type, with filtering, searching, sorting, and quantity/unit input.
@@ -112,25 +149,16 @@ export default function IngredientPickerScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [selectedIngredient, setSelectedIngredient] =
     useState<RecipeIngredient | null>(null);
-  const [amount, setAmount] = useState("1");
-  const [selectedUnit, setSelectedUnit] = useState<IngredientUnit>("lb");
-  const [hopUse, setHopUse] = useState("Boil");
-  const [hopTime, setHopTime] = useState("60");
-  const [showQuantityInput, setShowQuantityInput] = useState(false);
+
+  // New state for IngredientDetailEditor integration
+  const [editingIngredient, setEditingIngredient] =
+    useState<RecipeIngredient | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
+
+  // Legacy selectedIngredient kept for potential future use
+  // (IngredientDetailEditor now manages the working ingredient state)
 
   // Update hop time default when hop usage changes
-  const handleHopUseChange = (usage: string) => {
-    setHopUse(usage);
-    // Set appropriate default time based on usage type
-    const defaultTimes = {
-      Boil: "60",
-      "Dry Hop": "3",
-      Whirlpool: "15",
-      "First Wort": "60",
-      Mash: "60",
-    };
-    setHopTime(defaultTimes[usage as keyof typeof defaultTimes] || "0");
-  };
 
   const ingredientType = (params.type as IngredientType) || "grain";
 
@@ -167,25 +195,7 @@ export default function IngredientPickerScreen() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Set default unit and amount based on ingredient type and unit system
-  useEffect(() => {
-    const defaultUnits = {
-      grain: unitSystem === "imperial" ? "lb" : "kg",
-      hop: unitSystem === "imperial" ? "oz" : "g",
-      yeast: "pkg",
-      other: unitSystem === "imperial" ? "oz" : "g",
-    };
-
-    const defaultAmounts = {
-      grain: unitSystem === "imperial" ? "1" : "1",
-      hop: unitSystem === "imperial" ? "1" : "30",
-      yeast: "1", // 1 package regardless of unit system
-      other: unitSystem === "imperial" ? "1" : "15", // 1 oz ≈ 14 grams
-    };
-
-    setSelectedUnit(defaultUnits[ingredientType] as IngredientUnit);
-    setAmount(defaultAmounts[ingredientType]);
-  }, [ingredientType, unitSystem]);
+  // Legacy useEffect for setting default units/amounts removed - IngredientDetailEditor handles defaults
 
   // Custom sorting function for ingredients with special handling for caramel malts and candi syrups
   // Based on the sophisticated algorithm from BrewTracker web frontend
@@ -266,111 +276,48 @@ export default function IngredientPickerScreen() {
   }, [ingredients, sortIngredients]);
 
   const handleIngredientSelect = (ingredient: RecipeIngredient) => {
-    setSelectedIngredient(ingredient);
-    setShowQuantityInput(true);
+    // Create a complete RecipeIngredient with defaults for editing
+    const ingredientWithDefaults = createRecipeIngredientWithDefaults(
+      ingredient,
+      ingredientType,
+      unitSystem
+    );
+
+    setEditingIngredient(ingredientWithDefaults);
+    setShowEditor(true);
   };
 
-  const handleConfirmSelection = () => {
-    if (!selectedIngredient) {
-      return;
-    }
-
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      Alert.alert(
-        "Invalid Amount",
-        "Please enter a valid amount greater than 0"
-      );
-      return;
-    }
-
-    // Enhanced hop time validation based on usage type
-    if (ingredientType === "hop") {
-      const numTime = parseFloat(hopTime);
-      if (isNaN(numTime) || numTime < 0) {
-        const timeUnit = hopUse === "Dry Hop" ? "days" : "minutes";
-        Alert.alert("Invalid Time", `Please enter a valid time in ${timeUnit}`);
-        return;
-      }
-
-      // Usage-specific validation ranges (using display names for validation)
-      const validationRules = {
-        Boil: { min: 0, max: 120, unit: "minutes", warning: 90 },
-        "Dry Hop": { min: 1, max: 14, unit: "days", warning: 7 },
-        Whirlpool: { min: 0, max: 60, unit: "minutes", warning: 45 },
-        "First Wort": { min: 30, max: 120, unit: "minutes", warning: 90 },
-        Mash: { min: 30, max: 90, unit: "minutes", warning: 75 },
-      };
-
-      const rule = validationRules[hopUse as keyof typeof validationRules];
-      if (rule) {
-        if (numTime < rule.min || numTime > rule.max) {
-          Alert.alert(
-            "Unusual Time Value",
-            `${hopUse} time is typically between ${rule.min}-${rule.max} ${rule.unit}. Are you sure you want to continue?`,
-            [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Continue Anyway",
-                onPress: () => proceedWithIngredient(),
-              },
-            ]
-          );
-          return;
-        } else if (numTime > rule.warning) {
-          Alert.alert(
-            "High Time Value",
-            `${hopUse} time of ${numTime} ${rule.unit} is higher than typical. Continue?`,
-            [
-              { text: "Cancel", style: "cancel" },
-              { text: "Continue", onPress: () => proceedWithIngredient() },
-            ]
-          );
-          return;
-        }
-      }
-    }
-
-    proceedWithIngredient();
-  };
-
-  // Separate function to handle the actual ingredient creation
-  const proceedWithIngredient = () => {
-    if (!selectedIngredient) {
-      return;
-    }
-
-    const numAmount = parseFloat(amount);
-
-    // Create the ingredient with quantity and hop-specific fields
-    const ingredientWithQuantity: RecipeIngredient = {
-      ...selectedIngredient,
-      amount: numAmount,
-      unit: selectedUnit,
-      ...(ingredientType === "hop" && {
-        use:
-          HOP_USAGE_MAPPING[hopUse as keyof typeof HOP_USAGE_MAPPING] ||
-          hopUse.toLowerCase(),
-        // Convert hop time to minutes for consistent database storage
-        // Dry hops: days -> minutes, others: minutes -> minutes
-        time: convertHopTimeForStorage(parseFloat(hopTime), hopUse),
-      }),
-    };
-
-    // Navigate back with the selected ingredient as a parameter
+  /**
+   * Handles saving the ingredient from IngredientDetailEditor
+   */
+  const handleSaveIngredient = (finalIngredient: RecipeIngredient) => {
+    // Navigate back with the configured ingredient
     router.setParams({
-      selectedIngredient: JSON.stringify(ingredientWithQuantity),
+      selectedIngredient: JSON.stringify(finalIngredient),
     });
     router.back();
   };
 
+  /**
+   * Handles canceling the ingredient editor
+   */
+  const handleCancelEditor = () => {
+    setShowEditor(false);
+    setEditingIngredient(null);
+  };
+
+  /**
+   * This shouldn't be called since we don't allow removing from picker, but required by IngredientDetailEditor
+   */
+  const handleRemoveIngredient = () => {
+    setShowEditor(false);
+    setEditingIngredient(null);
+  };
+
+  // Legacy ingredient validation and creation functions removed - IngredientDetailEditor provides all this functionality
+
   const handleCancel = () => {
-    if (showQuantityInput) {
-      setShowQuantityInput(false);
-      setSelectedIngredient(null);
-    } else {
-      router.back();
-    }
+    router.back();
   };
 
   const renderIngredientItem = ({ item }: { item: RecipeIngredient }) => (
@@ -386,39 +333,10 @@ export default function IngredientPickerScreen() {
           </Text>
         )}
 
-        {/* Type-specific info */}
-        {ingredientType === "grain" && (
-          <View style={styles.ingredientSpecs}>
-            {item.potential && (
-              <Text style={styles.specText}>
-                Potential: {Math.round(item.potential)} PPG
-              </Text>
-            )}
-            {item.color && <Text style={styles.specText}>{item.color}°L</Text>}
-          </View>
-        )}
-
-        {ingredientType === "hop" && (
-          <View style={styles.ingredientSpecs}>
-            {item.alpha_acid && (
-              <Text style={styles.specText}>{item.alpha_acid}% AA</Text>
-            )}
-            {item.hop_type && (
-              <Text style={styles.specText}>{item.hop_type}</Text>
-            )}
-          </View>
-        )}
-
-        {ingredientType === "yeast" && (
-          <View style={styles.ingredientSpecs}>
-            {item.attenuation && (
-              <Text style={styles.specText}>{item.attenuation}% Att.</Text>
-            )}
-            {item.manufacturer && (
-              <Text style={styles.specText}>{item.manufacturer}</Text>
-            )}
-          </View>
-        )}
+        {/* Type-specific info using shared formatting utilities */}
+        <View style={styles.ingredientSpecs}>
+          <Text style={styles.specText}>{formatIngredientDetails(item)}</Text>
+        </View>
       </View>
 
       <MaterialIcons
@@ -492,140 +410,7 @@ export default function IngredientPickerScreen() {
     );
   };
 
-  const renderQuantityInput = () => {
-    if (!showQuantityInput || !selectedIngredient) return null;
-
-    const availableUnits = UNITS_BY_TYPE[ingredientType];
-
-    return (
-      <View style={styles.quantityContainer}>
-        <View style={styles.quantityHeader}>
-          <Text style={styles.quantityTitle}>
-            Add {selectedIngredient.name || "Ingredient"}
-          </Text>
-          <TouchableOpacity onPress={handleCancel}>
-            <MaterialIcons name="close" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.quantityContent}>
-          <Text style={styles.quantityLabel}>Amount</Text>
-          <View style={styles.quantityInputContainer}>
-            <TextInput
-              style={styles.quantityInput}
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="decimal-pad"
-              placeholder={(() => {
-                switch (ingredientType) {
-                  case "grain":
-                    return unitSystem === "imperial" ? "8.0" : "3.6";
-                  case "hop":
-                    return unitSystem === "imperial" ? "1.0" : "28";
-                  case "yeast":
-                    return "1";
-                  case "other":
-                    return unitSystem === "imperial" ? "0.5" : "14";
-                  default:
-                    return "1.0";
-                }
-              })()}
-              placeholderTextColor={theme.colors.textMuted}
-              selectTextOnFocus
-            />
-
-            {/* Unit picker */}
-            <View style={styles.unitPickerContainer}>
-              {availableUnits.map(unit => (
-                <TouchableOpacity
-                  key={unit}
-                  style={[
-                    styles.unitButton,
-                    selectedUnit === unit && styles.unitButtonActive,
-                  ]}
-                  onPress={() => setSelectedUnit(unit as IngredientUnit)}
-                >
-                  <Text
-                    style={[
-                      styles.unitButtonText,
-                      selectedUnit === unit && styles.unitButtonTextActive,
-                    ]}
-                  >
-                    {unit}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Hop-specific fields */}
-          {ingredientType === "hop" && (
-            <>
-              <Text style={styles.quantityLabel}>Usage</Text>
-              <View style={styles.unitPickerContainer}>
-                {HOP_USAGE_TYPES.map(usage => (
-                  <TouchableOpacity
-                    key={usage}
-                    style={[
-                      styles.unitButton,
-                      hopUse === usage && styles.unitButtonActive,
-                    ]}
-                    onPress={() => handleHopUseChange(usage)}
-                  >
-                    <Text
-                      style={[
-                        styles.unitButtonText,
-                        hopUse === usage && styles.unitButtonTextActive,
-                      ]}
-                    >
-                      {usage}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Time field for all hop usage types */}
-              <Text style={styles.quantityLabel}>
-                {hopUse === "Boil" && "Boil Time (minutes)"}
-                {hopUse === "Dry Hop" && "Contact Time (days)"}
-                {hopUse === "Whirlpool" && "Whirlpool Time (minutes)"}
-                {hopUse === "First Wort" && "Time (minutes)"}
-                {hopUse === "Mash" && "Mash Time (minutes)"}
-              </Text>
-              <TextInput
-                style={styles.quantityInput}
-                value={hopTime}
-                onChangeText={setHopTime}
-                keyboardType="decimal-pad"
-                placeholder={
-                  hopUse === "Boil"
-                    ? "60"
-                    : hopUse === "Dry Hop"
-                      ? "5"
-                      : hopUse === "Whirlpool"
-                        ? "20"
-                        : hopUse === "First Wort"
-                          ? "60"
-                          : hopUse === "Mash"
-                            ? "60"
-                            : "0"
-                }
-                placeholderTextColor={theme.colors.textMuted}
-                selectTextOnFocus
-              />
-            </>
-          )}
-
-          <TouchableOpacity
-            style={styles.confirmButton}
-            onPress={handleConfirmSelection}
-          >
-            <Text style={styles.confirmButtonText}>Add Ingredient</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  };
+  // Legacy renderQuantityInput removed - IngredientDetailEditor provides advanced ingredient configuration
 
   const getTypeTitle = () => {
     const titles = {
@@ -637,13 +422,7 @@ export default function IngredientPickerScreen() {
     return titles[ingredientType] || "Ingredients";
   };
 
-  if (showQuantityInput) {
-    return (
-      <KeyboardAvoidingView style={styles.container} behavior="height">
-        {renderQuantityInput()}
-      </KeyboardAvoidingView>
-    );
-  }
+  // Note: Legacy showQuantityInput removed - now using IngredientDetailEditor
 
   return (
     <View style={styles.container}>
@@ -734,6 +513,17 @@ export default function IngredientPickerScreen() {
           }
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
+        />
+      )}
+
+      {/* IngredientDetailEditor for advanced ingredient configuration */}
+      {editingIngredient && (
+        <IngredientDetailEditor
+          ingredient={editingIngredient}
+          onUpdate={handleSaveIngredient}
+          onCancel={handleCancelEditor}
+          onRemove={handleRemoveIngredient}
+          isVisible={showEditor}
         />
       )}
     </View>

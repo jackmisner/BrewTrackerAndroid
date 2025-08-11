@@ -7,7 +7,6 @@ import {
   Switch,
   Alert,
   ScrollView,
-  KeyboardAvoidingView,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 
@@ -127,10 +126,7 @@ export function BasicInfoForm({
     );
 
     return (
-      <KeyboardAvoidingView
-        style={styles.stylePickerContainer}
-        behavior="height"
-      >
+      <View style={styles.stylePickerContainer}>
         <View style={styles.stylePickerHeader}>
           <Text style={styles.stylePickerTitle}>
             Select Beer Style {stylesLoading && "(Loading...)"}
@@ -209,7 +205,7 @@ export function BasicInfoForm({
             </View>
           )}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     );
   };
 

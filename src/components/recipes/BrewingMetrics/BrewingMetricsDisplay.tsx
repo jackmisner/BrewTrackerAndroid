@@ -4,6 +4,13 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { brewingMetricsStyles } from "@styles/components/brewingMetricsStyles";
+import {
+  formatGravity,
+  formatABV,
+  formatIBU,
+  formatSRM,
+  getSrmColor,
+} from "@utils/formatUtils";
 
 interface BrewingMetricsProps {
   metrics?: {
@@ -51,7 +58,7 @@ export const BrewingMetricsDisplay: React.FC<BrewingMetricsProps> = ({
   const styles = brewingMetricsStyles(theme, compact);
 
   /**
-   * Format metric values based on type with proper decimal places
+   * Format metric values based on type with proper decimal places using shared formatting utilities
    */
   const formatMetricValue = (
     label: string,
@@ -62,92 +69,23 @@ export const BrewingMetricsDisplay: React.FC<BrewingMetricsProps> = ({
     // Coerce strings like "1.050" to numbers safely
     const num = typeof value === "number" ? value : Number(value);
     if (!Number.isFinite(num)) return "—";
-    let formattedValue: string;
 
     switch (label) {
       case "ABV":
-        formattedValue = num.toFixed(1);
-        break;
+        return formatABV(num);
       case "OG":
       case "FG":
-        formattedValue = num.toFixed(3);
-        break;
+        return formatGravity(num);
       case "IBU":
-        formattedValue = Math.round(num).toString();
-        break;
+        return formatIBU(num);
       case "SRM":
-        formattedValue = num.toFixed(1);
-        break;
+        return formatSRM(num);
       case "Mash Temp":
-        formattedValue = Math.round(num).toString();
-        break;
+        return `${Math.round(num)}${unit || ""}`;
       default:
-        formattedValue = num.toString();
+        return `${num}${unit || ""}`;
     }
-
-    return `${formattedValue}${unit || ""}`;
   };
-
-  /**
-   * Get hex color for SRM value (beer color visualization)
-   */
-  function getSrmColor(srm: number | string | null | undefined): string {
-    if (!srm) return "#FFE699";
-    const numSrm = parseFloat(srm.toString());
-    if (isNaN(numSrm) || numSrm < 0) return "#FFE699";
-
-    // Round to nearest integer for lookup
-    const roundedSrm = Math.round(numSrm);
-
-    // Colors for SRM 0-40, anything above 40 returns black
-    if (roundedSrm > 40) return "#000000";
-
-    const srmColors: string[] = [
-      "#FFE699", // SRM 0
-      "#FFE699", // SRM 1
-      "#FFE699", // SRM 2
-      "#FFCA5A", // SRM 3
-      "#FFBF42", // SRM 4
-      "#FFC232", // SRM 5
-      "#FBB123", // SRM 6
-      "#F8A615", // SRM 7
-      "#F39C00", // SRM 8
-      "#F09100", // SRM 9
-      "#E58500", // SRM 10
-      "#E07A00", // SRM 11
-      "#DB6F00", // SRM 12
-      "#CF6900", // SRM 13
-      "#CA5E00", // SRM 14
-      "#C45400", // SRM 15
-      "#BE4A00", // SRM 16
-      "#BB5100", // SRM 17
-      "#B04600", // SRM 18
-      "#A63C00", // SRM 19
-      "#A13700", // SRM 20
-      "#9B3200", // SRM 21
-      "#962E00", // SRM 22
-      "#912A00", // SRM 23
-      "#8E2900", // SRM 24
-      "#862400", // SRM 25
-      "#7E1F00", // SRM 26
-      "#761B00", // SRM 27
-      "#6E1700", // SRM 28
-      "#701400", // SRM 29
-      "#6A1200", // SRM 30
-      "#651000", // SRM 31
-      "#600E00", // SRM 32
-      "#5B0C00", // SRM 33
-      "#560A01", // SRM 34
-      "#600903", // SRM 35
-      "#550802", // SRM 36
-      "#4A0702", // SRM 37
-      "#420601", // SRM 38
-      "#3D0601", // SRM 39
-      "#3D0708", // SRM 40
-    ];
-
-    return srmColors[roundedSrm];
-  }
 
   /**
    * Render individual metric card

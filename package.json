@@ -1,7 +1,7 @@
 {
   "name": "brewtracker",
   "main": "expo-router/entry",
-  "version": "0.8.3",
+  "version": "0.8.5",
   "license": "GPL-3.0-or-later",
   "scripts": {
     "start": "expo start",
@@ -55,7 +55,8 @@
     "react-native-screens": "~4.11.1",
     "react-native-svg": "15.11.2",
     "react-native-web": "~0.20.0",
-    "react-native-webview": "13.13.5"
+    "react-native-webview": "13.13.5",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
@@ -66,6 +67,7 @@
     "@testing-library/react-native": "^13.2.2",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.0.10",
+    "@types/uuid": "^10.0.0",
     "babel-jest": "~29.7.0",
     "babel-preset-expo": "~13.0.0",
     "eslint": "^9.25.0",
@@ -98,7 +100,10 @@
       "^@contexts/(.*)$": "<rootDir>/src/contexts/$1",
       "^@services/(.*)$": "<rootDir>/src/services/$1",
       "^@styles/(.*)$": "<rootDir>/src/styles/$1",
-      "^@types/(.*)$": "<rootDir>/src/types/$1"
+      "^@types/(.*)$": "<rootDir>/src/types/$1",
+      "^@components/(.*)$": "<rootDir>/src/components/$1",
+      "^@constants/(.*)$": "<rootDir>/src/constants/$1",
+      "^@utils/(.*)$": "<rootDir>/src/utils/$1"
     },
     "collectCoverageFrom": [
       "src/**/*.{ts,tsx}",

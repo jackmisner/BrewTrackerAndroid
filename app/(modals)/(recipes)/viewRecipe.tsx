@@ -15,7 +15,7 @@ import { Recipe } from "@src/types";
 import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
 import { useTheme } from "@contexts/ThemeContext";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
-import { formatHopTime } from "@src/utils/timeUtils";
+import { formatHopTime, formatHopUsage } from "@src/utils/formatUtils";
 
 /**
  * Displays detailed information about a specific brewing recipe, including metrics, ingredients, and instructions.
@@ -170,6 +170,9 @@ export default function ViewRecipeScreen() {
                   ingredient.time &&
                   ingredient.time > 0 &&
                   ` • ${formatHopTime(ingredient.time, ingredient.use || "")}`}
+                {ingredient.type === "hop" &&
+                  ingredient.use &&
+                  ` • ${formatHopUsage(ingredient.use)}`}
                 {ingredient.alpha_acid && ` • ${ingredient.alpha_acid}% AA`}
                 {ingredient.attenuation &&
                   ` • ${ingredient.attenuation}% Attenuation`}
