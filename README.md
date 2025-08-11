@@ -75,45 +75,57 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   └── _layout.tsx                               # Tab navigation layout with Material Icons
 │   ├── (modals)/                                     # Modal/detail screens (not in tab navigation)
 │   │   ├── _layout.tsx                               # Modal navigation layout configuration
-│   │   ├── (recipes)/                                # Recipe-related detail screens
+│   │   ├── (recipes)/                                # Recipe-related detail and creation screens
 │   │   │   ├── _layout.tsx                           # Recipe modals layout
-│   │   │   └── viewRecipe.tsx                        # Individual recipe detail view with ingredients and metrics
+│   │   │   ├── viewRecipe.tsx                        # Individual recipe detail view with ingredients and metrics
+│   │   │   ├── createRecipe.tsx                      # Multi-step recipe creation wizard
+│   │   │   ├── editRecipe.tsx                        # Recipe editing interface
+│   │   │   └── ingredientPicker.tsx                  # Full-screen ingredient selection with search and filtering
 │   │   ├── (brewSessions)/                           # Brew session detail screens
 │   │   │   ├── _layout.tsx                           # Brew session modals layout
 │   │   │   └── viewBrewSession.tsx                   # Individual brew session detail view with metrics and status
 │   │   └── (settings)/                               # Settings screens
 │   │       ├── _layout.tsx                           # Settings modals layout
-│   │       └── settings.tsx                         # User settings and preferences
+│   │       └── settings.tsx                          # User settings and preferences
 │   ├── index.tsx                                     # Entry point with auth routing
 │   └── _layout.tsx                                   # Root layout with AuthProvider and QueryClient
 ├── src/                                              # Source code for React Native components and services
-│   ├── components/                                   # Reusable UI components
-│   ├── contexts/                                     # React contexts (Auth, Theme)
+│   ├── components/                                   # Reusable UI components organized by feature
+│   │   ├── brewSessions/                             # Brew session specific components
+│   │   │   └── FermentationChart.tsx                 # Interactive fermentation tracking charts with dual-axis
+│   │   ├── recipes/                                  # Recipe management components
+│   │   │   ├── BrewingMetrics/                       # Recipe metrics display components
+│   │   │   │   └── BrewingMetricsDisplay.tsx         # Reusable brewing metrics with SRM color visualization
+│   │   │   ├── IngredientEditor/                     # Advanced ingredient editing components
+│   │   │   │   └── IngredientDetailEditor.tsx        # Complete ingredient editing with type-specific UI
+│   │   │   └── RecipeForm/                           # Multi-step recipe creation forms
+│   │   │       ├── BasicInfoForm.tsx                 # Recipe name, style, batch size input
+│   │   │       ├── ParametersForm.tsx                # Brewing parameters (boil time, efficiency, mash temp)
+│   │   │       ├── IngredientsForm.tsx               # Ingredient list management interface
+│   │   │       └── ReviewForm.tsx                    # Final recipe review and submission
+│   │   └── ui/                                       # Generic UI components
+│   │       └── ContextMenu/                          # Context menu implementations
+│   │           └── RecipeContextMenu.tsx             # Recipe-specific context menu actions
+│   ├── contexts/                                     # React contexts for global state
 │   │   ├── AuthContext.tsx                           # Authentication context with secure token storage
-│   │   └── ThemeContext.tsx                          # Theme management with light/dark mode support
+│   │   ├── ThemeContext.tsx                          # Theme management with light/dark mode support
+│   │   └── UnitContext.tsx                           # Unit system management (imperial/metric)
 │   ├── hooks/                                        # Custom React hooks
+│   │   ├── useBeerStyles.ts                          # Beer style data fetching and management
+│   │   ├── useDebounce.ts                            # Performance optimization for search inputs
+│   │   └── useRecipeMetrics.ts                       # Real-time recipe calculations hook
 │   ├── services/                                     # API services and business logic
-│   │   ├── API/
-│   │   │   ├── apiService.ts                         # Complete API service layer with Axios configuration
-│   │   │   └── queryClient.ts                        # React Query client configuration
+│   │   ├── api/                                      # API layer with React Query integration
+│   │   │   ├── apiService.ts                         # Hardened API service with validated base URL, timeout, error normalization, and retry logic
+│   │   │   ├── queryClient.ts                        # React Query client configuration
+│   │   │   └── idInterceptor.ts                      # MongoDB ObjectId to string normalization
 │   │   └── config.ts                                 # Service configuration and constants
-│   ├── styles/                                       # StyleSheet definitions organized by feature
-│   │   ├── auth/                                     # Authentication screen styles
-│   │   │   ├── loginStyles.ts                        # Login screen styling with common colors
-│   │   │   ├── registerStyles.ts                     # Registration screen styling
-│   │   │   └── verifyEmailStyles.ts                  # Email verification screen styling
-│   │   ├── tabs/                                     # Main tab navigation screen styles
-│   │   │   ├── dashboardStyles.ts                    # Dashboard/home screen styling
-│   │   │   ├── recipesStyles.ts                      # Recipe browsing screen styling
-│   │   │   ├── brewSessionsStyles.ts                 # Brew session tracking screen styling
-│   │   │   └── profileStyles.ts                      # User profile screen styling
-│   │   ├── modals/                                   # Modal/detail screen styles
-│   │   │   ├── viewRecipeStyles.ts                   # Recipe detail view styling
-│   │   │   ├── viewBrewSessionStyles.ts               # Brew session detail view styling
-│   │   │   └── settingsStyles.ts                     # Settings screen styling
-│   │   └── common/                                   # Shared style definitions
-│   │       ├── colors.ts                             # Centralized color constants for consistent theming
-│   │       └── buttons.ts                            # Reusable button styles using color constants
+│   ├── constants/                                    # Shared constants and configuration
+│   │   └── hopConstants.ts                           # Hop usage options, time presets, and type definitions
+│   ├── utils/                                        # Utility functions
+│   │   ├── formatUtils.ts                            # Comprehensive brewing data formatting utilities
+│   │   ├── idNormalization.ts                        # MongoDB ObjectId normalization utilities
+│   │   └── timeUtils.ts                              # Time calculation and conversion utilities
 │   ├── types/                                        # TypeScript type definitions for mobile app
 │   │   ├── api.ts                                    # API request/response interfaces
 │   │   ├── common.ts                                 # Shared utility types
@@ -121,11 +133,13 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   ├── brewSession.ts                            # Brew session and fermentation types
 │   │   ├── user.ts                                   # User account and authentication types
 │   │   └── index.ts                                  # Central type exports
-│   └── utils/                                        # Utility functions
+│   └── styles/                                       # StyleSheet definitions organized by feature
+├── tests/                                            # Test files and configuration
 ├── assets/                                           # Static assets (images, fonts, icons)
 ├── app.json                                          # Expo configuration for Android-only development
 ├── package.json                                      # React Native dependencies and Expo configuration
-├── tsconfig.json                                     # TypeScript configuration for React Native
+├── LICENSE                                           # GPL-3.0-or-later license
+├── LICENSE-HEADER.txt                                # License header for source files
 └── .env                                              # Environment variables for API URL and mobile configuration
 ```
 
@@ -257,6 +271,66 @@ flask run --host=0.0.0.0
    expo build:android -t app-bundle
    ```
 
+## API Security & Hardening
+
+The BrewTrackerAndroid API service layer has been hardened with robust security and reliability features:
+
+### Configuration Validation
+
+- **Mandatory Base URL**: `EXPO_PUBLIC_API_URL` environment variable is strictly required and validated
+- **URL Format Validation**: Ensures API URL is properly formatted and accessible
+- **Clean URL Processing**: Automatic trailing slash removal for consistency
+- **Fail-Fast Validation**: Application fails immediately with clear error messages for invalid configuration
+
+### Enhanced Error Handling
+
+- **Error Normalization**: Consistent error format across all API responses
+- **Categorized Errors**: Network errors, timeouts, client errors, and server errors properly classified
+- **User-Friendly Messages**: Technical errors translated to actionable user messages
+- **Retryability Detection**: Automatic identification of retryable vs non-retryable errors
+
+### Network Resilience
+
+- **Smart Retry Policy**: Automatic retry for idempotent GET requests on transient failures
+- **Exponential Backoff**: Progressive retry delays with jitter to prevent thundering herd
+- **Timeout Configuration**: Hardened 15-second timeout optimized for mobile networks
+- **Connection Validation**: Built-in network connectivity checking
+
+### Error Types Handled
+
+- **Network Errors**: Connection failures, DNS issues, network timeouts
+- **HTTP Status Codes**: Proper handling of 4xx client errors and 5xx server errors  
+- **Rate Limiting**: Automatic retry for 429 (Too Many Requests) responses
+- **Service Unavailability**: Retry logic for 502, 503, 504 temporary service issues
+- **Authentication**: Secure token cleanup on 401 authentication failures
+
+### Usage Example
+
+```typescript
+// Error handling with normalization
+try {
+  const recipe = await ApiService.recipes.getById('recipe-id');
+} catch (error) {
+  const normalized = ApiService.handleApiError(error);
+  
+  if (normalized.isRetryable) {
+    // Will be automatically retried for GET requests
+    console.log('Retrying request...');
+  } else {
+    // Handle non-retryable errors
+    showUserError(normalized.message);
+  }
+}
+```
+
+### Configuration Requirements
+
+```bash
+# Required in .env file
+EXPO_PUBLIC_API_URL=https://api.brewtracker.com/v1  # Must be valid URL
+EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
+```
+
 ## Current Status
 
 **Version**: 0.6.3  
@@ -333,28 +407,33 @@ flask run --host=0.0.0.0
 
 ### 🚧 In Progress (Phase 4 - Recipe Builder Foundation)
 
-**Current Progress: 60% Complete (4/7 major components)**
+**Current Progress: 75% Complete (6/7 major components)**
 
-**✅ Completed Components:**
+**✅ Recently Completed Components:**
+
+- **Full-Screen Ingredient Picker**: Complete ingredient selection with search, filtering, and detailed editing
+- **Ingredient Detail Editor**: Advanced ingredient editing with hop timing, usage selection, and unit conversion
+- **Shared Formatting Utilities**: Centralized constants and formatting functions across the app
+- **Performance Optimizations**: Debounced API calls, optimized search, and React key fixes
+
+**✅ Completed Earlier:**
 
 - Multi-step Recipe Wizard with progress tracking
 - Recipe input forms (Basic Info, Parameters, Review)
 - Navigation integration with modal presentation
 - Comprehensive styling system with theme support
 
-**🔄 Active Development:**
+**🔄 Currently Working On:**
 
-- Full-screen ingredient picker with search/filtering
 - Real-time metrics calculation display
+- Recipe creation API integration
 - Enhanced form validation and error handling
-- Performance optimizations and debounced API calls
 
-**Priority Tasks:**
+**Priority Tasks Remaining:**
 
-- Complete ingredient picker implementation
 - Add real-time brewing calculations (IBU, ABV, SRM)
-- Implement recipe creation API integration
-- Enhanced search and filtering capabilities
+- Implement complete recipe creation workflow
+- Add recipe editing capabilities
 
 ## 📋 Feature Disparity Analysis & Implementation Roadmap
 

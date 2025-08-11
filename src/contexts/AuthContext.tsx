@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User, LoginRequest, RegisterRequest } from "@src/types";
-import ApiService from "@services/API/apiService";
+import ApiService from "@services/api/apiService";
 import { STORAGE_KEYS } from "@services/config";
 
 // Auth context interface

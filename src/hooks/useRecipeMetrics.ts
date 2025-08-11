@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import ApiService from "@services/API/apiService";
+import ApiService from "@services/api/apiService";
 import { RecipeFormData, RecipeMetrics } from "@src/types";
 import { useDebounce } from "./useDebounce";
 

@@ -5,7 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@contexts/AuthContext";
 import { ThemeProvider, useTheme } from "@contexts/ThemeContext";
 import { UnitProvider } from "@contexts/UnitContext";
-import { queryClient } from "@services/API/queryClient";
+import { queryClient } from "@services/api/queryClient";
 
 // Component to handle StatusBar with theme
 const ThemedStatusBar = () => {
