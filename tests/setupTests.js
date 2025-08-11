@@ -1,6 +1,9 @@
 // Basic test setup file
 import "react-native-gesture-handler/jestSetup";
 
+// Set up environment variables for tests
+process.env.EXPO_PUBLIC_API_URL = "http://localhost:5000/api";
+
 // Mock React Native modules - don't create circular dependency
 
 // Mock Expo modules

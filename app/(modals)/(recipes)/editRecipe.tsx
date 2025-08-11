@@ -14,7 +14,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
-import ApiService from "@services/API/apiService";
+import ApiService from "@services/api/apiService";
 import {
   RecipeFormData,
   RecipeIngredient,

@@ -7,15 +7,25 @@ import {
   RefreshControl,
   TextInput,
   ActivityIndicator,
+  Alert,
+  GestureResponderEvent,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import ApiService from "@services/API/apiService";
+import * as Haptics from "expo-haptics";
+import ApiService from "@services/api/apiService";
 import { Recipe } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { recipesStyles } from "@styles/tabs/recipesStyles";
 import { formatABV, formatIBU, formatSRM } from "@utils/formatUtils";
+import {
+  RecipeContextMenu,
+  createDefaultRecipeActions,
+  RecipeAction,
+} from "@src/components/ui/ContextMenu/RecipeContextMenu";
+import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
+import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
 
 /**
  * Displays a tabbed interface for browsing and managing recipes, allowing users to view their own recipes or search public recipes.
@@ -32,6 +42,9 @@ export default function RecipesScreen() {
   const [activeTab, setActiveTab] = useState<"my" | "public">("my");
   const [refreshing, setRefreshing] = useState(false);
   const lastParamsRef = useRef<string | undefined>(undefined);
+
+  // Context menu state
+  const contextMenu = useContextMenu<Recipe>();
 
   // Set active tab from URL parameters
   // Always respond to navigation with explicit activeTab parameters
@@ -122,6 +135,67 @@ export default function RecipesScreen() {
     router.push("/(modals)/(recipes)/createRecipe");
   };
 
+  // Context menu action handlers
+  const handleRecipeLongPress = (recipe: Recipe, event: GestureResponderEvent) => {
+    const position = getTouchPosition(event);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (error) {
+      // Silently handle devices without haptic support
+    }
+    contextMenu.showMenu(recipe, position);
+  };
+
+  const contextMenuActions = createDefaultRecipeActions({
+    onView: (recipe: Recipe) => {
+      router.push({
+        pathname: "/(modals)/(recipes)/viewRecipe",
+        params: { recipe_id: recipe.id },
+      });
+    },
+    onEdit: (recipe: Recipe) => {
+      router.push({
+        pathname: "/(modals)/(recipes)/editRecipe",
+        params: { recipe_id: recipe.id },
+      });
+    },
+    onClone: (recipe: Recipe) => {
+      // TODO: Implement recipe cloning functionality
+      Alert.alert(
+        "Clone Recipe",
+        `Cloning "${recipe.name}" - Feature coming soon!`
+      );
+    },
+    onBeerXMLExport: (recipe: Recipe) => {
+      // TODO: Implement BeerXML export functionality
+      Alert.alert(
+        "Export BeerXML",
+        `Exporting "${recipe.name}" - Feature coming soon!`
+      );
+    },
+    onStartBrewing: (recipe: Recipe) => {
+      // TODO: Implement brew session creation from recipe
+      Alert.alert(
+        "Start Brewing",
+        `Starting brew session for "${recipe.name}" - Feature coming soon!`
+      );
+    },
+    onShare: (recipe: Recipe) => {
+      // TODO: Implement recipe sharing functionality
+      Alert.alert(
+        "Share Recipe",
+        `Sharing "${recipe.name}" - Feature coming soon!`
+      );
+    },
+    onDelete: (recipe: Recipe) => {
+      // TODO: Implement recipe deletion with API call
+      Alert.alert(
+        "Delete Recipe",
+        `Deleting "${recipe.name}" - Feature coming soon!`
+      );
+    },
+  });
+
   const renderRecipeItem = ({ item: recipe }: { item: Recipe }) => {
     // Add safety checks for recipe data
     if (!recipe || !recipe.name) {
@@ -132,6 +206,7 @@ export default function RecipesScreen() {
       <TouchableOpacity
         style={styles.recipeCard}
         onPress={() => handleRecipePress(recipe)}
+        onLongPress={event => handleRecipeLongPress(recipe, event)}
       >
         <View style={styles.recipeHeader}>
           <Text style={styles.recipeName} numberOfLines={1}>
@@ -345,6 +420,15 @@ export default function RecipesScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* Context Menu */}
+      <RecipeContextMenu
+        visible={contextMenu.visible}
+        recipe={contextMenu.selectedItem}
+        actions={contextMenuActions}
+        onClose={contextMenu.hideMenu}
+        position={contextMenu.position}
+      />
     </View>
   );
 }

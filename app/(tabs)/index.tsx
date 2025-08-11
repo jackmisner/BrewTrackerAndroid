@@ -6,16 +6,28 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import Constants from "expo-constants";
+import * as Haptics from "expo-haptics";
 import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
-import ApiService from "@services/API/apiService";
+import ApiService from "@services/api/apiService";
 import { Recipe, BrewSession } from "@src/types";
 import { dashboardStyles } from "@styles/tabs/dashboardStyles";
+import {
+  RecipeContextMenu,
+  createDefaultRecipeActions,
+} from "@src/components/ui/ContextMenu/RecipeContextMenu";
+import {
+  BrewSessionContextMenu,
+  createDefaultBrewSessionActions,
+} from "@src/components/ui/ContextMenu/BrewSessionContextMenu";
+import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
+import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
 
 /**
  * Displays the main dashboard screen for the brewing app, showing user stats, recent recipes, and active brew sessions.
@@ -27,6 +39,10 @@ export default function DashboardScreen() {
   const theme = useTheme();
   const styles = dashboardStyles(theme);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Context menu state
+  const recipeContextMenu = useContextMenu<Recipe>();
+  const brewSessionContextMenu = useContextMenu<BrewSession>();
 
   // Handle pull to refresh
   const onRefresh = async () => {
@@ -141,6 +157,104 @@ export default function DashboardScreen() {
     });
   };
 
+  // Long-press handlers
+  const handleRecipeLongPress = (recipe: Recipe, event: any) => {
+    const position = getTouchPosition(event);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    recipeContextMenu.showMenu(recipe, position);
+  };
+
+  const handleBrewSessionLongPress = (brewSession: BrewSession, event: any) => {
+    const position = getTouchPosition(event);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    brewSessionContextMenu.showMenu(brewSession, position);
+  };
+
+  // Context menu actions
+  const recipeContextMenuActions = createDefaultRecipeActions({
+    onView: (recipe: Recipe) => {
+      router.push({
+        pathname: "/(modals)/(recipes)/viewRecipe",
+        params: { recipe_id: recipe.id },
+      });
+    },
+    onEdit: (recipe: Recipe) => {
+      router.push({
+        pathname: "/(modals)/(recipes)/editRecipe",
+        params: { recipe_id: recipe.id },
+      });
+    },
+    onClone: (recipe: Recipe) => {
+      Alert.alert(
+        "Clone Recipe",
+        `Cloning "${recipe.name}" - Feature coming soon!`
+      );
+    },
+    onBeerXMLExport: (recipe: Recipe) => {
+      Alert.alert(
+        "Export BeerXML",
+        `Exporting "${recipe.name}" - Feature coming soon!`
+      );
+    },
+    onStartBrewing: (recipe: Recipe) => {
+      Alert.alert(
+        "Start Brewing",
+        `Starting brew session for "${recipe.name}" - Feature coming soon!`
+      );
+    },
+    onShare: (recipe: Recipe) => {
+      Alert.alert(
+        "Share Recipe",
+        `Sharing "${recipe.name}" - Feature coming soon!`
+      );
+    },
+    onDelete: (recipe: Recipe) => {
+      Alert.alert(
+        "Delete Recipe",
+        `Deleting "${recipe.name}" - Feature coming soon!`
+      );
+    },
+  });
+
+  const brewSessionContextMenuActions = createDefaultBrewSessionActions({
+    onView: (brewSession: BrewSession) => {
+      router.push({
+        pathname: "/(modals)/(brewSessions)/viewBrewSession",
+        params: { brewSessionId: brewSession.id },
+      });
+    },
+    onEdit: (brewSession: BrewSession) => {
+      Alert.alert(
+        "Edit Session",
+        `Editing "${brewSession.name}" - Feature coming soon!`
+      );
+    },
+    onAddFermentationEntry: (brewSession: BrewSession) => {
+      Alert.alert(
+        "Add Fermentation Entry",
+        `Adding entry to "${brewSession.name}" - Feature coming soon!`
+      );
+    },
+    onExportData: (brewSession: BrewSession) => {
+      Alert.alert(
+        "Export Data",
+        `Exporting data for "${brewSession.name}" - Feature coming soon!`
+      );
+    },
+    onArchive: (brewSession: BrewSession) => {
+      Alert.alert(
+        "Archive Session",
+        `Archiving "${brewSession.name}" - Feature coming soon!`
+      );
+    },
+    onDelete: (brewSession: BrewSession) => {
+      Alert.alert(
+        "Delete Session",
+        `Deleting "${brewSession.name}" - Feature coming soon!`
+      );
+    },
+  });
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString();
@@ -173,6 +287,7 @@ export default function DashboardScreen() {
         key={recipe.id || recipe.name}
         style={styles.recentCard}
         onPress={() => handleRecipePress(recipe)}
+        onLongPress={event => handleRecipeLongPress(recipe, event)}
       >
         <View style={styles.recentHeader}>
           <MaterialIcons
@@ -205,6 +320,7 @@ export default function DashboardScreen() {
         key={brewSession.id}
         style={styles.recentCard}
         onPress={() => handleBrewSessionPress(brewSession)}
+        onLongPress={event => handleBrewSessionLongPress(brewSession, event)}
       >
         <View style={styles.recentHeader}>
           <MaterialIcons
@@ -517,6 +633,23 @@ export default function DashboardScreen() {
           BrewTracker Mobile v{Constants.expoConfig?.version || "0.1.0"}
         </Text>
       </View>
+
+      {/* Context Menus */}
+      <RecipeContextMenu
+        visible={recipeContextMenu.visible}
+        recipe={recipeContextMenu.selectedItem}
+        actions={recipeContextMenuActions}
+        onClose={recipeContextMenu.hideMenu}
+        position={recipeContextMenu.position}
+      />
+
+      <BrewSessionContextMenu
+        visible={brewSessionContextMenu.visible}
+        brewSession={brewSessionContextMenu.selectedItem}
+        actions={brewSessionContextMenuActions}
+        onClose={brewSessionContextMenu.hideMenu}
+        position={brewSessionContextMenu.position}
+      />
     </ScrollView>
   );
 }

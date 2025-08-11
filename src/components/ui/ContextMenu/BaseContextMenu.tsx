@@ -1,0 +1,248 @@
+import React from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  TouchableWithoutFeedback,
+  Alert,
+} from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+
+import { useTheme } from "@contexts/ThemeContext";
+import { baseContextMenuStyles } from "@styles/ui/baseContextMenuStyles";
+import {
+  calculateMenuPosition,
+  MENU_DIMENSIONS,
+  calculateMenuHeight,
+} from "./contextMenuUtils";
+
+export interface BaseAction<T> {
+  id: string;
+  title: string;
+  icon: keyof typeof MaterialIcons.glyphMap;
+  onPress: (item: T) => void;
+  destructive?: boolean;
+  disabled?: (item: T) => boolean;
+  hidden?: (item: T) => boolean;
+}
+
+interface BaseContextMenuProps<T> {
+  visible: boolean;
+  item: T | null;
+  actions: BaseAction<T>[];
+  onClose: () => void;
+  position?: { x: number; y: number };
+  title: string;
+  subtitle: string;
+}
+
+/**
+ * Generic context menu component that can be used for any data type.
+ * Provides haptic feedback, smart positioning, and accessibility support.
+ */
+export function BaseContextMenu<T>({
+  visible,
+  item,
+  actions,
+  onClose,
+  position,
+  title,
+  subtitle,
+}: BaseContextMenuProps<T>) {
+  const theme = useTheme();
+  const styles = baseContextMenuStyles(theme);
+
+  /**
+   * Handles action press with haptic feedback and confirmation for destructive actions
+   */
+  const handleActionPress = async (action: BaseAction<T>) => {
+    if (!item) return;
+
+    // Provide haptic feedback
+    await Haptics.selectionAsync();
+
+    // Close menu first
+    onClose();
+
+    // Handle destructive actions with confirmation
+    if (action.destructive) {
+      Alert.alert(
+        `${action.title}?`,
+        `Are you sure you want to ${action.title.toLowerCase()}?`,
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: action.title,
+            style: "destructive",
+            onPress: () => action.onPress(item),
+          },
+        ],
+        { cancelable: true }
+      );
+    } else {
+      // Execute non-destructive actions immediately
+      action.onPress(item);
+    }
+  };
+
+  /**
+   * Filters actions based on item state and action conditions
+   */
+  const getVisibleActions = (): BaseAction<T>[] => {
+    if (!item) return [];
+
+    return actions.filter(action => {
+      // Hide action if hidden condition is met
+      if (action.hidden && action.hidden(item)) {
+        return false;
+      }
+      return true;
+    });
+  };
+
+  /**
+   * Checks if an action should be disabled
+   */
+  const isActionDisabled = (action: BaseAction<T>): boolean => {
+    if (!item) return true;
+    if (action.disabled && action.disabled(item)) {
+      return true;
+    }
+    return false;
+  };
+
+  if (!visible || !item) {
+    return null;
+  }
+
+  const visibleActions = getVisibleActions();
+  const menuHeight = calculateMenuHeight(visibleActions.length);
+  const menuPosition = position
+    ? calculateMenuPosition(position, {
+        ...MENU_DIMENSIONS,
+        height: menuHeight,
+      })
+    : undefined;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.overlay}>
+          <TouchableWithoutFeedback>
+            <View
+              style={[
+                styles.menuContainer,
+                menuPosition && {
+                  position: "absolute",
+                  top: menuPosition.y,
+                  left: menuPosition.x,
+                  width: MENU_DIMENSIONS.width,
+                },
+              ]}
+            >
+              {/* Menu Header */}
+              <View style={styles.menuHeader}>
+                <Text style={styles.menuTitle} numberOfLines={1}>
+                  {title}
+                </Text>
+                <Text style={styles.menuSubtitle}>{subtitle}</Text>
+              </View>
+
+              {/* Action List */}
+              <View style={styles.actionsList}>
+                {visibleActions.map(action => {
+                  const disabled = isActionDisabled(action);
+
+                  return (
+                    <TouchableOpacity
+                      key={action.id}
+                      style={[
+                        styles.actionItem,
+                        disabled && styles.actionItemDisabled,
+                        action.destructive && styles.actionItemDestructive,
+                      ]}
+                      onPress={() => handleActionPress(action)}
+                      disabled={disabled}
+                      activeOpacity={0.7}
+                    >
+                      <MaterialIcons
+                        name={action.icon}
+                        size={20}
+                        color={
+                          disabled
+                            ? theme.colors.textMuted
+                            : action.destructive
+                              ? theme.colors.error
+                              : theme.colors.text
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.actionText,
+                          disabled && styles.actionTextDisabled,
+                          action.destructive && styles.actionTextDestructive,
+                        ]}
+                      >
+                        {action.title}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Cancel Button */}
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={onClose}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+}
+
+/**
+ * Hook to manage context menu state
+ */
+export function useContextMenu<T>() {
+  const [visible, setVisible] = React.useState(false);
+  const [selectedItem, setSelectedItem] = React.useState<T | null>(null);
+  const [position, setPosition] = React.useState<
+    { x: number; y: number } | undefined
+  >();
+
+  const showMenu = (item: T, touchPosition?: { x: number; y: number }) => {
+    setSelectedItem(item);
+    setPosition(touchPosition);
+    setVisible(true);
+  };
+
+  const hideMenu = () => {
+    setVisible(false);
+    setSelectedItem(null);
+    setPosition(undefined);
+  };
+
+  return {
+    visible,
+    selectedItem,
+    position,
+    showMenu,
+    hideMenu,
+  };
+}

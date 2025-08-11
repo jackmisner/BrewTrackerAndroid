@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
-import ApiService from "@services/API/apiService";
+import ApiService from "@services/api/apiService";
 import { useDebounce } from "@src/hooks/useDebounce";
 import { RecipeIngredient, IngredientType, IngredientUnit } from "@src/types";
 import { ingredientPickerStyles } from "@styles/modals/ingredientPickerStyles";

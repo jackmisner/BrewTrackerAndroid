@@ -6,15 +6,24 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import ApiService from "@services/API/apiService";
+import * as Haptics from "expo-haptics";
+-import ApiService from "@services/api/apiService";
++import ApiService from "@services/API/apiService";
 import { BrewSession } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { brewSessionsStyles } from "@styles/tabs/brewSessionsStyles";
 import { router, useLocalSearchParams } from "expo-router";
 import { formatGravity, formatABV } from "@utils/formatUtils";
+import {
+  BrewSessionContextMenu,
+  createDefaultBrewSessionActions,
+} from "@src/components/ui/ContextMenu/BrewSessionContextMenu";
+import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
+import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
 
 /**
  * Displays a tabbed interface for viewing, refreshing, and navigating brew sessions.
@@ -28,6 +37,9 @@ export default function BrewSessionsScreen() {
   const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
   const [refreshing, setRefreshing] = useState(false);
   const lastParamsRef = useRef<string | undefined>(undefined);
+
+  // Context menu state
+  const contextMenu = useContextMenu<BrewSession>();
 
   // Set active tab from URL parameters
   // Always respond to navigation with explicit activeTab parameters
@@ -88,6 +100,52 @@ export default function BrewSessionsScreen() {
       params: { brewSessionId: brewSession.id },
     });
   };
+
+  // Context menu handlers
+  const handleBrewSessionLongPress = (brewSession: BrewSession, event: any) => {
+    const position = getTouchPosition(event);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    contextMenu.showMenu(brewSession, position);
+  };
+
+  const contextMenuActions = createDefaultBrewSessionActions({
+    onView: (brewSession: BrewSession) => {
+      router.push({
+        pathname: "/(modals)/(brewSessions)/viewBrewSession",
+        params: { brewSessionId: brewSession.id },
+      });
+    },
+    onEdit: (brewSession: BrewSession) => {
+      Alert.alert(
+        "Edit Session",
+        `Editing "${brewSession.name}" - Feature coming soon!`
+      );
+    },
+    onAddFermentationEntry: (brewSession: BrewSession) => {
+      Alert.alert(
+        "Add Fermentation Entry",
+        `Adding entry to "${brewSession.name}" - Feature coming soon!`
+      );
+    },
+    onExportData: (brewSession: BrewSession) => {
+      Alert.alert(
+        "Export Data",
+        `Exporting data for "${brewSession.name}" - Feature coming soon!`
+      );
+    },
+    onArchive: (brewSession: BrewSession) => {
+      Alert.alert(
+        "Archive Session",
+        `Archiving "${brewSession.name}" - Feature coming soon!`
+      );
+    },
+    onDelete: (brewSession: BrewSession) => {
+      Alert.alert(
+        "Delete Session",
+        `Deleting "${brewSession.name}" - Feature coming soon!`
+      );
+    },
+  });
 
   const handleStartBrewing = () => {
     // TODO: Navigate to create brew session screen when implemented
@@ -183,6 +241,7 @@ export default function BrewSessionsScreen() {
       <TouchableOpacity
         style={styles.brewSessionCard}
         onPress={() => handleBrewSessionPress(brewSession)}
+        onLongPress={event => handleBrewSessionLongPress(brewSession, event)}
       >
         <View style={styles.brewSessionHeader}>
           <View style={styles.brewSessionTitleRow}>
@@ -402,6 +461,15 @@ export default function BrewSessionsScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* Context Menu */}
+      <BrewSessionContextMenu
+        visible={contextMenu.visible}
+        brewSession={contextMenu.selectedItem}
+        actions={contextMenuActions}
+        onClose={contextMenu.hideMenu}
+        position={contextMenu.position}
+      />
     </View>
   );
 }

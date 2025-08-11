@@ -7,7 +7,7 @@ import React, {
   ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import ApiService from "@services/API/apiService";
+import ApiService from "@services/api/apiService";
 import { STORAGE_KEYS } from "@services/config";
 import { UnitSystem, MeasurementType, UserSettings } from "@src/types";
 

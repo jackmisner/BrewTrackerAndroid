@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import ApiService from "@services/API/apiService";
+import ApiService from "@services/api/apiService";
 
 // Final item shape returned by this hook
 export interface BeerStyleOption {

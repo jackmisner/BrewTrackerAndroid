@@ -5,7 +5,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from "axios";
 import * as SecureStore from "expo-secure-store";
-import { API_CONFIG, STORAGE_KEYS, ENDPOINTS } from "@services/config";
+import { STORAGE_KEYS, ENDPOINTS } from "@services/config";
 import { setupIDInterceptors } from "./idInterceptor";
 import {
   // Authentication types
@@ -68,13 +68,194 @@ import {
   IngredientType,
 } from "@src/types";
 
-// Create typed axios instance
+// Validated API Configuration
+function validateAndGetApiConfig() {
+  const baseURL = process.env.EXPO_PUBLIC_API_URL;
+  
+  if (!baseURL) {
+    throw new Error(
+      "API_URL environment variable is required. Please set EXPO_PUBLIC_API_URL in your .env file."
+    );
+  }
+  
+  // Validate URL format
+  try {
+    new URL(baseURL);
+  } catch {
+    throw new Error(
+      `Invalid API_URL format: ${baseURL}. Please provide a valid URL.`
+    );
+  }
+  
+  // Ensure URL doesn't end with trailing slash for consistency
+  const cleanBaseURL = baseURL.replace(/\/$/, "");
+  
+  return {
+    BASE_URL: cleanBaseURL,
+    TIMEOUT: 15000, // 15 seconds - sensible timeout for mobile
+    MAX_RETRIES: 3,
+    RETRY_DELAY: 1000, // 1 second
+  };
+}
+
+const API_CONFIG = validateAndGetApiConfig();
+
+// Normalized error interface for consistent error handling
+interface NormalizedApiError {
+  message: string;
+  code?: string | number;
+  status?: number;
+  isNetworkError: boolean;
+  isTimeout: boolean;
+  isRetryable: boolean;
+  originalError?: any;
+}
+
+// Error normalization function
+function normalizeError(error: any): NormalizedApiError {
+  // Default error structure
+  const normalized: NormalizedApiError = {
+    message: "An unexpected error occurred",
+    isNetworkError: false,
+    isTimeout: false,
+    isRetryable: false,
+    originalError: error,
+  };
+
+  // Handle Axios errors
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError;
+    
+    // Network or timeout errors
+    if (!axiosError.response) {
+      normalized.isNetworkError = true;
+      normalized.isRetryable = true;
+      
+      if (axiosError.code === "ECONNABORTED" || axiosError.message.includes("timeout")) {
+        normalized.isTimeout = true;
+        normalized.message = "Request timed out. Please check your connection and try again.";
+      } else if (axiosError.code === "NETWORK_ERROR" || axiosError.message.includes("Network Error")) {
+        normalized.message = "Network error. Please check your internet connection.";
+      } else {
+        normalized.message = "Unable to connect to server. Please try again.";
+      }
+      
+      normalized.code = axiosError.code;
+      return normalized;
+    }
+    
+    // HTTP response errors
+    const { response } = axiosError;
+    normalized.status = response.status;
+    
+    // Handle specific HTTP status codes
+    switch (response.status) {
+      case 400:
+        normalized.message = "Invalid request data. Please check your input.";
+        break;
+      case 401:
+        normalized.message = "Authentication failed. Please log in again.";
+        break;
+      case 403:
+        normalized.message = "Access denied. You don't have permission to perform this action.";
+        break;
+      case 404:
+        normalized.message = "Resource not found.";
+        break;
+      case 409:
+        normalized.message = "Conflict. The resource already exists or has been modified.";
+        break;
+      case 422:
+        normalized.message = "Validation error. Please check your input.";
+        break;
+      case 429:
+        normalized.message = "Too many requests. Please wait a moment and try again.";
+        normalized.isRetryable = true;
+        break;
+      case 500:
+        normalized.message = "Server error. Please try again later.";
+        normalized.isRetryable = true;
+        break;
+      case 502:
+      case 503:
+      case 504:
+        normalized.message = "Service temporarily unavailable. Please try again.";
+        normalized.isRetryable = true;
+        break;
+      default:
+        normalized.message = `Server error (${response.status}). Please try again.`;
+        if (response.status >= 500) {
+          normalized.isRetryable = true;
+        }
+    }
+    
+    // Try to extract more specific error message from response
+    if (response.data && typeof response.data === "object") {
+      const data = response.data as any;
+      if (data.error && typeof data.error === "string") {
+        normalized.message = data.error;
+      } else if (data.message && typeof data.message === "string") {
+        normalized.message = data.message;
+      } else if (data.detail && typeof data.detail === "string") {
+        normalized.message = data.detail;
+      }
+    }
+    
+    normalized.code = response.status;
+    return normalized;
+  }
+  
+  // Handle non-Axios errors
+  if (error instanceof Error) {
+    normalized.message = error.message;
+  } else if (typeof error === "string") {
+    normalized.message = error;
+  }
+  
+  return normalized;
+}
+
+// Retry wrapper for idempotent requests
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  isRetryable: (error: any) => boolean = (error) => {
+    const normalized = normalizeError(error);
+    return normalized.isRetryable;
+  },
+  maxAttempts: number = API_CONFIG.MAX_RETRIES,
+  delay: number = API_CONFIG.RETRY_DELAY
+): Promise<T> {
+  let lastError: any;
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      
+      // Don't retry on last attempt or if error is not retryable
+      if (attempt === maxAttempts || !isRetryable(error)) {
+        throw error;
+      }
+      
+      // Exponential backoff with jitter
+      const backoffDelay = delay * Math.pow(2, attempt - 1) + Math.random() * 1000;
+      await new Promise(resolve => setTimeout(resolve, Math.min(backoffDelay, 10000)));
+    }
+  }
+  
+  throw lastError;
+}
+
+// Create typed axios instance with hardened configuration
 const api: AxiosInstance = axios.create({
   baseURL: API_CONFIG.BASE_URL,
   timeout: API_CONFIG.TIMEOUT,
   headers: {
     "Content-Type": "application/json",
   },
+  // Additional security headers
+  validateStatus: (status) => status < 500, // Don't throw on client errors, handle them in interceptors
 });
 
 // Setup automatic ID normalization interceptors
@@ -125,12 +306,12 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
+// Response interceptor with enhanced error handling and normalization
 api.interceptors.response.use(
   (response: AxiosResponse): AxiosResponse => {
     return response;
   },
-  async (error: AxiosError): Promise<AxiosError> => {
+  async (error: AxiosError): Promise<never> => {
     // Handle token expiration
     if (error.response?.status === 401) {
       await TokenManager.removeToken();
@@ -138,16 +319,27 @@ api.interceptors.response.use(
       // This would require passing a navigation callback or using a global event emitter
     }
 
-    // Handle different error codes, including MongoDB-specific errors
-    if (
-      error.response?.data &&
-      typeof error.response.data === "object" &&
-      "error" in error.response.data
-    ) {
-      console.error("API Error:", (error.response.data as any).error);
+    // Normalize the error before rejecting
+    const normalizedError = normalizeError(error);
+    
+    // Log error details for debugging (only in development)
+    if (process.env.EXPO_PUBLIC_DEBUG_MODE === "true") {
+      console.error("API Error:", {
+        message: normalizedError.message,
+        status: normalizedError.status,
+        code: normalizedError.code,
+        isNetworkError: normalizedError.isNetworkError,
+        isTimeout: normalizedError.isTimeout,
+        originalError: normalizedError.originalError,
+      });
     }
 
-    return Promise.reject(error);
+    // Create enhanced error object that maintains compatibility while adding normalized data
+    const enhancedError = Object.assign(error, {
+      normalized: normalizedError,
+    });
+    
+    return Promise.reject(enhancedError);
   }
 );
 
@@ -232,10 +424,10 @@ const ApiService = {
       page: number = 1,
       perPage: number = 10
     ): Promise<AxiosResponse<RecipesListResponse>> =>
-      api.get(`${ENDPOINTS.RECIPES.LIST}?page=${page}&per_page=${perPage}`),
+      withRetry(() => api.get(`${ENDPOINTS.RECIPES.LIST}?page=${page}&per_page=${perPage}`)),
 
     getById: (id: ID): Promise<AxiosResponse<RecipeResponse>> =>
-      api.get(ENDPOINTS.RECIPES.DETAIL(id)),
+      withRetry(() => api.get(ENDPOINTS.RECIPES.DETAIL(id))),
 
     create: (
       recipeData: CreateRecipeRequest
@@ -256,16 +448,16 @@ const ApiService = {
       page: number = 1,
       perPage: number = 10
     ): Promise<AxiosResponse<RecipesListResponse>> =>
-      api.get(
+      withRetry(() => api.get(
         `/search/recipes?q=${encodeURIComponent(
           query
         )}&page=${page}&per_page=${perPage}`
-      ),
+      )),
 
     calculateMetrics: (
       recipeId: ID
     ): Promise<AxiosResponse<RecipeMetricsResponse>> =>
-      api.get(ENDPOINTS.RECIPES.METRICS(recipeId)),
+      withRetry(() => api.get(ENDPOINTS.RECIPES.METRICS(recipeId))),
 
     calculateMetricsPreview: (
       recipeData: CalculateMetricsPreviewRequest
@@ -284,7 +476,7 @@ const ApiService = {
     getVersionHistory: (
       id: ID
     ): Promise<AxiosResponse<RecipeVersionHistoryResponse>> =>
-      api.get(ENDPOINTS.RECIPES.VERSIONS(id)),
+      withRetry(() => api.get(ENDPOINTS.RECIPES.VERSIONS(id))),
 
     getPublic: (
       page: number = 1,
@@ -297,7 +489,7 @@ const ApiService = {
         ...(filters.style && { style: filters.style }),
         ...(filters.search && { search: filters.search }),
       });
-      return api.get(`${ENDPOINTS.RECIPES.PUBLIC}?${params}`);
+      return withRetry(() => api.get(`${ENDPOINTS.RECIPES.PUBLIC}?${params}`));
     },
   },
 
@@ -307,12 +499,12 @@ const ApiService = {
       page: number = 1,
       perPage: number = 10
     ): Promise<AxiosResponse<BrewSessionsListResponse>> =>
-      api.get(
+      withRetry(() => api.get(
         `${ENDPOINTS.BREW_SESSIONS.LIST}?page=${page}&per_page=${perPage}`
-      ),
+      )),
 
     getById: (id: ID): Promise<AxiosResponse<BrewSessionResponse>> =>
-      api.get(ENDPOINTS.BREW_SESSIONS.DETAIL(id)),
+      withRetry(() => api.get(ENDPOINTS.BREW_SESSIONS.DETAIL(id))),
 
     create: (
       brewSessionData: CreateBrewSessionRequest
@@ -332,7 +524,7 @@ const ApiService = {
     getFermentationEntries: (
       brewSessionId: ID
     ): Promise<AxiosResponse<FermentationEntriesResponse>> =>
-      api.get(ENDPOINTS.BREW_SESSIONS.FERMENTATION(brewSessionId)),
+      withRetry(() => api.get(ENDPOINTS.BREW_SESSIONS.FERMENTATION(brewSessionId))),
 
     addFermentationEntry: (
       brewSessionId: ID,
@@ -361,7 +553,7 @@ const ApiService = {
     getFermentationStats: (
       brewSessionId: ID
     ): Promise<AxiosResponse<FermentationStatsResponse>> =>
-      api.get(ENDPOINTS.BREW_SESSIONS.FERMENTATION_STATS(brewSessionId)),
+      withRetry(() => api.get(ENDPOINTS.BREW_SESSIONS.FERMENTATION_STATS(brewSessionId))),
 
     analyzeCompletion: (
       brewSessionId: ID
@@ -370,17 +562,17 @@ const ApiService = {
         estimated_days_remaining: number;
         completion_probability: number;
       }>
-    > => api.get(ENDPOINTS.BREW_SESSIONS.ANALYZE_COMPLETION(brewSessionId)),
+    > => withRetry(() => api.get(ENDPOINTS.BREW_SESSIONS.ANALYZE_COMPLETION(brewSessionId))),
   },
 
   // Beer styles endpoints
   beerStyles: {
     getAll: (): Promise<AxiosResponse<any>> =>
-      api.get(ENDPOINTS.BEER_STYLES.LIST),
+      withRetry(() => api.get(ENDPOINTS.BEER_STYLES.LIST)),
     getById: (id: ID): Promise<AxiosResponse<any>> =>
-      api.get(ENDPOINTS.BEER_STYLES.DETAIL(id)),
+      withRetry(() => api.get(ENDPOINTS.BEER_STYLES.DETAIL(id))),
     search: (query: string): Promise<AxiosResponse<any>> =>
-      api.get(`${ENDPOINTS.BEER_STYLES.SEARCH}?q=${encodeURIComponent(query)}`),
+      withRetry(() => api.get(`${ENDPOINTS.BEER_STYLES.SEARCH}?q=${encodeURIComponent(query)}`)),
   },
 
   // Ingredients endpoints
@@ -398,8 +590,7 @@ const ApiService = {
       const url = `${ENDPOINTS.INGREDIENTS.LIST}${queryString ? `?${queryString}` : ""}`;
 
       // ID interceptors will automatically handle response transformation
-      return api
-        .get(url)
+      return withRetry(() => api.get(url))
         .then(response => {
           // Handle wrapped response format: {ingredients: [...], unit_system: "...", unit_preferences: {...}}
           if (
@@ -443,7 +634,7 @@ const ApiService = {
     },
 
     getById: (id: ID): Promise<AxiosResponse<RecipeIngredient>> =>
-      api.get(ENDPOINTS.INGREDIENTS.DETAIL(id)),
+      withRetry(() => api.get(ENDPOINTS.INGREDIENTS.DETAIL(id))),
 
     create: (
       ingredientData: CreateRecipeIngredientData
@@ -460,13 +651,13 @@ const ApiService = {
       api.delete(ENDPOINTS.INGREDIENTS.DELETE(id)),
 
     getRecipesUsingIngredient: (id: ID): Promise<AxiosResponse<Recipe[]>> =>
-      api.get(ENDPOINTS.INGREDIENTS.RECIPES(id)),
+      withRetry(() => api.get(ENDPOINTS.INGREDIENTS.RECIPES(id))),
   },
 
   // Dashboard endpoints
   dashboard: {
     getData: (): Promise<AxiosResponse<DashboardResponse>> =>
-      api.get(ENDPOINTS.DASHBOARD.DATA),
+      withRetry(() => api.get(ENDPOINTS.DASHBOARD.DATA)),
   },
 
   // Network status check
@@ -477,6 +668,14 @@ const ApiService = {
     } catch (_error) {
       return false;
     }
+  },
+
+  // Utility for handling API errors in components
+  handleApiError: (error: any): NormalizedApiError => {
+    if (error && error.normalized) {
+      return error.normalized;
+    }
+    return normalizeError(error);
   },
 
   // Cancel all pending requests

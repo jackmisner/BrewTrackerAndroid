@@ -308,7 +308,9 @@ export const formatPotential = (
  * @param ingredient - Recipe ingredient object
  * @returns Formatted ingredient details string
  */
-export const formatIngredientDetails = (ingredient: RecipeIngredient): string => {
+export const formatIngredientDetails = (
+  ingredient: RecipeIngredient
+): string => {
   const details: string[] = [];
 
   if (ingredient.type === "hop") {
