@@ -14,6 +14,7 @@ import { BrewSession } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { brewSessionsStyles } from "@styles/tabs/brewSessionsStyles";
 import { router, useLocalSearchParams } from "expo-router";
+import { formatGravity, formatABV } from "@utils/formatUtils";
 
 /**
  * Displays a tabbed interface for viewing, refreshing, and navigating brew sessions.
@@ -253,7 +254,7 @@ export default function BrewSessionsScreen() {
             <View style={styles.metric}>
               <Text style={styles.metricLabel}>OG</Text>
               <Text style={styles.metricValue}>
-                {brewSession.original_gravity.toFixed(3)}
+                {formatGravity(brewSession.original_gravity)}
               </Text>
             </View>
           )}
@@ -262,7 +263,7 @@ export default function BrewSessionsScreen() {
             <View style={styles.metric}>
               <Text style={styles.metricLabel}>FG</Text>
               <Text style={styles.metricValue}>
-                {brewSession.final_gravity.toFixed(3)}
+                {formatGravity(brewSession.final_gravity)}
               </Text>
             </View>
           )}
@@ -271,7 +272,7 @@ export default function BrewSessionsScreen() {
             <View style={styles.metric}>
               <Text style={styles.metricLabel}>ABV</Text>
               <Text style={styles.metricValue}>
-                {brewSession.actual_abv.toFixed(1)}%
+                {formatABV(brewSession.actual_abv)}
               </Text>
             </View>
           )}

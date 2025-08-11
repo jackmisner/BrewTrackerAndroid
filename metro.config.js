@@ -9,7 +9,9 @@ config.resolver = {
   alias: {
     "@": path.resolve(__dirname, "./"),
     "@src": path.resolve(__dirname, "./src"),
+    "@components": path.resolve(__dirname, "./src/components"),
     "@contexts": path.resolve(__dirname, "./src/contexts"),
+    "@constants": path.resolve(__dirname, "./src/constants"),
     "@styles": path.resolve(__dirname, "./src/styles"),
     "@services": path.resolve(__dirname, "./src/services"),
     "@types": path.resolve(__dirname, "./src/types"),

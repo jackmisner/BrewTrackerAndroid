@@ -22,7 +22,7 @@ export const ingredientDetailEditorStyles = (theme: ThemeContextValue) =>
       padding: 24,
       width: "100%",
       maxWidth: 500,
-      maxHeight: "90%",
+      maxHeight: "85%",
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.25,
@@ -30,7 +30,7 @@ export const ingredientDetailEditorStyles = (theme: ThemeContextValue) =>
       elevation: 8,
     },
     scrollContent: {
-      maxHeight: 400,
+      maxHeight: 500,
       marginBottom: 16,
     },
 
@@ -99,6 +99,31 @@ export const ingredientDetailEditorStyles = (theme: ThemeContextValue) =>
       fontSize: 12,
       color: theme.colors.error,
       marginTop: 4,
+    },
+    // Time section
+    timeContainer: {
+      gap: 12,
+    },
+    timeInputContainer: {
+      flex: 1,
+    },
+    timeInput: {
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: theme.colors.text,
+      backgroundColor: theme.colors.background,
+    },
+    timeInputError: {
+      borderColor: theme.colors.error,
+    },
+    timeInputLabel: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      marginBottom: 4,
     },
 
     // Adjustment buttons with left/right layout

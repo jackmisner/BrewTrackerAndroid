@@ -15,6 +15,7 @@ import ApiService from "@services/API/apiService";
 import { Recipe } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { recipesStyles } from "@styles/tabs/recipesStyles";
+import { formatABV, formatIBU, formatSRM } from "@utils/formatUtils";
 
 /**
  * Displays a tabbed interface for browsing and managing recipes, allowing users to view their own recipes or search public recipes.
@@ -161,19 +162,19 @@ export default function RecipesScreen() {
           <View style={styles.metric}>
             <Text style={styles.metricLabel}>ABV</Text>
             <Text style={styles.metricValue}>
-              {recipe.estimated_abv?.toFixed(1) || "—"}%
+              {formatABV(recipe.estimated_abv)}
             </Text>
           </View>
           <View style={styles.metric}>
             <Text style={styles.metricLabel}>IBU</Text>
             <Text style={styles.metricValue}>
-              {recipe.estimated_ibu?.toFixed(0) || "—"}
+              {formatIBU(recipe.estimated_ibu)}
             </Text>
           </View>
           <View style={styles.metric}>
             <Text style={styles.metricLabel}>SRM</Text>
             <Text style={styles.metricValue}>
-              {recipe.estimated_srm?.toFixed(0) || "—"}
+              {formatSRM(recipe.estimated_srm)}
             </Text>
           </View>
           {activeTab === "public" && (

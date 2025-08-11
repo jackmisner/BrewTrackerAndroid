@@ -130,8 +130,82 @@ export default function CreateRecipeScreen() {
 
   // Create recipe mutation
   const createRecipeMutation = useMutation({
-    mutationFn: (recipeData: RecipeFormData) =>
-      ApiService.recipes.create(recipeData),
+    mutationFn: (recipeData: RecipeFormData) => {
+      // Sanitize ingredients to ensure all numeric fields are valid and add ID mapping
+      // Note: Adding explicit ID mapping as fallback - the API interceptor should handle this but seems to have issues with nested ingredients
+      const sanitizedIngredients = recipeData.ingredients.map(ingredient => {
+        const sanitized: any = { ...ingredient };
+
+        // Ensure required amount is a valid number
+        sanitized.amount = Number(sanitized.amount) || 0;
+
+        // Clean up optional numeric fields - convert null to undefined or valid numbers
+        if (
+          sanitized.potential !== undefined &&
+          (sanitized.potential === null || isNaN(Number(sanitized.potential)))
+        ) {
+          delete sanitized.potential;
+        } else if (sanitized.potential !== undefined) {
+          sanitized.potential = Number(sanitized.potential);
+        }
+
+        if (
+          sanitized.color !== undefined &&
+          (sanitized.color === null || isNaN(Number(sanitized.color)))
+        ) {
+          delete sanitized.color;
+        } else if (sanitized.color !== undefined) {
+          sanitized.color = Number(sanitized.color);
+        }
+
+        if (
+          sanitized.alpha_acid !== undefined &&
+          (sanitized.alpha_acid === null || isNaN(Number(sanitized.alpha_acid)))
+        ) {
+          delete sanitized.alpha_acid;
+        } else if (sanitized.alpha_acid !== undefined) {
+          sanitized.alpha_acid = Number(sanitized.alpha_acid);
+        }
+
+        if (
+          sanitized.time !== undefined &&
+          (sanitized.time === null || isNaN(Number(sanitized.time)))
+        ) {
+          delete sanitized.time;
+        } else if (sanitized.time !== undefined) {
+          sanitized.time = Number(sanitized.time);
+        }
+
+        if (
+          sanitized.attenuation !== undefined &&
+          (sanitized.attenuation === null ||
+            isNaN(Number(sanitized.attenuation)))
+        ) {
+          delete sanitized.attenuation;
+        } else if (sanitized.attenuation !== undefined) {
+          sanitized.attenuation = Number(sanitized.attenuation);
+        }
+
+        // Remove fields that shouldn't be sent to API for creation
+        delete sanitized.created_at;
+        delete sanitized.updated_at;
+
+        // Explicit ID mapping as fallback (API interceptor should handle this but has issues with nested ingredients)
+        if (sanitized.id && !sanitized.ingredient_id) {
+          sanitized.ingredient_id = sanitized.id;
+          delete sanitized.id;
+        }
+
+        return sanitized;
+      });
+
+      const createData = {
+        ...recipeData,
+        ingredients: sanitizedIngredients,
+      };
+
+      return ApiService.recipes.create(createData);
+    },
     onSuccess: response => {
       // Invalidate relevant recipe caches to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["userRecipes"] });
@@ -240,35 +314,38 @@ export default function CreateRecipeScreen() {
 
   const renderProgressBar = () => (
     <View style={styles.progressContainer}>
-      <View style={styles.progressBar}>
-        {STEP_TITLES.map((title, index) => (
-          <View key={index} style={styles.progressStep}>
-            <View
-              style={[
-                styles.progressCircle,
-                index <= currentStep && styles.progressCircleActive,
-              ]}
-            >
+      {STEP_TITLES.map((title, index) => (
+        <View key={index} style={styles.progressStep}>
+          <View
+            style={[
+              styles.progressDot,
+              index === currentStep && styles.progressDotActive,
+              index < currentStep && styles.progressDotCompleted,
+            ]}
+          >
+            {index < currentStep ? (
+              <MaterialIcons name="check" size={12} color="#fff" />
+            ) : (
               <Text
                 style={[
-                  styles.progressStepText,
-                  index <= currentStep && styles.progressStepTextActive,
+                  styles.progressDotText,
+                  index === currentStep && styles.progressDotTextActive,
                 ]}
               >
                 {index + 1}
               </Text>
-            </View>
-            <Text
-              style={[
-                styles.progressStepLabel,
-                index === currentStep && styles.progressStepLabelActive,
-              ]}
-            >
-              {title}
-            </Text>
+            )}
           </View>
-        ))}
-      </View>
+          <Text
+            style={[
+              styles.progressLabel,
+              index === currentStep && styles.progressLabelActive,
+            ]}
+          >
+            {title}
+          </Text>
+        </View>
+      ))}
     </View>
   );
 
@@ -308,7 +385,7 @@ export default function CreateRecipeScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior="height">
+    <KeyboardAvoidingView style={styles.container} behavior="padding">
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleCancel} style={styles.headerButton}>

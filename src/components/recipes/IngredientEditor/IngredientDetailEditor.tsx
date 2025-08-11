@@ -13,6 +13,8 @@ import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import { RecipeIngredient, IngredientType } from "@src/types";
 import { ingredientDetailEditorStyles } from "@styles/recipes/ingredientDetailEditorStyles";
+import { HOP_USAGE_OPTIONS, HOP_TIME_PRESETS } from "@constants/hopConstants";
+import { getHopTimePlaceholder } from "@utils/formatUtils";
 
 // Unit options by ingredient type
 const UNIT_OPTIONS: Record<IngredientType, string[]> = {
@@ -21,26 +23,6 @@ const UNIT_OPTIONS: Record<IngredientType, string[]> = {
   yeast: ["pkg", "oz", "g", "tsp"],
   other: ["oz", "lb", "g", "kg", "tsp", "tbsp", "cup"],
 };
-
-// Hop usage options with display mapping
-const HOP_USAGE_OPTIONS = [
-  { value: "boil", display: "Boil", defaultTime: 60 },
-  { value: "whirlpool", display: "Whirlpool", defaultTime: 15 },
-  { value: "dry-hop", display: "Dry Hop", defaultTime: 1440 }, // 24 hours in minutes
-];
-
-// Preset time options for hops (in minutes)
-const HOP_TIME_PRESETS = [
-  { label: "60 min", value: 60 },
-  { label: "30 min", value: 30 },
-  { label: "15 min", value: 15 },
-  { label: "5 min", value: 5 },
-  { label: "0 min", value: 0 },
-  { label: "Whirlpool", value: 15 },
-  { label: "1 day", value: 1440 },
-  { label: "3 days", value: 4320 },
-  { label: "5 days", value: 7200 },
-];
 
 /**
  * Gets unit-aware amount adjustment presets grouped by size (small, medium, large)
@@ -153,6 +135,13 @@ export function IngredientDetailEditor({
   const [amountText, setAmountText] = useState<string>(
     ingredient.amount?.toString() || "0"
   );
+  const [timeText, setTimeText] = useState<string>("");
+  const [timeUnit, setTimeUnit] = useState<"minutes" | "days">(
+    ingredient.use === "dry-hop" ? "days" : "minutes"
+  );
+  const [currentUsage, setCurrentUsage] = useState<string>(
+    ingredient.use || "boil"
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Refs for input focus management
@@ -162,6 +151,27 @@ export function IngredientDetailEditor({
   useEffect(() => {
     setEditedIngredient(ingredient);
     setAmountText(ingredient.amount?.toString() || "0");
+
+    // Initialize hop usage
+    const ingredientUsage = ingredient.use || "boil";
+    setCurrentUsage(ingredientUsage);
+
+    // Initialize time display
+    const isDryHop = ingredientUsage === "dry-hop";
+    setTimeUnit(isDryHop ? "days" : "minutes");
+
+    if (ingredient.time !== undefined && ingredient.time !== null) {
+      if (isDryHop) {
+        // Convert minutes to days for display
+        const days = Math.round((ingredient.time / 1440) * 10) / 10;
+        setTimeText(days.toString());
+      } else {
+        setTimeText(ingredient.time.toString());
+      }
+    } else {
+      setTimeText("");
+    }
+
     setErrors({});
   }, [ingredient]);
 
@@ -194,6 +204,7 @@ export function IngredientDetailEditor({
    */
   const updateField = (field: keyof RecipeIngredient, value: any) => {
     const updated = { ...editedIngredient, [field]: value };
+
     setEditedIngredient(updated);
 
     // Clear related errors
@@ -239,19 +250,85 @@ export function IngredientDetailEditor({
   const handleHopUsageChange = (newUsage: string) => {
     const usageOption = HOP_USAGE_OPTIONS.find(opt => opt.value === newUsage);
 
-    updateField("use", newUsage);
+    // Update both usage and time fields in a single state update to avoid race condition
+    if (usageOption) {
+      const updated = {
+        ...editedIngredient,
+        use: usageOption.value,
+        time: usageOption.defaultTime,
+      };
 
-    // Set default time for the usage type
-    if (usageOption && !editedIngredient.time) {
-      updateField("time", usageOption.defaultTime);
+      setEditedIngredient(updated);
+    }
+
+    setCurrentUsage(newUsage); // This ensures immediate visual feedback
+
+    // Update time unit and display based on new usage
+    const isDryHop = newUsage === "dry-hop";
+    setTimeUnit(isDryHop ? "days" : "minutes");
+
+    // Always set default time for the new usage type
+    if (usageOption) {
+      // Update the time text display
+      if (isDryHop) {
+        const days = Math.round((usageOption.defaultTime / 1440) * 10) / 10;
+        setTimeText(days.toString());
+      } else {
+        setTimeText(usageOption.defaultTime.toString());
+      }
+    }
+
+    // Clear related errors
+    const newErrors = { ...errors };
+    delete newErrors.use;
+    delete newErrors.time;
+    setErrors(newErrors);
+  };
+
+  /**
+   * Handles hop time text input change
+   */
+  const handleTimeTextChange = (text: string) => {
+    setTimeText(text);
+
+    const numValue = parseFloat(text);
+    if (!isNaN(numValue) && numValue >= 0) {
+      // Convert to minutes for database storage
+      const timeInMinutes = timeUnit === "days" ? numValue * 1440 : numValue;
+      updateField("time", timeInMinutes);
     }
   };
 
   /**
-   * Handles hop time change
+   * Handles hop time change from preset buttons
    */
   const handleTimeChange = (newTime: number) => {
     updateField("time", newTime);
+
+    // Update the display text
+    if (timeUnit === "days") {
+      const days = Math.round((newTime / 1440) * 10) / 10;
+      setTimeText(days.toString());
+    } else {
+      setTimeText(newTime.toString());
+    }
+  };
+
+  /**
+   * Handles time unit change (minutes/days)
+   */
+  const handleTimeUnitChange = (newUnit: "minutes" | "days") => {
+    const currentTime = editedIngredient.time || 0;
+
+    setTimeUnit(newUnit);
+
+    // Update display based on new unit
+    if (newUnit === "days") {
+      const days = Math.round((currentTime / 1440) * 10) / 10;
+      setTimeText(days.toString());
+    } else {
+      setTimeText(currentTime.toString());
+    }
   };
 
   /**
@@ -415,9 +492,9 @@ export function IngredientDetailEditor({
                         {/* Small adjustments row */}
                         {groups.small.length > 0 && (
                           <View style={styles.adjustmentRow}>
-                            {[...groups.small].reverse().map(delta => (
+                            {[...groups.small].reverse().map((delta, idx) => (
                               <TouchableOpacity
-                                key={`minus-small-${delta}`}
+                                key={`minus-small-${delta}-${idx}`}
                                 style={[
                                   styles.adjustButton,
                                   styles.adjustButtonNegative,
@@ -440,9 +517,9 @@ export function IngredientDetailEditor({
                         {/* Medium adjustments row */}
                         {groups.medium.length > 0 && (
                           <View style={styles.adjustmentRow}>
-                            {[...groups.medium].reverse().map(delta => (
+                            {[...groups.medium].reverse().map((delta, idx) => (
                               <TouchableOpacity
-                                key={`minus-medium-${delta}`}
+                                key={`minus-medium-${delta}-${idx}`}
                                 style={[
                                   styles.adjustButton,
                                   styles.adjustButtonNegative,
@@ -465,9 +542,9 @@ export function IngredientDetailEditor({
                         {/* Large adjustments row */}
                         {groups.large.length > 0 && (
                           <View style={styles.adjustmentRow}>
-                            {[...groups.large].reverse().map(delta => (
+                            {[...groups.large].reverse().map((delta, idx) => (
                               <TouchableOpacity
-                                key={`minus-large-${delta}`}
+                                key={`minus-large-${delta}-${idx}`}
                                 style={[
                                   styles.adjustButton,
                                   styles.adjustButtonNegative,
@@ -510,9 +587,9 @@ export function IngredientDetailEditor({
                         {/* Small adjustments row */}
                         {groups.small.length > 0 && (
                           <View style={styles.adjustmentRow}>
-                            {groups.small.map(delta => (
+                            {groups.small.map((delta, idx) => (
                               <TouchableOpacity
-                                key={`plus-small-${delta}`}
+                                key={`plus-small-${delta}-${idx}`}
                                 style={[
                                   styles.adjustButton,
                                   styles.adjustButtonPositive,
@@ -535,9 +612,9 @@ export function IngredientDetailEditor({
                         {/* Medium adjustments row */}
                         {groups.medium.length > 0 && (
                           <View style={styles.adjustmentRow}>
-                            {groups.medium.map(delta => (
+                            {groups.medium.map((delta, idx) => (
                               <TouchableOpacity
-                                key={`plus-medium-${delta}`}
+                                key={`plus-medium-${delta}-${idx}`}
                                 style={[
                                   styles.adjustButton,
                                   styles.adjustButtonPositive,
@@ -560,9 +637,9 @@ export function IngredientDetailEditor({
                         {/* Large adjustments row */}
                         {groups.large.length > 0 && (
                           <View style={styles.adjustmentRow}>
-                            {groups.large.map(delta => (
+                            {groups.large.map((delta, idx) => (
                               <TouchableOpacity
-                                key={`plus-large-${delta}`}
+                                key={`plus-large-${delta}-${idx}`}
                                 style={[
                                   styles.adjustButton,
                                   styles.adjustButtonPositive,
@@ -628,7 +705,7 @@ export function IngredientDetailEditor({
                       key={usage.value}
                       style={[
                         styles.usageButton,
-                        editedIngredient.use === usage.value &&
+                        currentUsage === usage.value &&
                           styles.usageButtonActive,
                       ]}
                       onPress={() => handleHopUsageChange(usage.value)}
@@ -636,7 +713,7 @@ export function IngredientDetailEditor({
                       <Text
                         style={[
                           styles.usageButtonText,
-                          editedIngredient.use === usage.value &&
+                          currentUsage === usage.value &&
                             styles.usageButtonTextActive,
                         ]}
                       >
@@ -653,28 +730,100 @@ export function IngredientDetailEditor({
               {/* Time Section */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Time</Text>
-                <View style={styles.timePresets}>
-                  {HOP_TIME_PRESETS.map(preset => (
-                    <TouchableOpacity
-                      key={preset.value}
+                <View style={styles.timeContainer}>
+                  <View style={styles.timeInputContainer}>
+                    <TextInput
                       style={[
-                        styles.timeButton,
-                        editedIngredient.time === preset.value &&
-                          styles.timeButtonActive,
+                        styles.timeInput,
+                        errors.time && styles.timeInputError,
                       ]}
-                      onPress={() => handleTimeChange(preset.value)}
-                    >
-                      <Text
+                      value={timeText}
+                      onChangeText={handleTimeTextChange}
+                      placeholder={getHopTimePlaceholder(
+                        currentUsage,
+                        timeUnit
+                      )}
+                      placeholderTextColor={theme.colors.textMuted}
+                      keyboardType="decimal-pad"
+                      selectTextOnFocus
+                    />
+                    {errors.time && (
+                      <Text style={styles.errorText}>{errors.time}</Text>
+                    )}
+                  </View>
+
+                  {/* Time Unit Selector - conditional based on hop usage */}
+                  <View style={styles.unitButtons}>
+                    {/* Only show minutes for boil/whirlpool */}
+                    {currentUsage !== "dry-hop" && (
+                      <TouchableOpacity
                         style={[
-                          styles.timeButtonText,
-                          editedIngredient.time === preset.value &&
-                            styles.timeButtonTextActive,
+                          styles.unitButton,
+                          timeUnit === "minutes" && styles.unitButtonActive,
                         ]}
+                        onPress={() => handleTimeUnitChange("minutes")}
                       >
-                        {preset.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.unitButtonText,
+                            timeUnit === "minutes" &&
+                              styles.unitButtonTextActive,
+                          ]}
+                        >
+                          min
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    {/* Only show days for dry-hop */}
+                    {currentUsage === "dry-hop" && (
+                      <TouchableOpacity
+                        style={[
+                          styles.unitButton,
+                          timeUnit === "days" && styles.unitButtonActive,
+                        ]}
+                        onPress={() => handleTimeUnitChange("days")}
+                      >
+                        <Text
+                          style={[
+                            styles.unitButtonText,
+                            timeUnit === "days" && styles.unitButtonTextActive,
+                          ]}
+                        >
+                          days
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+                <View style={styles.timePresets}>
+                  {(() => {
+                    const presets =
+                      HOP_TIME_PRESETS[
+                        currentUsage as keyof typeof HOP_TIME_PRESETS
+                      ] || HOP_TIME_PRESETS.boil;
+
+                    return presets.map(preset => (
+                      <TouchableOpacity
+                        key={preset.value}
+                        style={[
+                          styles.timeButton,
+                          editedIngredient.time === preset.value &&
+                            styles.timeButtonActive,
+                        ]}
+                        onPress={() => handleTimeChange(preset.value)}
+                      >
+                        <Text
+                          style={[
+                            styles.timeButtonText,
+                            editedIngredient.time === preset.value &&
+                              styles.timeButtonTextActive,
+                          ]}
+                        >
+                          {preset.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ));
+                  })()}
                 </View>
                 {errors.time && (
                   <Text style={styles.errorText}>{errors.time}</Text>
