@@ -68,7 +68,7 @@ export default function DashboardScreen() {
         const [recipesResponse, brewSessionsResponse, publicRecipesResponse] =
           await Promise.all([
             ApiService.recipes.getAll(1, 5), // Get first 5 recipes like original
-            ApiService.brewSessions.getAll(1, 5), // Get first 5 brew sessions like original
+            ApiService.brewSessions.getAll(1, 20), // Get more brew sessions to get accurate count
             ApiService.recipes.getPublic(1, 1), // Get public recipes count (just need pagination info)
           ]);
 
@@ -197,10 +197,10 @@ export default function DashboardScreen() {
       );
     },
     onStartBrewing: (recipe: Recipe) => {
-      Alert.alert(
-        "Start Brewing",
-        `Starting brew session for "${recipe.name}" - Feature coming soon!`
-      );
+      router.push({
+        pathname: "/(modals)/(brewSessions)/createBrewSession",
+        params: { recipeId: recipe.id },
+      });
     },
     onShare: (recipe: Recipe) => {
       Alert.alert(

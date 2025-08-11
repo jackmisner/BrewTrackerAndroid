@@ -299,7 +299,7 @@ The BrewTrackerAndroid API service layer has been hardened with robust security 
 ### Error Types Handled
 
 - **Network Errors**: Connection failures, DNS issues, network timeouts
-- **HTTP Status Codes**: Proper handling of 4xx client errors and 5xx server errors  
+- **HTTP Status Codes**: Proper handling of 4xx client errors and 5xx server errors
 - **Rate Limiting**: Automatic retry for 429 (Too Many Requests) responses
 - **Service Unavailability**: Retry logic for 502, 503, 504 temporary service issues
 - **Authentication**: Secure token cleanup on 401 authentication failures
@@ -309,13 +309,13 @@ The BrewTrackerAndroid API service layer has been hardened with robust security 
 ```typescript
 // Error handling with normalization
 try {
-  const recipe = await ApiService.recipes.getById('recipe-id');
+  const recipe = await ApiService.recipes.getById("recipe-id");
 } catch (error) {
   const normalized = ApiService.handleApiError(error);
-  
+
   if (normalized.isRetryable) {
     // Will be automatically retried for GET requests
-    console.log('Retrying request...');
+    console.log("Retrying request...");
   } else {
     // Handle non-retryable errors
     showUserError(normalized.message);

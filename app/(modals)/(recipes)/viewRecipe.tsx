@@ -89,11 +89,12 @@ export default function ViewRecipeScreen() {
 
   /**
    * Navigation handler for starting a brew session with this recipe
-   * TODO: Implement when brew session creation is available
    */
   const handleStartBrewing = () => {
-    console.log("Start brewing with recipe:", recipe_id);
-    // TODO: Navigate to create brew session screen with this recipe
+    router.push({
+      pathname: "/(modals)/(brewSessions)/createBrewSession",
+      params: { recipeId: recipe_id },
+    });
   };
 
   /**

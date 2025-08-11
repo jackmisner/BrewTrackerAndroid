@@ -136,7 +136,10 @@ export default function RecipesScreen() {
   };
 
   // Context menu action handlers
-  const handleRecipeLongPress = (recipe: Recipe, event: GestureResponderEvent) => {
+  const handleRecipeLongPress = (
+    recipe: Recipe,
+    event: GestureResponderEvent
+  ) => {
     const position = getTouchPosition(event);
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -174,11 +177,10 @@ export default function RecipesScreen() {
       );
     },
     onStartBrewing: (recipe: Recipe) => {
-      // TODO: Implement brew session creation from recipe
-      Alert.alert(
-        "Start Brewing",
-        `Starting brew session for "${recipe.name}" - Feature coming soon!`
-      );
+      router.push({
+        pathname: "/(modals)/(brewSessions)/createBrewSession",
+        params: { recipeId: recipe.id },
+      });
     },
     onShare: (recipe: Recipe) => {
       // TODO: Implement recipe sharing functionality

@@ -86,7 +86,13 @@ export default function ViewBrewSession() {
   /**
    * Get status badge styling based on brew session status
    */
-  const getStatusColor = (status: BrewSessionStatus): string => {
+  const getStatusColor = (
+    status: BrewSessionStatus | null | undefined
+  ): string => {
+    if (!status || typeof status !== "string") {
+      return "#9E9E9E"; // Default gray for unknown/invalid status
+    }
+
     switch (status) {
       case "planned":
         return "#9E9E9E";
@@ -244,15 +250,22 @@ export default function ViewBrewSession() {
             style={[
               styles.statusBadge,
               {
-                backgroundColor: getStatusColor(
-                  brewSession.status as BrewSessionStatus
-                ),
+                backgroundColor: getStatusColor(brewSession.status),
               },
             ]}
           >
             <Text style={styles.statusText}>
-              {brewSession.status.charAt(0).toUpperCase() +
-                brewSession.status.slice(1)}
+              {(() => {
+                const status = brewSession.status;
+                if (
+                  !status ||
+                  typeof status !== "string" ||
+                  status.length === 0
+                ) {
+                  return "Unknown";
+                }
+                return status.charAt(0).toUpperCase() + status.slice(1);
+              })()}
             </Text>
           </View>
         </View>

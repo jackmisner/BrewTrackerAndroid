@@ -111,14 +111,9 @@ export interface BrewSession {
 export interface CreateBrewSessionRequest {
   recipe_id: ID;
   name: string;
-  batch_size: number;
-  batch_size_unit: "gal" | "l";
   brew_date: string;
-  original_gravity?: number;
-  target_og?: number;
-  target_fg?: number;
+  status: BrewSessionStatus;
   notes?: string;
-  brew_notes?: string;
 }
 
 // Update brew session data
@@ -132,6 +127,14 @@ export interface UpdateBrewSessionRequest {
   brew_notes?: string;
   tasting_notes?: string;
   efficiency?: number;
+  fermentation_start_date?: string;
+  fermentation_end_date?: string;
+  packaging_date?: string;
+  actual_og?: number;
+  actual_fg?: number;
+  actual_abv?: number;
+  mash_temp?: number;
+  batch_rating?: number;
 }
 
 // Fermentation entry creation
