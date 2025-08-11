@@ -492,9 +492,9 @@ export function IngredientDetailEditor({
                         {/* Small adjustments row */}
                         {groups.small.length > 0 && (
                           <View style={styles.adjustmentRow}>
-                            {[...groups.small].reverse().map((delta, idx) => (
+                            {[...groups.small].reverse().map((delta) => (
                               <TouchableOpacity
-                                key={`minus-small-${delta}-${idx}`}
+                                key={`minus-small-${delta}`}
                                 style={[
                                   styles.adjustButton,
                                   styles.adjustButtonNegative,
@@ -517,9 +517,9 @@ export function IngredientDetailEditor({
                         {/* Medium adjustments row */}
                         {groups.medium.length > 0 && (
                           <View style={styles.adjustmentRow}>
-                            {[...groups.medium].reverse().map((delta, idx) => (
+                            {[...groups.medium].reverse().map((delta) => (
                               <TouchableOpacity
-                                key={`minus-medium-${delta}-${idx}`}
+                                key={`minus-medium-${delta}`}
                                 style={[
                                   styles.adjustButton,
                                   styles.adjustButtonNegative,
@@ -542,9 +542,9 @@ export function IngredientDetailEditor({
                         {/* Large adjustments row */}
                         {groups.large.length > 0 && (
                           <View style={styles.adjustmentRow}>
-                            {[...groups.large].reverse().map((delta, idx) => (
+                            {[...groups.large].reverse().map((delta) => (
                               <TouchableOpacity
-                                key={`minus-large-${delta}-${idx}`}
+                                key={`minus-large-${delta}`}
                                 style={[
                                   styles.adjustButton,
                                   styles.adjustButtonNegative,
@@ -587,9 +587,9 @@ export function IngredientDetailEditor({
                         {/* Small adjustments row */}
                         {groups.small.length > 0 && (
                           <View style={styles.adjustmentRow}>
-                            {groups.small.map((delta, idx) => (
+                            {groups.small.map((delta) => (
                               <TouchableOpacity
-                                key={`plus-small-${delta}-${idx}`}
+                                key={`plus-small-${delta}`}
                                 style={[
                                   styles.adjustButton,
                                   styles.adjustButtonPositive,
@@ -612,9 +612,9 @@ export function IngredientDetailEditor({
                         {/* Medium adjustments row */}
                         {groups.medium.length > 0 && (
                           <View style={styles.adjustmentRow}>
-                            {groups.medium.map((delta, idx) => (
+                            {groups.medium.map((delta) => (
                               <TouchableOpacity
-                                key={`plus-medium-${delta}-${idx}`}
+                                key={`plus-medium-${delta}`}
                                 style={[
                                   styles.adjustButton,
                                   styles.adjustButtonPositive,
@@ -637,9 +637,9 @@ export function IngredientDetailEditor({
                         {/* Large adjustments row */}
                         {groups.large.length > 0 && (
                           <View style={styles.adjustmentRow}>
-                            {groups.large.map((delta, idx) => (
+                            {groups.large.map((delta) => (
                               <TouchableOpacity
-                                key={`plus-large-${delta}-${idx}`}
+                                key={`plus-large-${delta}`}
                                 style={[
                                   styles.adjustButton,
                                   styles.adjustButtonPositive,
