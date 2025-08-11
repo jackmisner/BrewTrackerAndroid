@@ -9,6 +9,8 @@ export default function BrewSessionsModalsLayout() {
       }}
     >
       <Stack.Screen name="viewBrewSession" />
+      <Stack.Screen name="createBrewSession" />
+      <Stack.Screen name="editBrewSession" />
     </Stack>
   );
 }

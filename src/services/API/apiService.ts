@@ -71,13 +71,13 @@ import {
 // Validated API Configuration
 function validateAndGetApiConfig() {
   const baseURL = process.env.EXPO_PUBLIC_API_URL;
-  
+
   if (!baseURL) {
     throw new Error(
       "API_URL environment variable is required. Please set EXPO_PUBLIC_API_URL in your .env file."
     );
   }
-  
+
   // Validate URL format
   try {
     new URL(baseURL);
@@ -86,10 +86,10 @@ function validateAndGetApiConfig() {
       `Invalid API_URL format: ${baseURL}. Please provide a valid URL.`
     );
   }
-  
+
   // Ensure URL doesn't end with trailing slash for consistency
   const cleanBaseURL = baseURL.replace(/\/$/, "");
-  
+
   return {
     BASE_URL: cleanBaseURL,
     TIMEOUT: 15000, // 15 seconds - sensible timeout for mobile
@@ -125,29 +125,37 @@ function normalizeError(error: any): NormalizedApiError {
   // Handle Axios errors
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError;
-    
+
     // Network or timeout errors
     if (!axiosError.response) {
       normalized.isNetworkError = true;
       normalized.isRetryable = true;
-      
-      if (axiosError.code === "ECONNABORTED" || axiosError.message.includes("timeout")) {
+
+      if (
+        axiosError.code === "ECONNABORTED" ||
+        axiosError.message.includes("timeout")
+      ) {
         normalized.isTimeout = true;
-        normalized.message = "Request timed out. Please check your connection and try again.";
-      } else if (axiosError.code === "NETWORK_ERROR" || axiosError.message.includes("Network Error")) {
-        normalized.message = "Network error. Please check your internet connection.";
+        normalized.message =
+          "Request timed out. Please check your connection and try again.";
+      } else if (
+        axiosError.code === "NETWORK_ERROR" ||
+        axiosError.message.includes("Network Error")
+      ) {
+        normalized.message =
+          "Network error. Please check your internet connection.";
       } else {
         normalized.message = "Unable to connect to server. Please try again.";
       }
-      
+
       normalized.code = axiosError.code;
       return normalized;
     }
-    
+
     // HTTP response errors
     const { response } = axiosError;
     normalized.status = response.status;
-    
+
     // Handle specific HTTP status codes
     switch (response.status) {
       case 400:
@@ -157,19 +165,22 @@ function normalizeError(error: any): NormalizedApiError {
         normalized.message = "Authentication failed. Please log in again.";
         break;
       case 403:
-        normalized.message = "Access denied. You don't have permission to perform this action.";
+        normalized.message =
+          "Access denied. You don't have permission to perform this action.";
         break;
       case 404:
         normalized.message = "Resource not found.";
         break;
       case 409:
-        normalized.message = "Conflict. The resource already exists or has been modified.";
+        normalized.message =
+          "Conflict. The resource already exists or has been modified.";
         break;
       case 422:
         normalized.message = "Validation error. Please check your input.";
         break;
       case 429:
-        normalized.message = "Too many requests. Please wait a moment and try again.";
+        normalized.message =
+          "Too many requests. Please wait a moment and try again.";
         normalized.isRetryable = true;
         break;
       case 500:
@@ -179,7 +190,8 @@ function normalizeError(error: any): NormalizedApiError {
       case 502:
       case 503:
       case 504:
-        normalized.message = "Service temporarily unavailable. Please try again.";
+        normalized.message =
+          "Service temporarily unavailable. Please try again.";
         normalized.isRetryable = true;
         break;
       default:
@@ -188,7 +200,7 @@ function normalizeError(error: any): NormalizedApiError {
           normalized.isRetryable = true;
         }
     }
-    
+
     // Try to extract more specific error message from response
     if (response.data && typeof response.data === "object") {
       const data = response.data as any;
@@ -200,25 +212,25 @@ function normalizeError(error: any): NormalizedApiError {
         normalized.message = data.detail;
       }
     }
-    
+
     normalized.code = response.status;
     return normalized;
   }
-  
+
   // Handle non-Axios errors
   if (error instanceof Error) {
     normalized.message = error.message;
   } else if (typeof error === "string") {
     normalized.message = error;
   }
-  
+
   return normalized;
 }
 
 // Retry wrapper for idempotent requests
 async function withRetry<T>(
   operation: () => Promise<T>,
-  isRetryable: (error: any) => boolean = (error) => {
+  isRetryable: (error: any) => boolean = error => {
     const normalized = normalizeError(error);
     return normalized.isRetryable;
   },
@@ -226,24 +238,27 @@ async function withRetry<T>(
   delay: number = API_CONFIG.RETRY_DELAY
 ): Promise<T> {
   let lastError: any;
-  
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await operation();
     } catch (error) {
       lastError = error;
-      
+
       // Don't retry on last attempt or if error is not retryable
       if (attempt === maxAttempts || !isRetryable(error)) {
         throw error;
       }
-      
+
       // Exponential backoff with jitter
-      const backoffDelay = delay * Math.pow(2, attempt - 1) + Math.random() * 1000;
-      await new Promise(resolve => setTimeout(resolve, Math.min(backoffDelay, 10000)));
+      const backoffDelay =
+        delay * Math.pow(2, attempt - 1) + Math.random() * 1000;
+      await new Promise(resolve =>
+        setTimeout(resolve, Math.min(backoffDelay, 10000))
+      );
     }
   }
-  
+
   throw lastError;
 }
 
@@ -254,8 +269,9 @@ const api: AxiosInstance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  // Additional security headers
-  validateStatus: (status) => status < 500, // Don't throw on client errors, handle them in interceptors
+  // Throw on any non-2xx so interceptors and withRetry can handle errors (401/429 included)
+  validateStatus: (status: number) => status >= 200 && status < 300,
+
 });
 
 // Setup automatic ID normalization interceptors
@@ -321,7 +337,7 @@ api.interceptors.response.use(
 
     // Normalize the error before rejecting
     const normalizedError = normalizeError(error);
-    
+
     // Log error details for debugging (only in development)
     if (process.env.EXPO_PUBLIC_DEBUG_MODE === "true") {
       console.error("API Error:", {
@@ -338,7 +354,7 @@ api.interceptors.response.use(
     const enhancedError = Object.assign(error, {
       normalized: normalizedError,
     });
-    
+
     return Promise.reject(enhancedError);
   }
 );
@@ -424,7 +440,9 @@ const ApiService = {
       page: number = 1,
       perPage: number = 10
     ): Promise<AxiosResponse<RecipesListResponse>> =>
-      withRetry(() => api.get(`${ENDPOINTS.RECIPES.LIST}?page=${page}&per_page=${perPage}`)),
+      withRetry(() =>
+        api.get(`${ENDPOINTS.RECIPES.LIST}?page=${page}&per_page=${perPage}`)
+      ),
 
     getById: (id: ID): Promise<AxiosResponse<RecipeResponse>> =>
       withRetry(() => api.get(ENDPOINTS.RECIPES.DETAIL(id))),
@@ -448,11 +466,13 @@ const ApiService = {
       page: number = 1,
       perPage: number = 10
     ): Promise<AxiosResponse<RecipesListResponse>> =>
-      withRetry(() => api.get(
-        `/search/recipes?q=${encodeURIComponent(
-          query
-        )}&page=${page}&per_page=${perPage}`
-      )),
+      withRetry(() =>
+        api.get(
+          `/search/recipes?q=${encodeURIComponent(
+            query
+          )}&page=${page}&per_page=${perPage}`
+        )
+      ),
 
     calculateMetrics: (
       recipeId: ID
@@ -499,9 +519,11 @@ const ApiService = {
       page: number = 1,
       perPage: number = 10
     ): Promise<AxiosResponse<BrewSessionsListResponse>> =>
-      withRetry(() => api.get(
-        `${ENDPOINTS.BREW_SESSIONS.LIST}?page=${page}&per_page=${perPage}`
-      )),
+      withRetry(() =>
+        api.get(
+          `${ENDPOINTS.BREW_SESSIONS.LIST}?page=${page}&per_page=${perPage}`
+        )
+      ),
 
     getById: (id: ID): Promise<AxiosResponse<BrewSessionResponse>> =>
       withRetry(() => api.get(ENDPOINTS.BREW_SESSIONS.DETAIL(id))),
@@ -524,7 +546,9 @@ const ApiService = {
     getFermentationEntries: (
       brewSessionId: ID
     ): Promise<AxiosResponse<FermentationEntriesResponse>> =>
-      withRetry(() => api.get(ENDPOINTS.BREW_SESSIONS.FERMENTATION(brewSessionId))),
+      withRetry(() =>
+        api.get(ENDPOINTS.BREW_SESSIONS.FERMENTATION(brewSessionId))
+      ),
 
     addFermentationEntry: (
       brewSessionId: ID,
@@ -553,7 +577,9 @@ const ApiService = {
     getFermentationStats: (
       brewSessionId: ID
     ): Promise<AxiosResponse<FermentationStatsResponse>> =>
-      withRetry(() => api.get(ENDPOINTS.BREW_SESSIONS.FERMENTATION_STATS(brewSessionId))),
+      withRetry(() =>
+        api.get(ENDPOINTS.BREW_SESSIONS.FERMENTATION_STATS(brewSessionId))
+      ),
 
     analyzeCompletion: (
       brewSessionId: ID
@@ -562,7 +588,10 @@ const ApiService = {
         estimated_days_remaining: number;
         completion_probability: number;
       }>
-    > => withRetry(() => api.get(ENDPOINTS.BREW_SESSIONS.ANALYZE_COMPLETION(brewSessionId))),
+    > =>
+      withRetry(() =>
+        api.get(ENDPOINTS.BREW_SESSIONS.ANALYZE_COMPLETION(brewSessionId))
+      ),
   },
 
   // Beer styles endpoints
@@ -572,7 +601,11 @@ const ApiService = {
     getById: (id: ID): Promise<AxiosResponse<any>> =>
       withRetry(() => api.get(ENDPOINTS.BEER_STYLES.DETAIL(id))),
     search: (query: string): Promise<AxiosResponse<any>> =>
-      withRetry(() => api.get(`${ENDPOINTS.BEER_STYLES.SEARCH}?q=${encodeURIComponent(query)}`)),
+      withRetry(() =>
+        api.get(
+          `${ENDPOINTS.BEER_STYLES.SEARCH}?q=${encodeURIComponent(query)}`
+        )
+      ),
   },
 
   // Ingredients endpoints

@@ -249,7 +249,7 @@ export interface BrewSessionsListResponse
   brew_sessions: BrewSession[];
 }
 
-export type CreateBrewSessionResponse = ApiResponse<BrewSession>;
+export type CreateBrewSessionResponse = BrewSession;
 
 export type UpdateBrewSessionResponse = ApiResponse<BrewSession>;
 

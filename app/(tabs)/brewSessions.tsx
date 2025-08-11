@@ -11,8 +11,7 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
--import ApiService from "@services/api/apiService";
-+import ApiService from "@services/API/apiService";
+import ApiService from "@services/api/apiService";
 import { BrewSession } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { brewSessionsStyles } from "@styles/tabs/brewSessionsStyles";
@@ -116,10 +115,10 @@ export default function BrewSessionsScreen() {
       });
     },
     onEdit: (brewSession: BrewSession) => {
-      Alert.alert(
-        "Edit Session",
-        `Editing "${brewSession.name}" - Feature coming soon!`
-      );
+      router.push({
+        pathname: "/(modals)/(brewSessions)/editBrewSession",
+        params: { brewSessionId: brewSession.id },
+      });
     },
     onAddFermentationEntry: (brewSession: BrewSession) => {
       Alert.alert(
@@ -148,8 +147,11 @@ export default function BrewSessionsScreen() {
   });
 
   const handleStartBrewing = () => {
-    // TODO: Navigate to create brew session screen when implemented
-    console.log("Navigate to create brew session");
+    // Navigate to recipes screen to select a recipe first
+    router.push({
+      pathname: "/(tabs)/recipes",
+      params: { activeTab: "my" },
+    });
   };
 
   const getStatusColor = (status: BrewSession["status"]) => {
