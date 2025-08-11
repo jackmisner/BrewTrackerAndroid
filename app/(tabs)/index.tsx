@@ -197,10 +197,10 @@ export default function DashboardScreen() {
       );
     },
     onStartBrewing: (recipe: Recipe) => {
-      Alert.alert(
-        "Start Brewing",
-        `Starting brew session for "${recipe.name}" - Feature coming soon!`
-      );
+      router.push({
+        pathname: "/(modals)/(brewSessions)/createBrewSession",
+        params: { recipeId: recipe.id },
+      });
     },
     onShare: (recipe: Recipe) => {
       Alert.alert(
