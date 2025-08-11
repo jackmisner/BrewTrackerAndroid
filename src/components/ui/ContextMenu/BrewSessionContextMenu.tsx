@@ -105,7 +105,7 @@ export function createDefaultBrewSessionActions(handlers: {
     {
       id: "add-fermentation",
       title: "Add Fermentation Entry",
-      icon: "add-chart",
+      icon: "add_chart",
       onPress: handlers.onAddFermentationEntry,
       // Only show for active/fermenting sessions
       hidden: brewSession =>

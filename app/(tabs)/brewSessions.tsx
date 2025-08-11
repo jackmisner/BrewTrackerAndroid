@@ -11,7 +11,8 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import ApiService from "@services/api/apiService";
+-import ApiService from "@services/api/apiService";
++import ApiService from "@services/API/apiService";
 import { BrewSession } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { brewSessionsStyles } from "@styles/tabs/brewSessionsStyles";
