@@ -3,6 +3,7 @@ import {
   HOP_TIME_PRESETS,
   HopUsageValue,
 } from "@src/constants/hopConstants";
+import { RecipeIngredient } from "@src/types";
 
 /**
  * Formats hop time for display based on usage type
@@ -307,7 +308,7 @@ export const formatPotential = (
  * @param ingredient - Recipe ingredient object
  * @returns Formatted ingredient details string
  */
-export const formatIngredientDetails = (ingredient: any): string => {
+export const formatIngredientDetails = (ingredient: RecipeIngredient): string => {
   const details: string[] = [];
 
   if (ingredient.type === "hop") {

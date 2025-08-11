@@ -100,7 +100,10 @@
       "^@contexts/(.*)$": "<rootDir>/src/contexts/$1",
       "^@services/(.*)$": "<rootDir>/src/services/$1",
       "^@styles/(.*)$": "<rootDir>/src/styles/$1",
-      "^@types/(.*)$": "<rootDir>/src/types/$1"
+      "^@types/(.*)$": "<rootDir>/src/types/$1",
+      "^@components/(.*)$": "<rootDir>/src/components/$1",
+      "^@constants/(.*)$": "<rootDir>/src/constants/$1",
+      "^@utils/(.*)$": "<rootDir>/src/utils/$1"
     },
     "collectCoverageFrom": [
       "src/**/*.{ts,tsx}",
