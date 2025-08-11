@@ -25,6 +25,13 @@ import {
 } from "@utils/formatUtils";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
+function toLocalISODateString(d: Date) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 /**
  * Screen for creating a new brew session from a selected recipe.
  *
@@ -38,12 +45,15 @@ export default function CreateBrewSessionScreen() {
   const queryClient = useQueryClient();
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const recipeId = params.recipeId as string;
+  const recipeIdParam = params.recipeId as string | string[] | undefined;
+  const recipeId = Array.isArray(recipeIdParam)
+    ? recipeIdParam[0]
+    : recipeIdParam;
 
   // Form state
   const [formData, setFormData] = useState({
     name: "",
-    brew_date: new Date().toISOString().split("T")[0], // Today's date
+    brew_date: toLocalISODateString(new Date()), // Today's date in local time
     status: "planned" as const,
     notes: "",
   });
@@ -96,6 +106,11 @@ export default function CreateBrewSessionScreen() {
       Alert.alert("Error", `Failed to create brew session: ${errorMessage}`);
     },
   });
+  if (!recipeId) {
+    Alert.alert("Error", "Recipe ID is required");
+    router.back();
+    return null as any;
+  }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -107,7 +122,7 @@ export default function CreateBrewSessionScreen() {
   const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(false);
     if (selectedDate) {
-      const dateString = selectedDate.toISOString().split("T")[0];
+      const dateString = toLocalISODateString(selectedDate);
       handleInputChange("brew_date", dateString);
     }
   };

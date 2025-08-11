@@ -271,7 +271,6 @@ const api: AxiosInstance = axios.create({
   },
   // Throw on any non-2xx so interceptors and withRetry can handle errors (401/429 included)
   validateStatus: (status: number) => status >= 200 && status < 300,
-
 });
 
 // Setup automatic ID normalization interceptors

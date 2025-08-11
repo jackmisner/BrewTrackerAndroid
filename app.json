@@ -3,12 +3,14 @@
     "name": "BrewTracker",
     "slug": "brewtracker-android",
     "orientation": "portrait",
-    "version": "0.9.2",
+    "version": "0.9.3",
     "icon": "./assets/images/icon.png",
     "scheme": "brewtracker",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "platforms": ["android"],
+    "platforms": [
+      "android"
+    ],
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
@@ -16,7 +18,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.brewtracker.android",
-      "versionCode": 26,
+      "versionCode": 27,
       "permissions": [
         "CAMERA",
         "WRITE_EXTERNAL_STORAGE",
