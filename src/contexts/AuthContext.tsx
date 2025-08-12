@@ -32,6 +32,10 @@ interface AuthContextValue {
   verifyEmail: (token: string) => Promise<void>;
   resendVerification: () => Promise<void>;
   checkVerificationStatus: () => Promise<void>;
+
+  // Password reset
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (token: string, newPassword: string) => Promise<void>;
 }
 
 // Provider props interface
@@ -304,6 +308,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     }
   };
 
+  const forgotPassword = async (email: string): Promise<void> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      await ApiService.auth.forgotPassword({ email });
+    } catch (error: any) {
+      console.error("Failed to send password reset:", error);
+      setError(
+        error.response?.data?.error || "Failed to send password reset email"
+      );
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetPassword = async (
+    token: string,
+    newPassword: string
+  ): Promise<void> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      await ApiService.auth.resetPassword({ token, new_password: newPassword });
+    } catch (error: any) {
+      console.error("Failed to reset password:", error);
+      setError(error.response?.data?.error || "Failed to reset password");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const clearError = (): void => {
     setError(null);
   };
@@ -329,6 +366,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     verifyEmail,
     resendVerification,
     checkVerificationStatus,
+
+    // Password reset
+    forgotPassword,
+    resetPassword,
   };
 
   return (

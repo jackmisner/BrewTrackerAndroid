@@ -50,6 +50,10 @@ export default function LoginScreen() {
     router.push("/(auth)/register");
   };
 
+  const navigateToForgotPassword = () => {
+    router.push("/(auth)/forgotPassword");
+  };
+
   return (
     <KeyboardAvoidingView style={styles.container} behavior="height">
       <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -81,6 +85,14 @@ export default function LoginScreen() {
               autoComplete="password"
               textContentType="password"
             />
+          </View>
+
+          <View style={styles.forgotPasswordContainer}>
+            <TouchableOpacity onPress={navigateToForgotPassword}>
+              <Text style={styles.forgotPasswordText}>
+                Forgot your password?
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {error && <Text style={styles.errorText}>{error}</Text>}
