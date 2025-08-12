@@ -51,6 +51,7 @@ export default function LoginScreen() {
   };
 
   const navigateToForgotPassword = () => {
+    clearError();
     router.push("/(auth)/forgotPassword");
   };
 

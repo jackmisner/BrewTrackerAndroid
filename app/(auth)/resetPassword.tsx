@@ -85,8 +85,13 @@ const ResetPasswordScreen: React.FC = () => {
       return;
     }
 
+    if (formData.newPassword !== formData.newPassword.trim()) {
+      Alert.alert("Error", "Password cannot start or end with spaces");
+      return;
+    }
+
     if (!formData.newPassword.trim()) {
-      Alert.alert("Error", "Password cannot be empty or contain only spaces");
+      Alert.alert("Error", "Password cannot be empty");
       return;
     }
 

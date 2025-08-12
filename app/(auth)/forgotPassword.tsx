@@ -19,9 +19,19 @@ const ForgotPasswordScreen: React.FC = () => {
   const [email, setEmail] = useState<string>("");
   const [emailSent, setEmailSent] = useState<boolean>(false);
 
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleForgotPassword = async (): Promise<void> => {
     if (!email.trim()) {
       Alert.alert("Error", "Please enter your email address");
+      return;
+    }
+
+    if (!validateEmail(email.trim())) {
+      Alert.alert("Error", "Please enter a valid email address");
       return;
     }
 
