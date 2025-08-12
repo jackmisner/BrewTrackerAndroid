@@ -25,6 +25,7 @@ const ForgotPasswordScreen: React.FC = () => {
   };
 
   const handleForgotPassword = async (): Promise<void> => {
+    if (isLoading) return;
     if (!email.trim()) {
       Alert.alert("Error", "Please enter your email address");
       return;
@@ -104,7 +105,7 @@ const ForgotPasswordScreen: React.FC = () => {
       <ScrollView contentContainerStyle={loginStyles.scrollContainer}>
         <View style={loginStyles.formContainer}>
           <View style={loginStyles.header}>
-            <MaterialIcons name="lock-reset" size={64} color="#2563eb" />
+            <MaterialIcons name="lock-outline" size={64} color="#2563eb" />
             <Text style={loginStyles.title}>Forgot Password</Text>
             <Text style={loginStyles.subtitle}>
               Enter your email address and we'll send you a link to reset your
@@ -151,16 +152,16 @@ const ForgotPasswordScreen: React.FC = () => {
             <TouchableOpacity
               style={[
                 loginStyles.resetPrimaryButton,
-                (isLoading || !email.trim()) &&
+                (isLoading || !email.trim() || !validateEmail(email.trim())) &&
                   loginStyles.primaryButtonDisabled,
               ]}
               onPress={handleForgotPassword}
-              disabled={isLoading || !email.trim()}
+              disabled={isLoading || !email.trim() || !validateEmail(email.trim())}
             >
               <Text
                 style={[
                   loginStyles.resetPrimaryButtonText,
-                  (isLoading || !email.trim()) &&
+                  (isLoading || !email.trim() || !validateEmail(email.trim())) &&
                     loginStyles.primaryButtonTextDisabled,
                 ]}
               >
