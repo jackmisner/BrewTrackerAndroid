@@ -7,6 +7,8 @@ export const lightColors = {
   // Primary colors
   primary: "#f4511e",
   primaryText: "#fff",
+  errorBackground: "#fee2e2",
+  successBackground: "#f0f9ff",
 
   // Background colors
   background: "#fff",
@@ -40,6 +42,8 @@ export const darkColors = {
   // Primary colors (keep brand color consistent)
   primary: "#f4511e",
   primaryText: "#fff",
+  errorBackground: "#fee2e2",
+  successBackground: "#f0f9ff",
 
   // Background colors
   background: "#121212",
