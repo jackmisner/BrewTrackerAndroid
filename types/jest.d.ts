@@ -35,8 +35,10 @@ declare global {
     createMockEvent: (overrides?: any) => any;
     createMockProps: (overrides?: any) => any;
     waitForNextTick: () => Promise<void>;
-    mockApiSuccess: <T>(data: T) => Promise<T>;
+    mockApiSuccess: <T>(data: T) => Promise<{ data: T }>;
     mockApiError: (error: string) => Promise<never>;
+    createMockNavigation: (overrides?: any) => any;
+    createMockRoute: (overrides?: any) => any;
     mockNavigation: {
       navigate: jest.MockedFunction<any>;
       goBack: jest.MockedFunction<any>;
@@ -48,6 +50,17 @@ declare global {
       key: string;
       name: string;
     };
+    createAuthenticatedState: (userOverrides?: any) => { isAuthenticated: true; user: any; token: string };
+    createUnauthenticatedState: () => { isAuthenticated: false; user: null; token: null };
+    resetCounters: () => void;
+    flushPromises: () => Promise<void>;
+    createNetworkError: (message?: string) => { isAxiosError: true; message: string; code: "NETWORK_ERROR"; response?: undefined };
+    createAPIError: (status?: number, message?: string, errors?: any[]) => {
+      isAxiosError: true;
+      message: string;
+      response: { status: number; data: { error: string; errors: any[] } };
+    };
+    createValidationError: (field: string, message: string) => { field: string; message: string };
   };
 }
 
