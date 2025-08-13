@@ -6,10 +6,13 @@ import {
   ScrollView,
   Alert,
   RefreshControl,
+  Image,
+  Linking,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import Constants from "expo-constants";
+import * as WebBrowser from "expo-web-browser";
 import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
 import { profileStyles } from "@styles/tabs/profileStyles";
@@ -21,10 +24,8 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
 
-  // Handle pull to refresh
   const onRefresh = async () => {
     setRefreshing(true);
-    // Profile data is static, so just simulate refresh
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
@@ -46,6 +47,20 @@ export default function ProfileScreen() {
 
   const handleSettingsPress = () => {
     router.push("/(modals)/(settings)/settings");
+  };
+
+  // Ko-fi donate button click handler
+  const handleDonate = async () => {
+    try {
+      await WebBrowser.openBrowserAsync("https://ko-fi.com/jackmisner");
+    } catch (error) {
+      console.error("Failed to open in-app browser:", error);
+      try {
+        await Linking.openURL("https://ko-fi.com/jackmisner");
+      } catch (linkingError) {
+        console.error("Failed to open external browser:", linkingError);
+      }
+    }
   };
 
   return (
@@ -112,6 +127,21 @@ export default function ProfileScreen() {
           <MaterialIcons
             name="chevron-right"
             size={24}
+            color={theme.colors.textMuted}
+          />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <TouchableOpacity style={styles.menuItem} onPress={handleDonate}>
+          <Image
+            source={require("../../assets/images/mugOfBeer512.png")}
+            style={styles.donateIcon}
+          />
+          <Text style={styles.menuText}>Buy me a Beer!</Text>
+          <MaterialIcons
+            name="open-in-new"
+            size={20}
             color={theme.colors.textMuted}
           />
         </TouchableOpacity>
