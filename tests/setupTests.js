@@ -334,7 +334,36 @@ const SUPPRESSED_ERROR_PATTERNS = [
   /Error: Network Error/, // Suppress expected network errors in tests
   /Error: Authentication required/, // Suppress expected auth errors in tests
   /Console error suppressed for test/, // Suppress our own test error markers
-  /An update to TestComponent inside a test was not wrapped in act/, // React Query + fake timers act() warnings
+  /An update to .* inside a test was not wrapped in act/, // React Query + fake timers act() warnings
+  // ApiService test-related errors that are intentionally triggered
+  /Error getting token: Error: SecureStore error/,
+  /Error setting token: Error: Storage failed/,
+  /Error removing token: Error: Delete failed/,
+  /SecureStore error/,
+  /Storage failed/,
+  /Delete failed/,
+  // AuthContext test-related errors that are intentionally triggered
+  /Failed to initialize auth:/,
+  /Login failed:/,
+  /Registration failed:/,
+  /Google sign-in failed:/,
+  /Logout failed:/,
+  /Failed to refresh user:/,
+  /Email verification failed:/,
+  /Failed to resend verification:/,
+  /Failed to check verification status:/,
+  /Failed to send password reset:/,
+  /Failed to reset password:/,
+  /Invalid credentials/,
+  /Username already exists/,
+  /Invalid Google token/,
+  /Invalid verification token/,
+  /Too many requests/,
+  /Email not found/,
+  /Invalid or expired token/,
+  // UnitContext test-related errors
+  /Failed to load unit preferences, using default:/,
+  /Cannot read properties of undefined \(reading 'data'\)/,
 ];
 
 const SUPPRESSED_WARN_PATTERNS = [
@@ -346,34 +375,58 @@ const SUPPRESSED_WARN_PATTERNS = [
   /UNSAFE_componentWillUpdate is deprecated/,
   /Animated: `useNativeDriver` was not specified/,
   /VirtualizedLists should never be nested/,
+  // UnitContext test warnings
+  /Failed to load unit preferences, using default:/,
 ];
 
 console.error = (...args) => {
   const message = args[0];
+  let messageString = '';
+  
   if (typeof message === "string") {
+    messageString = message;
+  } else if (message instanceof Error) {
+    messageString = message.message || message.toString();
+  } else if (message && typeof message.toString === 'function') {
+    messageString = message.toString();
+  }
+  
+  if (messageString) {
     // Check if this error matches any suppressed patterns
     const shouldSuppress = SUPPRESSED_ERROR_PATTERNS.some(pattern =>
-      pattern.test(message)
+      pattern.test(messageString)
     );
     if (shouldSuppress) {
       return;
     }
   }
+  
   // Log all other errors normally
   originalError.apply(console, args);
 };
 
 console.warn = (...args) => {
   const message = args[0];
+  let messageString = '';
+  
   if (typeof message === "string") {
+    messageString = message;
+  } else if (message instanceof Error) {
+    messageString = message.message || message.toString();
+  } else if (message && typeof message.toString === 'function') {
+    messageString = message.toString();
+  }
+  
+  if (messageString) {
     // Check if this warning matches any suppressed patterns
     const shouldSuppress = SUPPRESSED_WARN_PATTERNS.some(pattern =>
-      pattern.test(message)
+      pattern.test(messageString)
     );
     if (shouldSuppress) {
       return;
     }
   }
+  
   // Log all other warnings normally
   originalWarn.apply(console, args);
 };
