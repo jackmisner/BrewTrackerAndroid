@@ -2,11 +2,7 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "types": [
-      "jest", 
-      "@testing-library/jest-native",
-      "node"
-    ],
+    "types": ["jest", "@testing-library/jest-native", "node"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
@@ -24,13 +20,11 @@
     }
   },
   "include": [
-    "**/*.ts", 
-    "**/*.tsx", 
-    ".expo/types/**/*.ts", 
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "types/jest.d.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }

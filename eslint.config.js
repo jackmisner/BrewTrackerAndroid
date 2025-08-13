@@ -12,7 +12,7 @@ module.exports = defineConfig([
     languageOptions: {
       globals: {
         describe: "readonly",
-        it: "readonly", 
+        it: "readonly",
         expect: "readonly",
         jest: "readonly",
         beforeEach: "readonly",

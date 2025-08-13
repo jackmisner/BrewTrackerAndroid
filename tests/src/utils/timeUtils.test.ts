@@ -211,11 +211,11 @@ describe("timeUtils", () => {
       expect(convertHopTimeForDisplay(1441, "dry-hop")).toBe(1); // Rounds to 1
     });
 
-    it("should only convert exact 'dry-hop' string", () => {
-      // Note: This function only checks for exact "dry-hop", not normalized versions
-      expect(convertHopTimeForDisplay(1440, "DRY-HOP")).toBe(1440); // Not converted
-      expect(convertHopTimeForDisplay(1440, "Dry-Hop")).toBe(1440); // Not converted
-      expect(convertHopTimeForDisplay(1440, "dry hop")).toBe(1440); // Not converted
+    it("should convert normalized dry-hop variants", () => {
+      // Note: This function now uses isDryHop helper which normalizes variants
+      expect(convertHopTimeForDisplay(1440, "DRY-HOP")).toBe(1); // Converted
+      expect(convertHopTimeForDisplay(1440, "Dry-Hop")).toBe(1); // Converted
+      expect(convertHopTimeForDisplay(1440, "dry hop")).toBe(1); // Converted
       expect(convertHopTimeForDisplay(1440, "dry-hop")).toBe(1); // Converted
     });
   });

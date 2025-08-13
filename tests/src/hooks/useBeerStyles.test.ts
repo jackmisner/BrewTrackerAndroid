@@ -28,7 +28,7 @@ const mockedApiService = jest.mocked(ApiService);
 const createMockAxiosResponse = <T>(data: T) => ({
   data,
   status: 200,
-  statusText: 'OK',
+  statusText: "OK",
   headers: {},
   config: {} as any,
 });
@@ -81,7 +81,9 @@ describe("useBeerStyles", () => {
       },
     };
 
-    mockedApiService.beerStyles.getAll.mockResolvedValue(createMockAxiosResponse(mockApiResponse.data));
+    mockedApiService.beerStyles.getAll.mockResolvedValue(
+      createMockAxiosResponse(mockApiResponse.data)
+    );
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useBeerStyles(), { wrapper });
@@ -109,7 +111,9 @@ describe("useBeerStyles", () => {
       data: {},
     };
 
-    mockedApiService.beerStyles.getAll.mockResolvedValue(createMockAxiosResponse(mockApiResponse.data));
+    mockedApiService.beerStyles.getAll.mockResolvedValue(
+      createMockAxiosResponse(mockApiResponse.data)
+    );
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useBeerStyles(), { wrapper });
@@ -129,7 +133,9 @@ describe("useBeerStyles", () => {
       },
     };
 
-    mockedApiService.beerStyles.getAll.mockResolvedValue(createMockAxiosResponse(mockApiResponse.data));
+    mockedApiService.beerStyles.getAll.mockResolvedValue(
+      createMockAxiosResponse(mockApiResponse.data)
+    );
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useBeerStyles(), { wrapper });
@@ -158,7 +164,9 @@ describe("useBeerStyles", () => {
       },
     };
 
-    mockedApiService.beerStyles.getAll.mockResolvedValue(createMockAxiosResponse(mockApiResponse.data));
+    mockedApiService.beerStyles.getAll.mockResolvedValue(
+      createMockAxiosResponse(mockApiResponse.data)
+    );
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useBeerStyles(), { wrapper });
@@ -193,7 +201,9 @@ describe("useBeerStyles", () => {
       },
     };
 
-    mockedApiService.beerStyles.getAll.mockResolvedValue(createMockAxiosResponse(mockApiResponse.data));
+    mockedApiService.beerStyles.getAll.mockResolvedValue(
+      createMockAxiosResponse(mockApiResponse.data)
+    );
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useBeerStyles(), { wrapper });
@@ -263,7 +273,9 @@ describe("useBeerStyles", () => {
       },
     };
 
-    mockedApiService.beerStyles.getAll.mockResolvedValue(createMockAxiosResponse(mockApiResponse.data));
+    mockedApiService.beerStyles.getAll.mockResolvedValue(
+      createMockAxiosResponse(mockApiResponse.data)
+    );
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useBeerStyles(), { wrapper });
@@ -293,7 +305,9 @@ describe("useBeerStyles", () => {
       },
     };
 
-    mockedApiService.beerStyles.getAll.mockResolvedValue(createMockAxiosResponse(mockApiResponse.data));
+    mockedApiService.beerStyles.getAll.mockResolvedValue(
+      createMockAxiosResponse(mockApiResponse.data)
+    );
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useBeerStyles(), { wrapper });
@@ -325,7 +339,9 @@ describe("useBeerStyles", () => {
       },
     };
 
-    mockedApiService.beerStyles.getAll.mockResolvedValue(createMockAxiosResponse(mockApiResponse.data));
+    mockedApiService.beerStyles.getAll.mockResolvedValue(
+      createMockAxiosResponse(mockApiResponse.data)
+    );
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useBeerStyles(), { wrapper });
@@ -368,7 +384,9 @@ describe("useBeerStyles", () => {
       },
     };
 
-    mockedApiService.beerStyles.getAll.mockResolvedValue(createMockAxiosResponse(mockApiResponse.data));
+    mockedApiService.beerStyles.getAll.mockResolvedValue(
+      createMockAxiosResponse(mockApiResponse.data)
+    );
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useBeerStyles(), { wrapper });
@@ -397,7 +415,7 @@ describe("useBeerStyles", () => {
 
   it("should be loading initially", () => {
     jest.useFakeTimers();
-    
+
     // Mock API call with controlled pending promise
     mockedApiService.beerStyles.getAll.mockImplementation(
       () => new Promise(resolve => setTimeout(resolve, 1000))
@@ -409,7 +427,7 @@ describe("useBeerStyles", () => {
     expect(result.current.isLoading).toBe(true);
     expect(result.current.data).toBeUndefined();
     expect(result.current.error).toBeNull();
-    
+
     jest.useRealTimers();
   });
 });

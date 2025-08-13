@@ -25,7 +25,7 @@ const mockedApiService = jest.mocked(ApiService);
 const createMockAxiosResponse = <T>(data: T) => ({
   data,
   status: 200,
-  statusText: 'OK',
+  statusText: "OK",
   headers: {},
   config: {} as any,
 });
@@ -154,9 +154,9 @@ describe("useRecipeMetrics - Essential Tests", () => {
       } as any,
     };
 
-    mockedApiService.recipes.calculateMetricsPreview.mockResolvedValue(createMockAxiosResponse(
-      mockMetricsResponse.data
-    ));
+    mockedApiService.recipes.calculateMetricsPreview.mockResolvedValue(
+      createMockAxiosResponse(mockMetricsResponse.data)
+    );
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useRecipeMetrics(mockRecipeData), {
@@ -182,9 +182,9 @@ describe("useRecipeMetrics - Essential Tests", () => {
       data: {} as RecipeMetrics,
     };
 
-    mockedApiService.recipes.calculateMetricsPreview.mockResolvedValue(createMockAxiosResponse(
-      mockMetricsResponse.data
-    ));
+    mockedApiService.recipes.calculateMetricsPreview.mockResolvedValue(
+      createMockAxiosResponse(mockMetricsResponse.data)
+    );
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useRecipeMetrics(mockRecipeData), {
@@ -285,9 +285,9 @@ describe("useRecipeMetrics - Essential Tests", () => {
       } as RecipeMetrics,
     };
 
-    mockedApiService.recipes.calculateMetricsPreview.mockResolvedValue(createMockAxiosResponse(
-      mockMetricsResponse.data
-    ));
+    mockedApiService.recipes.calculateMetricsPreview.mockResolvedValue(
+      createMockAxiosResponse(mockMetricsResponse.data)
+    );
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useRecipeMetrics(complexRecipeData), {
@@ -350,9 +350,9 @@ describe("useRecipeMetrics - Essential Tests", () => {
       } as RecipeMetrics,
     };
 
-    mockedApiService.recipes.calculateMetricsPreview.mockResolvedValue(createMockAxiosResponse(
-      mockMetricsResponse.data
-    ));
+    mockedApiService.recipes.calculateMetricsPreview.mockResolvedValue(
+      createMockAxiosResponse(mockMetricsResponse.data)
+    );
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useRecipeMetrics(mockRecipeData), {

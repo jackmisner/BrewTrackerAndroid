@@ -1,5 +1,4 @@
 /// <reference types="jest" />
-/// <reference types="@types/jest" />
 /// <reference types="@testing-library/jest-native" />
 /// <reference types="node" />
 
@@ -13,8 +12,8 @@ declare global {
   // Extend jest mocks for better typing
   namespace NodeJS {
     interface Global {
-      mockStorage: any;
-      testUtils: any;
+      mockStorage: typeof mockStorage;
+      testUtils: typeof testUtils;
     }
   }
 
@@ -39,28 +38,37 @@ declare global {
     mockApiError: (error: string) => Promise<never>;
     createMockNavigation: (overrides?: any) => any;
     createMockRoute: (overrides?: any) => any;
-    mockNavigation: {
-      navigate: jest.MockedFunction<any>;
-      goBack: jest.MockedFunction<any>;
-      reset: jest.MockedFunction<any>;
-      setOptions: jest.MockedFunction<any>;
+    createAuthenticatedState: (userOverrides?: any) => {
+      isAuthenticated: true;
+      user: any;
+      token: string;
     };
-    mockRoute: {
-      params: any;
-      key: string;
-      name: string;
+    createUnauthenticatedState: () => {
+      isAuthenticated: false;
+      user: null;
+      token: null;
     };
-    createAuthenticatedState: (userOverrides?: any) => { isAuthenticated: true; user: any; token: string };
-    createUnauthenticatedState: () => { isAuthenticated: false; user: null; token: null };
     resetCounters: () => void;
     flushPromises: () => Promise<void>;
-    createNetworkError: (message?: string) => { isAxiosError: true; message: string; code: "NETWORK_ERROR"; response?: undefined };
-    createAPIError: (status?: number, message?: string, errors?: any[]) => {
+    createNetworkError: (message?: string) => {
+      isAxiosError: true;
+      message: string;
+      code: "NETWORK_ERROR";
+      response?: undefined;
+    };
+    createAPIError: (
+      status?: number,
+      message?: string,
+      errors?: any[]
+    ) => {
       isAxiosError: true;
       message: string;
       response: { status: number; data: { error: string; errors: any[] } };
     };
-    createValidationError: (field: string, message: string) => { field: string; message: string };
+    createValidationError: (
+      field: string,
+      message: string
+    ) => { field: string; message: string };
   };
 }
 

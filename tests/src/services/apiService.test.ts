@@ -305,7 +305,7 @@ describe("ApiService - Essential Functionality", () => {
       }
 
       // Only allow HTTP and HTTPS protocols for API URLs
-      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
         throw new Error(
           `Invalid API_URL protocol: ${parsedUrl.protocol}. Only HTTP and HTTPS are allowed.`
         );
@@ -329,7 +329,7 @@ describe("ApiService - Essential Functionality", () => {
         "Invalid API_URL format: not-a-url"
       );
       expect(() => validateApiUrl("ftp://invalid.com")).toThrow();
-      
+
       // Ensure HTTP/HTTPS URLs are accepted
       expect(() => validateApiUrl("http://api.example.com")).not.toThrow();
       expect(() => validateApiUrl("https://api.example.com")).not.toThrow();
