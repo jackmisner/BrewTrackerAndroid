@@ -74,6 +74,10 @@ export const profileStyles = (theme: ThemeContextValue) =>
     logoutText: {
       color: theme.colors.error,
     },
+    donateIcon: {
+      width: 24,
+      height: 24,
+    },
     footer: {
       alignItems: "center",
       padding: 24,

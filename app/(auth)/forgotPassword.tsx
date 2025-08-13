@@ -156,12 +156,16 @@ const ForgotPasswordScreen: React.FC = () => {
                   loginStyles.primaryButtonDisabled,
               ]}
               onPress={handleForgotPassword}
-              disabled={isLoading || !email.trim() || !validateEmail(email.trim())}
+              disabled={
+                isLoading || !email.trim() || !validateEmail(email.trim())
+              }
             >
               <Text
                 style={[
                   loginStyles.resetPrimaryButtonText,
-                  (isLoading || !email.trim() || !validateEmail(email.trim())) &&
+                  (isLoading ||
+                    !email.trim() ||
+                    !validateEmail(email.trim())) &&
                     loginStyles.primaryButtonTextDisabled,
                 ]}
               >

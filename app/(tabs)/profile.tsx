@@ -6,6 +6,8 @@ import {
   ScrollView,
   Alert,
   RefreshControl,
+  Image,
+  Linking,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -21,10 +23,8 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
 
-  // Handle pull to refresh
   const onRefresh = async () => {
     setRefreshing(true);
-    // Profile data is static, so just simulate refresh
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
@@ -46,6 +46,11 @@ export default function ProfileScreen() {
 
   const handleSettingsPress = () => {
     router.push("/(modals)/(settings)/settings");
+  };
+
+  // Ko-fi donate button click handler
+  const handleDonate = () => {
+    Linking.openURL("https://ko-fi.com/jackmisner");
   };
 
   return (
@@ -112,6 +117,21 @@ export default function ProfileScreen() {
           <MaterialIcons
             name="chevron-right"
             size={24}
+            color={theme.colors.textMuted}
+          />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <TouchableOpacity style={styles.menuItem} onPress={handleDonate}>
+          <Image
+            source={require("../../assets/images/mugOfBeer512.png")}
+            style={styles.donateIcon}
+          />
+          <Text style={styles.menuText}>Buy me a Beer!</Text>
+          <MaterialIcons
+            name="open-in-new"
+            size={20}
             color={theme.colors.textMuted}
           />
         </TouchableOpacity>
