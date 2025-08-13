@@ -130,7 +130,7 @@ export function convertHopTimeForDisplay(
   storedTime: number,
   hopUse: string
 ): number {
-  if (hopUse === "dry-hop") {
+  if (isDryHop(hopUse)) {
     return convertMinutesToDays(storedTime);
   }
   return storedTime;

@@ -49,46 +49,54 @@ export function renderWithProviders(
 
 // Mock data factories for Android app
 export const mockData = {
-  // Counter for deterministic ingredient IDs
+  // Counters for deterministic test IDs
   _ingredientCounter: 0,
-  recipe: (overrides: Record<string, any> = {}) => ({
-    id: "test-id",
-    recipe_id: "test-recipe-id",
-    name: "Test Recipe",
-    style: "IPA",
-    batch_size: 5,
-    batch_size_unit: "gal" as const,
-    boil_time: 60,
-    efficiency: 75,
-    is_public: false,
-    version: 1,
-    estimated_og: 1.065,
-    estimated_fg: 1.012,
-    estimated_abv: 6.9,
-    estimated_ibu: 65,
-    estimated_srm: 6.5,
-    ingredients: [],
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
-    description: "A test recipe for unit testing",
-    notes: "Test notes",
-    author: "testuser",
-    ...overrides,
-  }),
+  _recipeCounter: 0,
+  _sessionCounter: 0,
+  recipe: (overrides: Record<string, any> = {}) => {
+    mockData._recipeCounter++;
+    return {
+      id: `test-id-${mockData._recipeCounter}`,
+      recipe_id: `test-recipe-id-${mockData._recipeCounter}`,
+      name: `Test Recipe ${mockData._recipeCounter}`,
+      style: "IPA",
+      batch_size: 5,
+      batch_size_unit: "gal" as const,
+      boil_time: 60,
+      efficiency: 75,
+      is_public: false,
+      version: 1,
+      estimated_og: 1.065,
+      estimated_fg: 1.012,
+      estimated_abv: 6.9,
+      estimated_ibu: 65,
+      estimated_srm: 6.5,
+      ingredients: [],
+      created_at: "2024-01-01T00:00:00Z",
+      updated_at: "2024-01-01T00:00:00Z",
+      description: "A test recipe for unit testing",
+      notes: "Test notes",
+      author: "testuser",
+      ...overrides,
+    };
+  },
 
-  brewSession: (overrides: Record<string, any> = {}) => ({
-    session_id: "test-session-id",
-    name: "Test Brew Session",
-    recipe_id: "test-recipe-id",
-    status: "fermenting",
-    brew_date: "2024-01-15T00:00:00Z",
-    actual_og: 1.064,
-    actual_fg: null,
-    actual_abv: null,
-    notes: "Test brew session notes",
-    fermentation_data: [],
-    ...overrides,
-  }),
+  brewSession: (overrides: Record<string, any> = {}) => {
+    mockData._sessionCounter++;
+    return {
+      session_id: `test-session-id-${mockData._sessionCounter}`,
+      name: `Test Brew Session ${mockData._sessionCounter}`,
+      recipe_id: `test-recipe-id-${mockData._sessionCounter}`,
+      status: "fermenting",
+      brew_date: "2024-01-15T00:00:00Z",
+      actual_og: 1.064,
+      actual_fg: null,
+      actual_abv: null,
+      notes: "Test brew session notes",
+      fermentation_data: [],
+      ...overrides,
+    };
+  },
 
   ingredient: (type: string = "grain", overrides: Record<string, any> = {}) => {
     // Use deterministic counter for consistent test IDs
@@ -236,7 +244,35 @@ export const testUtils = {
   // Helper to reset mock data counters for deterministic tests
   resetCounters: () => {
     mockData._ingredientCounter = 0;
+    mockData._recipeCounter = 0;
+    mockData._sessionCounter = 0;
   },
+
+  // Async testing utilities
+  flushPromises: () => new Promise(resolve => setTimeout(resolve, 0)),
+
+  // Mock error scenarios
+  createNetworkError: (message = "Network Error") => ({
+    isAxiosError: true,
+    message,
+    code: "NETWORK_ERROR",
+    response: undefined,
+  }),
+
+  createAPIError: (status = 400, message = "API Error", errors = []) => ({
+    isAxiosError: true,
+    message,
+    response: {
+      status,
+      data: { error: message, errors },
+    },
+  }),
+
+  // Mock form validation
+  createValidationError: (field: string, message: string) => ({
+    field,
+    message,
+  }),
 };
 
 // Re-export testing library utilities
