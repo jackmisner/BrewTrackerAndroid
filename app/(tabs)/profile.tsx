@@ -12,6 +12,7 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import Constants from "expo-constants";
+import * as WebBrowser from "expo-web-browser";
 import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
 import { profileStyles } from "@styles/tabs/profileStyles";
@@ -49,8 +50,17 @@ export default function ProfileScreen() {
   };
 
   // Ko-fi donate button click handler
-  const handleDonate = () => {
-    Linking.openURL("https://ko-fi.com/jackmisner");
+  const handleDonate = async () => {
+    try {
+      await WebBrowser.openBrowserAsync("https://ko-fi.com/jackmisner");
+    } catch (error) {
+      console.error("Failed to open in-app browser:", error);
+      try {
+        await Linking.openURL("https://ko-fi.com/jackmisner");
+      } catch (linkingError) {
+        console.error("Failed to open external browser:", linkingError);
+      }
+    }
   };
 
   return (
