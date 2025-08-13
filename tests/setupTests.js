@@ -1,4 +1,5 @@
 // Basic test setup file
+/* eslint-disable no-undef */
 import "react-native-gesture-handler/jestSetup";
 
 // Set up environment variables for tests
@@ -191,6 +192,51 @@ Object.defineProperty(global, "crypto", {
   },
 });
 
+// Mock UUID module
+jest.mock("uuid", () => ({
+  v4: jest.fn(() => "mock-uuid-v4"),
+}));
+
+// Mock Expo modules that might not be available in test environment
+jest.mock("expo-image", () => ({
+  Image: "Image",
+}));
+
+jest.mock("expo-linear-gradient", () => ({
+  LinearGradient: "LinearGradient",
+}));
+
+jest.mock("expo-haptics", () => ({
+  impactAsync: jest.fn(),
+  notificationAsync: jest.fn(),
+  selectionAsync: jest.fn(),
+}));
+
+// Mock React Native SVG
+jest.mock("react-native-svg", () => {
+  const React = require("react");
+  return {
+    Svg: ({ children, ...props }) =>
+      React.createElement("Svg", props, children),
+    Circle: props => React.createElement("Circle", props),
+    Path: props => React.createElement("Path", props),
+    G: ({ children, ...props }) => React.createElement("G", props, children),
+    Text: ({ children, ...props }) =>
+      React.createElement("Text", props, children),
+    Defs: ({ children, ...props }) =>
+      React.createElement("Defs", props, children),
+    LinearGradient: ({ children, ...props }) =>
+      React.createElement("LinearGradient", props, children),
+    Stop: props => React.createElement("Stop", props),
+  };
+});
+
+// Mock React Native Gifted Charts
+jest.mock("react-native-gifted-charts", () => ({
+  LineChart: "LineChart",
+  BarChart: "BarChart",
+}));
+
 // Handle unhandled promise rejections from test mocks
 const originalUnhandledRejection = process.listeners("unhandledRejection");
 let testRejectionHandler;
@@ -285,6 +331,10 @@ const SUPPRESSED_ERROR_PATTERNS = [
   /Warning: Using UNSAFE_componentWillMount/,
   /Warning: Using UNSAFE_componentWillReceiveProps/,
   /Error (getting|setting|removing) token: Error: SecureStore error/,
+  /Error: Network Error/, // Suppress expected network errors in tests
+  /Error: Authentication required/, // Suppress expected auth errors in tests
+  /Console error suppressed for test/, // Suppress our own test error markers
+  /An update to TestComponent inside a test was not wrapped in act/, // React Query + fake timers act() warnings
 ];
 
 const SUPPRESSED_WARN_PATTERNS = [
@@ -294,6 +344,8 @@ const SUPPRESSED_WARN_PATTERNS = [
   /UNSAFE_componentWillMount is deprecated/,
   /UNSAFE_componentWillReceiveProps is deprecated/,
   /UNSAFE_componentWillUpdate is deprecated/,
+  /Animated: `useNativeDriver` was not specified/,
+  /VirtualizedLists should never be nested/,
 ];
 
 console.error = (...args) => {

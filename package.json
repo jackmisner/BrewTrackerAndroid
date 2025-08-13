@@ -23,7 +23,7 @@
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
-    "@react-native-community/datetimepicker": "^8.4.4",
+    "@react-native-community/datetimepicker": "^8.4.1",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
@@ -68,6 +68,7 @@
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^13.2.2",
     "@types/jest": "^30.0.0",
+    "@types/node": "^24.2.1",
     "@types/react": "~19.0.10",
     "@types/uuid": "^10.0.0",
     "@types/zxcvbn": "^4.4.5",
@@ -96,7 +97,7 @@
       "app"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!(react-native|@react-native|react-native-.*|@expo|expo|@tanstack|axios)/)"
+      "node_modules/(?!(react-native|@react-native|react-native-.*|@expo|expo|@tanstack|axios|uuid)/)"
     ],
     "moduleNameMapper": {
       "^@src/(.*)$": "<rootDir>/src/$1",
@@ -106,20 +107,32 @@
       "^@types/(.*)$": "<rootDir>/src/types/$1",
       "^@components/(.*)$": "<rootDir>/src/components/$1",
       "^@constants/(.*)$": "<rootDir>/src/constants/$1",
-      "^@utils/(.*)$": "<rootDir>/src/utils/$1"
+      "^@utils/(.*)$": "<rootDir>/src/utils/$1",
+      "^@hooks/(.*)$": "<rootDir>/src/hooks/$1"
     },
     "collectCoverageFrom": [
       "src/**/*.{ts,tsx}",
       "app/**/*.{ts,tsx}",
       "!**/*.d.ts",
       "!**/node_modules/**",
-      "!src/types/**/*"
+      "!src/types/**/*",
+      "!src/styles/**/*",
+      "!**/*.styles.{ts,tsx}"
     ],
     "coverageReporters": [
       "text",
       "lcov",
       "html"
-    ]
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 60,
+        "functions": 65,
+        "lines": 70,
+        "statements": 70
+      }
+    },
+    "testEnvironment": "jsdom"
   },
   "private": true
 }
