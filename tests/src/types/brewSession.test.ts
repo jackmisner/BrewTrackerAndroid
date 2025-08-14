@@ -8,7 +8,6 @@ import {
   CreateBrewSessionRequest,
   UpdateBrewSessionRequest,
   CreateFermentationEntryRequest,
-  UpdateFermentationEntryRequest,
   FermentationStats,
   BrewSessionSummary,
 } from "../../../src/types/brewSession";
