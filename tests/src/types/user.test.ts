@@ -83,8 +83,7 @@ Lines: 81-84
 
       expect(Date.parse(user.created_at)).not.toBeNaN();
       expect(Date.parse(user.updated_at)).not.toBeNaN();
--     expect(Date.parse(user.last_login!).not.toBeNaN();
-+     expect(Date.parse(user.last_login!)).not.toBeNaN();
+      expect(Date.parse(user.last_login!)).not.toBeNaN();
     });
 
     it("should handle user authentication states", () => {
