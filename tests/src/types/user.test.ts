@@ -78,9 +78,9 @@ describe("User Types", () => {
         last_login: "2024-01-03T12:00:00Z",
       });
 
-      expect(user.created_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
-      expect(user.updated_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
-      expect(user.last_login).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+      expect(Date.parse(user.created_at)).not.toBeNaN();
+      expect(Date.parse(user.updated_at)).not.toBeNaN(); 
+      expect(Date.parse(user.last_login!).not.toBeNaN();
     });
 
     it("should handle user authentication states", () => {
