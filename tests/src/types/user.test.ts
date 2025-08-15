@@ -78,9 +78,6 @@ describe("User Types", () => {
         last_login: "2024-01-03T12:00:00Z",
       });
 
-File: tests/src/types/user.test.ts
-Lines: 81-84
-
       expect(Date.parse(user.created_at)).not.toBeNaN();
       expect(Date.parse(user.updated_at)).not.toBeNaN();
       expect(Date.parse(user.last_login!)).not.toBeNaN();
