@@ -48,12 +48,12 @@ export const FermentationData: React.FC<FermentationDataProps> = ({
   };
 
   const formatGravity = (gravity: number | undefined) => {
-    if (!gravity) return '—';
+    if (gravity == null) return '—';
     return gravity.toFixed(3);
   };
 
   const formatTemperature = (temp: number | undefined) => {
-    if (!temp) return '—';
+    if (temp == null) return '—';
     return `${temp}°${temperatureUnit || 'F'}`;
   };
 
@@ -97,7 +97,7 @@ export const FermentationData: React.FC<FermentationDataProps> = ({
       </View>
       <View style={styles.entryCell}>
         <Text style={[styles.entryText, { color: theme.colors.text }]} numberOfLines={1}>
-          {item.ph ? item.ph.toFixed(2) : '—'}
+          {item.ph != null ? item.ph.toFixed(2) : '—'}
         </Text>
       </View>
     </Pressable>
