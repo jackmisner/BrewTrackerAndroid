@@ -1,5 +1,3 @@
-import { createRecipeStyles } from "../../../../src/styles/modals/createRecipeStyles";
-import { ThemeContextValue } from "../../../../src/contexts/ThemeContext";
 // Mock React Native StyleSheet
 jest.mock("react-native", () => ({
   StyleSheet: {
@@ -7,10 +5,13 @@ jest.mock("react-native", () => ({
   },
 }));
 
+import { createRecipeStyles } from "../../../../src/styles/modals/createRecipeStyles";
+import { ThemeContextValue } from "../../../../src/contexts/ThemeContext";
+
 
 describe("Create Recipe Styles", () => {
   const mockTheme: ThemeContextValue = {
-    theme: "light" as any,
+    theme: "light" as const,
     isDark: false,
     setTheme: jest.fn().mockResolvedValue(undefined),
     toggleTheme: jest.fn().mockResolvedValue(undefined),
@@ -54,7 +55,7 @@ describe("Create Recipe Styles", () => {
     it("should adapt to different theme configurations", () => {
       const darkTheme: ThemeContextValue = {
         ...mockTheme,
-        theme: "dark" as any,
+        theme: "dark" as const,
         isDark: true,
         colors: {
           ...mockTheme.colors,
