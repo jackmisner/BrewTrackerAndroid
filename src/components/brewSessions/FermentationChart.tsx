@@ -405,7 +405,10 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
             Duration
           </Text>
           <Text style={[styles.statValue, { color: theme.colors.primary }]}>
-            {Math.max(...processedData.map(d => d.x))} days
+            {(() => {
+              const days = Math.max(...processedData.map(d => d.x));
+              return `${days} ${days === 1 ? 'day' : 'days'}`;
+            })()}
           </Text>
         </View>
       </View>
