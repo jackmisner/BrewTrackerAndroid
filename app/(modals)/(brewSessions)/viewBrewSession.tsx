@@ -9,24 +9,29 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import ApiService from "@services/api/apiService";
 import { BrewSession, BrewSessionStatus } from "@/src/types";
 import { viewBrewSessionStyles } from "@styles/modals/viewBrewSessionStyles";
 import { useTheme } from "@contexts/ThemeContext";
+import { useUnits } from "@contexts/UnitContext";
 import { FermentationChart } from "@src/components/brewSessions/FermentationChart";
+import { FermentationData } from "@src/components/brewSessions/FermentationData";
 
 export default function ViewBrewSession() {
   const { brewSessionId } = useLocalSearchParams<{ brewSessionId: string }>();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [chartRefreshCounter, setChartRefreshCounter] = useState(0);
   const theme = useTheme();
+  const units = useUnits();
   const styles = viewBrewSessionStyles(theme);
   const {
     data: brewSessionData,
     isLoading,
     error,
     refetch,
+    dataUpdatedAt, // Track when data was last updated
   } = useQuery<BrewSession>({
     queryKey: ["brewSession", brewSessionId],
     queryFn: async () => {
@@ -40,6 +45,20 @@ export default function ViewBrewSession() {
     retry: 1,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
+
+  // Force chart refresh when brew session data is updated
+  React.useEffect(() => {
+    if (dataUpdatedAt) {
+      setChartRefreshCounter(prev => prev + 1);
+    }
+  }, [dataUpdatedAt]);
+
+  // Force chart refresh when screen comes into focus (handles navigation back from modals)
+  useFocusEffect(
+    React.useCallback(() => {
+      setChartRefreshCounter(prev => prev + 1);
+    }, [])
+  );
   /**
    * Pull-to-refresh handler
    * Manually triggers a refetch of the brew session data
@@ -301,7 +320,7 @@ export default function ViewBrewSession() {
           {renderMetric("ABV", brewSession.actual_abv, "%")}
           {renderMetric("Efficiency", brewSession.actual_efficiency, "%")}
           {brewSession.mash_temp &&
-            renderMetric("Mash Temp", brewSession.mash_temp, "°F")}
+            renderMetric("Mash Temp", brewSession.mash_temp, `°${brewSession.temperature_unit || 'F'}`)}
         </View>
 
         {/* Brew Notes */}
@@ -351,7 +370,20 @@ export default function ViewBrewSession() {
           expectedFG={brewSession.target_fg}
           actualOG={brewSession.actual_og}
           temperatureUnit={brewSession.temperature_unit}
+          forceRefresh={chartRefreshCounter}
         />
+
+        {/* Fermentation Entries */}
+        <View style={styles.detailsContainer}>
+          <Text style={styles.detailsTitle}>Fermentation Entries</Text>
+          <FermentationData
+            fermentationData={brewSession.fermentation_data || []}
+            expectedFG={brewSession.target_fg}
+            actualOG={brewSession.actual_og}
+            temperatureUnit={brewSession.temperature_unit}
+            brewSessionId={brewSessionId}
+          />
+        </View>
       </ScrollView>
     </View>
   );

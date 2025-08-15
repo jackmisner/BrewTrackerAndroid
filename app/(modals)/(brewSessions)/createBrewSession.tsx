@@ -16,6 +16,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import ApiService from "@services/api/apiService";
 import { CreateBrewSessionRequest } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
+import { useUnits } from "@contexts/UnitContext";
 import { createBrewSessionStyles } from "@styles/modals/createBrewSessionStyles";
 import {
   formatGravity,
@@ -40,10 +41,13 @@ function toLocalISODateString(d: Date) {
  */
 export default function CreateBrewSessionScreen() {
   const theme = useTheme();
+  const units = useUnits();
   const styles = createBrewSessionStyles(theme);
   const params = useLocalSearchParams();
   const queryClient = useQueryClient();
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedTemperatureUnit, setSelectedTemperatureUnit] = useState<"F" | "C" | null>(null);
+  const [showUnitPrompt, setShowUnitPrompt] = useState(false);
 
   const recipeIdParam = params.recipeId as string | string[] | undefined;
   const recipeId = Array.isArray(recipeIdParam)
@@ -85,6 +89,23 @@ export default function CreateBrewSessionScreen() {
       }));
     }
   }, [recipe, formData.name]);
+
+  // Check for unit system conflicts when recipe loads
+  useEffect(() => {
+    if (recipe && selectedTemperatureUnit === null) {
+      const userPreferredTempUnit = units.unitSystem === 'metric' ? 'C' : 'F';
+      const recipeUnitSystem = recipe.unit_system;
+      const recipeTempUnit = recipeUnitSystem === 'metric' ? 'C' : 'F';
+      
+      // If recipe unit system differs from user preference, prompt for unit selection
+      if (userPreferredTempUnit !== recipeTempUnit) {
+        setShowUnitPrompt(true);
+      } else {
+        // Units match, use the preferred unit
+        setSelectedTemperatureUnit(userPreferredTempUnit);
+      }
+    }
+  }, [recipe, units.unitSystem, selectedTemperatureUnit]);
 
   // Create brew session mutation
   const createBrewSessionMutation = useMutation({
@@ -144,6 +165,7 @@ export default function CreateBrewSessionScreen() {
       brew_date: formData.brew_date,
       status: formData.status,
       notes: formData.notes.trim(),
+      temperature_unit: selectedTemperatureUnit || (units.unitSystem === 'metric' ? 'C' : 'F'),
     };
 
     createBrewSessionMutation.mutate(brewSessionData);
@@ -212,6 +234,61 @@ export default function CreateBrewSessionScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Unit Selection Prompt */}
+        {showUnitPrompt && (
+          <View style={styles.promptContainer}>
+            <View style={styles.promptHeader}>
+              <MaterialIcons
+                name="thermostat"
+                size={24}
+                color={theme.colors.warning}
+              />
+              <Text style={styles.promptTitle}>Temperature Unit Preference</Text>
+            </View>
+            <Text style={styles.promptText}>
+              This recipe uses {recipe?.unit_system === 'metric' ? 'Celsius' : 'Fahrenheit'} temperatures, 
+              but your preference is {units.unitSystem === 'metric' ? 'Celsius' : 'Fahrenheit'}. 
+              Which would you like to use for this brew session?
+            </Text>
+            <View style={styles.unitButtonContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.unitButton,
+                  selectedTemperatureUnit === (units.unitSystem === 'metric' ? 'C' : 'F') && styles.unitButtonSelected
+                ]}
+                onPress={() => {
+                  setSelectedTemperatureUnit(units.unitSystem === 'metric' ? 'C' : 'F');
+                  setShowUnitPrompt(false);
+                }}
+              >
+                <Text style={[
+                  styles.unitButtonText,
+                  selectedTemperatureUnit === (units.unitSystem === 'metric' ? 'C' : 'F') && styles.unitButtonTextSelected
+                ]}>
+                  Your Preference (°{units.unitSystem === 'metric' ? 'C' : 'F'})
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.unitButton,
+                  selectedTemperatureUnit === (recipe?.unit_system === 'metric' ? 'C' : 'F') && styles.unitButtonSelected
+                ]}
+                onPress={() => {
+                  setSelectedTemperatureUnit(recipe?.unit_system === 'metric' ? 'C' : 'F');
+                  setShowUnitPrompt(false);
+                }}
+              >
+                <Text style={[
+                  styles.unitButtonText,
+                  selectedTemperatureUnit === (recipe?.unit_system === 'metric' ? 'C' : 'F') && styles.unitButtonTextSelected
+                ]}>
+                  Recipe Default (°{recipe?.unit_system === 'metric' ? 'C' : 'F'})
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Recipe Preview */}
         <View style={styles.recipePreview}>
           <View style={styles.recipeHeader}>

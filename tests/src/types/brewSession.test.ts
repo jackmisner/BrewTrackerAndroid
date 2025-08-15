@@ -457,35 +457,28 @@ describe("Brew Session Types", () => {
   describe("CreateFermentationEntryRequest", () => {
     it("should have required fermentation entry fields", () => {
       const request: CreateFermentationEntryRequest = {
-        date: "2024-01-05",
-        stage: "primary",
+        entry_date: "2024-01-05T12:00:00Z",
         temperature: 68,
-        temperature_unit: "F",
+        gravity: 1.050,
         notes: "Active fermentation",
       };
 
-      expect(request.date).toBe("2024-01-05");
-      expect(request.stage).toBe("primary");
+      expect(request.entry_date).toBe("2024-01-05T12:00:00Z");
       expect(request.temperature).toBe(68);
-      expect(request.temperature_unit).toBe("F");
+      expect(request.gravity).toBe(1.050);
       expect(request.notes).toBe("Active fermentation");
     });
 
-    it("should support gravity measurements", () => {
+    it("should support optional fields", () => {
       const request: CreateFermentationEntryRequest = {
-        date: "2024-01-07",
-        stage: "primary",
+        entry_date: "2024-01-07T12:00:00Z",
         temperature: 67,
-        temperature_unit: "F",
-        specific_gravity: 1.020,
-        gravity_temperature: 68,
-        gravity_temperature_unit: "F",
+        gravity: 1.020,
         ph: 4.3,
         notes: "Gravity dropping nicely",
       };
 
-      expect(request.specific_gravity).toBe(1.020);
-      expect(request.gravity_temperature).toBe(68);
+      expect(request.gravity).toBe(1.020);
       expect(request.ph).toBe(4.3);
     });
   });
@@ -648,18 +641,16 @@ describe("Brew Session Types", () => {
       };
 
       const fermentationEntry: CreateFermentationEntryRequest = {
-        date: "2024-01-05",
-        stage: "primary",
+        entry_date: "2024-01-05T12:00:00Z",
         temperature: 68,
-        temperature_unit: "F",
-        specific_gravity: 1.025,
+        gravity: 1.025,
         notes: "Halfway through fermentation",
       };
 
       expect(createRequest.status).toBe("planned");
       expect(updateToActive.status).toBe("active");
       expect(updateToFermenting.status).toBe("fermenting");
-      expect(fermentationEntry.stage).toBe("primary");
+      expect(fermentationEntry.gravity).toBe(1.025);
     });
   });
 });

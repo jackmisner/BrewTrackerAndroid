@@ -67,6 +67,62 @@ export const createBrewSessionStyles = (theme: ThemeContextValue) =>
       paddingTop: 20,
     },
 
+    // Unit Selection Prompt
+    promptContainer: {
+      backgroundColor: theme.colors.warning + "20", // 20% opacity
+      borderWidth: 1,
+      borderColor: theme.colors.warning,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 24,
+    },
+    promptHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    promptTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.colors.text,
+      marginLeft: 8,
+    },
+    promptText: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      lineHeight: 20,
+      marginBottom: 16,
+    },
+    unitButtonContainer: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    unitButton: {
+      flex: 1,
+      backgroundColor: theme.colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      minHeight: 48,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    unitButtonSelected: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    unitButtonText: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: theme.colors.text,
+      textAlign: "center",
+    },
+    unitButtonTextSelected: {
+      color: theme.colors.primaryText || "#fff",
+    },
+
     // Recipe Preview Section
     recipePreview: {
       backgroundColor: theme.colors.backgroundSecondary,

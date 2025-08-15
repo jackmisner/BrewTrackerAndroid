@@ -1,0 +1,368 @@
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { MaterialIcons } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import ApiService from "@services/api/apiService";
+import { BrewSession, UpdateFermentationEntryRequest } from "@src/types";
+import { useTheme } from "@contexts/ThemeContext";
+import { editBrewSessionStyles } from "@styles/modals/editBrewSessionStyles";
+
+export default function EditFermentationEntryScreen() {
+  const theme = useTheme();
+  const styles = editBrewSessionStyles(theme);
+  const params = useLocalSearchParams();
+  const queryClient = useQueryClient();
+
+  const brewSessionId = params.brewSessionId as string;
+  const entryIndex = parseInt(params.entryIndex as string, 10);
+
+  const [formData, setFormData] = useState({
+    gravity: "",
+    temperature: "",
+    ph: "",
+    notes: "",
+  });
+
+  const [entryDate, setEntryDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Fetch brew session data to get the entry to edit
+  const {
+    data: brewSessionData,
+    isLoading: isLoadingSession,
+    error: sessionError,
+  } = useQuery<BrewSession>({
+    queryKey: ["brewSession", brewSessionId],
+    queryFn: async () => {
+      const response = await ApiService.brewSessions.getById(brewSessionId);
+      return response.data;
+    },
+    enabled: !!brewSessionId,
+  });
+
+  // Initialize form with existing entry data
+  useEffect(() => {
+    if (brewSessionData?.fermentation_data?.[entryIndex]) {
+      const entry = brewSessionData.fermentation_data[entryIndex];
+      setFormData({
+        gravity: entry.gravity?.toString() || "",
+        temperature: entry.temperature?.toString() || "",
+        ph: entry.ph?.toString() || "",
+        notes: entry.notes || "",
+      });
+      if (entry.entry_date || entry.date) {
+        const dateString = entry.entry_date || entry.date;
+        if (dateString) {
+          setEntryDate(new Date(dateString));
+        }
+      }
+    }
+  }, [brewSessionData, entryIndex]);
+
+  const updateEntryMutation = useMutation({
+    mutationFn: async (entryData: UpdateFermentationEntryRequest) => {
+      return ApiService.brewSessions.updateFermentationEntry(
+        brewSessionId,
+        entryIndex,
+        entryData
+      );
+    },
+    onSuccess: (response) => {
+      // Invalidate and refetch brew session data
+      queryClient.invalidateQueries({
+        queryKey: ["brewSession", brewSessionId],
+      });
+      router.back();
+    },
+    onError: (error) => {
+      console.error("Failed to update fermentation entry:", error);
+      Alert.alert(
+        "Save Failed",
+        "Failed to update fermentation entry. Please check your data and try again.",
+        [{ text: "OK" }]
+      );
+    },
+  });
+
+  const validateForm = (): boolean => {
+    const errors: string[] = [];
+
+    // Gravity validation
+    if (!formData.gravity.trim()) {
+      errors.push("Gravity is required");
+    } else {
+      const gravity = parseFloat(formData.gravity);
+      if (isNaN(gravity) || gravity < 0.8 || gravity > 1.2) {
+        errors.push("Gravity must be between 0.800 and 1.200");
+      }
+    }
+
+    // Temperature validation (optional but if provided must be valid)
+    if (formData.temperature.trim()) {
+      const temp = parseFloat(formData.temperature);
+      const tempUnit = brewSessionData?.temperature_unit || 'F';
+      
+      // Validation ranges based on temperature unit
+      let minTemp, maxTemp, unitDisplay;
+      if (tempUnit === 'C') {
+        minTemp = -23; // ~-10°F in Celsius
+        maxTemp = 49;  // ~120°F in Celsius
+        unitDisplay = '°C';
+      } else {
+        minTemp = -10;
+        maxTemp = 120;
+        unitDisplay = '°F';
+      }
+      
+      if (isNaN(temp) || temp < minTemp || temp > maxTemp) {
+        errors.push(`Temperature must be between ${minTemp}${unitDisplay} and ${maxTemp}${unitDisplay}`);
+      }
+    }
+
+    // pH validation (optional but if provided must be valid)
+    if (formData.ph.trim()) {
+      const ph = parseFloat(formData.ph);
+      if (isNaN(ph) || ph < 0 || ph > 14) {
+        errors.push("pH must be between 0 and 14");
+      }
+    }
+
+    setValidationErrors(errors);
+    return errors.length === 0;
+  };
+
+  const handleSave = () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    const entryData: UpdateFermentationEntryRequest = {
+      entry_date: entryDate.toISOString(),
+      gravity: parseFloat(formData.gravity),
+      ...(formData.temperature.trim() && {
+        temperature: parseFloat(formData.temperature),
+      }),
+      ...(formData.ph.trim() && { ph: parseFloat(formData.ph) }),
+      ...(formData.notes.trim() && { notes: formData.notes.trim() }),
+    };
+
+    updateEntryMutation.mutate(entryData);
+  };
+
+  const handleCancel = () => {
+    router.back();
+  };
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setEntryDate(selectedDate);
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString();
+  };
+
+  if (isLoadingSession) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.headerButton} onPress={handleCancel}>
+            <MaterialIcons
+              name="close"
+              size={24}
+              color={theme.colors.text}
+            />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit Fermentation Entry</Text>
+          <View style={styles.saveButton} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Loading entry...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (sessionError || !brewSessionData?.fermentation_data?.[entryIndex]) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.headerButton} onPress={handleCancel}>
+            <MaterialIcons
+              name="close"
+              size={24}
+              color={theme.colors.text}
+            />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Edit Fermentation Entry</Text>
+          <View style={styles.saveButton} />
+        </View>
+        <View style={styles.errorContainer}>
+          <MaterialIcons name="error" size={64} color={theme.colors.error} />
+          <Text style={styles.errorText}>Entry Not Found</Text>
+          <Text style={styles.errorText}>
+            The fermentation entry could not be found or loaded.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.headerButton} onPress={handleCancel}>
+          <MaterialIcons
+            name="close"
+            size={24}
+            color={theme.colors.text}
+          />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Edit Fermentation Entry</Text>
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+            updateEntryMutation.isPending && styles.saveButtonDisabled,
+          ]}
+          onPress={handleSave}
+          disabled={updateEntryMutation.isPending}
+        >
+          {updateEntryMutation.isPending ? (
+            <ActivityIndicator size="small" color={theme.colors.primaryText} />
+          ) : (
+            <Text style={styles.saveButtonText}>Save</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <View style={styles.errorContainer}>
+          {validationErrors.map((error, index) => (
+            <Text key={index} style={styles.errorText}>
+              • {error}
+            </Text>
+          ))}
+        </View>
+      )}
+
+      {/* Form */}
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Entry Date */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Entry Date *</Text>
+          <TouchableOpacity
+            style={styles.datePickerButton}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={styles.datePickerText}>{formatDate(entryDate)}</Text>
+            <MaterialIcons
+              name="event"
+              size={20}
+              color={theme.colors.textSecondary}
+            />
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={entryDate}
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+            />
+          )}
+        </View>
+
+        {/* Gravity */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Specific Gravity *</Text>
+          <TextInput
+            style={styles.textInput}
+            value={formData.gravity}
+            onChangeText={(value) =>
+              setFormData({ ...formData, gravity: value })
+            }
+            placeholder="e.g., 1.050"
+            keyboardType="decimal-pad"
+            returnKeyType="next"
+            placeholderTextColor={theme.colors.textSecondary}
+          />
+          <Text style={styles.label}>
+            Enter the specific gravity reading (e.g., 1.050)
+          </Text>
+        </View>
+
+        {/* Temperature */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Temperature (°{brewSessionData?.temperature_unit || 'F'})</Text>
+          <TextInput
+            style={styles.textInput}
+            value={formData.temperature}
+            onChangeText={(value) =>
+              setFormData({ ...formData, temperature: value })
+            }
+            placeholder="e.g., 68"
+            keyboardType="decimal-pad"
+            returnKeyType="next"
+            placeholderTextColor={theme.colors.textSecondary}
+          />
+          <Text style={styles.label}>Optional temperature reading</Text>
+        </View>
+
+        {/* pH */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>pH</Text>
+          <TextInput
+            style={styles.textInput}
+            value={formData.ph}
+            onChangeText={(value) => setFormData({ ...formData, ph: value })}
+            placeholder="e.g., 4.2"
+            keyboardType="decimal-pad"
+            returnKeyType="next"
+            placeholderTextColor={theme.colors.textSecondary}
+          />
+          <Text style={styles.label}>Optional pH measurement</Text>
+        </View>
+
+        {/* Notes */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Notes</Text>
+          <TextInput
+            style={[styles.textInput, styles.textArea]}
+            value={formData.notes}
+            onChangeText={(value) =>
+              setFormData({ ...formData, notes: value })
+            }
+            placeholder="Any observations about fermentation..."
+            multiline
+            numberOfLines={4}
+            returnKeyType="done"
+            placeholderTextColor={theme.colors.textSecondary}
+          />
+          <Text style={styles.label}>
+            Optional notes about this reading or fermentation progress
+          </Text>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}

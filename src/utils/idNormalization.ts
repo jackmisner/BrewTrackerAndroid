@@ -191,6 +191,12 @@ export function normalizeResponseData(data: any, entityType: EntityType): any {
     return data;
   }
 
+  // Special case: fermentation entries don't have individual IDs
+  // They're managed by index within the brew session, so skip normalization
+  if (entityType === "fermentationEntry") {
+    return data;
+  }
+
   // Handle direct array response
   if (Array.isArray(data)) {
     return normalizeEntityIds(data, entityType);
