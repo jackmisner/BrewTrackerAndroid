@@ -1,3 +1,5 @@
+import { loginStyles } from "../../../../src/styles/auth/loginStyles";
+
 // Mock React Native StyleSheet
 jest.mock("react-native", () => ({
   StyleSheet: {
@@ -41,8 +43,6 @@ jest.mock("@styles/common/buttons", () => ({
     },
   },
 }));
-
-import { loginStyles } from "../../../../src/styles/auth/loginStyles";
 
 describe("Login Styles", () => {
   describe("Container and layout styles", () => {
@@ -395,7 +395,9 @@ describe("Login Styles", () => {
     });
 
     it("should indicate interactive elements", () => {
-      expect(loginStyles.forgotPasswordText.textDecorationLine).toBe("underline");
+      expect(loginStyles.forgotPasswordText.textDecorationLine).toBe(
+        "underline"
+      );
       expect(loginStyles.linkText.textDecorationLine).toBe("underline");
     });
   });
@@ -433,7 +435,7 @@ describe("Login Styles", () => {
     it("should be a valid StyleSheet object", () => {
       expect(typeof loginStyles).toBe("object");
       expect(loginStyles).not.toBeNull();
-      
+
       // Each style should be an object with style properties
       Object.values(loginStyles).forEach(style => {
         expect(typeof style).toBe("object");
@@ -444,7 +446,7 @@ describe("Login Styles", () => {
     it("should export all expected style keys", () => {
       const expectedKeys = [
         "container",
-        "scrollContainer", 
+        "scrollContainer",
         "header",
         "title",
         "subtitle",
@@ -457,7 +459,7 @@ describe("Login Styles", () => {
         "resetPrimaryButton",
         "resetPrimaryButtonText",
         "footerLinks",
-        "linkText"
+        "linkText",
       ];
 
       expectedKeys.forEach(key => {

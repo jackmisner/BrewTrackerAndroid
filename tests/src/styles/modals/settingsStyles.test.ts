@@ -1,3 +1,5 @@
+import { settingsStyles } from "../../../../src/styles/modals/settingsStyles";
+import { ThemeContextValue } from "../../../../src/contexts/ThemeContext";
 // Mock React Native StyleSheet
 jest.mock("react-native", () => ({
   StyleSheet: {
@@ -5,13 +7,13 @@ jest.mock("react-native", () => ({
   },
 }));
 
-import { settingsStyles } from "../../../../src/styles/modals/settingsStyles";
-import { ThemeContextValue } from "../../../../src/contexts/ThemeContext";
 
 describe("Settings Styles", () => {
   const mockTheme: ThemeContextValue = {
-    isDarkMode: false,
-    toggleTheme: jest.fn(),
+    theme: "light" as any,
+    isDark: false,
+    setTheme: jest.fn().mockResolvedValue(undefined),
+    toggleTheme: jest.fn().mockResolvedValue(undefined),
     colors: {
       background: "#ffffff",
       backgroundSecondary: "#f8f9fa",
@@ -51,7 +53,8 @@ describe("Settings Styles", () => {
     it("should adapt to different theme configurations", () => {
       const darkTheme: ThemeContextValue = {
         ...mockTheme,
-        isDarkMode: true,
+        theme: "dark" as any,
+        isDark: true,
         colors: {
           ...mockTheme.colors,
           background: "#1a1a1a",

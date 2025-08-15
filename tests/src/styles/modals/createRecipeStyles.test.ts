@@ -1,3 +1,5 @@
+import { createRecipeStyles } from "../../../../src/styles/modals/createRecipeStyles";
+import { ThemeContextValue } from "../../../../src/contexts/ThemeContext";
 // Mock React Native StyleSheet
 jest.mock("react-native", () => ({
   StyleSheet: {
@@ -5,13 +7,13 @@ jest.mock("react-native", () => ({
   },
 }));
 
-import { createRecipeStyles } from "../../../../src/styles/modals/createRecipeStyles";
-import { ThemeContextValue } from "../../../../src/contexts/ThemeContext";
 
 describe("Create Recipe Styles", () => {
   const mockTheme: ThemeContextValue = {
-    isDarkMode: false,
-    toggleTheme: jest.fn(),
+    theme: "light" as any,
+    isDark: false,
+    setTheme: jest.fn().mockResolvedValue(undefined),
+    toggleTheme: jest.fn().mockResolvedValue(undefined),
     colors: {
       background: "#ffffff",
       backgroundSecondary: "#f8f9fa",
@@ -46,13 +48,14 @@ describe("Create Recipe Styles", () => {
       expect(styles.header.backgroundColor).toBe(mockTheme.colors.background);
       expect(styles.headerTitle.color).toBe(mockTheme.colors.text);
       expect(styles.navigationButtonPrimary.backgroundColor).toBe(mockTheme.colors.primary);
-      expect(styles.progressCircleActive.backgroundColor).toBe(mockTheme.colors.primary);
+      expect(styles.progressDotActive.backgroundColor).toBe(mockTheme.colors.primary);
     });
 
     it("should adapt to different theme configurations", () => {
       const darkTheme: ThemeContextValue = {
         ...mockTheme,
-        isDarkMode: true,
+        theme: "dark" as any,
+        isDark: true,
         colors: {
           ...mockTheme.colors,
           background: "#000000",
@@ -372,7 +375,7 @@ describe("Create Recipe Styles", () => {
     });
 
     it("should maintain color consistency", () => {
-      expect(styles.navigationButtonPrimary.backgroundColor).toBe(styles.progressCircleActive.backgroundColor);
+      expect(styles.navigationButtonPrimary.backgroundColor).toBe(styles.progressDotActive.backgroundColor);
       expect(styles.addIngredientText.color).toBe(styles.progressLabelActive.color);
       expect(styles.textInputError.borderColor).toBe(styles.errorTitle.color);
     });
