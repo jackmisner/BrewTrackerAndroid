@@ -564,10 +564,7 @@ const ApiService = {
         api.get(ENDPOINTS.BREW_SESSIONS.FERMENTATION(brewSessionId))
       ),
 
-    addFermentationEntry: (
-      brewSessionId: ID,
-      entryData: CreateFermentationEntryRequest
-    ): Promise<AxiosResponse<CreateFermentationEntryResponse>> =>
+    addFermentationEntry: (brewSessionId: ID, entryData: CreateFermentationEntryRequest): Promise<AxiosResponse<CreateFermentationEntryResponse>> =>
       api.post(ENDPOINTS.BREW_SESSIONS.FERMENTATION(brewSessionId), entryData),
 
     updateFermentationEntry: (

@@ -11,17 +11,24 @@ import { FermentationEntry } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 
+// Chart wrapper component that forces complete remount
+const ChartWrapper: React.FC<{
+  children: React.ReactNode;
+  refreshKey: string | number;
+}> = ({ children, refreshKey }) => {
+  return (
+    <View key={`chart-wrapper-${refreshKey}`} style={{ width: "100%" }}>
+      {children}
+    </View>
+  );
+};
+
 interface FermentationChartProps {
   fermentationData: FermentationEntry[];
   expectedFG?: number;
   actualOG?: number;
   temperatureUnit?: "C" | "F"; // Session-specific temperature unit
-}
-
-interface ChartDataPoint {
-  value: number; // Y-axis value
-  label?: string; // X-axis label (day number)
-  labelTextStyle?: object;
+  forceRefresh?: number; // External refresh trigger
 }
 
 interface ProcessedDataPoint {
@@ -38,10 +45,24 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
   expectedFG,
   actualOG,
   temperatureUnit,
+  forceRefresh = 0,
 }) => {
   const theme = useTheme();
   const units = useUnits();
   const [combinedView, setCombinedView] = React.useState(true);
+  const [chartRefreshKey, setChartRefreshKey] = React.useState(0);
+
+  // Force chart refresh when fermentation data changes or external refresh is triggered
+  React.useEffect(() => {
+    setChartRefreshKey(prev => prev + 1);
+  }, [fermentationData, forceRefresh]);
+
+  // Force refresh when switching between combined/separate views
+  const handleViewToggle = React.useCallback(() => {
+    setCombinedView(prev => !prev);
+    // Add small delay to ensure state change is processed before refresh
+    setChartRefreshKey(prev => prev + 1);
+  }, []);
 
   // Get temperature symbol based on session-specific unit, fallback to user preference
   const getSessionTemperatureSymbol = (): string => {
@@ -87,10 +108,6 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
         }
       }
 
-      console.log(
-        "⚠️ [FermentationChart] No valid date found for entry:",
-        entry
-      );
       return new Date(); // Fallback to current date
     };
 
@@ -127,50 +144,94 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     });
   }, [fermentationData]);
 
-  // Get screen dimensions for responsive chart sizing
-  const screenWidth = Dimensions.get("window").width;
+  // Responsive screen dimensions that update on device rotation/unfolding
+  const [screenDimensions, setScreenDimensions] = React.useState(() =>
+    Dimensions.get("window")
+  );
 
-  // Calculate optimal chart width based on data points and screen size
-  const calculateOptimalChartWidth = React.useMemo(() => {
-    const containerPadding = 32; // Account for container padding
-    return screenWidth - containerPadding; // Always use full available width
-  }, [screenWidth]);
+  // Listen for dimension changes (device rotation, folding/unfolding)
+  React.useEffect(() => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setScreenDimensions(window);
+      // Force chart refresh when dimensions change
+      setChartRefreshKey(prev => prev + 1);
+    });
 
-  const chartWidth = calculateOptimalChartWidth;
+    return () => subscription?.remove();
+  }, []);
 
-  // Convert to chart format for Gifted Charts with proper spacing
+  // Calculate optimal chart width based on current screen dimensions
+  const chartWidth = React.useMemo(() => {
+    const containerPadding = 60; // Account for container padding
+    const secondaryAxisPadding = 80; // Increased padding for secondary Y-axis labels
+    const maxChartWidth = 600; // Reduced max width to ensure secondary axis fits
+
+    const calculatedWidth =
+      screenDimensions.width - containerPadding - secondaryAxisPadding;
+
+    // Constrain width to prevent over-stretching on large screens
+    return Math.min(calculatedWidth, maxChartWidth);
+  }, [screenDimensions.width]);
+
+  // Generate chart keys for force re-rendering when data changes
+  // Generate chart keys for force re-rendering when data changes
+  const chartKeys = React.useMemo(() => {
+    // Use chartRefreshKey as the primary key since it's incremented on all relevant changes
+    const baseKey = `${chartRefreshKey}-${screenDimensions.width}x${screenDimensions.height}`;
+
+    return {
+      combined: `combined-${baseKey}`,
+      gravity: `gravity-${baseKey}`,
+      temperature: `temperature-${baseKey}`,
+    };
+  }, [chartRefreshKey, screenDimensions]);
+
+  // Convert to chart format for Gifted Charts with proper spacing and alignment
   const combinedChartData = React.useMemo(() => {
-    const maxPoints = Math.max(
-      processedData.filter(p => p.gravity !== undefined).length,
-      processedData.filter(p => p.temperature !== undefined).length
-    );
+    if (processedData.length === 0) return { gravity: [], temperature: [] };
 
-    if (maxPoints === 0) return { gravity: [], temperature: [] };
-
-    // Create arrays for both gravity and temperature data with proper spacing
-    const gravityData = processedData
-      .filter(point => point.gravity !== undefined)
-      .map((point, index) => ({
-        value: point.gravity!,
+    // Create aligned data arrays where each index corresponds to the same date
+    // This ensures proper spacing and secondary axis alignment
+    const alignedData = processedData.map((point, index) => {
+      const baseDataPoint = {
         label: point.rawDate.toLocaleDateString(undefined, {
           month: "numeric",
           day: "numeric",
         }),
         labelTextStyle: { color: theme.colors.textSecondary, fontSize: 9 },
-      }));
+        dataPointText: `Day ${point.x}`, // Add day indicator
+      };
 
-    const temperatureData = processedData
-      .filter(point => point.temperature !== undefined)
-      .map((point, index) => ({
-        value: point.temperature!,
-        label: point.rawDate.toLocaleDateString(undefined, {
-          month: "numeric",
-          day: "numeric",
-        }),
-        labelTextStyle: { color: theme.colors.textSecondary, fontSize: 9 },
-      }));
+      return {
+        gravity:
+          point.gravity !== undefined
+            ? {
+                ...baseDataPoint,
+                value: point.gravity,
+              }
+            : {
+                ...baseDataPoint,
+                value: 0, // Use 0 for missing gravity data (will be hidden)
+                hideDataPoint: true,
+              },
+        temperature:
+          point.temperature !== undefined
+            ? {
+                ...baseDataPoint,
+                value: point.temperature,
+              }
+            : {
+                ...baseDataPoint,
+                value: 0, // Use 0 for missing temperature data (will be hidden)
+                hideDataPoint: true,
+              },
+      };
+    });
 
-    return { gravity: gravityData, temperature: temperatureData };
+    return {
+      gravity: alignedData.map(d => d.gravity),
+      temperature: alignedData.map(d => d.temperature),
+    };
   }, [processedData, theme.colors.textSecondary]);
 
   const gravityChartData = combinedChartData.gravity;
@@ -182,7 +243,6 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     }
 
     const gravityValues = gravityChartData.map(d => d.value);
-    const minGravity = Math.min(...gravityValues);
     const maxGravity = actualOG || Math.max(...gravityValues);
 
     const config = {
@@ -194,28 +254,64 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     return config;
   }, [gravityChartData, actualOG]);
 
+  // Create session-specific temperature axis configuration
+  const getSessionTemperatureAxisConfig = React.useCallback(
+    (
+      temperatures: number[],
+      bufferPercent: number = 10
+    ): { minValue: number; maxValue: number } => {
+      if (temperatures.length === 0) {
+        // Default ranges based on session temperature unit
+        if (temperatureUnit === "C") {
+          return { minValue: 15, maxValue: 27 };
+        } else {
+          return { minValue: 60, maxValue: 80 };
+        }
+      }
+
+      const min = Math.min(...temperatures);
+      const max = Math.max(...temperatures);
+      const range = max - min;
+
+      // Calculate intelligent buffer based on data spread
+      let buffer;
+      if (range < (temperatureUnit === "C" ? 1 : 2)) {
+        // Very tight range, use minimum buffer
+        buffer = temperatureUnit === "C" ? 2 : 4;
+      } else {
+        // Use percentage-based buffer with minimum
+        buffer = Math.max(
+          range * (bufferPercent / 100),
+          temperatureUnit === "C" ? 1 : 2
+        );
+      }
+
+      // Ensure reasonable axis bounds
+      const minValue = Math.max(
+        Math.floor(min - buffer),
+        temperatureUnit === "C" ? -5 : 20 // Reasonable lower bounds
+      );
+      const maxValue = Math.min(
+        Math.ceil(max + buffer),
+        temperatureUnit === "C" ? 50 : 120 // Reasonable upper bounds
+      );
+
+      return { minValue, maxValue };
+    },
+    [temperatureUnit]
+  );
+
   const temperatureAxisConfig = React.useMemo(() => {
     if (temperatureChartData.length === 0) {
-      console.log(
-        "🔍 [FermentationChart] No temperature data, using default range"
-      );
-      return { minValue: 60, maxValue: 80 };
+      return getSessionTemperatureAxisConfig([]);
     }
 
     const temperatures = temperatureChartData.map(d => d.value);
-    const avgTemp =
-      temperatures.reduce((a, b) => a + b, 0) / temperatures.length;
-
-    // Use appropriate temperature range based on unit system
-    const config = units.getTemperatureAxisConfig(temperatures, 8);
-
-    return config;
-  }, [temperatureChartData]);
+    return getSessionTemperatureAxisConfig(temperatures, 8);
+  }, [temperatureChartData, getSessionTemperatureAxisConfig]);
 
   const gravityReferenceLines = React.useMemo(() => {
-    console.log("🔍 [FermentationChart] Expected FG:", expectedFG);
     if (!expectedFG) {
-      console.log("🔍 [FermentationChart] No expected FG, no reference line");
       return [];
     }
 
@@ -234,10 +330,6 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       },
     };
 
-    console.log(
-      "🔍 [FermentationChart] Reference line config:",
-      referenceConfig
-    );
     return [referenceConfig];
   }, [expectedFG, theme.colors.textSecondary]);
 
@@ -252,8 +344,15 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     rulesColor: theme.colors.border,
     backgroundColor: theme.colors.background,
     curved: true,
-    animateOnDataChange: true,
-    animationDuration: 800,
+    animateOnDataChange: false, // Disable animations to prevent state corruption
+    animationDuration: 0, // No animation duration
+    isAnimated: false, // Explicitly disable animations
+    spacing: chartWidth / Math.max(gravityChartData.length, 1), // Dynamic spacing for full width
+    xAxisLabelTextStyle: { color: theme.colors.textSecondary, fontSize: 9 },
+    showXAxisIndices: true,
+    xAxisIndicesHeight: 4,
+    xAxisIndicesWidth: 1,
+    xAxisIndicesColor: theme.colors.border,
   };
 
   const gravityChartConfig = {
@@ -280,7 +379,8 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     dataPointsColor: theme.colors.temperatureLine,
     dataPointsRadius: 4,
     maxValue: temperatureAxisConfig.maxValue,
-    yAxisLabelSuffix: units.getTemperatureSymbol(),
+    yAxisOffset: temperatureAxisConfig.minValue,
+    yAxisLabelSuffix: getSessionTemperatureSymbol(),
     formatYLabel: (label: string) => Math.round(parseFloat(label)).toString(),
   };
 
@@ -298,12 +398,19 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     formatYLabel: (label: string) => parseFloat(label).toFixed(3),
     referenceLine1Config:
       gravityReferenceLines.length > 0 ? gravityReferenceLines[0] : undefined,
+    showSecondaryYAxis: true,
     secondaryYAxis: {
       yAxisOffset: temperatureAxisConfig.minValue,
+      maxValue: temperatureAxisConfig.maxValue,
       noOfSections: 6,
-      yAxisLabelSuffix: units.getTemperatureSymbol(),
+      yAxisLabelSuffix: getSessionTemperatureSymbol(),
       formatYLabel: (label: string) => Math.round(parseFloat(label)).toString(),
-      yAxisTextStyle: { color: theme.colors.textSecondary },
+      yAxisTextStyle: { color: theme.colors.textSecondary, fontSize: 10 },
+      yAxisColor: theme.colors.border,
+      showYAxisIndices: true,
+      yAxisLabelWidth: 45, // Increased width for temperature labels
+      hideYAxisText: false, // Explicitly show Y-axis text
+      yAxisLabelContainerStyle: { width: 100 }, // Container width for labels
     },
     secondaryLineConfig: {
       color: theme.colors.temperatureLine,
@@ -350,7 +457,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
             styles.toggleButton,
             { backgroundColor: theme.colors.border },
           ]}
-          onPress={() => setCombinedView(!combinedView)}
+          onPress={handleViewToggle}
         >
           <Text style={[styles.toggleText, { color: theme.colors.text }]}>
             {combinedView ? "Separate" : "Combined"}
@@ -407,7 +514,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
           <Text style={[styles.statValue, { color: theme.colors.primary }]}>
             {(() => {
               const days = Math.max(...processedData.map(d => d.x));
-              return `${days} ${days === 1 ? 'day' : 'days'}`;
+              return `${days} ${days === 1 ? "day" : "days"}`;
             })()}
           </Text>
         </View>
@@ -428,11 +535,13 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
                 Combined View
               </Text>
               <View style={styles.chart}>
-                <LineChart
-                  {...combinedChartConfig}
-                  data={gravityChartData}
-                  secondaryData={temperatureChartData}
-                />
+                <ChartWrapper refreshKey={chartKeys.combined}>
+                  <LineChart
+                    {...combinedChartConfig}
+                    data={gravityChartData}
+                    secondaryData={temperatureChartData}
+                  />
+                </ChartWrapper>
               </View>
             </View>
           ) : (
@@ -446,10 +555,12 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
                     Specific Gravity
                   </Text>
                   <View style={styles.chart}>
-                    <LineChart
-                      {...gravityChartConfig}
-                      data={gravityChartData}
-                    />
+                    <ChartWrapper refreshKey={chartKeys.gravity}>
+                      <LineChart
+                        {...gravityChartConfig}
+                        data={gravityChartData}
+                      />
+                    </ChartWrapper>
                   </View>
                 </View>
               )}
@@ -461,10 +572,12 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
                     Temperature
                   </Text>
                   <View style={styles.chart}>
-                    <LineChart
-                      {...temperatureChartConfig}
-                      data={temperatureChartData}
-                    />
+                    <ChartWrapper refreshKey={chartKeys.temperature}>
+                      <LineChart
+                        {...temperatureChartConfig}
+                        data={temperatureChartData}
+                      />
+                    </ChartWrapper>
                   </View>
                 </View>
               )}
@@ -479,7 +592,12 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
                   Specific Gravity
                 </Text>
                 <View style={styles.chart}>
-                  <LineChart {...gravityChartConfig} data={gravityChartData} />
+                  <ChartWrapper refreshKey={chartKeys.gravity}>
+                    <LineChart
+                      {...gravityChartConfig}
+                      data={gravityChartData}
+                    />
+                  </ChartWrapper>
                 </View>
               </View>
             )}
@@ -490,10 +608,12 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
                   Temperature
                 </Text>
                 <View style={styles.chart}>
-                  <LineChart
-                    {...temperatureChartConfig}
-                    data={temperatureChartData}
-                  />
+                  <ChartWrapper refreshKey={chartKeys.temperature}>
+                    <LineChart
+                      {...temperatureChartConfig}
+                      data={temperatureChartData}
+                    />
+                  </ChartWrapper>
                 </View>
               </View>
             )}
@@ -588,21 +708,29 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
+    paddingRight: 20, // Extra padding on right for secondary Y-axis
+    overflow: "visible", // Allow secondary axis to be visible
+    alignItems: "center", // Center chart horizontally
   },
   chartSection: {
     marginBottom: 20,
+    paddingHorizontal: 8, // Add horizontal padding to prevent title truncation
   },
   chartTitle: {
     fontSize: 14,
     fontWeight: "600",
-    marginBottom: 8,
+    marginBottom: 12, // Increase bottom margin
     textAlign: "center",
+    paddingHorizontal: 16, // Add padding to prevent text truncation
+    lineHeight: 18, // Ensure proper line height
   },
   chart: {
     height: 200,
-    width: "100%",
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 4, // Add small top margin for better spacing
+    overflow: "visible", // Allow secondary axis to be visible
+    paddingRight: 15, // Extra padding for secondary axis labels
   },
   legend: {
     flexDirection: "row",

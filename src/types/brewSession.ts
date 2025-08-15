@@ -114,6 +114,7 @@ export interface CreateBrewSessionRequest {
   brew_date: string;
   status: BrewSessionStatus;
   notes?: string;
+  temperature_unit?: TemperatureUnit;
 }
 
 // Update brew session data
@@ -137,28 +138,20 @@ export interface UpdateBrewSessionRequest {
   batch_rating?: number;
 }
 
-// Fermentation entry creation
+// Fermentation entry creation - matches backend schema
 export interface CreateFermentationEntryRequest {
-  date: string;
-  stage: FermentationStage;
-  temperature: number;
-  temperature_unit: TemperatureUnit;
-  specific_gravity?: number;
-  gravity_temperature?: number;
-  gravity_temperature_unit?: TemperatureUnit;
+  entry_date: string; // ISO date string
+  temperature?: number;
+  gravity?: number; // Specific gravity (e.g., 1.010)
   ph?: number;
-  notes: string;
+  notes?: string;
 }
 
-// Update fermentation entry
+// Update fermentation entry - matches backend schema
 export interface UpdateFermentationEntryRequest {
-  date?: string;
-  stage?: FermentationStage;
+  entry_date?: string; // ISO date string
   temperature?: number;
-  temperature_unit?: TemperatureUnit;
-  specific_gravity?: number;
-  gravity_temperature?: number;
-  gravity_temperature_unit?: TemperatureUnit;
+  gravity?: number; // Specific gravity (e.g., 1.010)
   ph?: number;
   notes?: string;
 }

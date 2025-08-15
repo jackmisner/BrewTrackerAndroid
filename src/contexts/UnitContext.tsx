@@ -1,3 +1,29 @@
+/**
+ * Provides the context value for unit system management and conversions throughout the application.
+ *
+ * @property {UnitSystem} unitSystem - The currently selected unit system (e.g., metric or imperial).
+ * @property {boolean} loading - Indicates if unit system data is being loaded.
+ * @property {string | null} error - Holds any error message related to unit operations.
+ *
+ * @property {(newSystem: UnitSystem) => Promise<void>} updateUnitSystem - Updates the current unit system asynchronously.
+ * @property {(error: string | null) => void} setError - Sets or clears the error state.
+ *
+ * @property {(unitType: MeasurementType) => string} getPreferredUnit - Returns the preferred unit for a given measurement type.
+ *
+ * @property {(value: number | string, fromUnit: string, toUnit: string) => UnitConversion} convertUnit - Converts a value from one unit to another.
+ * @property {(value: number | string, storageUnit: string, measurementType: MeasurementType) => UnitConversion} convertForDisplay - Converts a value for display purposes based on storage unit and measurement type.
+ *
+ * @property {(value: number | string, unit: string, measurementType: MeasurementType, precision?: number) => string} formatValue - Formats a value with its unit and measurement type, optionally specifying precision.
+ *
+ * @property {() => string} getTemperatureSymbol - Returns the symbol for the current temperature unit.
+ * @property {(value: number, fromSystem: UnitSystem, precision?: number) => string} formatTemperature - Formats a temperature value from a given unit system, with optional precision.
+ * @property {(value: number, precision?: number) => string} formatCurrentTemperature - Formats the current temperature value with optional precision.
+ * @property {(value: number, fromSystem: UnitSystem, toSystem: UnitSystem) => number} convertTemperature - Converts a temperature value between unit systems.
+ * @property {(temperatures: number[], bufferPercent?: number) => { minValue: number; maxValue: number }} getTemperatureAxisConfig - Calculates axis configuration for temperature charts, with optional buffer.
+ *
+ * @property {() => string} getUnitSystemLabel - Returns a human-readable label for the current unit system.
+ * @property {(measurementType: MeasurementType) => UnitOption[]} getCommonUnits - Returns a list of common units for a given measurement type.
+ */
 import React, {
   createContext,
   useContext,
