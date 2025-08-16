@@ -1,9 +1,15 @@
-import { lightColors, darkColors, colors } from "../../../../src/styles/common/colors";
+import {
+  lightColors,
+  darkColors,
+  colors,
+} from "../../../../src/styles/common/colors";
 
 const validateHexColor = (colorValue: string): boolean => {
   // Allow #rgb, #rrggbb, or named colors like 'white', 'black'
   const isHex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(colorValue);
-  const isNamedColor = ['#fff', '#ffffff', '#000', '#000000'].includes(colorValue);
+  const isNamedColor = ["#fff", "#ffffff", "#000", "#000000"].includes(
+    colorValue
+  );
   return isHex || isNamedColor;
 };
 
@@ -162,7 +168,7 @@ describe("Color Constants", () => {
     it("should have same structure between light and dark themes", () => {
       const lightKeys = Object.keys(lightColors);
       const darkKeys = Object.keys(darkColors);
-      
+
       expect(lightKeys.sort()).toEqual(darkKeys.sort());
     });
 
@@ -192,7 +198,7 @@ describe("Color Constants", () => {
       Object.values(lightColors).forEach(color => {
         expect(typeof color).toBe("string");
       });
-      
+
       Object.values(darkColors).forEach(color => {
         expect(typeof color).toBe("string");
       });
@@ -203,7 +209,7 @@ describe("Color Constants", () => {
         expect(color).toBeTruthy();
         expect(color.length).toBeGreaterThan(0);
       });
-      
+
       Object.values(darkColors).forEach(color => {
         expect(color).toBeTruthy();
         expect(color.length).toBeGreaterThan(0);
@@ -234,7 +240,7 @@ describe("Color Constants", () => {
       // Error colors should both be reddish but appropriate for their theme
       expect(lightColors.error).toMatch(/#ff/i);
       expect(darkColors.error).toMatch(/#ff/i);
-      
+
       // Success colors should both be greenish
       expect(lightColors.success).toMatch(/#4c|#5/i);
       expect(darkColors.success).toMatch(/#51/i);

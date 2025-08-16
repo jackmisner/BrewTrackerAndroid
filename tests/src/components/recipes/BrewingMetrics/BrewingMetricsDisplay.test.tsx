@@ -19,42 +19,42 @@ jest.mock("@styles/components/brewingMetricsStyles", () => ({
     container: { flex: 1 },
     sectionTitle: { fontSize: 18, fontWeight: "bold" },
     metricsGrid: { flexDirection: "row", flexWrap: "wrap" },
-    metricCard: { 
-      backgroundColor: "#f9f9f9", 
-      padding: 12, 
+    metricCard: {
+      backgroundColor: "#f9f9f9",
+      padding: 12,
       borderRadius: 8,
       margin: 4,
       minWidth: 80,
     },
     metricLabel: { fontSize: 12, color: "#666" },
     metricValue: { fontSize: 16, fontWeight: "600" },
-    loadingSkeleton: { 
-      height: 16, 
-      backgroundColor: "#e0e0e0", 
+    loadingSkeleton: {
+      height: 16,
+      backgroundColor: "#e0e0e0",
       borderRadius: 4,
     },
-    srmColorIndicator: { 
-      width: 16, 
-      height: 16, 
+    srmColorIndicator: {
+      width: 16,
+      height: 16,
       borderRadius: 8,
       marginTop: 4,
     },
-    errorContainer: { 
-      flexDirection: "row", 
-      alignItems: "center", 
+    errorContainer: {
+      flexDirection: "row",
+      alignItems: "center",
       padding: 16,
     },
     errorText: { fontSize: 14, color: "#ff4444", marginLeft: 8 },
-    retryButton: { 
-      backgroundColor: "#f4511e", 
-      padding: 8, 
+    retryButton: {
+      backgroundColor: "#f4511e",
+      padding: 8,
       borderRadius: 4,
       marginLeft: 12,
     },
     retryButtonText: { color: "#fff", fontSize: 14 },
-    emptyState: { 
-      alignItems: "center", 
-      justifyContent: "center", 
+    emptyState: {
+      alignItems: "center",
+      justifyContent: "center",
       padding: 32,
     },
     emptyStateText: { fontSize: 14, color: "#666", marginTop: 8 },
@@ -79,10 +79,13 @@ jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: ({ name, testID, ...props }: any) => {
     const React = require("react");
     const { Text } = require("react-native");
-    return <Text testID={testID || `icon-${name}`} {...props}>{name}</Text>;
+    return (
+      <Text testID={testID || `icon-${name}`} {...props}>
+        {name}
+      </Text>
+    );
   },
 }));
-
 
 describe("BrewingMetricsDisplay", () => {
   const mockMetrics = {
@@ -142,10 +145,7 @@ describe("BrewingMetricsDisplay", () => {
   describe("Loading state", () => {
     it("should show loading skeletons when loading is true", () => {
       const { queryByText } = render(
-        <BrewingMetricsDisplay 
-          metrics={mockMetrics} 
-          loading={true}
-        />
+        <BrewingMetricsDisplay metrics={mockMetrics} loading={true} />
       );
 
       // Should show the structure but no values
@@ -161,10 +161,7 @@ describe("BrewingMetricsDisplay", () => {
     it("should render error state with message", () => {
       const errorMessage = "Failed to calculate metrics";
       const { getByText, getByTestId } = render(
-        <BrewingMetricsDisplay 
-          metrics={mockMetrics}
-          error={errorMessage}
-        />
+        <BrewingMetricsDisplay metrics={mockMetrics} error={errorMessage} />
       );
 
       expect(getByText(errorMessage)).toBeTruthy();
@@ -174,7 +171,7 @@ describe("BrewingMetricsDisplay", () => {
     it("should show retry button when onRetry is provided", () => {
       const mockRetry = jest.fn();
       const { getByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={mockMetrics}
           error="Failed to calculate"
           onRetry={mockRetry}
@@ -183,14 +180,14 @@ describe("BrewingMetricsDisplay", () => {
 
       const retryButton = getByText("Retry");
       expect(retryButton).toBeTruthy();
-      
+
       fireEvent.press(retryButton);
       expect(mockRetry).toHaveBeenCalledTimes(1);
     });
 
     it("should not show retry button when onRetry is not provided", () => {
       const { queryByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={mockMetrics}
           error="Failed to calculate"
         />
@@ -202,17 +199,17 @@ describe("BrewingMetricsDisplay", () => {
 
   describe("Empty state", () => {
     it("should show empty state when no metrics provided", () => {
-      const { getByText, getByTestId } = render(
-        <BrewingMetricsDisplay />
-      );
+      const { getByText, getByTestId } = render(<BrewingMetricsDisplay />);
 
-      expect(getByText("Metrics will appear as you add ingredients")).toBeTruthy();
+      expect(
+        getByText("Metrics will appear as you add ingredients")
+      ).toBeTruthy();
       expect(getByTestId("icon-analytics")).toBeTruthy();
     });
 
     it("should show empty state when all metrics are undefined", () => {
       const { getByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={{
             og: undefined,
             fg: undefined,
@@ -223,21 +220,27 @@ describe("BrewingMetricsDisplay", () => {
         />
       );
 
-      expect(getByText("Metrics will appear as you add ingredients")).toBeTruthy();
+      expect(
+        getByText("Metrics will appear as you add ingredients")
+      ).toBeTruthy();
     });
 
     it("should show compact empty state message", () => {
-      const { getByText } = render(
-        <BrewingMetricsDisplay compact={true} />
-      );
+      const { getByText } = render(<BrewingMetricsDisplay compact={true} />);
 
       expect(getByText("Add ingredients to see metrics")).toBeTruthy();
     });
 
     it("should show metrics even if only one value is present", () => {
       const { getByText } = render(
-        <BrewingMetricsDisplay 
-          metrics={{ og: 1.050, fg: undefined, abv: undefined, ibu: undefined, srm: undefined }}
+        <BrewingMetricsDisplay
+          metrics={{
+            og: 1.05,
+            fg: undefined,
+            abv: undefined,
+            ibu: undefined,
+            srm: undefined,
+          }}
         />
       );
 
@@ -249,7 +252,7 @@ describe("BrewingMetricsDisplay", () => {
   describe("Mash temperature", () => {
     it("should show mash temperature in full mode", () => {
       const { getByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={mockMetrics}
           mash_temperature={152}
           mash_temp_unit="F"
@@ -263,7 +266,7 @@ describe("BrewingMetricsDisplay", () => {
 
     it("should not show mash temperature in compact mode", () => {
       const { queryByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={mockMetrics}
           mash_temperature={152}
           mash_temp_unit="F"
@@ -277,7 +280,7 @@ describe("BrewingMetricsDisplay", () => {
 
     it("should handle Celsius temperature unit", () => {
       const { getByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={mockMetrics}
           mash_temperature={67}
           mash_temp_unit="C"
@@ -290,10 +293,7 @@ describe("BrewingMetricsDisplay", () => {
 
     it("should not show mash temperature if not provided", () => {
       const { queryByText } = render(
-        <BrewingMetricsDisplay 
-          metrics={mockMetrics}
-          compact={false}
-        />
+        <BrewingMetricsDisplay metrics={mockMetrics} compact={false} />
       );
 
       expect(queryByText("Mash Temp")).toBeNull();
@@ -303,7 +303,7 @@ describe("BrewingMetricsDisplay", () => {
   describe("Value formatting and validation", () => {
     it("should handle undefined values gracefully", () => {
       const { getByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={{
             og: undefined,
             fg: 1.012,
@@ -321,7 +321,7 @@ describe("BrewingMetricsDisplay", () => {
 
     it("should handle null values gracefully", () => {
       const { getByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={{
             og: null as any,
             fg: 1.012,
@@ -338,7 +338,7 @@ describe("BrewingMetricsDisplay", () => {
 
     it("should handle NaN values gracefully", () => {
       const { getByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={{
             og: NaN,
             fg: 1.012,
@@ -355,7 +355,7 @@ describe("BrewingMetricsDisplay", () => {
 
     it("should handle string numeric values as empty state", () => {
       const { getByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={{
             og: "1.055" as any,
             fg: "1.012" as any,
@@ -367,12 +367,14 @@ describe("BrewingMetricsDisplay", () => {
       );
 
       // String values are treated as invalid, so should show empty state
-      expect(getByText("Metrics will appear as you add ingredients")).toBeTruthy();
+      expect(
+        getByText("Metrics will appear as you add ingredients")
+      ).toBeTruthy();
     });
 
     it("should handle zero values correctly", () => {
       const { getAllByText, getByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={{
             og: 0,
             fg: 0,
@@ -391,7 +393,7 @@ describe("BrewingMetricsDisplay", () => {
 
     it("should round mash temperature to whole numbers", () => {
       const { getByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={mockMetrics}
           mash_temperature={152.7}
           mash_temp_unit="F"
@@ -430,7 +432,7 @@ describe("BrewingMetricsDisplay", () => {
 
     it("should not show mash temperature in compact mode even if provided", () => {
       const { queryByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={mockMetrics}
           mash_temperature={152}
           mash_temp_unit="F"
@@ -445,10 +447,10 @@ describe("BrewingMetricsDisplay", () => {
   describe("Edge cases", () => {
     it("should handle extremely high values", () => {
       const { getByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={{
-            og: 1.200,
-            fg: 1.100,
+            og: 1.2,
+            fg: 1.1,
             abv: 15.8,
             ibu: 120,
             srm: 50.5,
@@ -463,10 +465,10 @@ describe("BrewingMetricsDisplay", () => {
 
     it("should handle very small decimal values", () => {
       const { getByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={{
             og: 1.001,
-            fg: 1.000,
+            fg: 1.0,
             abv: 0.1,
             ibu: 0.5,
             srm: 0.1,
@@ -482,7 +484,7 @@ describe("BrewingMetricsDisplay", () => {
     it("should handle loading state with error simultaneously", () => {
       // Error should take priority over loading
       const { getByText, queryByText } = render(
-        <BrewingMetricsDisplay 
+        <BrewingMetricsDisplay
           metrics={mockMetrics}
           loading={true}
           error="Calculation failed"

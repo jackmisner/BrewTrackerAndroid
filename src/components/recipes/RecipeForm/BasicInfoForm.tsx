@@ -138,7 +138,7 @@ export function BasicInfoForm({
             }}
             testID="close-button"
           >
-            <MaterialIcons name="close"  size={24} color={theme.colors.text} />
+            <MaterialIcons name="close" size={24} color={theme.colors.text} />
           </TouchableOpacity>
         </View>
 

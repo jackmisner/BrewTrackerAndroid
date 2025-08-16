@@ -6,7 +6,7 @@ import { RecipeFormData } from "../../../../../src/types";
 // Comprehensive React Native mocking to avoid ES6 module issues
 jest.mock("react-native", () => ({
   View: "View",
-  Text: "Text", 
+  Text: "Text",
   TextInput: "TextInput",
   TouchableOpacity: "TouchableOpacity",
   Switch: "Switch",
@@ -56,7 +56,11 @@ jest.mock("@styles/modals/createRecipeStyles", () => ({
     inputError: { color: "#dc3545", fontSize: 12 },
     characterCount: { fontSize: 12, textAlign: "right" },
     pickerContainer: { borderWidth: 1, borderRadius: 8 },
-    pickerButton: { flexDirection: "row", justifyContent: "space-between", padding: 12 },
+    pickerButton: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      padding: 12,
+    },
     pickerButtonText: { fontSize: 16 },
     pickerPlaceholder: { color: "#999999" },
     batchSizeContainer: { flexDirection: "row", gap: 12 },
@@ -67,9 +71,17 @@ jest.mock("@styles/modals/createRecipeStyles", () => ({
     unitButtonText: { fontSize: 14 },
     unitButtonTextActive: { color: "#ffffff" },
     stylePickerContainer: { position: "absolute", backgroundColor: "#ffffff" },
-    stylePickerHeader: { flexDirection: "row", justifyContent: "space-between", padding: 16 },
+    stylePickerHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      padding: 16,
+    },
     stylePickerTitle: { fontSize: 18, fontWeight: "600" },
-    searchContainer: { flexDirection: "row", alignItems: "center", padding: 12 },
+    searchContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 12,
+    },
     searchInput: { flex: 1, fontSize: 16 },
     stylePickerContent: { flex: 1 },
     stylePickerItem: { paddingVertical: 16 },
@@ -101,7 +113,7 @@ jest.mock("@src/hooks/useBeerStyles", () => ({
 
 describe("BasicInfoForm", () => {
   const mockOnUpdateField = jest.fn();
-  
+
   const defaultRecipeData: RecipeFormData = {
     name: "",
     style: "",
@@ -134,7 +146,9 @@ describe("BasicInfoForm", () => {
       expect(getByPlaceholderText("Enter recipe name")).toBeTruthy();
       expect(getByText("Select beer style")).toBeTruthy();
       expect(getByPlaceholderText("5.0")).toBeTruthy();
-      expect(getByPlaceholderText("Describe your recipe (optional)")).toBeTruthy();
+      expect(
+        getByPlaceholderText("Describe your recipe (optional)")
+      ).toBeTruthy();
       // Note: Labels contain nested text with required asterisks, so we check for parts
       expect(getByText(/Recipe Name/)).toBeTruthy();
       expect(getByText(/Beer Style/)).toBeTruthy();
@@ -405,9 +419,11 @@ describe("BasicInfoForm", () => {
       fireEvent.press(getByText("Select beer style"));
 
       await waitFor(() => {
-        const searchInput = getByPlaceholderText("Search beer styles or IDs...");
+        const searchInput = getByPlaceholderText(
+          "Search beer styles or IDs..."
+        );
         fireEvent.changeText(searchInput, "IPA");
-        
+
         // Should show IPA but not other styles
         expect(getByText("American IPA")).toBeTruthy();
       });
@@ -418,16 +434,16 @@ describe("BasicInfoForm", () => {
     it("should validate required recipe name", () => {
       const { getByPlaceholderText, getByText } = render(
         <BasicInfoForm
-          recipeData={{...defaultRecipeData, name: "Initial Name"}}
+          recipeData={{ ...defaultRecipeData, name: "Initial Name" }}
           onUpdateField={mockOnUpdateField}
         />
       );
 
       const nameInput = getByPlaceholderText("Enter recipe name");
-      
+
       // Change to empty string to trigger validation
       fireEvent.changeText(nameInput, "");
-      fireEvent(nameInput, 'blur');
+      fireEvent(nameInput, "blur");
 
       expect(getByText("Recipe name is required")).toBeTruthy();
     });
@@ -444,7 +460,9 @@ describe("BasicInfoForm", () => {
       const longName = "a".repeat(101);
       fireEvent.changeText(nameInput, longName);
 
-      expect(getByText("Recipe name must be less than 100 characters")).toBeTruthy();
+      expect(
+        getByText("Recipe name must be less than 100 characters")
+      ).toBeTruthy();
     });
 
     it("should validate batch size is greater than zero", () => {
@@ -483,11 +501,15 @@ describe("BasicInfoForm", () => {
         />
       );
 
-      const descriptionInput = getByPlaceholderText("Describe your recipe (optional)");
+      const descriptionInput = getByPlaceholderText(
+        "Describe your recipe (optional)"
+      );
       const longDescription = "a".repeat(501);
       fireEvent.changeText(descriptionInput, longDescription);
 
-      expect(getByText("Description must be less than 500 characters")).toBeTruthy();
+      expect(
+        getByText("Description must be less than 500 characters")
+      ).toBeTruthy();
     });
 
     it("should show error styling on invalid inputs", () => {
@@ -554,7 +576,9 @@ describe("BasicInfoForm", () => {
       fireEvent.press(getByText("Select beer style"));
 
       await waitFor(() => {
-        expect(getByText("Unable to load beer styles from server.")).toBeTruthy();
+        expect(
+          getByText("Unable to load beer styles from server.")
+        ).toBeTruthy();
       });
     });
 
@@ -570,9 +594,11 @@ describe("BasicInfoForm", () => {
       fireEvent.press(getByText("Select beer style"));
 
       await waitFor(() => {
-        const searchInput = getByPlaceholderText("Search beer styles or IDs...");
+        const searchInput = getByPlaceholderText(
+          "Search beer styles or IDs..."
+        );
         fireEvent.changeText(searchInput, "nonexistent");
-        
+
         expect(getByText("No beer styles match your search")).toBeTruthy();
       });
     });
@@ -668,7 +694,7 @@ describe("BasicInfoForm", () => {
       );
 
       const nameInput = getByPlaceholderText("Enter recipe name");
-      
+
       // First create an error
       fireEvent.changeText(nameInput, "");
       expect(queryByText("Recipe name is required")).toBeTruthy();

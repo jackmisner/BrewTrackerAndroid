@@ -1,4 +1,14 @@
-// API Configuration
+/**
+ * API Configuration for BrewTracker mobile app
+ *
+ * Central configuration for all network requests, storage keys, and API endpoints.
+ * Uses environment variables for deployment-specific settings with local dev fallbacks.
+ */
+
+/**
+ * Main API configuration object
+ * Configures base URL, timeouts, retry logic, and debug settings
+ */
 export const API_CONFIG = {
   // Use environment variable or fallback to local development
   BASE_URL: process.env.EXPO_PUBLIC_API_URL || "http://127.0.0.1:5000/api",
@@ -9,7 +19,11 @@ export const API_CONFIG = {
   LOG_LEVEL: process.env.EXPO_PUBLIC_LOG_LEVEL || "info",
 };
 
-// Storage keys for secure storage
+/**
+ * Storage keys for secure storage
+ * All user data and authentication tokens are stored using these keys
+ * Uses SecureStore on mobile for enhanced security
+ */
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: "access_token",
   USER_DATA: "user_data",
@@ -19,7 +33,10 @@ export const STORAGE_KEYS = {
   LAST_SYNC: "last_sync",
 } as const;
 
-// API Endpoints
+/**
+ * Centralized API endpoint definitions
+ * Organizes all backend routes by functional area for easy maintenance
+ */
 export const ENDPOINTS = {
   // Auth
   AUTH: {

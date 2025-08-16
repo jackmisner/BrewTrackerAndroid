@@ -119,9 +119,15 @@ describe("Register Styles", () => {
     });
 
     it("should maintain consistent typography hierarchy", () => {
-      expect(registerStyles.title.fontSize).toBeGreaterThan(registerStyles.subtitle.fontSize);
-      expect(registerStyles.subtitle.fontSize).toBeGreaterThan(registerStyles.dividerText.fontSize);
-      expect(registerStyles.input.fontSize).toBeGreaterThan(registerStyles.errorText.fontSize);
+      expect(registerStyles.title.fontSize).toBeGreaterThan(
+        registerStyles.subtitle.fontSize
+      );
+      expect(registerStyles.subtitle.fontSize).toBeGreaterThan(
+        registerStyles.dividerText.fontSize
+      );
+      expect(registerStyles.input.fontSize).toBeGreaterThan(
+        registerStyles.errorText.fontSize
+      );
     });
   });
 
@@ -152,7 +158,7 @@ describe("Register Styles", () => {
 
     it("should maintain consistent input styling", () => {
       const input = registerStyles.input;
-      
+
       expect(input.borderRadius).toBe(8);
       expect(typeof input.borderWidth).toBe("number");
       expect(typeof input.padding).toBe("number");
@@ -198,7 +204,9 @@ describe("Register Styles", () => {
     });
 
     it("should have correct inherited secondary button properties", () => {
-      expect(registerStyles.secondaryButton.backgroundColor).toBe("transparent");
+      expect(registerStyles.secondaryButton.backgroundColor).toBe(
+        "transparent"
+      );
       expect(registerStyles.secondaryButton.borderWidth).toBe(1);
       expect(registerStyles.secondaryButton.borderColor).toBe("#f4511e");
     });
@@ -237,8 +245,12 @@ describe("Register Styles", () => {
     });
 
     it("should maintain color consistency across elements", () => {
-      expect(registerStyles.title.color).toBe(registerStyles.primaryButton.backgroundColor);
-      expect(registerStyles.subtitle.color).toBe(registerStyles.dividerText.color);
+      expect(registerStyles.title.color).toBe(
+        registerStyles.primaryButton.backgroundColor
+      );
+      expect(registerStyles.subtitle.color).toBe(
+        registerStyles.dividerText.color
+      );
     });
   });
 
@@ -319,7 +331,7 @@ describe("Register Styles", () => {
     it("should be a valid StyleSheet object", () => {
       expect(typeof registerStyles).toBe("object");
       expect(registerStyles).not.toBeNull();
-      
+
       // Each style should be an object with style properties
       Object.values(registerStyles).forEach(style => {
         expect(typeof style).toBe("object");
@@ -330,7 +342,7 @@ describe("Register Styles", () => {
     it("should export all expected style keys", () => {
       const expectedKeys = [
         "container",
-        "scrollContainer", 
+        "scrollContainer",
         "header",
         "title",
         "subtitle",
@@ -345,7 +357,7 @@ describe("Register Styles", () => {
         "primaryButton",
         "secondaryButton",
         "buttonText",
-        "secondaryButtonText"
+        "secondaryButtonText",
       ];
 
       expectedKeys.forEach(key => {
@@ -359,12 +371,14 @@ describe("Register Styles", () => {
       expect(typeof registerStyles.scrollContainer.padding).toBe("number");
       expect(typeof registerStyles.input.fontSize).toBe("number");
       expect(typeof registerStyles.title.fontSize).toBe("number");
-      
+
       // String properties should be strings
       expect(typeof registerStyles.container.backgroundColor).toBe("string");
       expect(typeof registerStyles.title.color).toBe("string");
       expect(typeof registerStyles.form.width).toBe("string");
-      expect(typeof registerStyles.scrollContainer.justifyContent).toBe("string");
+      expect(typeof registerStyles.scrollContainer.justifyContent).toBe(
+        "string"
+      );
     });
   });
 

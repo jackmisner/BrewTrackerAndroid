@@ -62,7 +62,7 @@ export default function AddFermentationEntryScreen() {
       });
       router.back();
     },
-    onError: (error) => {
+    onError: error => {
       console.error("Failed to add fermentation entry:", error);
       Alert.alert(
         "Save Failed",
@@ -88,22 +88,24 @@ export default function AddFermentationEntryScreen() {
     // Temperature validation (optional but if provided must be valid)
     if (formData.temperature.trim()) {
       const temp = parseFloat(formData.temperature);
-      const tempUnit = brewSession?.temperature_unit || 'F';
-      
+      const tempUnit = brewSession?.temperature_unit || "F";
+
       // Validation ranges based on temperature unit
       let minTemp, maxTemp, unitDisplay;
-      if (tempUnit === 'C') {
+      if (tempUnit === "C") {
         minTemp = -23; // ~-10°F in Celsius
-        maxTemp = 49;  // ~120°F in Celsius
-        unitDisplay = '°C';
+        maxTemp = 49; // ~120°F in Celsius
+        unitDisplay = "°C";
       } else {
         minTemp = -10;
         maxTemp = 120;
-        unitDisplay = '°F';
+        unitDisplay = "°F";
       }
-      
+
       if (isNaN(temp) || temp < minTemp || temp > maxTemp) {
-        errors.push(`Temperature must be between ${minTemp}${unitDisplay} and ${maxTemp}${unitDisplay}`);
+        errors.push(
+          `Temperature must be between ${minTemp}${unitDisplay} and ${maxTemp}${unitDisplay}`
+        );
       }
     }
 
@@ -148,7 +150,8 @@ export default function AddFermentationEntryScreen() {
     }
   };
 
-  const fermentationEntryTemperaturePlaceholder = brewSession?.temperature_unit === 'C' ? '20' : '68';
+  const fermentationEntryTemperaturePlaceholder =
+    brewSession?.temperature_unit === "C" ? "20" : "68";
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString();
@@ -162,11 +165,7 @@ export default function AddFermentationEntryScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerButton} onPress={handleCancel}>
-          <MaterialIcons
-            name="close"
-            size={24}
-            color={theme.colors.text}
-          />
+          <MaterialIcons name="close" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add Fermentation Entry</Text>
         <TouchableOpacity
@@ -228,26 +227,31 @@ export default function AddFermentationEntryScreen() {
           <TextInput
             style={styles.textInput}
             value={formData.gravity}
-            onChangeText={(value) =>
-              setFormData({ ...formData, gravity: value })
-            }
+            onChangeText={value => setFormData({ ...formData, gravity: value })}
             placeholder="e.g., 1.050"
             keyboardType="decimal-pad"
             returnKeyType="next"
             placeholderTextColor={theme.colors.textSecondary}
           />
-          <Text style={[styles.label, { fontSize: 12, color: theme.colors.textSecondary }]}>
+          <Text
+            style={[
+              styles.label,
+              { fontSize: 12, color: theme.colors.textSecondary },
+            ]}
+          >
             Enter the specific gravity reading (e.g., 1.050)
           </Text>
         </View>
 
         {/* Temperature */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Temperature (°{brewSession?.temperature_unit || 'F'})</Text>
+          <Text style={styles.label}>
+            Temperature (°{brewSession?.temperature_unit || "F"})
+          </Text>
           <TextInput
             style={styles.textInput}
             value={formData.temperature}
-            onChangeText={(value) =>
+            onChangeText={value =>
               setFormData({ ...formData, temperature: value })
             }
             placeholder={`e.g., ${fermentationEntryTemperaturePlaceholder}`}
@@ -255,7 +259,14 @@ export default function AddFermentationEntryScreen() {
             returnKeyType="next"
             placeholderTextColor={theme.colors.textSecondary}
           />
-          <Text style={[styles.label, { fontSize: 12, color: theme.colors.textSecondary }]}>Optional temperature reading</Text>
+          <Text
+            style={[
+              styles.label,
+              { fontSize: 12, color: theme.colors.textSecondary },
+            ]}
+          >
+            Optional temperature reading
+          </Text>
         </View>
 
         {/* pH */}
@@ -264,13 +275,20 @@ export default function AddFermentationEntryScreen() {
           <TextInput
             style={styles.textInput}
             value={formData.ph}
-            onChangeText={(value) => setFormData({ ...formData, ph: value })}
+            onChangeText={value => setFormData({ ...formData, ph: value })}
             placeholder="e.g., 4.2"
             keyboardType="decimal-pad"
             returnKeyType="next"
             placeholderTextColor={theme.colors.textSecondary}
           />
-          <Text style={[styles.label, { fontSize: 12, color: theme.colors.textSecondary }]}>Optional pH measurement</Text>
+          <Text
+            style={[
+              styles.label,
+              { fontSize: 12, color: theme.colors.textSecondary },
+            ]}
+          >
+            Optional pH measurement
+          </Text>
         </View>
 
         {/* Notes */}
@@ -279,16 +297,19 @@ export default function AddFermentationEntryScreen() {
           <TextInput
             style={[styles.textInput, styles.textArea]}
             value={formData.notes}
-            onChangeText={(value) =>
-              setFormData({ ...formData, notes: value })
-            }
+            onChangeText={value => setFormData({ ...formData, notes: value })}
             placeholder="Any observations about fermentation..."
             multiline
             numberOfLines={4}
             returnKeyType="done"
             placeholderTextColor={theme.colors.textSecondary}
           />
-          <Text style={[styles.label, { fontSize: 12, color: theme.colors.textSecondary }]}>
+          <Text
+            style={[
+              styles.label,
+              { fontSize: 12, color: theme.colors.textSecondary },
+            ]}
+          >
             Optional notes about this reading or fermentation progress
           </Text>
         </View>

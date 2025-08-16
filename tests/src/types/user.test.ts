@@ -477,7 +477,9 @@ describe("User Types", () => {
       expect(settings.user_id).toBe(user.id);
       expect(profile.username).toBe(user.username);
       expect(preferences.theme).toBe(settings.theme_preference);
-      expect(preferences.notifications_enabled).toBe(settings.push_notifications);
+      expect(preferences.notifications_enabled).toBe(
+        settings.push_notifications
+      );
     });
 
     it("should support user onboarding flow", () => {

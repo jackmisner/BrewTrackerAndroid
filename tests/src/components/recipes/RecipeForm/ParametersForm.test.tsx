@@ -6,7 +6,7 @@ import { RecipeFormData } from "../../../../../src/types";
 // Comprehensive React Native mocking to avoid ES6 module issues
 jest.mock("react-native", () => ({
   View: "View",
-  Text: "Text", 
+  Text: "Text",
   TextInput: "TextInput",
   TouchableOpacity: "TouchableOpacity",
   StyleSheet: {
@@ -70,11 +70,11 @@ jest.mock("@styles/modals/createRecipeStyles", () => ({
     presetsContainer: { marginTop: 8 },
     presetsLabel: { fontSize: 12, color: "#666666", marginBottom: 4 },
     presetsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-    presetButton: { 
-      backgroundColor: "#f8f9fa", 
-      borderRadius: 6, 
-      paddingHorizontal: 12, 
-      paddingVertical: 6 
+    presetButton: {
+      backgroundColor: "#f8f9fa",
+      borderRadius: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
     },
     presetButtonActive: { backgroundColor: "#f4511e" },
     presetButtonText: { fontSize: 12, color: "#000000" },
@@ -88,7 +88,7 @@ jest.mock("@styles/modals/createRecipeStyles", () => ({
 
 describe("ParametersForm", () => {
   const mockOnUpdateField = jest.fn();
-  
+
   const defaultRecipeData: RecipeFormData = {
     name: "Test Recipe",
     style: "IPA",
@@ -124,7 +124,7 @@ describe("ParametersForm", () => {
       expect(getByText(/Brewhouse Efficiency/)).toBeTruthy();
       expect(getByText(/Mash Temperature/)).toBeTruthy();
       expect(getByText("Mash Time (minutes)")).toBeTruthy();
-      
+
       // Check that specific inputs exist by their display values
       expect(getByDisplayValue("90")).toBeTruthy(); // Boil time default value
       expect(getByDisplayValue("75")).toBeTruthy(); // Efficiency default value
@@ -179,7 +179,9 @@ describe("ParametersForm", () => {
       );
 
       expect(getByText("Brewing Parameters")).toBeTruthy();
-      expect(getByText(/These parameters affect the final recipe calculations/)).toBeTruthy();
+      expect(
+        getByText(/These parameters affect the final recipe calculations/)
+      ).toBeTruthy();
     });
   });
 
@@ -241,7 +243,7 @@ describe("ParametersForm", () => {
 
       const mashTimeInput = getByTestId("mash-time-input");
       fireEvent.changeText(mashTimeInput, "90");
-      
+
       expect(mockOnUpdateField).toHaveBeenCalledWith("mash_time", 90);
     });
   });
@@ -297,7 +299,10 @@ describe("ParametersForm", () => {
       presets.forEach(preset => {
         const button = getByText(preset.text);
         fireEvent.press(button);
-        expect(mockOnUpdateField).toHaveBeenCalledWith("efficiency", preset.value);
+        expect(mockOnUpdateField).toHaveBeenCalledWith(
+          "efficiency",
+          preset.value
+        );
       });
     });
   });
@@ -583,9 +588,15 @@ describe("ParametersForm", () => {
         />
       );
 
-      expect(getByText("Typical: 60-90 minutes for ales, 90+ for lagers")).toBeTruthy();
-      expect(getByText("Single infusion temperature for enzyme activity")).toBeTruthy();
-      expect(getByText("Optional - leave blank for default (60 minutes)")).toBeTruthy();
+      expect(
+        getByText("Typical: 60-90 minutes for ales, 90+ for lagers")
+      ).toBeTruthy();
+      expect(
+        getByText("Single infusion temperature for enzyme activity")
+      ).toBeTruthy();
+      expect(
+        getByText("Optional - leave blank for default (60 minutes)")
+      ).toBeTruthy();
     });
   });
 

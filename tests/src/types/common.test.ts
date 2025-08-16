@@ -21,7 +21,9 @@ describe("Common Types", () => {
     it("should accept UUID format strings", () => {
       const uuid: ID = "550e8400-e29b-41d4-a716-446655440000";
       expect(typeof uuid).toBe("string");
-      expect(uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+      expect(uuid).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+      );
     });
 
     it("should accept short ID strings", () => {
@@ -216,7 +218,10 @@ describe("Common Types", () => {
     });
 
     it("should be used in brewing contexts", () => {
-      const getMeasurementUnit = (type: MeasurementType, system: UnitSystem): string => {
+      const getMeasurementUnit = (
+        type: MeasurementType,
+        system: UnitSystem
+      ): string => {
         switch (type) {
           case "weight":
             return system === "metric" ? "kg" : "lb";

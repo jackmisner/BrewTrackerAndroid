@@ -381,16 +381,16 @@ const SUPPRESSED_WARN_PATTERNS = [
 
 console.error = (...args) => {
   const message = args[0];
-  let messageString = '';
-  
+  let messageString = "";
+
   if (typeof message === "string") {
     messageString = message;
   } else if (message instanceof Error) {
     messageString = message.message || message.toString();
-  } else if (message && typeof message.toString === 'function') {
+  } else if (message && typeof message.toString === "function") {
     messageString = message.toString();
   }
-  
+
   if (messageString) {
     // Check if this error matches any suppressed patterns
     const shouldSuppress = SUPPRESSED_ERROR_PATTERNS.some(pattern =>
@@ -400,23 +400,23 @@ console.error = (...args) => {
       return;
     }
   }
-  
+
   // Log all other errors normally
   originalError.apply(console, args);
 };
 
 console.warn = (...args) => {
   const message = args[0];
-  let messageString = '';
-  
+  let messageString = "";
+
   if (typeof message === "string") {
     messageString = message;
   } else if (message instanceof Error) {
     messageString = message.message || message.toString();
-  } else if (message && typeof message.toString === 'function') {
+  } else if (message && typeof message.toString === "function") {
     messageString = message.toString();
   }
-  
+
   if (messageString) {
     // Check if this warning matches any suppressed patterns
     const shouldSuppress = SUPPRESSED_WARN_PATTERNS.some(pattern =>
@@ -426,7 +426,7 @@ console.warn = (...args) => {
       return;
     }
   }
-  
+
   // Log all other warnings normally
   originalWarn.apply(console, args);
 };

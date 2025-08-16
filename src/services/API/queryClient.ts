@@ -1,8 +1,36 @@
+/**
+ * React Query Client Configuration for BrewTracker Android
+ *
+ * Configures caching, persistence, and query management for optimal mobile performance.
+ * Provides centralized query keys and cache utilities for consistent data management.
+ *
+ * Features:
+ * - Mobile-optimized cache settings (5min stale, 10min garbage collection)
+ * - Offline support preparation with AsyncStorage persister
+ * - Standardized query keys for all entities
+ * - Cache management utilities for invalidation and cleanup
+ *
+ * @example
+ * ```typescript
+ * // Use in components with React Query hooks
+ * const { data: recipes } = useQuery({
+ *   queryKey: QUERY_KEYS.RECIPES,
+ *   queryFn: () => ApiService.recipes.getAll()
+ * });
+ *
+ * // Invalidate cache after mutations
+ * cacheUtils.invalidateRecipes();
+ * ```
+ */
+
 import { QueryClient } from "@tanstack/react-query";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 
-// Create async storage persister (for future offline support)
+/**
+ * AsyncStorage persister for future offline support
+ * Enables data persistence across app sessions
+ */
 const _asyncStoragePersister = createAsyncStoragePersister({
   storage: AsyncStorage,
   key: "BREWTRACKER_CACHE",
@@ -10,7 +38,10 @@ const _asyncStoragePersister = createAsyncStoragePersister({
   deserialize: JSON.parse,
 });
 
-// Create query client with React Native optimized defaults
+/**
+ * Main React Query client with mobile-optimized configuration
+ * Balances performance, freshness, and network usage for mobile apps
+ */
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -38,7 +69,11 @@ export const queryClient = new QueryClient({
 // Note: In newer versions, persistence is handled differently
 // This will be configured in the app root with QueryClientProvider
 
-// Query keys for consistent caching
+/**
+ * Standardized query keys for React Query caching
+ * Provides type-safe, hierarchical cache keys for all entities
+ * Use these constants to ensure consistent cache management across the app
+ */
 export const QUERY_KEYS = {
   // Auth
   USER_PROFILE: ["user", "profile"] as const,
@@ -81,7 +116,10 @@ export const QUERY_KEYS = {
   AI_HEALTH: ["ai", "health"] as const,
 } as const;
 
-// Helper functions for cache management
+/**
+ * Cache management utilities for React Query
+ * Provides convenient methods for cache invalidation, cleanup, and debugging
+ */
 export const cacheUtils = {
   // Invalidate all recipe-related queries
   invalidateRecipes: () => {

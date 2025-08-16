@@ -159,10 +159,16 @@ export function setupIDInterceptors(apiInstance: AxiosInstance): void {
  */
 export function removeIDInterceptors(apiInstance: AxiosInstance): void {
   // Clear interceptors by removing all handlers
-  if (apiInstance.interceptors.request && (apiInstance.interceptors.request as any).handlers) {
+  if (
+    apiInstance.interceptors.request &&
+    (apiInstance.interceptors.request as any).handlers
+  ) {
     (apiInstance.interceptors.request as any).handlers = [];
   }
-  if (apiInstance.interceptors.response && (apiInstance.interceptors.response as any).handlers) {
+  if (
+    apiInstance.interceptors.response &&
+    (apiInstance.interceptors.response as any).handlers
+  ) {
     (apiInstance.interceptors.response as any).handlers = [];
   }
 }

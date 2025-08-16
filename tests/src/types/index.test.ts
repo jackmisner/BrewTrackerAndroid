@@ -73,7 +73,7 @@ describe("Types Index Exports", () => {
         const { BrewSession } = await import("../../../src/types/brewSession");
         const { LoginRequest } = await import("../../../src/types/api");
       };
-      
+
       await expect(importTest()).resolves.not.toThrow();
     });
 
@@ -170,35 +170,35 @@ describe("Types Index Exports", () => {
   describe("Type definition completeness", () => {
     it("should export all expected common types", async () => {
       const commonTypes = await import("../../../src/types/common");
-      
+
       // Check that common types module has expected structure
       expect(typeof commonTypes).toBe("object");
     });
 
     it("should export all expected user types", async () => {
       const userTypes = await import("../../../src/types/user");
-      
+
       // Check that user types module has expected structure
       expect(typeof userTypes).toBe("object");
     });
 
     it("should export all expected recipe types", async () => {
       const recipeTypes = await import("../../../src/types/recipe");
-      
+
       // Check that recipe types module has expected structure
       expect(typeof recipeTypes).toBe("object");
     });
 
     it("should export all expected brew session types", async () => {
       const brewSessionTypes = await import("../../../src/types/brewSession");
-      
+
       // Check that brew session types module has expected structure
       expect(typeof brewSessionTypes).toBe("object");
     });
 
     it("should export all expected API types", async () => {
       const apiTypes = await import("../../../src/types/api");
-      
+
       // Check that API types module has expected structure
       expect(typeof apiTypes).toBe("object");
     });
@@ -244,7 +244,7 @@ describe("Types Index Exports", () => {
     it("should have clear module organization", async () => {
       // Test that the module structure is logical and well-organized
       const indexModule = await import("../../../src/types");
-      
+
       expect(typeof indexModule).toBe("object");
       expect(indexModule).not.toBeNull();
     });

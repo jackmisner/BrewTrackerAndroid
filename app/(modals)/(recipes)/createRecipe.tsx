@@ -1,3 +1,27 @@
+/**
+ * Create Recipe Modal Screen
+ *
+ * Multi-step wizard for creating new beer recipes with real-time validation and metrics.
+ * Provides a guided 4-step process: Basic Info → Parameters → Ingredients → Review.
+ *
+ * Features:
+ * - Multi-step form with progress indicator
+ * - Real-time recipe metrics calculation
+ * - Unit-aware ingredient management
+ * - Comprehensive form validation
+ * - Optimistic UI updates with error handling
+ * - Auto-save to prevent data loss
+ *
+ * The component uses a reducer for complex state management and React Query for
+ * server-side operations including real-time metrics calculation.
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push('/(modals)/(recipes)/createRecipe');
+ * ```
+ */
+
 import React, { useState, useReducer, useCallback } from "react";
 import {
   View,
@@ -23,7 +47,9 @@ import { IngredientsForm } from "@src/components/recipes/RecipeForm/IngredientsF
 import { ReviewForm } from "@src/components/recipes/RecipeForm/ReviewForm";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 
-// Recipe builder steps
+/**
+ * Recipe creation wizard steps
+ */
 enum RecipeStep {
   BASIC_INFO = 0,
   PARAMETERS = 1,
@@ -31,9 +57,18 @@ enum RecipeStep {
   REVIEW = 3,
 }
 
+/**
+ * Human-readable titles for each step in the wizard
+ */
 const STEP_TITLES = ["Basic Info", "Parameters", "Ingredients", "Review"];
 
-// Create unit-aware initial recipe state
+/**
+ * Creates initial recipe state with unit-aware defaults
+ * Provides sensible defaults based on the user's unit system preference
+ *
+ * @param unitSystem - User's preferred unit system ('imperial' or 'metric')
+ * @returns Initial recipe form data with appropriate units and defaults
+ */
 const createInitialRecipeState = (
   unitSystem: "imperial" | "metric"
 ): RecipeFormData => ({

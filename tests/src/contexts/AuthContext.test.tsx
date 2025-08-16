@@ -165,7 +165,7 @@ describe("AuthContext", () => {
 
     it("should initialize auth when no token is stored", async () => {
       mockApiService.token.getToken.mockResolvedValue(null);
-      
+
       const wrapper = createWrapper();
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -217,7 +217,9 @@ describe("AuthContext", () => {
     it("should use cached user data when API fails", async () => {
       const mockUser = createMockUser();
       mockApiService.token.getToken.mockResolvedValue("token");
-      mockApiService.auth.getProfile.mockRejectedValue(new Error("Network error"));
+      mockApiService.auth.getProfile.mockRejectedValue(
+        new Error("Network error")
+      );
       mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(mockUser));
 
       const wrapper = createWrapper();
@@ -422,7 +424,9 @@ describe("AuthContext", () => {
         await result.current.signInWithGoogle(googleToken);
       });
 
-      expect(mockApiService.auth.googleAuth).toHaveBeenCalledWith({ token: googleToken });
+      expect(mockApiService.auth.googleAuth).toHaveBeenCalledWith({
+        token: googleToken,
+      });
       expect(mockApiService.token.setToken).toHaveBeenCalledWith("new-token");
       expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
         "userData",
@@ -482,7 +486,9 @@ describe("AuthContext", () => {
 
     it("should clear user state even if logout fails", async () => {
       const mockUser = createMockUser();
-      mockApiService.token.removeToken.mockRejectedValue(new Error("Logout failed"));
+      mockApiService.token.removeToken.mockRejectedValue(
+        new Error("Logout failed")
+      );
 
       const wrapper = createWrapper({ user: mockUser });
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -504,7 +510,7 @@ describe("AuthContext", () => {
     it("should refresh user profile", async () => {
       const mockUser = createMockUser();
       const updatedUser = { ...mockUser, username: "updateduser" };
-      
+
       mockApiService.auth.getProfile.mockResolvedValue({ data: updatedUser });
 
       const wrapper = createWrapper({ user: mockUser });
@@ -575,7 +581,9 @@ describe("AuthContext", () => {
         await result.current.verifyEmail(verificationToken);
       });
 
-      expect(mockApiService.auth.verifyEmail).toHaveBeenCalledWith({ token: verificationToken });
+      expect(mockApiService.auth.verifyEmail).toHaveBeenCalledWith({
+        token: verificationToken,
+      });
       expect(mockApiService.token.setToken).toHaveBeenCalledWith("new-token");
       expect(result.current.user).toEqual(mockUser);
     });
@@ -628,7 +636,9 @@ describe("AuthContext", () => {
     });
 
     it("should resend verification email", async () => {
-      mockApiService.auth.resendVerification.mockResolvedValue({ data: { message: "Email sent" } });
+      mockApiService.auth.resendVerification.mockResolvedValue({
+        data: { message: "Email sent" },
+      });
 
       const wrapper = createWrapper({ user: createMockUser() });
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -672,7 +682,9 @@ describe("AuthContext", () => {
       const mockUser = createMockUser({ email_verified: false });
       const statusResponse = { data: { email_verified: true } };
 
-      mockApiService.auth.getVerificationStatus.mockResolvedValue(statusResponse);
+      mockApiService.auth.getVerificationStatus.mockResolvedValue(
+        statusResponse
+      );
 
       const wrapper = createWrapper({ user: mockUser });
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -692,7 +704,9 @@ describe("AuthContext", () => {
       const mockUser = createMockUser({ email_verified: true });
       const statusResponse = { data: { email_verified: true } };
 
-      mockApiService.auth.getVerificationStatus.mockResolvedValue(statusResponse);
+      mockApiService.auth.getVerificationStatus.mockResolvedValue(
+        statusResponse
+      );
 
       const wrapper = createWrapper({ user: mockUser });
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -706,7 +720,9 @@ describe("AuthContext", () => {
 
     it("should handle verification status check failure silently", async () => {
       const mockUser = createMockUser();
-      mockApiService.auth.getVerificationStatus.mockRejectedValue(new Error("Network error"));
+      mockApiService.auth.getVerificationStatus.mockRejectedValue(
+        new Error("Network error")
+      );
 
       const wrapper = createWrapper({ user: mockUser });
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -728,7 +744,9 @@ describe("AuthContext", () => {
 
     it("should send forgot password email", async () => {
       const email = "test@example.com";
-      mockApiService.auth.forgotPassword.mockResolvedValue({ data: { message: "Email sent" } });
+      mockApiService.auth.forgotPassword.mockResolvedValue({
+        data: { message: "Email sent" },
+      });
 
       const wrapper = createWrapper({ user: null });
       const { result } = renderHook(() => useAuth(), { wrapper });
@@ -737,7 +755,9 @@ describe("AuthContext", () => {
         await result.current.forgotPassword(email);
       });
 
-      expect(mockApiService.auth.forgotPassword).toHaveBeenCalledWith({ email });
+      expect(mockApiService.auth.forgotPassword).toHaveBeenCalledWith({
+        email,
+      });
       expect(result.current.error).toBeNull();
     });
 
@@ -772,7 +792,9 @@ describe("AuthContext", () => {
     it("should reset password successfully", async () => {
       const token = "reset-token";
       const newPassword = "newpassword123";
-      mockApiService.auth.resetPassword.mockResolvedValue({ data: { message: "Password reset" } });
+      mockApiService.auth.resetPassword.mockResolvedValue({
+        data: { message: "Password reset" },
+      });
 
       const wrapper = createWrapper({ user: null });
       const { result } = renderHook(() => useAuth(), { wrapper });

@@ -209,17 +209,19 @@ describe("Button Styles", () => {
       expect(buttonStyles.secondaryButtonText.color).toBe(colors.primary);
       expect(buttonStyles.buttonText.color).toBe(colors.primaryText);
       expect(buttonStyles.disabledButtonText.color).toBe(colors.primaryText);
-      expect(buttonStyles.disabledButton.backgroundColor).toBe(colors.textMuted);
+      expect(buttonStyles.disabledButton.backgroundColor).toBe(
+        colors.textMuted
+      );
     });
 
     it("should maintain proper visual hierarchy", () => {
       // Primary button should be most prominent (filled)
       expect(buttonStyles.primaryButton.backgroundColor).toBe("#f4511e");
-      
+
       // Secondary button should be less prominent (outline only)
       expect(buttonStyles.secondaryButton.backgroundColor).toBe("transparent");
       expect(buttonStyles.secondaryButton.borderWidth).toBeGreaterThan(0);
-      
+
       // Disabled button should be least prominent (muted)
       expect(buttonStyles.disabledButton.opacity).toBeLessThan(1);
     });
@@ -285,7 +287,7 @@ describe("Button Styles", () => {
     it("should be a valid StyleSheet object", () => {
       expect(typeof buttonStyles).toBe("object");
       expect(buttonStyles).not.toBeNull();
-      
+
       // Each style should be an object with style properties
       Object.values(buttonStyles).forEach(style => {
         expect(typeof style).toBe("object");
@@ -299,7 +301,7 @@ describe("Button Styles", () => {
       // Verify that the styles use imported colors rather than hardcoded values
       // This is tested through the consistent color usage in other tests
       const { colors } = require("../../../../src/styles/common/colors");
-      
+
       expect(colors.primary).toBeDefined();
       expect(colors.primaryText).toBeDefined();
       expect(colors.textMuted).toBeDefined();
@@ -317,7 +319,7 @@ describe("Button Styles", () => {
     it("should be created with StyleSheet.create", () => {
       // This verifies the structure is compatible with React Native StyleSheet
       expect(typeof buttonStyles).toBe("object");
-      
+
       // Each style should have properties that are valid React Native styles
       const baseButton = buttonStyles.button;
       expect(typeof baseButton.borderRadius).toBe("number");
@@ -330,11 +332,11 @@ describe("Button Styles", () => {
       // Color properties should be strings
       expect(typeof buttonStyles.primaryButton.backgroundColor).toBe("string");
       expect(typeof buttonStyles.buttonText.color).toBe("string");
-      
+
       // Numeric properties should be numbers
       expect(typeof buttonStyles.button.padding).toBe("number");
       expect(typeof buttonStyles.button.borderRadius).toBe("number");
-      
+
       // Layout properties should be strings
       expect(typeof buttonStyles.button.alignItems).toBe("string");
       expect(typeof buttonStyles.button.justifyContent).toBe("string");

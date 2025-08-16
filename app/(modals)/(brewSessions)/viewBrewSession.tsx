@@ -320,7 +320,11 @@ export default function ViewBrewSession() {
           {renderMetric("ABV", brewSession.actual_abv, "%")}
           {renderMetric("Efficiency", brewSession.actual_efficiency, "%")}
           {brewSession.mash_temp &&
-            renderMetric("Mash Temp", brewSession.mash_temp, `°${brewSession.temperature_unit || 'F'}`)}
+            renderMetric(
+              "Mash Temp",
+              brewSession.mash_temp,
+              `°${brewSession.temperature_unit || "F"}`
+            )}
         </View>
 
         {/* Brew Notes */}

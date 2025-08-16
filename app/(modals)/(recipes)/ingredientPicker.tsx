@@ -1,3 +1,31 @@
+/**
+ * Ingredient Picker Modal Screen
+ *
+ * Comprehensive ingredient selection interface for recipe building with advanced
+ * search, filtering, and category browsing capabilities.
+ *
+ * Features:
+ * - Real-time search with debouncing (500ms delay)
+ * - Category-based filtering (grain types, yeast types, etc.)
+ * - Ingredient type filtering (grain, hop, yeast, other)
+ * - Unit-aware amount and time editing
+ * - Hop-specific usage and time configuration
+ * - Detailed ingredient information display
+ * - Optimized performance with virtualized lists
+ *
+ * The picker loads ingredients from the backend API with proper caching and
+ * allows users to select, configure amounts/units, and add to their recipe.
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push({
+ *   pathname: '/(modals)/(recipes)/ingredientPicker',
+ *   params: { recipeId: '123', stepIndex: '2' }
+ * });
+ * ```
+ */
+
 import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
@@ -24,7 +52,10 @@ import { IngredientDetailEditor } from "@src/components/recipes/IngredientEditor
 import { HOP_USAGE_OPTIONS } from "@constants/hopConstants";
 import { formatIngredientDetails } from "@utils/formatUtils";
 
-// Ingredient categories for filtering (matching backend grain_type values)
+/**
+ * Ingredient categories for filtering (matching backend grain_type values)
+ * Organizes ingredients by functional categories to improve searchability
+ */
 const INGREDIENT_CATEGORIES = {
   grain: [
     "base_malt",
