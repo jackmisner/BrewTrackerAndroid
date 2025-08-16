@@ -3,8 +3,8 @@ import {
   UserSettings,
   UserProfile,
   UserPreferences,
-} from "../../../src/types/user";
-import { UnitSystem, ID } from "../../../src/types/common";
+} from "@src/types/user";
+import { UnitSystem, ID } from "@src/types/common";
 
 describe("User Types", () => {
   describe("User interface", () => {

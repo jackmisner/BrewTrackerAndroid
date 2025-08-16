@@ -8,7 +8,7 @@ import {
   FilterOptions,
   SortOption,
   SearchFilters,
-} from "../../../src/types/common";
+} from "@src/types/common";
 
 describe("Common Types", () => {
   describe("ID type", () => {

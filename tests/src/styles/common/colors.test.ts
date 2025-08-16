@@ -1,8 +1,4 @@
-import {
-  lightColors,
-  darkColors,
-  colors,
-} from "../../../../src/styles/common/colors";
+import { lightColors, darkColors, colors } from "@src/styles/common/colors";
 
 const validateHexColor = (colorValue: string): boolean => {
   // Allow #rgb, #rrggbb, or named colors like 'white', 'black'

@@ -7,7 +7,7 @@ import {
   useTheme,
   ThemeMode,
   ThemeContextValue,
-} from "../../../src/contexts/ThemeContext";
+} from "@src/contexts/ThemeContext";
 
 // Mock React Native modules
 jest.mock("react-native", () => ({

@@ -1,4 +1,4 @@
-import { loginStyles } from "../../../../src/styles/auth/loginStyles";
+import { loginStyles } from "@src/styles/auth/loginStyles";
 
 // Mock React Native StyleSheet
 jest.mock("react-native", () => ({

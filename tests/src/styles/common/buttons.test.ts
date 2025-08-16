@@ -6,7 +6,7 @@ jest.mock("react-native", () => ({
 }));
 
 // Mock colors import
-jest.mock("../../../../src/styles/common/colors", () => ({
+jest.mock("@src/styles/common/colors", () => ({
   colors: {
     primary: "#f4511e",
     primaryText: "#fff",
@@ -14,7 +14,7 @@ jest.mock("../../../../src/styles/common/colors", () => ({
   },
 }));
 
-import { buttonStyles } from "../../../../src/styles/common/buttons";
+import { buttonStyles } from "@src/styles/common/buttons";
 
 describe("Button Styles", () => {
   describe("Base button style", () => {
@@ -54,7 +54,7 @@ describe("Button Styles", () => {
 
     it("should use consistent brand color", () => {
       const primaryButton = buttonStyles.primaryButton;
-      const { colors } = require("../../../../src/styles/common/colors");
+      const { colors } = require("@src/styles/common/colors");
 
       expect(primaryButton.backgroundColor).toBe(colors.primary);
     });
@@ -71,7 +71,7 @@ describe("Button Styles", () => {
 
     it("should use brand color for border", () => {
       const secondaryButton = buttonStyles.secondaryButton;
-      const { colors } = require("../../../../src/styles/common/colors");
+      const { colors } = require("@src/styles/common/colors");
 
       expect(secondaryButton.borderColor).toBe(colors.primary);
     });
@@ -96,7 +96,7 @@ describe("Button Styles", () => {
 
       it("should use high contrast text color", () => {
         const buttonText = buttonStyles.buttonText;
-        const { colors } = require("../../../../src/styles/common/colors");
+        const { colors } = require("@src/styles/common/colors");
 
         expect(buttonText.color).toBe(colors.primaryText);
       });
@@ -121,7 +121,7 @@ describe("Button Styles", () => {
 
       it("should use consistent brand color", () => {
         const secondaryButtonText = buttonStyles.secondaryButtonText;
-        const { colors } = require("../../../../src/styles/common/colors");
+        const { colors } = require("@src/styles/common/colors");
 
         expect(secondaryButtonText.color).toBe(colors.primary);
       });
@@ -147,7 +147,7 @@ describe("Button Styles", () => {
 
       it("should use muted color from theme", () => {
         const disabledButton = buttonStyles.disabledButton;
-        const { colors } = require("../../../../src/styles/common/colors");
+        const { colors } = require("@src/styles/common/colors");
 
         expect(disabledButton.backgroundColor).toBe(colors.textMuted);
       });
@@ -171,7 +171,7 @@ describe("Button Styles", () => {
 
       it("should use primary text color for contrast", () => {
         const disabledButtonText = buttonStyles.disabledButtonText;
-        const { colors } = require("../../../../src/styles/common/colors");
+        const { colors } = require("@src/styles/common/colors");
 
         expect(disabledButtonText.color).toBe(colors.primaryText);
       });
@@ -202,7 +202,7 @@ describe("Button Styles", () => {
     });
 
     it("should use theme colors consistently", () => {
-      const { colors } = require("../../../../src/styles/common/colors");
+      const { colors } = require("@src/styles/common/colors");
 
       expect(buttonStyles.primaryButton.backgroundColor).toBe(colors.primary);
       expect(buttonStyles.secondaryButton.borderColor).toBe(colors.primary);
@@ -300,7 +300,7 @@ describe("Button Styles", () => {
     it("should import and use color constants", () => {
       // Verify that the styles use imported colors rather than hardcoded values
       // This is tested through the consistent color usage in other tests
-      const { colors } = require("../../../../src/styles/common/colors");
+      const { colors } = require("@src/styles/common/colors");
 
       expect(colors.primary).toBeDefined();
       expect(colors.primaryText).toBeDefined();

@@ -43,10 +43,10 @@ import {
   ApiCallOptions,
   DashboardData,
   DashboardResponse,
-} from "../../../src/types/api";
-import { User } from "../../../src/types/user";
-import { Recipe } from "../../../src/types/recipe";
-import { BrewSessionSummary } from "../../../src/types/brewSession";
+} from "@src/types/api";
+import { User } from "@src/types/user";
+import { Recipe } from "@src/types/recipe";
+import { BrewSessionSummary } from "@src/types/brewSession";
 
 // Shared test fixtures
 const mockUser: User = {

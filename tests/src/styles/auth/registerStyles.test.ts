@@ -46,7 +46,7 @@ jest.mock("@styles/common/buttons", () => ({
   },
 }));
 
-import { registerStyles } from "../../../../src/styles/auth/registerStyles";
+import { registerStyles } from "@src/styles/auth/registerStyles";
 
 describe("Register Styles", () => {
   describe("Container and layout styles", () => {

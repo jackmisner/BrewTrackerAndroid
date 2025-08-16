@@ -1,4 +1,4 @@
-import {
+import type {
   IngredientType,
   BatchSizeUnit,
   IngredientUnit,
@@ -10,8 +10,8 @@ import {
   IngredientsByType,
   RecipeAnalysis,
   CreateRecipeIngredientData,
-} from "../../../src/types/recipe";
-import { ID } from "../../../src/types/common";
+} from "@src/types/recipe";
+import type { ID } from "@src/types/common";
 
 describe("Recipe Types", () => {
   describe("IngredientType enum", () => {

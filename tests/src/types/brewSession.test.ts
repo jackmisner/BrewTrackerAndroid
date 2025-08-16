@@ -10,9 +10,9 @@ import {
   CreateFermentationEntryRequest,
   FermentationStats,
   BrewSessionSummary,
-} from "../../../src/types/brewSession";
-import { ID } from "../../../src/types/common";
-import { Recipe } from "../../../src/types/recipe";
+} from "@src/types/brewSession";
+import { ID } from "@src/types/common";
+import { Recipe } from "@src/types/recipe";
 
 describe("Brew Session Types", () => {
   describe("BrewSessionStatus enum", () => {

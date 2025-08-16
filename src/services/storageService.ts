@@ -73,12 +73,6 @@ export class StorageService {
     _mediaType: MediaPermission = "READ_MEDIA_IMAGES"
   ): Promise<boolean> {
     try {
-      if (Platform.OS !== "android") {
-        // iOS uses photo library permissions through MediaLibrary
-        const { status } = await MediaLibrary.requestPermissionsAsync();
-        return status === "granted";
-      }
-
       if (this.isAndroid13Plus()) {
         // Android 13+: Use granular media permissions
         const { status } = await MediaLibrary.requestPermissionsAsync();
@@ -188,9 +182,10 @@ export class StorageService {
     albumName?: string
   ): Promise<FileOperationResult> {
     try {
-      const hasPermission =
-        await this.requestMediaPermissions("READ_MEDIA_IMAGES");
-      if (!hasPermission) {
+      // Note: MediaLibrary.createAssetAsync handles its own permissions
+      // but we can still check if permissions are available
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== "granted") {
         return {
           success: false,
           error: "Media library permission denied",

@@ -42,7 +42,7 @@ jest.mock("@styles/common/buttons", () => ({
   },
 }));
 
-import { verifyEmailStyles } from "../../../../src/styles/auth/verifyEmailStyles";
+import { verifyEmailStyles } from "@src/styles/auth/verifyEmailStyles";
 
 describe("Verify Email Styles", () => {
   describe("Container and layout styles", () => {

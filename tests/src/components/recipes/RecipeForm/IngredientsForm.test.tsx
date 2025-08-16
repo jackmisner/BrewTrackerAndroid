@@ -1,8 +1,8 @@
 import React from "react";
 import { Text } from "react-native";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
-import { IngredientsForm } from "../../../../../src/components/recipes/RecipeForm/IngredientsForm";
-import { RecipeFormData, RecipeIngredient } from "../../../../../src/types";
+import { IngredientsForm } from "@src/components/recipes/RecipeForm/IngredientsForm";
+import { RecipeFormData, RecipeIngredient } from "@src/types";
 
 // Comprehensive React Native mocking to avoid ES6 module issues
 jest.mock("react-native", () => ({
