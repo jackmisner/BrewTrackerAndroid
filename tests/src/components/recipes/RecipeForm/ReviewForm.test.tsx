@@ -613,7 +613,7 @@ describe("ReviewForm", () => {
         name: "Simple Ingredient",
         type: "other",
         amount: 1,
-        unit: "unit",
+        unit: "oz",
       };
 
       const recipeWithMinimalIngredient = {
@@ -626,7 +626,7 @@ describe("ReviewForm", () => {
       );
 
       expect(getByText("Simple Ingredient")).toBeTruthy();
-      expect(getByText("1 unit")).toBeTruthy();
+      expect(getByText("1 oz")).toBeTruthy();
     });
 
     it("should handle yeast without optional properties", () => {
@@ -653,10 +653,11 @@ describe("ReviewForm", () => {
 
     it("should handle undefined ingredient IDs", () => {
       const ingredientWithoutId: RecipeIngredient = {
+        id: "no-id-1",
         name: "No ID Ingredient",
         type: "other",
         amount: 1,
-        unit: "unit",
+        unit: "oz",
       };
 
       const recipeWithIngredientNoId = {

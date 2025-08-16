@@ -67,6 +67,7 @@ import {
   CalculateMetricsPreviewResponse,
   RecipeVersionHistoryResponse,
   PublicRecipesResponse,
+  RecipeSearchFilters,
 
   // Additional types needed
   RecipeIngredient,
@@ -422,14 +423,6 @@ api.interceptors.response.use(
     return Promise.reject(enhancedError);
   }
 );
-
-/**
- * Recipe search filters interface for public recipe endpoint
- */
-interface RecipeSearchFilters {
-  style?: string;
-  search?: string;
-}
 
 /**
  * Main API Service object providing access to all BrewTracker backend endpoints

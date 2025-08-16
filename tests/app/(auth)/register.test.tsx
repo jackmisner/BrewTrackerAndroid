@@ -52,7 +52,7 @@ jest.mock("@styles/auth/registerStyles", () => ({
 
 const mockAuth = {
   register: jest.fn(),
-  error: null,
+  error: null as string | null,
   clearError: jest.fn(),
 };
 

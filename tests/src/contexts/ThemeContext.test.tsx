@@ -77,7 +77,7 @@ describe("ThemeContext", () => {
   });
 
   const createWrapper = ({ children }: { children: React.ReactNode }) =>
-    React.createElement(ThemeProvider, {}, children);
+    React.createElement(ThemeProvider, { children });
 
   describe("useTheme hook", () => {
     it("should throw error when used outside provider", () => {

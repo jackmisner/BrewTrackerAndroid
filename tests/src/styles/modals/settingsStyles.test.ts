@@ -25,6 +25,12 @@ describe("Settings Styles", () => {
       borderLight: "#f0f0f0",
       inputBackground: "#f8f9fa",
       shadow: "#000000",
+      error: "#dc3545",
+      success: "#28a745",
+      warning: "#ffc107",
+      info: "#17a2b8",
+      gravityLine: "#28a745",
+      temperatureLine: "#dc3545",
     },
   };
 

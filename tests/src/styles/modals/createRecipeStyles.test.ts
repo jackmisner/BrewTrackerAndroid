@@ -27,6 +27,11 @@ describe("Create Recipe Styles", () => {
       inputBackground: "#f8f9fa",
       error: "#dc3545",
       success: "#28a745",
+      warning: "#ffc107",
+      info: "#17a2b8",
+      shadow: "#000000",
+      gravityLine: "#28a745",
+      temperatureLine: "#dc3545",
     },
   };
 

@@ -54,7 +54,7 @@ jest.mock("@styles/auth/loginStyles", () => ({
 
 const mockAuth = {
   login: jest.fn(),
-  error: null,
+  error: null as string | null,
   clearError: jest.fn(),
 };
 

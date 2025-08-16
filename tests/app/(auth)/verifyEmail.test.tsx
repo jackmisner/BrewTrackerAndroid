@@ -49,11 +49,14 @@ jest.mock("@styles/auth/verifyEmailStyles", () => ({
 // Alert is now mocked in the react-native mock above
 
 const mockAuth = {
-  user: { email: "test@example.com", email_verified: false },
+  user: { email: "test@example.com", email_verified: false } as {
+    email: string;
+    email_verified: boolean;
+  } | null,
   verifyEmail: jest.fn(),
   resendVerification: jest.fn(),
   checkVerificationStatus: jest.fn(),
-  error: null,
+  error: null as string | null,
   clearError: jest.fn(),
 };
 

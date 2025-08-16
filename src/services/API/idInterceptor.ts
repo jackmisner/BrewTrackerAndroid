@@ -158,18 +158,20 @@ export function setupIDInterceptors(apiInstance: AxiosInstance): void {
  * Useful for resetting the API instance during testing or debugging to ensure no ID normalization logic is applied.
  */
 export function removeIDInterceptors(apiInstance: AxiosInstance): void {
-  // Clear interceptors by removing all handlers
-  if (
-    apiInstance.interceptors.request &&
-    (apiInstance.interceptors.request as any).handlers
-  ) {
-    (apiInstance.interceptors.request as any).handlers = [];
+  // Clear interceptors using public clear() method when available
+  if (apiInstance.interceptors?.request) {
+    if (typeof apiInstance.interceptors.request.clear === "function") {
+      apiInstance.interceptors.request.clear();
+    } else if ((apiInstance.interceptors.request as any).handlers) {
+      (apiInstance.interceptors.request as any).handlers = [];
+    }
   }
-  if (
-    apiInstance.interceptors.response &&
-    (apiInstance.interceptors.response as any).handlers
-  ) {
-    (apiInstance.interceptors.response as any).handlers = [];
+  if (apiInstance.interceptors?.response) {
+    if (typeof apiInstance.interceptors.response.clear === "function") {
+      apiInstance.interceptors.response.clear();
+    } else if ((apiInstance.interceptors.response as any).handlers) {
+      (apiInstance.interceptors.response as any).handlers = [];
+    }
   }
 }
 

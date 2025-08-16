@@ -22,6 +22,37 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   multiRemove: jest.fn(),
 }));
 
+// Mock new storage modules
+jest.mock("expo-document-picker", () => ({
+  getDocumentAsync: jest.fn(),
+  DocumentPickerOptions: {},
+}));
+
+jest.mock("expo-media-library", () => ({
+  requestPermissionsAsync: jest.fn(),
+  getPermissionsAsync: jest.fn(),
+  createAssetAsync: jest.fn(),
+  getAlbumAsync: jest.fn(),
+  addAssetsToAlbumAsync: jest.fn(),
+  createAlbumAsync: jest.fn(),
+  PermissionStatus: {
+    GRANTED: "granted",
+    DENIED: "denied",
+    UNDETERMINED: "undetermined",
+  },
+}));
+
+jest.mock("expo-sharing", () => ({
+  isAvailableAsync: jest.fn(),
+  shareAsync: jest.fn(),
+}));
+
+jest.mock("expo-file-system", () => ({
+  writeAsStringAsync: jest.fn(),
+  readAsStringAsync: jest.fn(),
+  cacheDirectory: "file://cache/",
+}));
+
 jest.mock("expo-router", () => ({
   useRouter: () => ({
     push: jest.fn(),

@@ -82,7 +82,7 @@ jest.mock("@styles/auth/loginStyles", () => ({
 const mockAuth = {
   forgotPassword: jest.fn(),
   isLoading: false,
-  error: null,
+  error: null as string | null,
   clearError: jest.fn(),
 };
 

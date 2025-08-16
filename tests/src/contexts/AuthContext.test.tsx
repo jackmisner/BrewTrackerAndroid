@@ -1,26 +1,25 @@
 import React from "react";
 import { renderHook, act } from "@testing-library/react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import ApiService from "@services/api/apiService";
 
-// Mock dependencies
-jest.mock("@react-native-async-storage/async-storage", () => ({
-  __esModule: true,
-  default: {
-    getItem: jest.fn(() => Promise.resolve(null)),
-    setItem: jest.fn(() => Promise.resolve()),
-    removeItem: jest.fn(() => Promise.resolve()),
-    multiRemove: jest.fn(() => Promise.resolve()),
+// Mock dependencies using a simpler approach
+
+jest.mock("@services/config", () => ({
+  STORAGE_KEYS: {
+    USER_DATA: "userData",
+    USER_SETTINGS: "userSettings",
+    OFFLINE_RECIPES: "offlineRecipes",
+    CACHED_INGREDIENTS: "cachedIngredients",
   },
 }));
 
+// Mock the entire apiService module to avoid initialization issues
 jest.mock("@services/api/apiService", () => ({
   __esModule: true,
   default: {
     token: {
-      getToken: jest.fn(() => Promise.resolve(null)),
-      setToken: jest.fn(() => Promise.resolve()),
-      removeToken: jest.fn(() => Promise.resolve()),
+      getToken: jest.fn(),
+      setToken: jest.fn(),
+      removeToken: jest.fn(),
     },
     auth: {
       login: jest.fn(),
@@ -36,20 +35,33 @@ jest.mock("@services/api/apiService", () => ({
   },
 }));
 
-jest.mock("@services/config", () => ({
-  STORAGE_KEYS: {
-    USER_DATA: "userData",
-    USER_SETTINGS: "userSettings",
-    OFFLINE_RECIPES: "offlineRecipes",
-    CACHED_INGREDIENTS: "cachedIngredients",
-  },
-}));
-
+// Import after mocks
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import ApiService from "@services/api/apiService";
 import { AuthProvider, useAuth } from "../../../src/contexts/AuthContext";
 import { User, LoginRequest, RegisterRequest } from "@src/types";
 
 const mockAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
-const mockApiService = ApiService as jest.Mocked<typeof ApiService>;
+
+// Create spies for ApiService methods
+let mockApiService: {
+  token: {
+    getToken: jest.SpyInstance;
+    setToken: jest.SpyInstance;
+    removeToken: jest.SpyInstance;
+  };
+  auth: {
+    login: jest.SpyInstance;
+    register: jest.SpyInstance;
+    getProfile: jest.SpyInstance;
+    googleAuth: jest.SpyInstance;
+    verifyEmail: jest.SpyInstance;
+    resendVerification: jest.SpyInstance;
+    getVerificationStatus: jest.SpyInstance;
+    forgotPassword: jest.SpyInstance;
+    resetPassword: jest.SpyInstance;
+  };
+};
 
 const createMockUser = (overrides: Partial<User> = {}): User => ({
   id: "user-123",
@@ -68,6 +80,36 @@ const createWrapper = (initialAuthState?: any) => {
 };
 
 describe("AuthContext", () => {
+  beforeAll(() => {
+    // ApiService is already mocked, just get references to the mock functions
+    mockApiService = {
+      token: {
+        getToken: ApiService.token.getToken as jest.MockedFunction<any>,
+        setToken: ApiService.token.setToken as jest.MockedFunction<any>,
+        removeToken: ApiService.token.removeToken as jest.MockedFunction<any>,
+      },
+      auth: {
+        login: ApiService.auth.login as jest.MockedFunction<any>,
+        register: ApiService.auth.register as jest.MockedFunction<any>,
+        getProfile: ApiService.auth.getProfile as jest.MockedFunction<any>,
+        googleAuth: ApiService.auth.googleAuth as jest.MockedFunction<any>,
+        verifyEmail: ApiService.auth.verifyEmail as jest.MockedFunction<any>,
+        resendVerification: ApiService.auth
+          .resendVerification as jest.MockedFunction<any>,
+        getVerificationStatus: ApiService.auth
+          .getVerificationStatus as jest.MockedFunction<any>,
+        forgotPassword: ApiService.auth
+          .forgotPassword as jest.MockedFunction<any>,
+        resetPassword: ApiService.auth
+          .resetPassword as jest.MockedFunction<any>,
+      },
+    };
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
+  });
+
   it("should throw error when useAuth used outside provider", () => {
     const consoleSpy = jest
       .spyOn(console, "error")
@@ -161,6 +203,10 @@ describe("AuthContext", () => {
   describe("initializeAuth", () => {
     beforeEach(() => {
       jest.clearAllMocks();
+      // Reset default mock implementations
+      mockApiService.token.getToken.mockResolvedValue(null);
+      mockApiService.token.setToken.mockResolvedValue(undefined);
+      mockApiService.token.removeToken.mockResolvedValue(undefined);
     });
 
     it("should initialize auth when no token is stored", async () => {
@@ -169,14 +215,19 @@ describe("AuthContext", () => {
       const wrapper = createWrapper();
       const { result } = renderHook(() => useAuth(), { wrapper });
 
-      // Wait for initialization to complete
+      // Check if initialization started
+      expect(result.current.isLoading).toBe(true);
+
+      // Wait for initialization to complete - need longer wait for useEffect
       await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
+        await new Promise(resolve => setTimeout(resolve, 100));
       });
 
       expect(result.current.isLoading).toBe(false);
       expect(result.current.user).toBeNull();
+      // Check both the mock object and the imported module
       expect(mockApiService.token.getToken).toHaveBeenCalled();
+      expect(ApiService.token.getToken).toHaveBeenCalled();
     });
 
     it("should initialize auth with valid token and user profile", async () => {

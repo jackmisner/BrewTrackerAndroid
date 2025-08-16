@@ -33,7 +33,7 @@ describe("UnitContext", () => {
   const createWrapper =
     (initialUnitSystem?: UnitSystem) =>
     ({ children }: { children: React.ReactNode }) =>
-      React.createElement(UnitProvider, { initialUnitSystem }, children);
+      React.createElement(UnitProvider, { initialUnitSystem, children });
 
   describe("useUnits hook", () => {
     it("should throw error when used outside provider", () => {

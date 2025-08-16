@@ -41,7 +41,7 @@ jest.mock("@contexts/ThemeContext", () => ({
 
 // Mock unit context
 const mockUnitContext = {
-  unitSystem: "imperial" as const,
+  unitSystem: "imperial" as "imperial" | "metric",
   setUnitSystem: jest.fn(),
 };
 
