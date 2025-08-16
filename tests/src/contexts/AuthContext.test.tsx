@@ -35,6 +35,17 @@ jest.mock("@services/api/apiService", () => ({
   },
 }));
 
+// Mock AsyncStorage
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+    removeItem: jest.fn(),
+    multiRemove: jest.fn(),
+  },
+}));
+
 // Import after mocks
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ApiService from "@services/api/apiService";

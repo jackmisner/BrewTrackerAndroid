@@ -3,7 +3,19 @@ module.exports = function (api) {
   return {
     presets: ["babel-preset-expo"],
     plugins: [
-      "react-native-reanimated/plugin", // must stay last
+      [
+        "module-resolver",
+        {
+          alias: {
+            "@src": "./src",
+            "@contexts": "./src/contexts",
+            "@services": "./src/services",
+            "@styles": "./src/styles",
+            "@hooks": "./src/hooks",
+          },
+        },
+      ],
+      "react-native-reanimated/plugin",
     ],
     env: {
       test: {

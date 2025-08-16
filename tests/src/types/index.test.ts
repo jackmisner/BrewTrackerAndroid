@@ -113,7 +113,7 @@ describe("Types Index Exports", () => {
         import("@src/types/user"),
         import("@src/types/recipe"),
         import("@src/types/brewSession"),
-        import("@src/types/api")
+        import("@src/types/api"),
       ]);
     });
   });
