@@ -312,8 +312,8 @@ export class BeerXMLService {
     recipeName: string
   ): Promise<FileOperationResult> {
     const sanitizedName = recipeName
-      .replace(/[<>:"/\\|?*\x00-\x1F]/g, "_") // Sanitize invalid filename characters
-      .replace(/\s+/g, " ") // Replace multiple spaces with a single space
+      .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_") // Sanitize invalid filename characters
+      .replace(/\s+/g, "_") // Replace multiple spaces with underscores
       .trim() // Remove leading/trailing whitespace
       .replace(/\.+$/, ""); // Remove trailing periods
 
