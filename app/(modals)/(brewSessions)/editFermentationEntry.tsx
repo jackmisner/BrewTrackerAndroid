@@ -80,14 +80,14 @@ export default function EditFermentationEntryScreen() {
         entryData
       );
     },
-    onSuccess: (response) => {
+    onSuccess: response => {
       // Invalidate and refetch brew session data
       queryClient.invalidateQueries({
         queryKey: ["brewSession", brewSessionId],
       });
       router.back();
     },
-    onError: (error) => {
+    onError: error => {
       console.error("Failed to update fermentation entry:", error);
       Alert.alert(
         "Save Failed",
@@ -113,22 +113,24 @@ export default function EditFermentationEntryScreen() {
     // Temperature validation (optional but if provided must be valid)
     if (formData.temperature.trim()) {
       const temp = parseFloat(formData.temperature);
-      const tempUnit = brewSessionData?.temperature_unit || 'F';
-      
+      const tempUnit = brewSessionData?.temperature_unit || "F";
+
       // Validation ranges based on temperature unit
       let minTemp, maxTemp, unitDisplay;
-      if (tempUnit === 'C') {
+      if (tempUnit === "C") {
         minTemp = -23; // ~-10°F in Celsius
-        maxTemp = 49;  // ~120°F in Celsius
-        unitDisplay = '°C';
+        maxTemp = 49; // ~120°F in Celsius
+        unitDisplay = "°C";
       } else {
         minTemp = -10;
         maxTemp = 120;
-        unitDisplay = '°F';
+        unitDisplay = "°F";
       }
-      
+
       if (isNaN(temp) || temp < minTemp || temp > maxTemp) {
-        errors.push(`Temperature must be between ${minTemp}${unitDisplay} and ${maxTemp}${unitDisplay}`);
+        errors.push(
+          `Temperature must be between ${minTemp}${unitDisplay} and ${maxTemp}${unitDisplay}`
+        );
       }
     }
 
@@ -182,11 +184,7 @@ export default function EditFermentationEntryScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.headerButton} onPress={handleCancel}>
-            <MaterialIcons
-              name="close"
-              size={24}
-              color={theme.colors.text}
-            />
+            <MaterialIcons name="close" size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Fermentation Entry</Text>
           <View style={styles.saveButton} />
@@ -204,11 +202,7 @@ export default function EditFermentationEntryScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.headerButton} onPress={handleCancel}>
-            <MaterialIcons
-              name="close"
-              size={24}
-              color={theme.colors.text}
-            />
+            <MaterialIcons name="close" size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Fermentation Entry</Text>
           <View style={styles.saveButton} />
@@ -232,11 +226,7 @@ export default function EditFermentationEntryScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerButton} onPress={handleCancel}>
-          <MaterialIcons
-            name="close"
-            size={24}
-            color={theme.colors.text}
-          />
+          <MaterialIcons name="close" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Fermentation Entry</Text>
         <TouchableOpacity
@@ -298,9 +288,7 @@ export default function EditFermentationEntryScreen() {
           <TextInput
             style={styles.textInput}
             value={formData.gravity}
-            onChangeText={(value) =>
-              setFormData({ ...formData, gravity: value })
-            }
+            onChangeText={value => setFormData({ ...formData, gravity: value })}
             placeholder="e.g., 1.050"
             keyboardType="decimal-pad"
             returnKeyType="next"
@@ -313,11 +301,13 @@ export default function EditFermentationEntryScreen() {
 
         {/* Temperature */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Temperature (°{brewSessionData?.temperature_unit || 'F'})</Text>
+          <Text style={styles.label}>
+            Temperature (°{brewSessionData?.temperature_unit || "F"})
+          </Text>
           <TextInput
             style={styles.textInput}
             value={formData.temperature}
-            onChangeText={(value) =>
+            onChangeText={value =>
               setFormData({ ...formData, temperature: value })
             }
             placeholder="e.g., 68"
@@ -334,7 +324,7 @@ export default function EditFermentationEntryScreen() {
           <TextInput
             style={styles.textInput}
             value={formData.ph}
-            onChangeText={(value) => setFormData({ ...formData, ph: value })}
+            onChangeText={value => setFormData({ ...formData, ph: value })}
             placeholder="e.g., 4.2"
             keyboardType="decimal-pad"
             returnKeyType="next"
@@ -349,9 +339,7 @@ export default function EditFermentationEntryScreen() {
           <TextInput
             style={[styles.textInput, styles.textArea]}
             value={formData.notes}
-            onChangeText={(value) =>
-              setFormData({ ...formData, notes: value })
-            }
+            onChangeText={value => setFormData({ ...formData, notes: value })}
             placeholder="Any observations about fermentation..."
             multiline
             numberOfLines={4}

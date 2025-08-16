@@ -145,6 +145,7 @@ export default function RegisterScreen() {
             style={[styles.button, styles.primaryButton]}
             onPress={handleRegister}
             disabled={isLoading}
+            testID="register-button"
           >
             {isLoading ? (
               <ActivityIndicator color="#fff" />

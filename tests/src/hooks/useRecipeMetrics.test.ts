@@ -15,7 +15,7 @@ jest.mock("@services/api/apiService", () => ({
 jest.unmock("@tanstack/react-query");
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useRecipeMetrics } from "../../../src/hooks/useRecipeMetrics";
+import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 import { RecipeFormData, RecipeMetrics, RecipeIngredient } from "@src/types";
 import ApiService from "@services/api/apiService";
 

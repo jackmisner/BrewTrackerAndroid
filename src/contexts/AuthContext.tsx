@@ -1,3 +1,32 @@
+/**
+ * Authentication Context for BrewTracker Android
+ *
+ * Provides comprehensive authentication state management including:
+ * - User login/logout with JWT token handling
+ * - User registration and profile management
+ * - Google OAuth authentication
+ * - Email verification workflow
+ * - Password reset functionality
+ * - Secure token storage using Expo SecureStore
+ * - Automatic token refresh and validation
+ *
+ * The context automatically persists user data and handles authentication
+ * state initialization on app startup.
+ *
+ * @example
+ * ```typescript
+ * const { user, login, logout, isAuthenticated } = useAuth();
+ *
+ * // Login user
+ * await login({ email: 'user@example.com', password: 'password' });
+ *
+ * // Check authentication status
+ * if (isAuthenticated) {
+ *   console.log('User logged in:', user.username);
+ * }
+ * ```
+ */
+
 import React, {
   createContext,
   useContext,
@@ -10,7 +39,9 @@ import { User, LoginRequest, RegisterRequest } from "@src/types";
 import ApiService from "@services/api/apiService";
 import { STORAGE_KEYS } from "@services/config";
 
-// Auth context interface
+/**
+ * Authentication context interface defining all available state and actions
+ */
 interface AuthContextValue {
   // State
   user: User | null;
@@ -38,7 +69,10 @@ interface AuthContextValue {
   resetPassword: (token: string, newPassword: string) => Promise<void>;
 }
 
-// Provider props interface
+/**
+ * Props for the AuthProvider component
+ * Allows for optional initial state injection (useful for testing)
+ */
 interface AuthProviderProps {
   children: ReactNode;
   initialAuthState?: Partial<
@@ -48,6 +82,13 @@ interface AuthProviderProps {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+/**
+ * Custom hook to access authentication context
+ * Must be used within an AuthProvider
+ *
+ * @returns AuthContextValue with all auth state and actions
+ * @throws Error if used outside AuthProvider
+ */
 export const useAuth = (): AuthContextValue => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -56,6 +97,16 @@ export const useAuth = (): AuthContextValue => {
   return context;
 };
 
+/**
+ * Authentication Provider Component
+ *
+ * Manages global authentication state and provides auth context to child components.
+ * Automatically initializes auth state from stored tokens on app startup.
+ * Handles token persistence, user data caching, and auth state synchronization.
+ *
+ * @param children - Child components that need access to auth context
+ * @param initialAuthState - Optional initial state for testing purposes
+ */
 export const AuthProvider: React.FC<AuthProviderProps> = ({
   children,
   initialAuthState,

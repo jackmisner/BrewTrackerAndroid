@@ -1,7 +1,7 @@
 import React from "react";
 import { render } from "@testing-library/react-native";
-import { ReviewForm } from "../../../../../src/components/recipes/RecipeForm/ReviewForm";
-import { RecipeFormData, RecipeIngredient } from "../../../../../src/types";
+import { ReviewForm } from "@src/components/recipes/RecipeForm/ReviewForm";
+import { RecipeFormData, RecipeIngredient } from "@src/types";
 
 // Comprehensive React Native mocking to avoid ES6 module issues
 jest.mock("react-native", () => ({
@@ -44,9 +44,18 @@ jest.mock("@styles/modals/createRecipeStyles", () => ({
     sectionDescription: { fontSize: 14, color: "#666666" },
     reviewSection: { marginBottom: 24, padding: 16 },
     reviewSectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 12 },
-    reviewRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
+    reviewRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
     reviewLabel: { fontSize: 14, color: "#666666", flex: 1 },
-    reviewValue: { fontSize: 14, color: "#000000", flex: 2, textAlign: "right" },
+    reviewValue: {
+      fontSize: 14,
+      color: "#000000",
+      flex: 2,
+      textAlign: "right",
+    },
     ingredientTypeSection: { marginBottom: 16 },
     ingredientTypeTitle: { fontSize: 14, fontWeight: "500", marginBottom: 8 },
     ingredientReviewItem: { marginBottom: 12, padding: 8 },
@@ -64,9 +73,12 @@ jest.mock("@styles/modals/createRecipeStyles", () => ({
 }));
 
 // Mock BrewingMetricsDisplay component
-jest.mock("@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay", () => ({
-  BrewingMetricsDisplay: "BrewingMetricsDisplay",
-}));
+jest.mock(
+  "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay",
+  () => ({
+    BrewingMetricsDisplay: "BrewingMetricsDisplay",
+  })
+);
 
 // Mock time utils
 jest.mock("@src/utils/timeUtils", () => ({
@@ -148,7 +160,9 @@ describe("ReviewForm", () => {
       );
 
       expect(getByText("Review Your Recipe")).toBeTruthy();
-      expect(getByText(/Review all recipe details before creating/)).toBeTruthy();
+      expect(
+        getByText(/Review all recipe details before creating/)
+      ).toBeTruthy();
     });
 
     it("should render basic information section", () => {
@@ -267,9 +281,7 @@ describe("ReviewForm", () => {
         is_public: false,
       };
 
-      const { getByText } = render(
-        <ReviewForm recipeData={privateRecipe} />
-      );
+      const { getByText } = render(<ReviewForm recipeData={privateRecipe} />);
 
       expect(getByText("No")).toBeTruthy();
     });
@@ -365,9 +377,7 @@ describe("ReviewForm", () => {
         ingredients: [mockGrainIngredient],
       };
 
-      const { getByText } = render(
-        <ReviewForm recipeData={recipeWithGrain} />
-      );
+      const { getByText } = render(<ReviewForm recipeData={recipeWithGrain} />);
 
       expect(getByText("Grains & Fermentables (1)")).toBeTruthy();
       expect(getByText("Pale Malt 2-Row")).toBeTruthy();
@@ -381,9 +391,7 @@ describe("ReviewForm", () => {
         ingredients: [mockHopIngredient],
       };
 
-      const { getByText } = render(
-        <ReviewForm recipeData={recipeWithHop} />
-      );
+      const { getByText } = render(<ReviewForm recipeData={recipeWithHop} />);
 
       expect(getByText("Hops (1)")).toBeTruthy();
       expect(getByText("Cascade")).toBeTruthy();
@@ -397,9 +405,7 @@ describe("ReviewForm", () => {
         ingredients: [mockYeastIngredient],
       };
 
-      const { getByText } = render(
-        <ReviewForm recipeData={recipeWithYeast} />
-      );
+      const { getByText } = render(<ReviewForm recipeData={recipeWithYeast} />);
 
       expect(getByText("Yeast (1)")).toBeTruthy();
       expect(getByText("Safale US-05")).toBeTruthy();
@@ -415,9 +421,7 @@ describe("ReviewForm", () => {
         ingredients: [mockOtherIngredient],
       };
 
-      const { getByText } = render(
-        <ReviewForm recipeData={recipeWithOther} />
-      );
+      const { getByText } = render(<ReviewForm recipeData={recipeWithOther} />);
 
       expect(getByText("Other Ingredients (1)")).toBeTruthy();
       expect(getByText("Irish Moss")).toBeTruthy();
@@ -427,7 +431,12 @@ describe("ReviewForm", () => {
     it("should display multiple ingredient types", () => {
       const recipeWithAllIngredients = {
         ...defaultRecipeData,
-        ingredients: [mockGrainIngredient, mockHopIngredient, mockYeastIngredient, mockOtherIngredient],
+        ingredients: [
+          mockGrainIngredient,
+          mockHopIngredient,
+          mockYeastIngredient,
+          mockOtherIngredient,
+        ],
       };
 
       const { getByText } = render(
@@ -521,10 +530,7 @@ describe("ReviewForm", () => {
   describe("Metrics integration", () => {
     it("should render BrewingMetricsDisplay component", () => {
       const { root } = render(
-        <ReviewForm
-          recipeData={defaultRecipeData}
-          metrics={mockMetrics}
-        />
+        <ReviewForm recipeData={defaultRecipeData} metrics={mockMetrics} />
       );
 
       // Component should be rendered (mocked as text element)
@@ -533,10 +539,7 @@ describe("ReviewForm", () => {
 
     it("should handle loading metrics state", () => {
       const { root } = render(
-        <ReviewForm
-          recipeData={defaultRecipeData}
-          metricsLoading={true}
-        />
+        <ReviewForm recipeData={defaultRecipeData} metricsLoading={true} />
       );
 
       expect(root).toBeTruthy();
@@ -558,10 +561,7 @@ describe("ReviewForm", () => {
   describe("Editing mode", () => {
     it("should display edit mode text", () => {
       const { getByText } = render(
-        <ReviewForm
-          recipeData={defaultRecipeData}
-          isEditing={true}
-        />
+        <ReviewForm recipeData={defaultRecipeData} isEditing={true} />
       );
 
       expect(getByText("Ready to Update")).toBeTruthy();
@@ -600,7 +600,11 @@ describe("ReviewForm", () => {
         <ReviewForm recipeData={recipeWithLongName} />
       );
 
-      expect(getByText("This is a very long recipe name that might cause display issues but should be handled gracefully")).toBeTruthy();
+      expect(
+        getByText(
+          "This is a very long recipe name that might cause display issues but should be handled gracefully"
+        )
+      ).toBeTruthy();
     });
 
     it("should handle ingredients without optional properties", () => {
@@ -609,7 +613,7 @@ describe("ReviewForm", () => {
         name: "Simple Ingredient",
         type: "other",
         amount: 1,
-        unit: "unit",
+        unit: "oz",
       };
 
       const recipeWithMinimalIngredient = {
@@ -622,7 +626,7 @@ describe("ReviewForm", () => {
       );
 
       expect(getByText("Simple Ingredient")).toBeTruthy();
-      expect(getByText("1 unit")).toBeTruthy();
+      expect(getByText("1 oz")).toBeTruthy();
     });
 
     it("should handle yeast without optional properties", () => {
@@ -649,10 +653,11 @@ describe("ReviewForm", () => {
 
     it("should handle undefined ingredient IDs", () => {
       const ingredientWithoutId: RecipeIngredient = {
+        id: "no-id-1",
         name: "No ID Ingredient",
         type: "other",
         amount: 1,
-        unit: "unit",
+        unit: "oz",
       };
 
       const recipeWithIngredientNoId = {

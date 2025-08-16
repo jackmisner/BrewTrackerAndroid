@@ -5,9 +5,8 @@ jest.mock("react-native", () => ({
   },
 }));
 
-import { createRecipeStyles } from "../../../../src/styles/modals/createRecipeStyles";
-import { ThemeContextValue } from "../../../../src/contexts/ThemeContext";
-
+import { createRecipeStyles } from "@src/styles/modals/createRecipeStyles";
+import { ThemeContextValue } from "@src/contexts/ThemeContext";
 
 describe("Create Recipe Styles", () => {
   const mockTheme: ThemeContextValue = {
@@ -28,6 +27,11 @@ describe("Create Recipe Styles", () => {
       inputBackground: "#f8f9fa",
       error: "#dc3545",
       success: "#28a745",
+      warning: "#ffc107",
+      info: "#17a2b8",
+      shadow: "#000000",
+      gravityLine: "#28a745",
+      temperatureLine: "#dc3545",
     },
   };
 
@@ -45,11 +49,17 @@ describe("Create Recipe Styles", () => {
     });
 
     it("should use theme colors throughout", () => {
-      expect(styles.container.backgroundColor).toBe(mockTheme.colors.background);
+      expect(styles.container.backgroundColor).toBe(
+        mockTheme.colors.background
+      );
       expect(styles.header.backgroundColor).toBe(mockTheme.colors.background);
       expect(styles.headerTitle.color).toBe(mockTheme.colors.text);
-      expect(styles.navigationButtonPrimary.backgroundColor).toBe(mockTheme.colors.primary);
-      expect(styles.progressDotActive.backgroundColor).toBe(mockTheme.colors.primary);
+      expect(styles.navigationButtonPrimary.backgroundColor).toBe(
+        mockTheme.colors.primary
+      );
+      expect(styles.progressDotActive.backgroundColor).toBe(
+        mockTheme.colors.primary
+      );
     });
 
     it("should adapt to different theme configurations", () => {
@@ -101,7 +111,9 @@ describe("Create Recipe Styles", () => {
       expect(styles.progressContainer.flexDirection).toBe("row");
       expect(styles.progressContainer.justifyContent).toBe("space-between");
       expect(styles.progressContainer.paddingHorizontal).toBe(20);
-      expect(styles.progressContainer.backgroundColor).toBe(mockTheme.colors.backgroundSecondary);
+      expect(styles.progressContainer.backgroundColor).toBe(
+        mockTheme.colors.backgroundSecondary
+      );
     });
 
     it("should style progress dots", () => {
@@ -112,8 +124,12 @@ describe("Create Recipe Styles", () => {
     });
 
     it("should differentiate active and completed progress states", () => {
-      expect(styles.progressDotActive.backgroundColor).toBe(mockTheme.colors.primary);
-      expect(styles.progressDotCompleted.backgroundColor).toBe(mockTheme.colors.success);
+      expect(styles.progressDotActive.backgroundColor).toBe(
+        mockTheme.colors.primary
+      );
+      expect(styles.progressDotCompleted.backgroundColor).toBe(
+        mockTheme.colors.success
+      );
       expect(styles.progressLabelActive.color).toBe(mockTheme.colors.primary);
       expect(styles.progressLabelActive.fontWeight).toBe("600");
     });
@@ -136,7 +152,9 @@ describe("Create Recipe Styles", () => {
     });
 
     it("should style text inputs appropriately", () => {
-      expect(styles.textInput.backgroundColor).toBe(mockTheme.colors.inputBackground);
+      expect(styles.textInput.backgroundColor).toBe(
+        mockTheme.colors.inputBackground
+      );
       expect(styles.textInput.borderWidth).toBe(1);
       expect(styles.textInput.borderRadius).toBe(8);
       expect(styles.textInput.fontSize).toBe(16);
@@ -172,16 +190,26 @@ describe("Create Recipe Styles", () => {
     });
 
     it("should differentiate primary and secondary navigation buttons", () => {
-      expect(styles.navigationButtonPrimary.backgroundColor).toBe(mockTheme.colors.primary);
-      expect(styles.navigationButtonSecondary.backgroundColor).toBe("transparent");
+      expect(styles.navigationButtonPrimary.backgroundColor).toBe(
+        mockTheme.colors.primary
+      );
+      expect(styles.navigationButtonSecondary.backgroundColor).toBe(
+        "transparent"
+      );
       expect(styles.navigationButtonSecondary.borderWidth).toBe(1);
-      expect(styles.navigationButtonPrimaryText.color).toBe(mockTheme.colors.primaryText);
-      expect(styles.navigationButtonSecondaryText.color).toBe(mockTheme.colors.text);
+      expect(styles.navigationButtonPrimaryText.color).toBe(
+        mockTheme.colors.primaryText
+      );
+      expect(styles.navigationButtonSecondaryText.color).toBe(
+        mockTheme.colors.text
+      );
     });
 
     it("should handle disabled navigation buttons", () => {
       expect(styles.navigationButtonDisabled.opacity).toBe(0.5);
-      expect(styles.navigationButtonDisabledText.color).toBe(mockTheme.colors.textMuted);
+      expect(styles.navigationButtonDisabledText.color).toBe(
+        mockTheme.colors.textMuted
+      );
     });
   });
 
@@ -201,14 +229,22 @@ describe("Create Recipe Styles", () => {
     });
 
     it("should differentiate active and inactive unit buttons", () => {
-      expect(styles.unitButton.backgroundColor).toBe(mockTheme.colors.inputBackground);
-      expect(styles.unitButtonActive.backgroundColor).toBe(mockTheme.colors.primary);
+      expect(styles.unitButton.backgroundColor).toBe(
+        mockTheme.colors.inputBackground
+      );
+      expect(styles.unitButtonActive.backgroundColor).toBe(
+        mockTheme.colors.primary
+      );
       expect(styles.unitButtonText.color).toBe(mockTheme.colors.text);
-      expect(styles.unitButtonTextActive.color).toBe(mockTheme.colors.primaryText);
+      expect(styles.unitButtonTextActive.color).toBe(
+        mockTheme.colors.primaryText
+      );
     });
 
     it("should style picker components", () => {
-      expect(styles.pickerContainer.backgroundColor).toBe(mockTheme.colors.inputBackground);
+      expect(styles.pickerContainer.backgroundColor).toBe(
+        mockTheme.colors.inputBackground
+      );
       expect(styles.pickerContainer.borderWidth).toBe(1);
       expect(styles.pickerContainer.minHeight).toBe(48);
       expect(styles.pickerButton.flexDirection).toBe("row");
@@ -220,7 +256,9 @@ describe("Create Recipe Styles", () => {
     it("should style ingredient sections", () => {
       expect(styles.ingredientSection.marginBottom).toBe(24);
       expect(styles.ingredientSectionHeader.flexDirection).toBe("row");
-      expect(styles.ingredientSectionHeader.justifyContent).toBe("space-between");
+      expect(styles.ingredientSectionHeader.justifyContent).toBe(
+        "space-between"
+      );
     });
 
     it("should style add ingredient button", () => {
@@ -240,7 +278,9 @@ describe("Create Recipe Styles", () => {
     it("should style ingredient items", () => {
       expect(styles.ingredientItem.flexDirection).toBe("row");
       expect(styles.ingredientItem.justifyContent).toBe("space-between");
-      expect(styles.ingredientItem.backgroundColor).toBe(mockTheme.colors.backgroundSecondary);
+      expect(styles.ingredientItem.backgroundColor).toBe(
+        mockTheme.colors.backgroundSecondary
+      );
       expect(styles.ingredientActions.flexDirection).toBe("row");
     });
   });
@@ -298,7 +338,9 @@ describe("Create Recipe Styles", () => {
       expect(styles.stylePickerContainer.position).toBe("absolute");
       expect(styles.stylePickerContainer.top).toBe(0);
       expect(styles.stylePickerContainer.zIndex).toBe(1000);
-      expect(styles.stylePickerContainer.backgroundColor).toBe(mockTheme.colors.background);
+      expect(styles.stylePickerContainer.backgroundColor).toBe(
+        mockTheme.colors.background
+      );
     });
 
     it("should style style picker header", () => {
@@ -310,7 +352,9 @@ describe("Create Recipe Styles", () => {
 
     it("should style search functionality", () => {
       expect(styles.searchContainer.flexDirection).toBe("row");
-      expect(styles.searchContainer.backgroundColor).toBe(mockTheme.colors.backgroundSecondary);
+      expect(styles.searchContainer.backgroundColor).toBe(
+        mockTheme.colors.backgroundSecondary
+      );
       expect(styles.searchInput.flex).toBe(1);
       expect(styles.searchInput.fontSize).toBe(16);
     });
@@ -321,7 +365,9 @@ describe("Create Recipe Styles", () => {
       expect(styles.headerButton.width).toBeGreaterThanOrEqual(44);
       expect(styles.headerButton.height).toBeGreaterThanOrEqual(44);
       expect(styles.textInput.minHeight).toBeGreaterThanOrEqual(48);
-      expect(styles.navigationButton.paddingHorizontal).toBeGreaterThanOrEqual(20);
+      expect(styles.navigationButton.paddingHorizontal).toBeGreaterThanOrEqual(
+        20
+      );
     });
 
     it("should use appropriate font sizes", () => {
@@ -331,8 +377,12 @@ describe("Create Recipe Styles", () => {
     });
 
     it("should provide clear visual hierarchy", () => {
-      expect(styles.sectionTitle.fontSize).toBeGreaterThan(styles.inputLabel.fontSize);
-      expect(styles.metricValue.fontSize).toBeGreaterThan(styles.metricLabel.fontSize);
+      expect(styles.sectionTitle.fontSize).toBeGreaterThan(
+        styles.inputLabel.fontSize
+      );
+      expect(styles.metricValue.fontSize).toBeGreaterThan(
+        styles.metricLabel.fontSize
+      );
       expect(styles.ingredientName.fontWeight).toBe("500");
     });
   });
@@ -376,8 +426,12 @@ describe("Create Recipe Styles", () => {
     });
 
     it("should maintain color consistency", () => {
-      expect(styles.navigationButtonPrimary.backgroundColor).toBe(styles.progressDotActive.backgroundColor);
-      expect(styles.addIngredientText.color).toBe(styles.progressLabelActive.color);
+      expect(styles.navigationButtonPrimary.backgroundColor).toBe(
+        styles.progressDotActive.backgroundColor
+      );
+      expect(styles.addIngredientText.color).toBe(
+        styles.progressLabelActive.color
+      );
       expect(styles.textInputError.borderColor).toBe(styles.errorTitle.color);
     });
   });
@@ -385,8 +439,16 @@ describe("Create Recipe Styles", () => {
   describe("Style object integrity", () => {
     it("should export a comprehensive set of styles", () => {
       const expectedCategories = [
-        "container", "header", "navigation", "progress", "form", 
-        "ingredients", "review", "loading", "error", "picker"
+        "container",
+        "header",
+        "navigation",
+        "progress",
+        "form",
+        "ingredients",
+        "review",
+        "loading",
+        "error",
+        "picker",
       ];
 
       // Check that styles from each category exist
@@ -408,7 +470,7 @@ describe("Create Recipe Styles", () => {
       expect(typeof styles.textInput.fontSize).toBe("number");
       expect(typeof styles.progressDot.borderRadius).toBe("number");
 
-      // Check string properties  
+      // Check string properties
       expect(typeof styles.container.backgroundColor).toBe("string");
       expect(typeof styles.header.flexDirection).toBe("string");
       expect(typeof styles.textInputMultiline.textAlignVertical).toBe("string");

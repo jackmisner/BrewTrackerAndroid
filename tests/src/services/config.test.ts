@@ -50,8 +50,12 @@ describe("config", () => {
         expect(ENDPOINTS.AUTH.GOOGLE_AUTH).toBe("/auth/google");
         expect(ENDPOINTS.AUTH.PROFILE).toBe("/auth/profile");
         expect(ENDPOINTS.AUTH.VERIFY_EMAIL).toBe("/auth/verify-email");
-        expect(ENDPOINTS.AUTH.RESEND_VERIFICATION).toBe("/auth/resend-verification");
-        expect(ENDPOINTS.AUTH.VALIDATE_USERNAME).toBe("/auth/validate-username");
+        expect(ENDPOINTS.AUTH.RESEND_VERIFICATION).toBe(
+          "/auth/resend-verification"
+        );
+        expect(ENDPOINTS.AUTH.VALIDATE_USERNAME).toBe(
+          "/auth/validate-username"
+        );
       });
     });
 
@@ -69,7 +73,9 @@ describe("config", () => {
         expect(ENDPOINTS.RECIPES.LIST).toBe("/recipes");
         expect(ENDPOINTS.RECIPES.CREATE).toBe("/recipes");
         expect(ENDPOINTS.RECIPES.PUBLIC).toBe("/recipes/public");
-        expect(ENDPOINTS.RECIPES.CALCULATE_PREVIEW).toBe("/recipes/calculate-metrics-preview");
+        expect(ENDPOINTS.RECIPES.CALCULATE_PREVIEW).toBe(
+          "/recipes/calculate-metrics-preview"
+        );
       });
 
       it("should generate parameterized recipe endpoints", () => {
@@ -77,10 +83,14 @@ describe("config", () => {
         expect(ENDPOINTS.RECIPES.UPDATE("456")).toBe("/recipes/456");
         expect(ENDPOINTS.RECIPES.DELETE("789")).toBe("/recipes/789");
         expect(ENDPOINTS.RECIPES.CLONE("abc")).toBe("/recipes/abc/clone");
-        expect(ENDPOINTS.RECIPES.CLONE_PUBLIC("def")).toBe("/recipes/def/clone-public");
+        expect(ENDPOINTS.RECIPES.CLONE_PUBLIC("def")).toBe(
+          "/recipes/def/clone-public"
+        );
         expect(ENDPOINTS.RECIPES.METRICS("ghi")).toBe("/recipes/ghi/metrics");
         expect(ENDPOINTS.RECIPES.VERSIONS("jkl")).toBe("/recipes/jkl/versions");
-        expect(ENDPOINTS.RECIPES.BREW_SESSIONS("mno")).toBe("/recipes/mno/brew-sessions");
+        expect(ENDPOINTS.RECIPES.BREW_SESSIONS("mno")).toBe(
+          "/recipes/mno/brew-sessions"
+        );
       });
     });
 
@@ -92,8 +102,12 @@ describe("config", () => {
 
       it("should generate parameterized beer styles endpoints", () => {
         expect(ENDPOINTS.BEER_STYLES.DETAIL("1A")).toBe("/beer-styles/1A");
-        expect(ENDPOINTS.BEER_STYLES.SUGGESTIONS("recipe123")).toBe("/beer-styles/suggestions/recipe123");
-        expect(ENDPOINTS.BEER_STYLES.ANALYSIS("recipe456")).toBe("/beer-styles/analysis/recipe456");
+        expect(ENDPOINTS.BEER_STYLES.SUGGESTIONS("recipe123")).toBe(
+          "/beer-styles/suggestions/recipe123"
+        );
+        expect(ENDPOINTS.BEER_STYLES.ANALYSIS("recipe456")).toBe(
+          "/beer-styles/analysis/recipe456"
+        );
       });
     });
 
@@ -104,10 +118,18 @@ describe("config", () => {
       });
 
       it("should generate parameterized ingredients endpoints", () => {
-        expect(ENDPOINTS.INGREDIENTS.DETAIL("ingredient123")).toBe("/ingredients/ingredient123");
-        expect(ENDPOINTS.INGREDIENTS.UPDATE("ingredient456")).toBe("/ingredients/ingredient456");
-        expect(ENDPOINTS.INGREDIENTS.DELETE("ingredient789")).toBe("/ingredients/ingredient789");
-        expect(ENDPOINTS.INGREDIENTS.RECIPES("ingredient000")).toBe("/ingredients/ingredient000/recipes");
+        expect(ENDPOINTS.INGREDIENTS.DETAIL("ingredient123")).toBe(
+          "/ingredients/ingredient123"
+        );
+        expect(ENDPOINTS.INGREDIENTS.UPDATE("ingredient456")).toBe(
+          "/ingredients/ingredient456"
+        );
+        expect(ENDPOINTS.INGREDIENTS.DELETE("ingredient789")).toBe(
+          "/ingredients/ingredient789"
+        );
+        expect(ENDPOINTS.INGREDIENTS.RECIPES("ingredient000")).toBe(
+          "/ingredients/ingredient000/recipes"
+        );
       });
     });
 
@@ -118,25 +140,45 @@ describe("config", () => {
       });
 
       it("should generate parameterized brew sessions endpoints", () => {
-        expect(ENDPOINTS.BREW_SESSIONS.DETAIL("session123")).toBe("/brew-sessions/session123");
-        expect(ENDPOINTS.BREW_SESSIONS.UPDATE("session456")).toBe("/brew-sessions/session456");
-        expect(ENDPOINTS.BREW_SESSIONS.DELETE("session789")).toBe("/brew-sessions/session789");
-        expect(ENDPOINTS.BREW_SESSIONS.FERMENTATION("session000")).toBe("/brew-sessions/session000/fermentation");
-        expect(ENDPOINTS.BREW_SESSIONS.FERMENTATION_ENTRY("session111", 5)).toBe("/brew-sessions/session111/fermentation/5");
-        expect(ENDPOINTS.BREW_SESSIONS.FERMENTATION_STATS("session222")).toBe("/brew-sessions/session222/fermentation/stats");
-        expect(ENDPOINTS.BREW_SESSIONS.ANALYZE_COMPLETION("session333")).toBe("/brew-sessions/session333/fermentation/analyze-completion");
+        expect(ENDPOINTS.BREW_SESSIONS.DETAIL("session123")).toBe(
+          "/brew-sessions/session123"
+        );
+        expect(ENDPOINTS.BREW_SESSIONS.UPDATE("session456")).toBe(
+          "/brew-sessions/session456"
+        );
+        expect(ENDPOINTS.BREW_SESSIONS.DELETE("session789")).toBe(
+          "/brew-sessions/session789"
+        );
+        expect(ENDPOINTS.BREW_SESSIONS.FERMENTATION("session000")).toBe(
+          "/brew-sessions/session000/fermentation"
+        );
+        expect(
+          ENDPOINTS.BREW_SESSIONS.FERMENTATION_ENTRY("session111", 5)
+        ).toBe("/brew-sessions/session111/fermentation/5");
+        expect(ENDPOINTS.BREW_SESSIONS.FERMENTATION_STATS("session222")).toBe(
+          "/brew-sessions/session222/fermentation/stats"
+        );
+        expect(ENDPOINTS.BREW_SESSIONS.ANALYZE_COMPLETION("session333")).toBe(
+          "/brew-sessions/session333/fermentation/analyze-completion"
+        );
       });
     });
 
     describe("BEERXML endpoints", () => {
       it("should define BeerXML endpoints", () => {
         expect(ENDPOINTS.BEERXML.PARSE).toBe("/beerxml/parse");
-        expect(ENDPOINTS.BEERXML.MATCH_INGREDIENTS).toBe("/beerxml/match-ingredients");
-        expect(ENDPOINTS.BEERXML.CREATE_INGREDIENTS).toBe("/beerxml/create-ingredients");
+        expect(ENDPOINTS.BEERXML.MATCH_INGREDIENTS).toBe(
+          "/beerxml/match-ingredients"
+        );
+        expect(ENDPOINTS.BEERXML.CREATE_INGREDIENTS).toBe(
+          "/beerxml/create-ingredients"
+        );
       });
 
       it("should generate parameterized BeerXML endpoints", () => {
-        expect(ENDPOINTS.BEERXML.EXPORT("recipe123")).toBe("/beerxml/export/recipe123");
+        expect(ENDPOINTS.BEERXML.EXPORT("recipe123")).toBe(
+          "/beerxml/export/recipe123"
+        );
       });
     });
 

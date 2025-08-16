@@ -1,3 +1,24 @@
+/**
+ * API Service for BrewTracker Android App
+ *
+ * Provides a comprehensive, type-safe interface to all backend endpoints.
+ * Handles authentication, error normalization, retry logic, and automatic ID transformation.
+ *
+ * Features:
+ * - Automatic JWT token management via SecureStore
+ * - Automatic ID normalization between backend and frontend formats
+ * - Retry logic for transient failures with exponential backoff
+ * - Normalized error handling across all endpoints
+ * - Type-safe request/response contracts
+ *
+ * @example
+ * ```typescript
+ * // Login and get user recipes
+ * const loginResult = await ApiService.auth.login({ email, password });
+ * const recipes = await ApiService.recipes.getAll();
+ * ```
+ */
+
 import axios, {
   AxiosInstance,
   AxiosResponse,
@@ -46,6 +67,7 @@ import {
   CalculateMetricsPreviewResponse,
   RecipeVersionHistoryResponse,
   PublicRecipesResponse,
+  RecipeSearchFilters,
 
   // Additional types needed
   RecipeIngredient,
@@ -72,7 +94,13 @@ import {
   IngredientType,
 } from "@src/types";
 
-// Validated API Configuration
+/**
+ * Validates and retrieves API configuration from environment variables
+ * Ensures the API URL is properly formatted and accessible
+ *
+ * @returns Validated API configuration object
+ * @throws Error if API URL is missing or invalid
+ */
 function validateAndGetApiConfig() {
   const baseURL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -104,7 +132,10 @@ function validateAndGetApiConfig() {
 
 const API_CONFIG = validateAndGetApiConfig();
 
-// Normalized error interface for consistent error handling
+/**
+ * Normalized error interface for consistent error handling across the app
+ * Provides standardized error information regardless of the underlying error type
+ */
 interface NormalizedApiError {
   message: string;
   code?: string | number;
@@ -115,7 +146,13 @@ interface NormalizedApiError {
   originalError?: any;
 }
 
-// Error normalization function
+/**
+ * Normalizes any error into a consistent format for handling in UI components
+ * Handles Axios errors, network errors, timeouts, and generic JavaScript errors
+ *
+ * @param error - Any error object or value
+ * @returns Normalized error object with consistent structure
+ */
 function normalizeError(error: any): NormalizedApiError {
   // Default error structure
   const normalized: NormalizedApiError = {
@@ -231,7 +268,17 @@ function normalizeError(error: any): NormalizedApiError {
   return normalized;
 }
 
-// Retry wrapper for idempotent requests
+/**
+ * Retry wrapper for idempotent requests with exponential backoff
+ * Automatically retries failed requests for transient errors (network, timeout, 5xx)
+ * Uses jittered exponential backoff to prevent thundering herd
+ *
+ * @param operation - The async operation to retry
+ * @param isRetryable - Function to determine if error should be retried
+ * @param maxAttempts - Maximum number of retry attempts
+ * @param delay - Base delay between retries in milliseconds
+ * @returns Promise resolving to operation result
+ */
 async function withRetry<T>(
   operation: () => Promise<T>,
   isRetryable: (error: any) => boolean = error => {
@@ -280,8 +327,16 @@ const api: AxiosInstance = axios.create({
 // Setup automatic ID normalization interceptors
 setupIDInterceptors(api);
 
-// Token management utilities
+/**
+ * Secure token management utilities for JWT authentication
+ * Handles storage, retrieval, and cleanup of authentication tokens
+ * Uses Expo SecureStore for secure token storage on device
+ */
 class TokenManager {
+  /**
+   * Retrieves the stored authentication token
+   * @returns JWT token string or null if not found
+   */
   static async getToken(): Promise<string | null> {
     try {
       return await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
@@ -291,6 +346,10 @@ class TokenManager {
     }
   }
 
+  /**
+   * Stores a new authentication token securely
+   * @param token - JWT token to store
+   */
   static async setToken(token: string): Promise<void> {
     try {
       await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, token);
@@ -300,6 +359,9 @@ class TokenManager {
     }
   }
 
+  /**
+   * Removes the stored authentication token (logout)
+   */
   static async removeToken(): Promise<void> {
     try {
       await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
@@ -362,13 +424,33 @@ api.interceptors.response.use(
   }
 );
 
-// Recipe search filters interface
-interface RecipeSearchFilters {
-  style?: string;
-  search?: string;
-}
-
-// Type-safe API Service
+/**
+ * Main API Service object providing access to all BrewTracker backend endpoints
+ *
+ * Organized by functional areas (auth, user, recipes, brewSessions, etc.)
+ * All methods return typed Axios responses and handle errors consistently
+ *
+ * Key features:
+ * - Automatic authentication header injection
+ * - ID normalization for all entities
+ * - Retry logic for GET operations
+ * - Comprehensive error handling
+ * - Type safety for all requests/responses
+ *
+ * @example
+ * ```typescript
+ * // Authentication
+ * await ApiService.auth.login({ email: 'user@example.com', password: 'password' });
+ *
+ * // Recipe management
+ * const recipes = await ApiService.recipes.getAll(1, 20);
+ * const newRecipe = await ApiService.recipes.create({ name: 'IPA', ... });
+ *
+ * // Brew session tracking
+ * const sessions = await ApiService.brewSessions.getAll();
+ * await ApiService.brewSessions.addFermentationEntry(sessionId, entryData);
+ * ```
+ */
 const ApiService = {
   // Token management
   token: TokenManager,
@@ -564,7 +646,10 @@ const ApiService = {
         api.get(ENDPOINTS.BREW_SESSIONS.FERMENTATION(brewSessionId))
       ),
 
-    addFermentationEntry: (brewSessionId: ID, entryData: CreateFermentationEntryRequest): Promise<AxiosResponse<CreateFermentationEntryResponse>> =>
+    addFermentationEntry: (
+      brewSessionId: ID,
+      entryData: CreateFermentationEntryRequest
+    ): Promise<AxiosResponse<CreateFermentationEntryResponse>> =>
       api.post(ENDPOINTS.BREW_SESSIONS.FERMENTATION(brewSessionId), entryData),
 
     updateFermentationEntry: (

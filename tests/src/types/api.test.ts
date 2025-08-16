@@ -43,10 +43,10 @@ import {
   ApiCallOptions,
   DashboardData,
   DashboardResponse,
-} from "../../../src/types/api";
-import { User } from "../../../src/types/user";
-import { Recipe } from "../../../src/types/recipe";
-import { BrewSessionSummary } from "../../../src/types/brewSession";
+} from "@src/types/api";
+import { User } from "@src/types/user";
+import { Recipe } from "@src/types/recipe";
+import { BrewSessionSummary } from "@src/types/brewSession";
 
 // Shared test fixtures
 const mockUser: User = {
@@ -105,7 +105,6 @@ describe("API Types", () => {
     });
 
     describe("LoginResponse", () => {
-
       it("should contain access token and user data", () => {
         const response: LoginResponse = {
           access_token: "jwt.token.here",
@@ -118,11 +117,14 @@ describe("API Types", () => {
 
       it("should have valid JWT token format", () => {
         const response: LoginResponse = {
-          access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+          access_token:
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
           user: mockUser,
         };
 
-        expect(response.access_token).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+        expect(response.access_token).toMatch(
+          /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/
+        );
       });
     });
 
@@ -335,7 +337,6 @@ describe("API Types", () => {
   });
 
   describe("Recipe API Types", () => {
-
     describe("RecipesListResponse", () => {
       it("should contain recipes array and pagination", () => {
         const response: RecipesListResponse = {
@@ -387,7 +388,7 @@ describe("API Types", () => {
           og: 1.055,
           avg_og: 1.052,
           fg: 1.012,
-          avg_fg: 1.010,
+          avg_fg: 1.01,
           abv: 5.6,
           avg_abv: 5.4,
           ibu: 45,
@@ -508,7 +509,9 @@ describe("API Types", () => {
 
         expect(error.error).toBe("VALIDATION_ERROR");
         expect(error.field_errors?.name).toContain("Recipe name is required");
-        expect(error.field_errors?.batch_size).toContain("Batch size must be positive");
+        expect(error.field_errors?.batch_size).toContain(
+          "Batch size must be positive"
+        );
       });
     });
   });
@@ -571,7 +574,6 @@ describe("API Types", () => {
   describe("Dashboard Types", () => {
     describe("DashboardData", () => {
       it("should contain comprehensive dashboard information", () => {
-
         const dashboardData: DashboardData = {
           user_stats: {
             total_recipes: 25,
@@ -588,7 +590,7 @@ describe("API Types", () => {
             avg_brew_time: 240,
             success_rate: 0.85,
             most_brewed_style: "IPA",
-          } as BrewSessionSummary
+          } as BrewSessionSummary,
         };
 
         expect(dashboardData.user_stats.total_recipes).toBe(25);

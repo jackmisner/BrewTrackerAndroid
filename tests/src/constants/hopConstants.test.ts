@@ -9,7 +9,7 @@ describe("hopConstants", () => {
   describe("HOP_USAGE_OPTIONS", () => {
     it("should contain all expected hop usage options", () => {
       expect(HOP_USAGE_OPTIONS).toHaveLength(3);
-      
+
       const usageValues = HOP_USAGE_OPTIONS.map(option => option.value);
       expect(usageValues).toContain("boil");
       expect(usageValues).toContain("whirlpool");
@@ -20,10 +20,14 @@ describe("hopConstants", () => {
       const boilOption = HOP_USAGE_OPTIONS.find(opt => opt.value === "boil");
       expect(boilOption?.display).toBe("Boil");
 
-      const whirlpoolOption = HOP_USAGE_OPTIONS.find(opt => opt.value === "whirlpool");
+      const whirlpoolOption = HOP_USAGE_OPTIONS.find(
+        opt => opt.value === "whirlpool"
+      );
       expect(whirlpoolOption?.display).toBe("Whirlpool");
 
-      const dryHopOption = HOP_USAGE_OPTIONS.find(opt => opt.value === "dry-hop");
+      const dryHopOption = HOP_USAGE_OPTIONS.find(
+        opt => opt.value === "dry-hop"
+      );
       expect(dryHopOption?.display).toBe("Dry Hop");
     });
 
@@ -31,10 +35,14 @@ describe("hopConstants", () => {
       const boilOption = HOP_USAGE_OPTIONS.find(opt => opt.value === "boil");
       expect(boilOption?.defaultTime).toBe(60); // 60 minutes
 
-      const whirlpoolOption = HOP_USAGE_OPTIONS.find(opt => opt.value === "whirlpool");
+      const whirlpoolOption = HOP_USAGE_OPTIONS.find(
+        opt => opt.value === "whirlpool"
+      );
       expect(whirlpoolOption?.defaultTime).toBe(15); // 15 minutes
 
-      const dryHopOption = HOP_USAGE_OPTIONS.find(opt => opt.value === "dry-hop");
+      const dryHopOption = HOP_USAGE_OPTIONS.find(
+        opt => opt.value === "dry-hop"
+      );
       expect(dryHopOption?.defaultTime).toBe(4320); // 3 days in minutes (3 * 24 * 60)
     });
 
@@ -63,7 +71,7 @@ describe("hopConstants", () => {
 
       it("should have proper labels for boil times", () => {
         const boilPresets = HOP_TIME_PRESETS.boil;
-        
+
         const sixtyMinPreset = boilPresets.find(preset => preset.value === 60);
         expect(sixtyMinPreset?.label).toBe("60 min");
 
@@ -74,7 +82,7 @@ describe("hopConstants", () => {
       it("should be sorted in descending order", () => {
         const boilPresets = HOP_TIME_PRESETS.boil;
         const values = boilPresets.map(preset => preset.value);
-        
+
         for (let i = 1; i < values.length; i++) {
           expect(values[i]).toBeLessThanOrEqual(values[i - 1]);
         }
@@ -97,11 +105,15 @@ describe("hopConstants", () => {
 
       it("should have proper labels for whirlpool times", () => {
         const whirlpoolPresets = HOP_TIME_PRESETS.whirlpool;
-        
-        const thirtyMinPreset = whirlpoolPresets.find(preset => preset.value === 30);
+
+        const thirtyMinPreset = whirlpoolPresets.find(
+          preset => preset.value === 30
+        );
         expect(thirtyMinPreset?.label).toBe("30 min");
 
-        const fiveMinPreset = whirlpoolPresets.find(preset => preset.value === 5);
+        const fiveMinPreset = whirlpoolPresets.find(
+          preset => preset.value === 5
+        );
         expect(fiveMinPreset?.label).toBe("5 min");
       });
     });
@@ -112,19 +124,25 @@ describe("hopConstants", () => {
         expect(dryHopPresets).toHaveLength(6);
 
         // Check that values are in minutes (days * 1440)
-        const sevenDayPreset = dryHopPresets.find(preset => preset.label === "7 days");
+        const sevenDayPreset = dryHopPresets.find(
+          preset => preset.label === "7 days"
+        );
         expect(sevenDayPreset?.value).toBe(7 * 1440); // 7 days in minutes
 
-        const threeDayPreset = dryHopPresets.find(preset => preset.label === "3 days");
+        const threeDayPreset = dryHopPresets.find(
+          preset => preset.label === "3 days"
+        );
         expect(threeDayPreset?.value).toBe(3 * 1440); // 3 days in minutes
 
-        const oneDayPreset = dryHopPresets.find(preset => preset.label === "1 day");
+        const oneDayPreset = dryHopPresets.find(
+          preset => preset.label === "1 day"
+        );
         expect(oneDayPreset?.value).toBe(1 * 1440); // 1 day in minutes
       });
 
       it("should have proper labels for dry hop times", () => {
         const dryHopPresets = HOP_TIME_PRESETS["dry-hop"];
-        
+
         const labels = dryHopPresets.map(preset => preset.label);
         expect(labels).toContain("7 days");
         expect(labels).toContain("5 days");
@@ -136,7 +154,7 @@ describe("hopConstants", () => {
 
       it("should have correct minute calculations", () => {
         const dryHopPresets = HOP_TIME_PRESETS["dry-hop"];
-        
+
         // Verify the math: days * 24 hours * 60 minutes
         dryHopPresets.forEach(preset => {
           const dayMatch = preset.label.match(/(\d+) days?/);
@@ -199,7 +217,9 @@ describe("hopConstants", () => {
       HOP_USAGE_OPTIONS.forEach(option => {
         const presets = HOP_TIME_PRESETS[option.value as HopTimePresetKey];
         if (presets) {
-          const hasDefaultTime = presets.some(preset => preset.value === option.defaultTime);
+          const hasDefaultTime = presets.some(
+            preset => preset.value === option.defaultTime
+          );
           expect(hasDefaultTime).toBe(true);
         }
       });

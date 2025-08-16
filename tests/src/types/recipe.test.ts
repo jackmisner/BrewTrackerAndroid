@@ -1,4 +1,4 @@
-import {
+import type {
   IngredientType,
   BatchSizeUnit,
   IngredientUnit,
@@ -10,8 +10,8 @@ import {
   IngredientsByType,
   RecipeAnalysis,
   CreateRecipeIngredientData,
-} from "../../../src/types/recipe";
-import { ID } from "../../../src/types/common";
+} from "@src/types/recipe";
+import type { ID } from "@src/types/common";
 
 describe("Recipe Types", () => {
   describe("IngredientType enum", () => {
@@ -72,7 +72,16 @@ describe("Recipe Types", () => {
   describe("IngredientUnit type", () => {
     it("should include all valid ingredient units", () => {
       const validUnits: IngredientUnit[] = [
-        "lb", "kg", "g", "oz", "pkg", "tsp", "tbsp", "cup", "ml", "l"
+        "lb",
+        "kg",
+        "g",
+        "oz",
+        "pkg",
+        "tsp",
+        "tbsp",
+        "cup",
+        "ml",
+        "l",
       ];
 
       validUnits.forEach(unit => {
@@ -211,7 +220,7 @@ describe("Recipe Types", () => {
     it("should validate realistic brewing values", () => {
       const metrics: RecipeMetrics = {
         og: 1.045, // Light beer
-        fg: 1.010,
+        fg: 1.01,
         abv: 4.6,
         ibu: 20, // Mild bitterness
         srm: 3, // Light color
@@ -227,13 +236,13 @@ describe("Recipe Types", () => {
     it("should handle strong beer metrics", () => {
       const strongBeer: RecipeMetrics = {
         og: 1.095, // Imperial stout
-        fg: 1.020,
+        fg: 1.02,
         abv: 9.8,
         ibu: 65,
         srm: 45,
       };
 
-      expect(strongBeer.og).toBeGreaterThan(1.080);
+      expect(strongBeer.og).toBeGreaterThan(1.08);
       expect(strongBeer.abv).toBeGreaterThan(8);
       expect(strongBeer.srm).toBeGreaterThan(30); // Dark beer
     });
@@ -596,16 +605,22 @@ describe("Recipe Types", () => {
       };
 
       // Percentages should add up correctly
-      const grainTotal = analysis.grain_bill_analysis.base_malt_percentage + 
-                        analysis.grain_bill_analysis.specialty_malt_percentage;
+      const grainTotal =
+        analysis.grain_bill_analysis.base_malt_percentage +
+        analysis.grain_bill_analysis.specialty_malt_percentage;
       expect(grainTotal).toBe(100);
 
-      const hopTotal = analysis.hop_analysis.bittering_ratio + 
-                      analysis.hop_analysis.aroma_ratio;
+      const hopTotal =
+        analysis.hop_analysis.bittering_ratio +
+        analysis.hop_analysis.aroma_ratio;
       expect(hopTotal).toBe(100);
 
-      expect(analysis.style_compliance.overall_compliance).toBeLessThanOrEqual(100);
-      expect(analysis.yeast_analysis.expected_attenuation).toBeLessThanOrEqual(100);
+      expect(analysis.style_compliance.overall_compliance).toBeLessThanOrEqual(
+        100
+      );
+      expect(analysis.yeast_analysis.expected_attenuation).toBeLessThanOrEqual(
+        100
+      );
     });
   });
 
@@ -765,17 +780,21 @@ describe("Recipe Types", () => {
       // Recipe should match search criteria
       expect(mockRecipe.style).toBe(searchFilters.style);
       expect(mockRecipe.is_public).toBe(searchFilters.is_public);
-      
+
       // Guard against null/undefined values before comparison
       expect(searchFilters.min_abv).toBeDefined();
       expect(searchFilters.max_abv).toBeDefined();
       expect(mockRecipe.estimated_abv).toBeDefined();
-      
+
       if (searchFilters.min_abv != null && mockRecipe.estimated_abv != null) {
-        expect(mockRecipe.estimated_abv).toBeGreaterThanOrEqual(searchFilters.min_abv);
+        expect(mockRecipe.estimated_abv).toBeGreaterThanOrEqual(
+          searchFilters.min_abv
+        );
       }
       if (searchFilters.max_abv != null && mockRecipe.estimated_abv != null) {
-        expect(mockRecipe.estimated_abv).toBeLessThanOrEqual(searchFilters.max_abv);
+        expect(mockRecipe.estimated_abv).toBeLessThanOrEqual(
+          searchFilters.max_abv
+        );
       }
     });
   });

@@ -10,9 +10,9 @@ import {
   CreateFermentationEntryRequest,
   FermentationStats,
   BrewSessionSummary,
-} from "../../../src/types/brewSession";
-import { ID } from "../../../src/types/common";
-import { Recipe } from "../../../src/types/recipe";
+} from "@src/types/brewSession";
+import { ID } from "@src/types/common";
+import { Recipe } from "@src/types/recipe";
 
 describe("Brew Session Types", () => {
   describe("BrewSessionStatus enum", () => {
@@ -39,8 +39,14 @@ describe("Brew Session Types", () => {
     });
 
     it("should represent brewing workflow progression", () => {
-      const workflowOrder = ["planned", "active", "fermenting", "conditioning", "completed"];
-      
+      const workflowOrder = [
+        "planned",
+        "active",
+        "fermenting",
+        "conditioning",
+        "completed",
+      ];
+
       workflowOrder.forEach(status => {
         const brewStatus: BrewSessionStatus = status as BrewSessionStatus;
         expect(typeof brewStatus).toBe("string");
@@ -54,7 +60,7 @@ describe("Brew Session Types", () => {
 
     it("should support error and pause states", () => {
       const errorStates: BrewSessionStatus[] = ["failed", "paused"];
-      
+
       errorStates.forEach(status => {
         expect(typeof status).toBe("string");
       });
@@ -86,7 +92,8 @@ describe("Brew Session Types", () => {
       });
 
       packagingOptions.forEach(packaging => {
-        const packagingStage: FermentationStage = packaging as FermentationStage;
+        const packagingStage: FermentationStage =
+          packaging as FermentationStage;
         expect(typeof packagingStage).toBe("string");
       });
     });
@@ -102,8 +109,11 @@ describe("Brew Session Types", () => {
     });
 
     it("should be used in temperature-related functions", () => {
-      const convertTemperature = (temp: number, unit: TemperatureUnit): number => {
-        return unit === "F" ? (temp - 32) * 5/9 : temp * 9/5 + 32;
+      const convertTemperature = (
+        temp: number,
+        unit: TemperatureUnit
+      ): number => {
+        return unit === "F" ? ((temp - 32) * 5) / 9 : (temp * 9) / 5 + 32;
       };
 
       expect(convertTemperature(32, "F")).toBeCloseTo(0, 1); // 32°F to °C
@@ -116,7 +126,7 @@ describe("Brew Session Types", () => {
       overrides: Partial<GravityReading> = {}
     ): GravityReading => ({
       id: "gravity-123",
-      specific_gravity: 1.050,
+      specific_gravity: 1.05,
       temperature: 68,
       temperature_unit: "F",
       date_recorded: "2024-01-01T12:00:00Z",
@@ -127,7 +137,7 @@ describe("Brew Session Types", () => {
       const reading = createMockGravityReading();
 
       expect(reading.id).toBe("gravity-123");
-      expect(reading.specific_gravity).toBe(1.050);
+      expect(reading.specific_gravity).toBe(1.05);
       expect(reading.temperature).toBe(68);
       expect(reading.temperature_unit).toBe("F");
       expect(reading.date_recorded).toBe("2024-01-01T12:00:00Z");
@@ -137,10 +147,10 @@ describe("Brew Session Types", () => {
       const reading = createMockGravityReading({
         specific_gravity: 1.052,
         temperature: 80,
-        corrected_gravity: 1.050,
+        corrected_gravity: 1.05,
       });
 
-      expect(reading.corrected_gravity).toBe(1.050);
+      expect(reading.corrected_gravity).toBe(1.05);
       expect(reading.corrected_gravity).toBeLessThan(reading.specific_gravity);
     });
 
@@ -154,10 +164,12 @@ describe("Brew Session Types", () => {
 
     it("should validate realistic gravity values", () => {
       const lightBeer = createMockGravityReading({ specific_gravity: 1.035 });
-      const strongBeer = createMockGravityReading({ specific_gravity: 1.090 });
+      const strongBeer = createMockGravityReading({ specific_gravity: 1.09 });
 
       expect(lightBeer.specific_gravity).toBeGreaterThan(1.0);
-      expect(strongBeer.specific_gravity).toBeGreaterThan(lightBeer.specific_gravity);
+      expect(strongBeer.specific_gravity).toBeGreaterThan(
+        lightBeer.specific_gravity
+      );
     });
   });
 
@@ -166,14 +178,14 @@ describe("Brew Session Types", () => {
       const apiEntry: FermentationEntry = {
         entry_date: "2024-01-01",
         temperature: 68,
-        gravity: 1.020,
+        gravity: 1.02,
         ph: 4.2,
         notes: "Fermentation progressing well",
       };
 
       expect(apiEntry.entry_date).toBe("2024-01-01");
       expect(apiEntry.temperature).toBe(68);
-      expect(apiEntry.gravity).toBe(1.020);
+      expect(apiEntry.gravity).toBe(1.02);
       expect(apiEntry.ph).toBe(4.2);
     });
 
@@ -303,15 +315,15 @@ describe("Brew Session Types", () => {
         actual_og: 1.054,
         target_og: 1.055,
         target_fg: 1.012,
-        final_gravity: 1.010,
-        actual_fg: 1.010,
+        final_gravity: 1.01,
+        actual_fg: 1.01,
         actual_abv: 5.8,
       });
 
       expect(session.original_gravity).toBe(1.055);
       expect(session.actual_og).toBe(1.054);
       expect(session.target_fg).toBe(1.012);
-      expect(session.final_gravity).toBe(1.010);
+      expect(session.final_gravity).toBe(1.01);
       expect(session.actual_abv).toBe(5.8);
     });
 
@@ -364,7 +376,9 @@ describe("Brew Session Types", () => {
 
       expect(session.notes).toBe("General session notes");
       expect(session.brew_notes).toBe("Mash temp was slightly high");
-      expect(session.tasting_notes).toBe("Hoppy with citrus notes, good balance");
+      expect(session.tasting_notes).toBe(
+        "Hoppy with citrus notes, good balance"
+      );
     });
 
     it("should support photo tracking", () => {
@@ -439,7 +453,7 @@ describe("Brew Session Types", () => {
         name: "Updated Session Name",
         status: "completed",
         current_stage: "bottled",
-        final_gravity: 1.010,
+        final_gravity: 1.01,
         actual_completion_date: "2024-01-20",
         notes: "Updated notes",
         brew_notes: "Brewing went smoothly",
@@ -459,13 +473,13 @@ describe("Brew Session Types", () => {
       const request: CreateFermentationEntryRequest = {
         entry_date: "2024-01-05T12:00:00Z",
         temperature: 68,
-        gravity: 1.050,
+        gravity: 1.05,
         notes: "Active fermentation",
       };
 
       expect(request.entry_date).toBe("2024-01-05T12:00:00Z");
       expect(request.temperature).toBe(68);
-      expect(request.gravity).toBe(1.050);
+      expect(request.gravity).toBe(1.05);
       expect(request.notes).toBe("Active fermentation");
     });
 
@@ -473,12 +487,12 @@ describe("Brew Session Types", () => {
       const request: CreateFermentationEntryRequest = {
         entry_date: "2024-01-07T12:00:00Z",
         temperature: 67,
-        gravity: 1.020,
+        gravity: 1.02,
         ph: 4.3,
         notes: "Gravity dropping nicely",
       };
 
-      expect(request.gravity).toBe(1.020);
+      expect(request.gravity).toBe(1.02);
       expect(request.ph).toBe(4.3);
     });
   });
@@ -513,20 +527,29 @@ describe("Brew Session Types", () => {
         gravity_trend: "stable",
         estimated_completion_days: 3,
         current_attenuation: 80,
-        expected_final_gravity: 1.010,
+        expected_final_gravity: 1.01,
         fermentation_health: "good",
       };
 
       expect(stats.min_temperature).toBeLessThanOrEqual(stats.avg_temperature);
-      expect(stats.max_temperature).toBeGreaterThanOrEqual(stats.avg_temperature);
+      expect(stats.max_temperature).toBeGreaterThanOrEqual(
+        stats.avg_temperature
+      );
       expect(stats.current_attenuation).toBeGreaterThanOrEqual(0);
       expect(stats.current_attenuation).toBeLessThanOrEqual(100);
     });
 
     it("should support all gravity trends and health levels", () => {
-      const trends: FermentationStats["gravity_trend"][] = ["falling", "stable", "rising"];
+      const trends: FermentationStats["gravity_trend"][] = [
+        "falling",
+        "stable",
+        "rising",
+      ];
       const healthLevels: FermentationStats["fermentation_health"][] = [
-        "excellent", "good", "concerning", "poor"
+        "excellent",
+        "good",
+        "concerning",
+        "poor",
       ];
 
       trends.forEach(trend => {
@@ -596,13 +619,13 @@ describe("Brew Session Types", () => {
           {
             entry_date: "2024-01-03",
             temperature: 68,
-            gravity: 1.040,
+            gravity: 1.04,
             notes: "Active fermentation started",
           },
           {
             entry_date: "2024-01-07",
             temperature: 67,
-            gravity: 1.020,
+            gravity: 1.02,
             notes: "Fermentation progressing well",
           },
         ],

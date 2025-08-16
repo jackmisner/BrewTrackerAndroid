@@ -51,35 +51,55 @@ describe("contextMenuUtils", () => {
 
     it("should adjust horizontal position when too close to left edge", () => {
       const touchPosition: Position = { x: 10, y: 300 }; // Very close to left edge
-      const result = calculateMenuPosition(touchPosition, menuDimensions, defaultPadding);
+      const result = calculateMenuPosition(
+        touchPosition,
+        menuDimensions,
+        defaultPadding
+      );
 
       expect(result.x).toBe(defaultPadding); // Should be pushed to padding distance
     });
 
     it("should adjust horizontal position when too close to right edge", () => {
       const touchPosition: Position = { x: 350, y: 300 }; // Close to right edge (screen width 375)
-      const result = calculateMenuPosition(touchPosition, menuDimensions, defaultPadding);
+      const result = calculateMenuPosition(
+        touchPosition,
+        menuDimensions,
+        defaultPadding
+      );
 
       expect(result.x).toBe(155); // 375 - 200 - 20 = 155
     });
 
     it("should adjust vertical position when too close to top edge", () => {
       const touchPosition: Position = { x: 200, y: 10 }; // Very close to top
-      const result = calculateMenuPosition(touchPosition, menuDimensions, defaultPadding);
+      const result = calculateMenuPosition(
+        touchPosition,
+        menuDimensions,
+        defaultPadding
+      );
 
       expect(result.y).toBe(30); // touchY + 20 (position below touch point)
     });
 
     it("should adjust vertical position when too close to bottom edge", () => {
       const touchPosition: Position = { x: 200, y: 600 }; // Close to bottom (screen height 667)
-      const result = calculateMenuPosition(touchPosition, menuDimensions, defaultPadding);
+      const result = calculateMenuPosition(
+        touchPosition,
+        menuDimensions,
+        defaultPadding
+      );
 
       expect(result.y).toBe(347); // 667 - 300 - 20 = 347
     });
 
     it("should handle corner cases - top-left corner", () => {
       const touchPosition: Position = { x: 10, y: 10 };
-      const result = calculateMenuPosition(touchPosition, menuDimensions, defaultPadding);
+      const result = calculateMenuPosition(
+        touchPosition,
+        menuDimensions,
+        defaultPadding
+      );
 
       expect(result.x).toBe(defaultPadding); // Pushed right
       expect(result.y).toBe(30); // Positioned below touch point
@@ -87,7 +107,11 @@ describe("contextMenuUtils", () => {
 
     it("should handle corner cases - bottom-right corner", () => {
       const touchPosition: Position = { x: 350, y: 600 };
-      const result = calculateMenuPosition(touchPosition, menuDimensions, defaultPadding);
+      const result = calculateMenuPosition(
+        touchPosition,
+        menuDimensions,
+        defaultPadding
+      );
 
       expect(result.x).toBe(155); // 375 - 200 - 20
       expect(result.y).toBe(347); // 667 - 300 - 20
@@ -96,7 +120,11 @@ describe("contextMenuUtils", () => {
     it("should use custom padding", () => {
       const customPadding = 50;
       const touchPosition: Position = { x: 10, y: 300 };
-      const result = calculateMenuPosition(touchPosition, menuDimensions, customPadding);
+      const result = calculateMenuPosition(
+        touchPosition,
+        menuDimensions,
+        customPadding
+      );
 
       expect(result.x).toBe(customPadding);
     });
@@ -135,7 +163,11 @@ describe("contextMenuUtils", () => {
     it("should handle very large menu dimensions", () => {
       const largeMenu: MenuDimensions = { width: 400, height: 700 };
       const touchPosition: Position = { x: 200, y: 300 };
-      const result = calculateMenuPosition(touchPosition, largeMenu, defaultPadding);
+      const result = calculateMenuPosition(
+        touchPosition,
+        largeMenu,
+        defaultPadding
+      );
 
       // The function should still respect the padding constraint
       // x would be: max(padding, screenWidth - menuWidth - padding) = max(20, 375-400-20) = max(20, -45) = 20
@@ -408,7 +440,10 @@ describe("contextMenuUtils", () => {
 
       const touchPosition = getTouchPosition(touchEvent);
       const menuHeight = calculateMenuHeight(3, true);
-      const menuDimensions = { width: MENU_DIMENSIONS.width, height: menuHeight };
+      const menuDimensions = {
+        width: MENU_DIMENSIONS.width,
+        height: menuHeight,
+      };
       const position = calculateMenuPosition(touchPosition, menuDimensions);
 
       expect(touchPosition).toEqual({ x: 100, y: 200 });

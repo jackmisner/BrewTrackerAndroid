@@ -16,7 +16,8 @@
       "@services/*": ["./src/services/*"],
       "@types/*": ["./src/types/*"],
       "@utils/*": ["./src/utils/*"],
-      "@constants/*": ["./src/constants/*"]
+      "@constants/*": ["./src/constants/*"],
+      "@hooks/*": ["./src/hooks/*"]
     }
   },
   "include": [

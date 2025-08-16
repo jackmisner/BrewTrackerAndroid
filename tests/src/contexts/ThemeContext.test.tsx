@@ -7,7 +7,7 @@ import {
   useTheme,
   ThemeMode,
   ThemeContextValue,
-} from "../../../src/contexts/ThemeContext";
+} from "@src/contexts/ThemeContext";
 
 // Mock React Native modules
 jest.mock("react-native", () => ({
@@ -77,7 +77,7 @@ describe("ThemeContext", () => {
   });
 
   const createWrapper = ({ children }: { children: React.ReactNode }) =>
-    React.createElement(ThemeProvider, {}, children);
+    React.createElement(ThemeProvider, { children });
 
   describe("useTheme hook", () => {
     it("should throw error when used outside provider", () => {
@@ -108,7 +108,7 @@ describe("ThemeContext", () => {
   describe("ThemeProvider", () => {
     it("should initialize with system theme and light colors when system is light", () => {
       mockAppearance.getColorScheme.mockReturnValue("light");
-      
+
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
@@ -119,7 +119,7 @@ describe("ThemeContext", () => {
 
     it("should initialize with system theme and dark colors when system is dark", () => {
       mockAppearance.getColorScheme.mockReturnValue("dark");
-      
+
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
@@ -130,7 +130,7 @@ describe("ThemeContext", () => {
 
     it("should load saved theme preference from storage", async () => {
       mockAsyncStorage.getItem.mockResolvedValue("dark");
-      
+
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
@@ -145,7 +145,7 @@ describe("ThemeContext", () => {
 
     it("should ignore invalid saved theme preference", async () => {
       mockAsyncStorage.getItem.mockResolvedValue("invalid");
-      
+
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
@@ -157,9 +157,11 @@ describe("ThemeContext", () => {
     });
 
     it("should handle storage errors gracefully", async () => {
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       mockAsyncStorage.getItem.mockRejectedValue(new Error("Storage error"));
-      
+
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
@@ -168,16 +170,19 @@ describe("ThemeContext", () => {
       });
 
       expect(result.current.theme).toBe("system");
-      expect(consoleSpy).toHaveBeenCalledWith("Error loading theme preference:", expect.any(Error));
-      
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Error loading theme preference:",
+        expect.any(Error)
+      );
+
       consoleSpy.mockRestore();
     });
 
     it("should listen to system theme changes when theme is system", () => {
       const mockSubscription = { remove: jest.fn() };
       let changeListener: (event: { colorScheme: any }) => void;
-      
-      mockAppearance.addChangeListener.mockImplementation((callback) => {
+
+      mockAppearance.addChangeListener.mockImplementation(callback => {
         changeListener = callback;
         return mockSubscription;
       });
@@ -203,8 +208,8 @@ describe("ThemeContext", () => {
     it("should not respond to system changes when theme is not system", async () => {
       const mockSubscription = { remove: jest.fn() };
       let changeListener: (event: { colorScheme: any }) => void;
-      
-      mockAppearance.addChangeListener.mockImplementation((callback) => {
+
+      mockAppearance.addChangeListener.mockImplementation(callback => {
         changeListener = callback;
         return mockSubscription;
       });
@@ -238,7 +243,10 @@ describe("ThemeContext", () => {
         await result.current.setTheme("light");
       });
 
-      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith("@brewtracker_theme_preference", "light");
+      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
+        "@brewtracker_theme_preference",
+        "light"
+      );
       expect(result.current.theme).toBe("light");
       expect(result.current.isDark).toBe(false);
     });
@@ -251,14 +259,17 @@ describe("ThemeContext", () => {
         await result.current.setTheme("dark");
       });
 
-      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith("@brewtracker_theme_preference", "dark");
+      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
+        "@brewtracker_theme_preference",
+        "dark"
+      );
       expect(result.current.theme).toBe("dark");
       expect(result.current.isDark).toBe(true);
     });
 
     it("should set theme to system", async () => {
       mockAppearance.getColorScheme.mockReturnValue("dark");
-      
+
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
@@ -266,15 +277,20 @@ describe("ThemeContext", () => {
         await result.current.setTheme("system");
       });
 
-      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith("@brewtracker_theme_preference", "system");
+      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
+        "@brewtracker_theme_preference",
+        "system"
+      );
       expect(result.current.theme).toBe("system");
       expect(result.current.isDark).toBe(true); // Should follow system (dark)
     });
 
     it("should handle storage errors gracefully", async () => {
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       mockAsyncStorage.setItem.mockRejectedValue(new Error("Storage error"));
-      
+
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
@@ -282,8 +298,11 @@ describe("ThemeContext", () => {
         await result.current.setTheme("dark");
       });
 
-      expect(consoleSpy).toHaveBeenCalledWith("Error saving theme preference:", expect.any(Error));
-      
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Error saving theme preference:",
+        expect.any(Error)
+      );
+
       consoleSpy.mockRestore();
     });
   });
@@ -331,7 +350,7 @@ describe("ThemeContext", () => {
 
     it("should toggle system theme based on current effective theme", async () => {
       mockAppearance.getColorScheme.mockReturnValue("light");
-      
+
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 

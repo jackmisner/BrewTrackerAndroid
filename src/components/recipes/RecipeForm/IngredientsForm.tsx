@@ -302,7 +302,6 @@ export function IngredientsForm({
         compact={true}
         showTitle={true}
         onRetry={retryMetrics}
-
       />
 
       {renderIngredientSection("grain", "Grains & Fermentables")}

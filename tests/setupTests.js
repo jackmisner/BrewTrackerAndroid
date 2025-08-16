@@ -22,6 +22,37 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   multiRemove: jest.fn(),
 }));
 
+// Mock new storage modules
+jest.mock("expo-document-picker", () => ({
+  getDocumentAsync: jest.fn(),
+  DocumentPickerOptions: {},
+}));
+
+jest.mock("expo-media-library", () => ({
+  requestPermissionsAsync: jest.fn(),
+  getPermissionsAsync: jest.fn(),
+  createAssetAsync: jest.fn(),
+  getAlbumAsync: jest.fn(),
+  addAssetsToAlbumAsync: jest.fn(),
+  createAlbumAsync: jest.fn(),
+  PermissionStatus: {
+    GRANTED: "granted",
+    DENIED: "denied",
+    UNDETERMINED: "undetermined",
+  },
+}));
+
+jest.mock("expo-sharing", () => ({
+  isAvailableAsync: jest.fn(),
+  shareAsync: jest.fn(),
+}));
+
+jest.mock("expo-file-system", () => ({
+  writeAsStringAsync: jest.fn(),
+  readAsStringAsync: jest.fn(),
+  cacheDirectory: "file://cache/",
+}));
+
 jest.mock("expo-router", () => ({
   useRouter: () => ({
     push: jest.fn(),
@@ -381,16 +412,16 @@ const SUPPRESSED_WARN_PATTERNS = [
 
 console.error = (...args) => {
   const message = args[0];
-  let messageString = '';
-  
+  let messageString = "";
+
   if (typeof message === "string") {
     messageString = message;
   } else if (message instanceof Error) {
     messageString = message.message || message.toString();
-  } else if (message && typeof message.toString === 'function') {
+  } else if (message && typeof message.toString === "function") {
     messageString = message.toString();
   }
-  
+
   if (messageString) {
     // Check if this error matches any suppressed patterns
     const shouldSuppress = SUPPRESSED_ERROR_PATTERNS.some(pattern =>
@@ -400,23 +431,23 @@ console.error = (...args) => {
       return;
     }
   }
-  
+
   // Log all other errors normally
   originalError.apply(console, args);
 };
 
 console.warn = (...args) => {
   const message = args[0];
-  let messageString = '';
-  
+  let messageString = "";
+
   if (typeof message === "string") {
     messageString = message;
   } else if (message instanceof Error) {
     messageString = message.message || message.toString();
-  } else if (message && typeof message.toString === 'function') {
+  } else if (message && typeof message.toString === "function") {
     messageString = message.toString();
   }
-  
+
   if (messageString) {
     // Check if this warning matches any suppressed patterns
     const shouldSuppress = SUPPRESSED_WARN_PATTERNS.some(pattern =>
@@ -426,7 +457,7 @@ console.warn = (...args) => {
       return;
     }
   }
-  
+
   // Log all other warnings normally
   originalWarn.apply(console, args);
 };

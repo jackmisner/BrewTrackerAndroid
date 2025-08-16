@@ -17,10 +17,7 @@ jest.mock("@services/api/apiService", () => ({
 jest.unmock("@tanstack/react-query");
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  useBeerStyles,
-  BeerStyleOption,
-} from "../../../src/hooks/useBeerStyles";
+import { useBeerStyles, type BeerStyleOption } from "@src/hooks/useBeerStyles";
 import ApiService from "@services/api/apiService";
 const mockedApiService = jest.mocked(ApiService);
 

@@ -42,7 +42,7 @@ jest.mock("@styles/common/buttons", () => ({
   },
 }));
 
-import { verifyEmailStyles } from "../../../../src/styles/auth/verifyEmailStyles";
+import { verifyEmailStyles } from "@src/styles/auth/verifyEmailStyles";
 
 describe("Verify Email Styles", () => {
   describe("Container and layout styles", () => {
@@ -118,7 +118,9 @@ describe("Verify Email Styles", () => {
 
     it("should provide proper line height for readability", () => {
       expect(verifyEmailStyles.subtitle.lineHeight).toBe(22);
-      expect(verifyEmailStyles.subtitle.lineHeight).toBeGreaterThan(verifyEmailStyles.subtitle.fontSize);
+      expect(verifyEmailStyles.subtitle.lineHeight).toBeGreaterThan(
+        verifyEmailStyles.subtitle.fontSize
+      );
     });
   });
 
@@ -230,12 +232,16 @@ describe("Verify Email Styles", () => {
     it("should use theme colors consistently", () => {
       const { colors } = require("@styles/common/colors");
 
-      expect(verifyEmailStyles.container.backgroundColor).toBe(colors.background);
+      expect(verifyEmailStyles.container.backgroundColor).toBe(
+        colors.background
+      );
       expect(verifyEmailStyles.title.color).toBe(colors.primary);
       expect(verifyEmailStyles.subtitle.color).toBe(colors.textSecondary);
       expect(verifyEmailStyles.email.color).toBe(colors.text);
       expect(verifyEmailStyles.input.borderColor).toBe(colors.border);
-      expect(verifyEmailStyles.input.backgroundColor).toBe(colors.inputBackground);
+      expect(verifyEmailStyles.input.backgroundColor).toBe(
+        colors.inputBackground
+      );
       expect(verifyEmailStyles.errorText.color).toBe(colors.error);
       expect(verifyEmailStyles.linkText.color).toBe(colors.primary);
     });
@@ -247,8 +253,12 @@ describe("Verify Email Styles", () => {
     });
 
     it("should maintain brand color consistency", () => {
-      expect(verifyEmailStyles.title.color).toBe(verifyEmailStyles.linkText.color);
-      expect(verifyEmailStyles.title.color).toBe(verifyEmailStyles.primaryButton.backgroundColor);
+      expect(verifyEmailStyles.title.color).toBe(
+        verifyEmailStyles.linkText.color
+      );
+      expect(verifyEmailStyles.title.color).toBe(
+        verifyEmailStyles.primaryButton.backgroundColor
+      );
     });
   });
 
@@ -262,7 +272,9 @@ describe("Verify Email Styles", () => {
 
     it("should provide adequate touch targets", () => {
       expect(verifyEmailStyles.input.padding).toBeGreaterThanOrEqual(16);
-      expect(verifyEmailStyles.linkButton.paddingVertical).toBeGreaterThanOrEqual(12);
+      expect(
+        verifyEmailStyles.linkButton.paddingVertical
+      ).toBeGreaterThanOrEqual(12);
       expect(verifyEmailStyles.button.padding).toBeGreaterThanOrEqual(14);
     });
 
@@ -273,7 +285,9 @@ describe("Verify Email Styles", () => {
     });
 
     it("should provide proper line height for text", () => {
-      expect(verifyEmailStyles.subtitle.lineHeight).toBeGreaterThan(verifyEmailStyles.subtitle.fontSize);
+      expect(verifyEmailStyles.subtitle.lineHeight).toBeGreaterThan(
+        verifyEmailStyles.subtitle.fontSize
+      );
     });
 
     it("should enhance code input readability", () => {
@@ -290,7 +304,7 @@ describe("Verify Email Styles", () => {
 
     it("should optimize input for verification codes", () => {
       const input = verifyEmailStyles.input;
-      
+
       expect(input.fontSize).toBe(18); // Larger for easier reading
       expect(input.letterSpacing).toBe(1); // Spacing for code clarity
       expect(input.padding).toBe(16); // Larger touch target
@@ -313,7 +327,7 @@ describe("Verify Email Styles", () => {
     it("should be a valid StyleSheet object", () => {
       expect(typeof verifyEmailStyles).toBe("object");
       expect(verifyEmailStyles).not.toBeNull();
-      
+
       Object.values(verifyEmailStyles).forEach(style => {
         expect(typeof style).toBe("object");
         expect(style).not.toBeNull();
@@ -338,7 +352,7 @@ describe("Verify Email Styles", () => {
         // Inherited button styles
         "button",
         "primaryButton",
-        "buttonText"
+        "buttonText",
       ];
 
       expectedKeys.forEach(key => {
@@ -380,18 +394,18 @@ describe("Verify Email Styles", () => {
     it("should differentiate from general auth forms", () => {
       // Centered layout (no scrollContainer)
       expect(verifyEmailStyles.container.justifyContent).toBe("center");
-      
+
       // Specialized input styling for codes
       expect(verifyEmailStyles.input.letterSpacing).toBe(1);
       expect(verifyEmailStyles.input.fontSize).toBe(18);
-      
+
       // Email emphasis
       expect(verifyEmailStyles.email.fontWeight).toBe("600");
     });
 
     it("should optimize for verification code entry", () => {
       const input = verifyEmailStyles.input;
-      
+
       expect(input.fontSize).toBeGreaterThan(16); // Larger than standard inputs
       expect(input.letterSpacing).toBeGreaterThan(0); // Character separation
       expect(input.padding).toBeGreaterThan(12); // More generous padding

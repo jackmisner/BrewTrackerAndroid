@@ -23,9 +23,12 @@ export const FermentationEntryContextMenu: React.FC<
 > = ({ visible, entry, entryIndex, brewSessionId, onClose, position }) => {
   const queryClient = useQueryClient();
 
-
   const deleteMutation = useMutation({
-    mutationFn: async (contextData: { brewSessionId: string; index: number; entry: FermentationEntry }) => {
+    mutationFn: async (contextData: {
+      brewSessionId: string;
+      index: number;
+      entry: FermentationEntry;
+    }) => {
       const { brewSessionId: sessionId, index } = contextData;
       return ApiService.brewSessions.deleteFermentationEntry(sessionId, index);
     },
@@ -34,7 +37,7 @@ export const FermentationEntryContextMenu: React.FC<
         queryKey: ["brewSession", contextData.brewSessionId],
       });
     },
-    onError: (error) => {
+    onError: error => {
       console.error("Failed to delete fermentation entry:", error);
       Alert.alert(
         "Delete Failed",
@@ -51,7 +54,11 @@ export const FermentationEntryContextMenu: React.FC<
     return date.toLocaleDateString();
   };
 
-  const handleEdit = (contextData: { entry: FermentationEntry; index: number; brewSessionId: string }) => {
+  const handleEdit = (contextData: {
+    entry: FermentationEntry;
+    index: number;
+    brewSessionId: string;
+  }) => {
     const { brewSessionId: sessionId, index } = contextData;
     if (!sessionId || index === undefined) {
       return;
@@ -61,7 +68,11 @@ export const FermentationEntryContextMenu: React.FC<
     );
   };
 
-  const handleDelete = (contextData: { entry: FermentationEntry; index: number; brewSessionId: string }) => {
+  const handleDelete = (contextData: {
+    entry: FermentationEntry;
+    index: number;
+    brewSessionId: string;
+  }) => {
     const { brewSessionId: sessionId, index, entry } = contextData;
     if (!sessionId || index === undefined) {
       Alert.alert(
@@ -71,11 +82,15 @@ export const FermentationEntryContextMenu: React.FC<
       );
       return;
     }
-    
+
     deleteMutation.mutate({ brewSessionId: sessionId, index, entry });
   };
 
-  const handleViewDetails = (contextData: { entry: FermentationEntry; index: number; brewSessionId: string }) => {
+  const handleViewDetails = (contextData: {
+    entry: FermentationEntry;
+    index: number;
+    brewSessionId: string;
+  }) => {
     // For now, just show an alert with entry details
     // In the future, this could open a detailed view modal
     const { entry } = contextData;
@@ -94,7 +109,11 @@ export const FermentationEntryContextMenu: React.FC<
     Alert.alert("Entry Details", details, [{ text: "OK" }]);
   };
 
-  const actions: BaseAction<{ entry: FermentationEntry; index: number; brewSessionId: string }>[] = [
+  const actions: BaseAction<{
+    entry: FermentationEntry;
+    index: number;
+    brewSessionId: string;
+  }>[] = [
     {
       id: "view",
       title: "View Details",
@@ -106,7 +125,8 @@ export const FermentationEntryContextMenu: React.FC<
       title: "Edit Entry",
       icon: "edit",
       onPress: handleEdit,
-      disabled: (contextData) => !contextData.brewSessionId || contextData.index === undefined,
+      disabled: contextData =>
+        !contextData.brewSessionId || contextData.index === undefined,
     },
     {
       id: "delete",
@@ -114,7 +134,8 @@ export const FermentationEntryContextMenu: React.FC<
       icon: "delete",
       onPress: handleDelete,
       destructive: true,
-      disabled: (contextData) => !contextData.brewSessionId || contextData.index === undefined,
+      disabled: contextData =>
+        !contextData.brewSessionId || contextData.index === undefined,
     },
   ];
 

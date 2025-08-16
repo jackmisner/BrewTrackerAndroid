@@ -1,9 +1,9 @@
 /**
  * ApiService Test Suite
- * 
+ *
  * Tests core API service functionality including token management,
  * error handling, endpoint calling, and service structure.
- * 
+ *
  * Note: This test file uses manual mocking to avoid environment validation
  * issues that occur during module import. The actual ApiService functionality
  * is tested through focused unit tests.
@@ -99,12 +99,16 @@ describe("ApiService Core Functionality", () => {
 
         const token = await TestTokenManager.getToken();
 
-        expect(mockSecureStore.getItemAsync).toHaveBeenCalledWith(STORAGE_KEYS.ACCESS_TOKEN);
+        expect(mockSecureStore.getItemAsync).toHaveBeenCalledWith(
+          STORAGE_KEYS.ACCESS_TOKEN
+        );
         expect(token).toBe(mockToken);
       });
 
       it("should return null when token retrieval fails", async () => {
-        mockSecureStore.getItemAsync.mockRejectedValue(new Error("SecureStore error"));
+        mockSecureStore.getItemAsync.mockRejectedValue(
+          new Error("SecureStore error")
+        );
 
         const token = await TestTokenManager.getToken();
 
@@ -138,7 +142,9 @@ describe("ApiService Core Functionality", () => {
         const error = new Error("Storage failed");
         mockSecureStore.setItemAsync.mockRejectedValue(error);
 
-        await expect(TestTokenManager.setToken(mockToken)).rejects.toThrow("Storage failed");
+        await expect(TestTokenManager.setToken(mockToken)).rejects.toThrow(
+          "Storage failed"
+        );
       });
     });
 
@@ -148,11 +154,15 @@ describe("ApiService Core Functionality", () => {
 
         await TestTokenManager.removeToken();
 
-        expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(STORAGE_KEYS.ACCESS_TOKEN);
+        expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(
+          STORAGE_KEYS.ACCESS_TOKEN
+        );
       });
 
       it("should handle removal errors gracefully", async () => {
-        mockSecureStore.deleteItemAsync.mockRejectedValue(new Error("Delete failed"));
+        mockSecureStore.deleteItemAsync.mockRejectedValue(
+          new Error("Delete failed")
+        );
 
         await expect(TestTokenManager.removeToken()).resolves.toBeUndefined();
       });
@@ -192,14 +202,17 @@ describe("ApiService Core Functionality", () => {
             (axiosError.message && axiosError.message.includes("timeout"))
           ) {
             normalized.isTimeout = true;
-            normalized.message = "Request timed out. Please check your connection and try again.";
+            normalized.message =
+              "Request timed out. Please check your connection and try again.";
           } else if (
             axiosError.code === "NETWORK_ERROR" ||
             (axiosError.message && axiosError.message.includes("Network Error"))
           ) {
-            normalized.message = "Network error. Please check your internet connection.";
+            normalized.message =
+              "Network error. Please check your internet connection.";
           } else {
-            normalized.message = "Unable to connect to server. Please try again.";
+            normalized.message =
+              "Unable to connect to server. Please try again.";
           }
 
           normalized.code = axiosError.code;
@@ -211,7 +224,8 @@ describe("ApiService Core Functionality", () => {
 
         switch (response.status) {
           case 400:
-            normalized.message = "Invalid request data. Please check your input.";
+            normalized.message =
+              "Invalid request data. Please check your input.";
             break;
           case 401:
             normalized.message = "Authentication failed. Please log in again.";
@@ -220,7 +234,8 @@ describe("ApiService Core Functionality", () => {
             normalized.message = "Resource not found.";
             break;
           case 429:
-            normalized.message = "Too many requests. Please wait a moment and try again.";
+            normalized.message =
+              "Too many requests. Please wait a moment and try again.";
             normalized.isRetryable = true;
             break;
           case 500:
@@ -267,7 +282,9 @@ describe("ApiService Core Functionality", () => {
 
       expect(result.isNetworkError).toBe(true);
       expect(result.isRetryable).toBe(true);
-      expect(result.message).toBe("Network error. Please check your internet connection.");
+      expect(result.message).toBe(
+        "Network error. Please check your internet connection."
+      );
     });
 
     it("should normalize timeout errors", () => {
@@ -281,7 +298,9 @@ describe("ApiService Core Functionality", () => {
 
       expect(result.isTimeout).toBe(true);
       expect(result.isRetryable).toBe(true);
-      expect(result.message).toBe("Request timed out. Please check your connection and try again.");
+      expect(result.message).toBe(
+        "Request timed out. Please check your connection and try again."
+      );
     });
 
     it("should normalize HTTP client errors as non-retryable", () => {
@@ -344,7 +363,7 @@ describe("ApiService Core Functionality", () => {
 
     it("should handle string errors", () => {
       mockAxios.isAxiosError.mockReturnValue(false);
-      
+
       const result = normalizeError("String error message");
 
       expect(result.message).toBe("String error message");
@@ -352,7 +371,7 @@ describe("ApiService Core Functionality", () => {
 
     it("should handle unknown error types", () => {
       mockAxios.isAxiosError.mockReturnValue(false);
-      
+
       const result = normalizeError({ unknown: "error" });
 
       expect(result.message).toBe("An unexpected error occurred");
@@ -395,7 +414,8 @@ describe("ApiService Core Functionality", () => {
     });
 
     it("should retry on retryable errors", async () => {
-      const operation = jest.fn()
+      const operation = jest
+        .fn()
         .mockRejectedValueOnce(new Error("Temporary error"))
         .mockResolvedValue("success");
 
@@ -408,14 +428,18 @@ describe("ApiService Core Functionality", () => {
     it("should not retry on non-retryable errors", async () => {
       const operation = jest.fn().mockRejectedValue(new Error("Non-retryable"));
 
-      await expect(withRetry(operation, () => false)).rejects.toThrow("Non-retryable");
+      await expect(withRetry(operation, () => false)).rejects.toThrow(
+        "Non-retryable"
+      );
       expect(operation).toHaveBeenCalledTimes(1);
     });
 
     it("should exhaust retry attempts", async () => {
       const operation = jest.fn().mockRejectedValue(new Error("Always fails"));
 
-      await expect(withRetry(operation, () => true, 3, 0)).rejects.toThrow("Always fails");
+      await expect(withRetry(operation, () => true, 3, 0)).rejects.toThrow(
+        "Always fails"
+      );
       expect(operation).toHaveBeenCalledTimes(3);
     });
   });
@@ -431,7 +455,9 @@ describe("ApiService Core Functionality", () => {
       try {
         new URL(baseURL);
       } catch {
-        throw new Error(`Invalid API_URL format: ${baseURL}. Please provide a valid URL.`);
+        throw new Error(
+          `Invalid API_URL format: ${baseURL}. Please provide a valid URL.`
+        );
       }
 
       const cleanBaseURL = baseURL.replace(/\/$/, "");
@@ -451,7 +477,9 @@ describe("ApiService Core Functionality", () => {
     });
 
     it("should validate URL format", () => {
-      expect(() => validateAndGetApiConfig("invalid-url")).toThrow("Invalid API_URL format");
+      expect(() => validateAndGetApiConfig("invalid-url")).toThrow(
+        "Invalid API_URL format"
+      );
     });
 
     it("should clean trailing slashes", () => {
@@ -612,7 +640,7 @@ describe("ApiService Core Functionality", () => {
       const query = "IPA beer with hops";
       const encodedQuery = encodeURIComponent(query);
       const searchUrl = `/search/recipes?q=${encodedQuery}&page=1&per_page=10`;
-      
+
       expect(searchUrl).toContain(encodeURIComponent("IPA beer with hops"));
     });
   });
@@ -629,11 +657,15 @@ describe("ApiService Core Functionality", () => {
 
       mockAxiosInstance.get.mockResolvedValue(mockResponse);
 
-      const response = await mockAxiosInstance.get("/recipes?page=1&per_page=10");
+      const response = await mockAxiosInstance.get(
+        "/recipes?page=1&per_page=10"
+      );
 
       expect(response.status).toBe(200);
       expect(response.data.success).toBe(true);
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith("/recipes?page=1&per_page=10");
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        "/recipes?page=1&per_page=10"
+      );
     });
 
     it("should simulate error response flow", async () => {
@@ -646,7 +678,9 @@ describe("ApiService Core Functionality", () => {
 
       mockAxiosInstance.get.mockRejectedValue(mockError);
 
-      await expect(mockAxiosInstance.get("/recipes/nonexistent")).rejects.toEqual(mockError);
+      await expect(
+        mockAxiosInstance.get("/recipes/nonexistent")
+      ).rejects.toEqual(mockError);
     });
 
     it("should simulate ingredient data processing", () => {
@@ -659,15 +693,29 @@ describe("ApiService Core Functionality", () => {
       };
 
       // Simulate the processing that happens in ingredients.getAll
-      const processedIngredients = rawIngredientData.ingredients.map(ingredient => ({
-        ...ingredient,
-        amount: 0,
-        unit: ingredient.suggested_unit || "lb",
-      }));
+      const processedIngredients = rawIngredientData.ingredients.map(
+        ingredient => ({
+          ...ingredient,
+          amount: 0,
+          unit: ingredient.suggested_unit || "lb",
+        })
+      );
 
       expect(processedIngredients).toEqual([
-        { id: "1", name: "Pilsner Malt", suggested_unit: "lb", amount: 0, unit: "lb" },
-        { id: "2", name: "Cascade Hops", suggested_unit: "oz", amount: 0, unit: "oz" },
+        {
+          id: "1",
+          name: "Pilsner Malt",
+          suggested_unit: "lb",
+          amount: 0,
+          unit: "lb",
+        },
+        {
+          id: "2",
+          name: "Cascade Hops",
+          suggested_unit: "oz",
+          amount: 0,
+          unit: "oz",
+        },
       ]);
     });
   });

@@ -158,6 +158,7 @@ const ResetPasswordScreen: React.FC = () => {
               <TouchableOpacity
                 style={loginStyles.resetPrimaryButton}
                 onPress={handleGoToLogin}
+                testID="go-to-login-button"
               >
                 <Text style={loginStyles.resetPrimaryButtonText}>
                   Go to Login
@@ -179,7 +180,9 @@ const ResetPasswordScreen: React.FC = () => {
         <View style={loginStyles.formContainer}>
           <View style={loginStyles.header}>
             <MaterialIcons name="lock-reset" size={64} color="#2563eb" />
-            <Text style={loginStyles.title}>Reset Password</Text>
+            <Text style={loginStyles.title} testID="reset-password-title">
+              Reset Password
+            </Text>
             <Text style={loginStyles.subtitle}>
               Enter your new password below.
             </Text>
@@ -272,6 +275,7 @@ const ResetPasswordScreen: React.FC = () => {
                 editable={!isLoading}
                 returnKeyType="send"
                 onSubmitEditing={handleResetPassword}
+                testID="confirm-password-input"
               />
               <TouchableOpacity
                 style={loginStyles.passwordToggle}
@@ -305,6 +309,7 @@ const ResetPasswordScreen: React.FC = () => {
                 !passwordsMatch ||
                 !isPasswordValid(formData.newPassword)
               }
+              testID="reset-password-button"
             >
               <Text
                 style={[

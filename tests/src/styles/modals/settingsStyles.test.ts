@@ -1,12 +1,11 @@
-import { settingsStyles } from "../../../../src/styles/modals/settingsStyles";
-import { ThemeContextValue } from "../../../../src/contexts/ThemeContext";
+import { settingsStyles } from "@src/styles/modals/settingsStyles";
+import { ThemeContextValue } from "@src/contexts/ThemeContext";
 // Mock React Native StyleSheet
 jest.mock("react-native", () => ({
   StyleSheet: {
     create: (styles: any) => styles,
   },
 }));
-
 
 describe("Settings Styles", () => {
   const mockTheme: ThemeContextValue = {
@@ -26,6 +25,12 @@ describe("Settings Styles", () => {
       borderLight: "#f0f0f0",
       inputBackground: "#f8f9fa",
       shadow: "#000000",
+      error: "#dc3545",
+      success: "#28a745",
+      warning: "#ffc107",
+      info: "#17a2b8",
+      gravityLine: "#28a745",
+      temperatureLine: "#dc3545",
     },
   };
 
@@ -43,7 +48,9 @@ describe("Settings Styles", () => {
     });
 
     it("should use theme colors throughout", () => {
-      expect(styles.container.backgroundColor).toBe(mockTheme.colors.backgroundSecondary);
+      expect(styles.container.backgroundColor).toBe(
+        mockTheme.colors.backgroundSecondary
+      );
       expect(styles.header.backgroundColor).toBe(mockTheme.colors.background);
       expect(styles.headerTitle.color).toBe(mockTheme.colors.text);
       expect(styles.section.backgroundColor).toBe(mockTheme.colors.background);
@@ -75,7 +82,9 @@ describe("Settings Styles", () => {
   describe("Container and layout", () => {
     it("should style main container", () => {
       expect(styles.container.flex).toBe(1);
-      expect(styles.container.backgroundColor).toBe(mockTheme.colors.backgroundSecondary);
+      expect(styles.container.backgroundColor).toBe(
+        mockTheme.colors.backgroundSecondary
+      );
     });
 
     it("should style scroll view", () => {
@@ -162,7 +171,9 @@ describe("Settings Styles", () => {
       expect(styles.menuItem.alignItems).toBe("center");
       expect(styles.menuItem.paddingVertical).toBe(12);
       expect(styles.menuItem.borderBottomWidth).toBe(1);
-      expect(styles.menuItem.borderBottomColor).toBe(mockTheme.colors.borderLight);
+      expect(styles.menuItem.borderBottomColor).toBe(
+        mockTheme.colors.borderLight
+      );
     });
 
     it("should style menu content", () => {
@@ -200,7 +211,9 @@ describe("Settings Styles", () => {
     });
 
     it("should style group content containers", () => {
-      expect(styles.groupContent.backgroundColor).toBe(mockTheme.colors.inputBackground);
+      expect(styles.groupContent.backgroundColor).toBe(
+        mockTheme.colors.inputBackground
+      );
       expect(styles.groupContent.borderRadius).toBe(8);
       expect(styles.groupContent.padding).toBe(4);
     });
@@ -250,11 +263,17 @@ describe("Settings Styles", () => {
 
   describe("Typography hierarchy", () => {
     it("should establish clear hierarchy", () => {
-      expect(styles.sectionTitle.fontSize).toBeGreaterThan(styles.groupTitle.fontSize);
+      expect(styles.sectionTitle.fontSize).toBeGreaterThan(
+        styles.groupTitle.fontSize
+      );
       expect(styles.groupTitle.fontSize).toBe(styles.menuText.fontSize);
       expect(styles.optionTitle.fontSize).toBe(styles.menuText.fontSize);
-      expect(styles.menuText.fontSize).toBeGreaterThan(styles.menuSubtext.fontSize);
-      expect(styles.optionTitle.fontSize).toBeGreaterThan(styles.optionSubtitle.fontSize);
+      expect(styles.menuText.fontSize).toBeGreaterThan(
+        styles.menuSubtext.fontSize
+      );
+      expect(styles.optionTitle.fontSize).toBeGreaterThan(
+        styles.optionSubtitle.fontSize
+      );
     });
 
     it("should use appropriate font weights", () => {
@@ -311,7 +330,7 @@ describe("Settings Styles", () => {
 
     it("should create depth with shadows", () => {
       const shadowElements = [styles.header, styles.section];
-      
+
       shadowElements.forEach(element => {
         expect(element.shadowColor).toBeDefined();
         expect(element.shadowOffset).toBeDefined();
@@ -336,8 +355,12 @@ describe("Settings Styles", () => {
     });
 
     it("should use secondary colors appropriately", () => {
-      expect(styles.container.backgroundColor).toBe(mockTheme.colors.backgroundSecondary);
-      expect(styles.groupContent.backgroundColor).toBe(mockTheme.colors.inputBackground);
+      expect(styles.container.backgroundColor).toBe(
+        mockTheme.colors.backgroundSecondary
+      );
+      expect(styles.groupContent.backgroundColor).toBe(
+        mockTheme.colors.inputBackground
+      );
       expect(styles.menuSubtext.color).toBe(mockTheme.colors.textSecondary);
     });
 
@@ -372,7 +395,7 @@ describe("Settings Styles", () => {
       expect(styles.headerTitle.color).toBe(mockTheme.colors.text);
       expect(styles.sectionTitle.color).toBe(mockTheme.colors.text);
       expect(styles.menuText.color).toBe(mockTheme.colors.text);
-      
+
       // Secondary text should be distinct but readable
       expect(styles.menuSubtext.color).toBe(mockTheme.colors.textSecondary);
       expect(styles.optionSubtitle.color).toBe(mockTheme.colors.textSecondary);
@@ -389,7 +412,7 @@ describe("Settings Styles", () => {
     it("should be a valid StyleSheet object", () => {
       expect(typeof styles).toBe("object");
       expect(styles).not.toBeNull();
-      
+
       Object.values(styles).forEach(style => {
         expect(typeof style).toBe("object");
         expect(style).not.toBeNull();
@@ -401,7 +424,7 @@ describe("Settings Styles", () => {
         "container",
         "scrollView",
         "header",
-        "backButton", 
+        "backButton",
         "headerTitle",
         "headerSpacer",
         "section",
@@ -418,7 +441,7 @@ describe("Settings Styles", () => {
         "optionTitle",
         "optionSubtitle",
         "radioButton",
-        "bottomSpacing"
+        "bottomSpacing",
       ];
 
       expectedKeys.forEach(key => {
@@ -445,7 +468,7 @@ describe("Settings Styles", () => {
       expect(typeof styles.header.shadowOffset).toBe("object");
       expect(styles.header.shadowOffset).toHaveProperty("width");
       expect(styles.header.shadowOffset).toHaveProperty("height");
-      
+
       expect(typeof styles.section.shadowOffset).toBe("object");
       expect(styles.section.shadowOffset).toHaveProperty("width");
       expect(styles.section.shadowOffset).toHaveProperty("height");

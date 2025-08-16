@@ -14,7 +14,9 @@ jest.mock("@utils/idNormalization", () => ({
   debugEntityIds: jest.fn(),
 }));
 
-const mockIdNormalization = idNormalization as jest.Mocked<typeof idNormalization>;
+const mockIdNormalization = idNormalization as jest.Mocked<
+  typeof idNormalization
+>;
 
 describe("idInterceptor", () => {
   let apiInstance: AxiosInstance;
@@ -40,7 +42,7 @@ describe("idInterceptor", () => {
 
     it("should register interceptors that can be detected", () => {
       setupIDInterceptors(apiInstance);
-      
+
       // Should be able to add more interceptors after setup
       expect(() => {
         apiInstance.interceptors.request.use(config => config);
@@ -49,8 +51,11 @@ describe("idInterceptor", () => {
     });
 
     it("should call the use method on interceptors", () => {
-      const requestUseSpy = jest.spyOn(apiInstance.interceptors.request, 'use');
-      const responseUseSpy = jest.spyOn(apiInstance.interceptors.response, 'use');
+      const requestUseSpy = jest.spyOn(apiInstance.interceptors.request, "use");
+      const responseUseSpy = jest.spyOn(
+        apiInstance.interceptors.response,
+        "use"
+      );
 
       setupIDInterceptors(apiInstance);
 
@@ -77,9 +82,9 @@ describe("idInterceptor", () => {
       // Manually set up handlers array to test clearing
       (apiInstance.interceptors.request as any).handlers = [{}];
       (apiInstance.interceptors.response as any).handlers = [{}, {}];
-      
+
       removeIDInterceptors(apiInstance);
-      
+
       expect((apiInstance.interceptors.request as any).handlers).toEqual([]);
       expect((apiInstance.interceptors.response as any).handlers).toEqual([]);
     });
@@ -200,18 +205,30 @@ describe("idInterceptor", () => {
 
   describe("mock verification", () => {
     it("should verify that idNormalization module is properly mocked", () => {
-      expect(jest.isMockFunction(mockIdNormalization.detectEntityTypeFromUrl)).toBe(true);
-      expect(jest.isMockFunction(mockIdNormalization.normalizeResponseData)).toBe(true);
-      expect(jest.isMockFunction(mockIdNormalization.denormalizeEntityIdDeep)).toBe(true);
-      expect(jest.isMockFunction(mockIdNormalization.debugEntityIds)).toBe(true);
+      expect(
+        jest.isMockFunction(mockIdNormalization.detectEntityTypeFromUrl)
+      ).toBe(true);
+      expect(
+        jest.isMockFunction(mockIdNormalization.normalizeResponseData)
+      ).toBe(true);
+      expect(
+        jest.isMockFunction(mockIdNormalization.denormalizeEntityIdDeep)
+      ).toBe(true);
+      expect(jest.isMockFunction(mockIdNormalization.debugEntityIds)).toBe(
+        true
+      );
     });
 
     it("should allow mock configuration", () => {
       mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue("recipe");
-      expect(mockIdNormalization.detectEntityTypeFromUrl("test")).toBe("recipe");
+      expect(mockIdNormalization.detectEntityTypeFromUrl("test")).toBe(
+        "recipe"
+      );
 
       mockIdNormalization.normalizeResponseData.mockReturnValue({ id: "123" });
-      expect(mockIdNormalization.normalizeResponseData({}, "recipe")).toEqual({ id: "123" });
+      expect(mockIdNormalization.normalizeResponseData({}, "recipe")).toEqual({
+        id: "123",
+      });
     });
   });
 
@@ -240,10 +257,14 @@ describe("idInterceptor", () => {
 
     it("should handle repeated mock configurations", () => {
       mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue("recipe");
-      expect(mockIdNormalization.detectEntityTypeFromUrl("test")).toBe("recipe");
-      
+      expect(mockIdNormalization.detectEntityTypeFromUrl("test")).toBe(
+        "recipe"
+      );
+
       mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue("ingredient");
-      expect(mockIdNormalization.detectEntityTypeFromUrl("test")).toBe("ingredient");
+      expect(mockIdNormalization.detectEntityTypeFromUrl("test")).toBe(
+        "ingredient"
+      );
     });
   });
 });
