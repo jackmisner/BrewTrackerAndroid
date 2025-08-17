@@ -425,24 +425,6 @@ describe("BrewSessionsScreen", () => {
       expect(queryByText("Active (0)")).toBeTruthy();
     });
 
-    it("should navigate to recipes when FAB is pressed", () => {
-      render(<BrewSessionsScreen />);
-      
-      // Since we can't easily test FAB directly due to mocking, test the handler
-      const handleStartBrewing = jest.fn(() => {
-        mockRouter.push({
-          pathname: "/(tabs)/recipes",
-          params: { activeTab: "my" },
-        });
-      });
-
-      handleStartBrewing();
-
-      expect(mockRouter.push).toHaveBeenCalledWith({
-        pathname: "/(tabs)/recipes",
-        params: { activeTab: "my" },
-      });
-    });
   });
 
   describe("pull to refresh", () => {
