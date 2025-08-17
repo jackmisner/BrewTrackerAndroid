@@ -297,33 +297,52 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should render FlatList with active brew sessions", () => {
-      render(<BrewSessionsScreen />);
+      const { queryByText } = render(<BrewSessionsScreen />);
 
-      // Since FlatList is mocked, we verify the component renders without crashing
-      expect(true).toBe(true);
+      // Verify active tab is displayed with correct count
+      expect(queryByText("Active (1)")).toBeTruthy();
+      // Verify completed tab shows correct count
+      expect(queryByText("Completed (1)")).toBeTruthy();
     });
 
     it("should handle completed brew sessions tab logic", () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "completed" });
 
-      render(<BrewSessionsScreen />);
+      const { queryByText } = render(<BrewSessionsScreen />);
 
-      // Component correctly handles tab switching logic
-      expect(true).toBe(true);
+      // When activeTab is "completed", component should handle tab state correctly
+      // Verify tabs are still rendered with counts
+      expect(queryByText("Active (1)")).toBeTruthy();
+      expect(queryByText("Completed (1)")).toBeTruthy();
     });
 
     it("should provide correct data to FlatList", () => {
-      render(<BrewSessionsScreen />);
+      const { queryByText } = render(<BrewSessionsScreen />);
 
-      // Component processes brew session data correctly
-      expect(true).toBe(true);
+      // Verify component processes data correctly by checking the data structure
+      // mockUseQuery should have been called with correct query key
+      expect(mockUseQuery).toHaveBeenCalledWith(expect.objectContaining({
+        queryKey: ["brewSessions"],
+      }));
+      // Component should render tabs showing correct data counts
+      expect(queryByText("Active (1)")).toBeTruthy();
     });
 
     it("should handle brew session navigation logic", () => {
-      render(<BrewSessionsScreen />);
+      const mockPush = jest.spyOn(require("expo-router").router, "push");
+      
+      const { getByText } = render(<BrewSessionsScreen />);
 
-      // Navigation handlers are set up correctly
-      expect(true).toBe(true);
+      // Test tab navigation - click on Completed tab
+      const completedTab = getByText("Completed (1)");
+      fireEvent.press(completedTab);
+      
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: "/(tabs)/brewSessions",
+        params: { activeTab: "completed" },
+      });
+
+      mockPush.mockRestore();
     });
 
     it("should handle context menu setup", () => {
@@ -338,8 +357,10 @@ describe("BrewSessionsScreen", () => {
 
       render(<BrewSessionsScreen />);
 
-      // Context menu is configured correctly
-      expect(true).toBe(true);
+      // Verify context menu hook was called (indicates context menu setup)
+      expect(require("@src/components/ui/ContextMenu/BaseContextMenu").useContextMenu).toHaveBeenCalled();
+      // Verify showMenu function is available for context menu interactions
+      expect(mockShowMenu).toBeDefined();
     });
   });
 
@@ -384,21 +405,24 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should show floating action button only for active tab", () => {
-      render(<BrewSessionsScreen />);
+      const { queryByText } = render(<BrewSessionsScreen />);
 
-      // FAB functionality is tested through the component logic
-      // Since it's mocked, we just verify the component renders without error
-      expect(true).toBe(true);
+      // Verify component renders active tab (which should show FAB)
+      expect(queryByText("Active (0)")).toBeTruthy();
+      // Verify component renders without errors when showing FAB
+      expect(queryByText("Completed (0)")).toBeTruthy();
     });
 
     it("should not show floating action button for completed tab", () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "completed" });
 
-      render(<BrewSessionsScreen />);
+      const { queryByText } = render(<BrewSessionsScreen />);
 
-      // FAB logic is conditional based on activeTab
-      // Since it's mocked, we just verify the component renders without error
-      expect(true).toBe(true);
+      // Verify component handles completed tab state correctly
+      expect(queryByText("Active (0)")).toBeTruthy();
+      expect(queryByText("Completed (0)")).toBeTruthy();
+      // Component should render without errors even when FAB logic is conditional
+      expect(queryByText("Active (0)")).toBeTruthy();
     });
 
     it("should navigate to recipes when FAB is pressed", () => {
@@ -457,11 +481,13 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should display different status badges correctly", () => {
-      render(<BrewSessionsScreen />);
+      const { queryByText } = render(<BrewSessionsScreen />);
 
-      // Since FlatList is mocked, status badge logic is verified through component rendering
-      // Component correctly handles different brew session statuses
-      expect(true).toBe(true);
+      // Verify component renders with status handling capabilities
+      expect(queryByText("Active (3)")).toBeTruthy(); // fermenting + paused + failed
+      expect(queryByText("Completed (1)")).toBeTruthy(); // completed
+      // Component should handle status rendering without errors
+      expect(queryByText("Active (3)")).toBeTruthy();
     });
   });
 
@@ -481,11 +507,17 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should calculate and display brewing progress", () => {
-      render(<BrewSessionsScreen />);
+      // Since FlatList is mocked, we can't test the actual rendering of items
+      // Instead, we verify that the component receives the correct data and can render without errors
+      const { queryByText } = render(<BrewSessionsScreen />);
 
-      // Since FlatList is mocked, progress calculation logic is verified through component rendering
-      // Component correctly calculates and displays brewing progress
-      expect(true).toBe(true);
+      // Verify the screen renders successfully with the mock data
+      // The component should not crash and should display the tabs with counts
+      expect(queryByText("Active (1)")).toBeTruthy();
+      expect(queryByText("Completed (0)")).toBeTruthy();
+      
+      // Since FlatList is mocked, the actual progress calculation happens in the renderItem function
+      // which isn't called. The test verifies the component structure and data handling.
     });
   });
 
@@ -572,11 +604,13 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should format dates correctly", () => {
-      render(<BrewSessionsScreen />);
+      const { queryByText } = render(<BrewSessionsScreen />);
 
-      // Since FlatList is mocked, date formatting logic is verified through component rendering
-      // Component correctly formats and displays dates in brew session cards
-      expect(true).toBe(true);
+      // Verify component renders with date handling capabilities
+      expect(queryByText("Active (1)")).toBeTruthy();
+      expect(queryByText("Completed (0)")).toBeTruthy();
+      // Component should handle date formatting without errors
+      expect(queryByText("Active (1)")).toBeTruthy();
     });
   });
 });

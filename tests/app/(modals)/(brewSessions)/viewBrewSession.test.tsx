@@ -418,11 +418,15 @@ describe("ViewBrewSessionScreen", () => {
         dataUpdatedAt: Date.now(),
       });
 
-      render(<ViewBrewSessionScreen />);
-
-      // Metrics are formatted through formatMetric function
-      // OG/FG should have 3 decimals, ABV should have 1, others default to 2
-      expect(true).toBe(true);
+            const { getByText } = render(<ViewBrewSessionScreen />);
+      // Verify OG is formatted with 3 decimals
+      expect(getByText("1.065")).toBeTruthy();
+      // Verify FG is formatted with 3 decimals  
+      expect(getByText("1.012")).toBeTruthy();
+      // Verify ABV is formatted with 1 decimal
+      expect(getByText("6.8%")).toBeTruthy();
+      // Verify efficiency is formatted as percentage (rounded to 0 decimals)
+      expect(getByText("76%")).toBeTruthy();
     });
 
     it("should handle missing metrics gracefully", () => {
@@ -440,10 +444,12 @@ describe("ViewBrewSessionScreen", () => {
         dataUpdatedAt: Date.now(),
       });
 
-      render(<ViewBrewSessionScreen />);
+      const { getByTestId } = render(<ViewBrewSessionScreen />);
 
-      // Missing metrics should display "—"
-      expect(true).toBe(true);
+      // Missing metrics should display "—" for undefined actual_og, actual_fg, actual_abv
+      expect(getByTestId("metric-og-value")).toHaveTextContent("—");
+      expect(getByTestId("metric-fg-value")).toHaveTextContent("—");
+      expect(getByTestId("metric-abv-value")).toHaveTextContent("—");
     });
   });
 
@@ -493,6 +499,10 @@ describe("ViewBrewSessionScreen", () => {
 
   describe("chart refresh behavior", () => {
     it("should refresh chart when data is updated", () => {
+      const FermentationChart = require("@src/components/brewSessions/FermentationChart").FermentationChart;
+      // Clear any previous calls to start fresh
+      FermentationChart.mockClear();
+      
       const brewSession = mockData.brewSession({
         fermentation_data: [
           { date: "2024-01-16", specific_gravity: 1.065, temperature: 68 },
@@ -521,10 +531,17 @@ describe("ViewBrewSessionScreen", () => {
       rerender(<ViewBrewSessionScreen />);
 
       // Chart should be refreshed with new forceRefresh value
-      expect(true).toBe(true);
+      // Verify the chart was called and forceRefresh values changed
+      const calls = FermentationChart.mock.calls;
+      expect(calls.length).toBeGreaterThanOrEqual(2);
+      const firstCall = calls[0][0];
+      const lastCall = calls[calls.length - 1][0];
+      
+      // forceRefresh should have incremented between first and last calls due to dataUpdatedAt change
+      expect(lastCall.forceRefresh).toBeGreaterThan(firstCall.forceRefresh);
     });
 
-    it("should refresh chart when screen comes into focus", () => {
+    it("should refresh chart when screen comes into focus", async () => {
       const brewSession = mockData.brewSession();
       
       mockUseQuery.mockReturnValue({
@@ -535,10 +552,30 @@ describe("ViewBrewSessionScreen", () => {
         dataUpdatedAt: Date.now(),
       });
 
+      const mockUseFocusEffect = require("expo-router").useFocusEffect;
+      
       render(<ViewBrewSessionScreen />);
 
-      // Chart refresh logic is handled by useFocusEffect
-      expect(true).toBe(true);
+      // Verify useFocusEffect was called to set up focus behavior
+      expect(mockUseFocusEffect).toHaveBeenCalled();
+      
+      // Get the callback function passed to useFocusEffect and simulate focus
+      const focusCallback = mockUseFocusEffect.mock.calls[0][0];
+      const FermentationChart = require("@src/components/brewSessions/FermentationChart").FermentationChart;
+      
+      // Clear previous chart calls
+      FermentationChart.mockClear();
+      
+      // Simulate the focus effect callback
+      await act(async () => {
+        focusCallback();
+      });
+
+      // Re-render the component to trigger the chart update
+      render(<ViewBrewSessionScreen />);
+      
+      // Verify the chart was rendered after focus callback
+      expect(FermentationChart).toHaveBeenCalled();
     });
   });
 
