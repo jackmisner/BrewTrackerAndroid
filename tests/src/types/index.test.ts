@@ -64,11 +64,14 @@ describe("Types Index Exports", () => {
       }).not.toThrow();
     });
 
-    it("should support type imports", () => {
-      // Test that type imports are available at compile time
-      // This test ensures types are properly exported but doesn't test runtime imports
-      // since types are compile-time only constructs
-      expect(true).toBe(true);
+    it("should support type imports", async () => {
+      // Test that type modules can be imported and provide accessible exports
+      const indexModule = await import("@src/types");
+      
+      // Verify the main types module imports successfully
+      expect(indexModule).toBeDefined();
+      // Since this is a TypeScript compilation test, successful import means types are accessible
+      expect(typeof indexModule).toBe("object");
     });
 
     it("should support namespace imports", async () => {

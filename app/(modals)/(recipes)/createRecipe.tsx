@@ -348,7 +348,7 @@ export default function CreateRecipeScreen() {
   };
 
   const renderProgressBar = () => (
-    <View style={styles.progressContainer}>
+    <View style={styles.progressContainer} testID="progress-indicator">
       {STEP_TITLES.map((title, index) => (
         <View key={index} style={styles.progressStep}>
           <View

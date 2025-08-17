@@ -138,21 +138,26 @@ export default function ViewBrewSession() {
     label: string,
     value: string | number | undefined,
     unit?: string
-  ) => (
-    <View style={styles.metricCard}>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricValue}>
-        {(() => {
-          if (value === undefined || value === null) return "—";
-          if (typeof value === "number") {
-            const decimals = label === "ABV" ? 1 : label.includes("G") ? 3 : 0;
-            return `${formatMetric(value, decimals)}${unit || ""}`;
-          }
-          return `${value}${unit || ""}`;
-        })()}
-      </Text>
-    </View>
-  );
+  ) => {
+    // Generate testID based on label for testing
+    const testId = `metric-${label.toLowerCase().replace(/\s+/g, '-')}-value`;
+    
+    return (
+      <View style={styles.metricCard}>
+        <Text style={styles.metricLabel}>{label}</Text>
+        <Text style={styles.metricValue} testID={testId}>
+          {(() => {
+            if (value === undefined || value === null) return "—";
+            if (typeof value === "number") {
+              const decimals = label === "ABV" ? 1 : label.includes("G") ? 3 : 0;
+              return `${formatMetric(value, decimals)}${unit || ""}`;
+            }
+            return `${value}${unit || ""}`;
+          })()}
+        </Text>
+      </View>
+    );
+  };
   /**
    * Loading State
    * Show spinner and loading text while fetching data
