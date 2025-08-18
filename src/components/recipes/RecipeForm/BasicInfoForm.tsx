@@ -14,6 +14,7 @@ import { useTheme } from "@contexts/ThemeContext";
 import { RecipeFormData, BatchSizeUnit } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { useBeerStyles } from "@src/hooks/useBeerStyles";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 interface BasicInfoFormProps {
   recipeData: RecipeFormData;
@@ -136,7 +137,7 @@ export function BasicInfoForm({
               setShowStylePicker(false);
               setStyleSearchQuery("");
             }}
-            testID="close-button"
+            testID={TEST_IDS.components.closeButton}
           >
             <MaterialIcons name="close" size={24} color={theme.colors.text} />
           </TouchableOpacity>

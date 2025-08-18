@@ -12,6 +12,7 @@ import {
 import { useRouter } from "expo-router";
 import { useAuth } from "@contexts/AuthContext";
 import { registerStyles as styles } from "@styles/auth/registerStyles";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 export default function RegisterScreen() {
   const [username, setUsername] = useState("");
@@ -145,7 +146,7 @@ export default function RegisterScreen() {
             style={[styles.button, styles.primaryButton]}
             onPress={handleRegister}
             disabled={isLoading}
-            testID="register-button"
+            testID={TEST_IDS.auth.registerButton}
           >
             {isLoading ? (
               <ActivityIndicator color="#fff" />

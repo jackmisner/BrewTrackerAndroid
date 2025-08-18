@@ -6,6 +6,29 @@ import "react-native-gesture-handler/jestSetup";
 process.env.EXPO_PUBLIC_API_URL = "http://localhost:5000/api";
 
 // Mock React Native modules - don't create circular dependency
+jest.mock("react-native", () => {
+  const React = require("react");
+  
+  return {
+    View: "View",
+    Text: "Text", 
+    ScrollView: "ScrollView",
+    TouchableOpacity: "TouchableOpacity",
+    Switch: "Switch",
+    ActivityIndicator: "ActivityIndicator",
+    Alert: {
+      alert: jest.fn(),
+    },
+    StyleSheet: {
+      create: jest.fn(styles => styles),
+      flatten: jest.fn(styles => styles),
+    },
+    Platform: {
+      OS: "ios",
+      select: jest.fn(obj => obj.ios || obj.default),
+    },
+  };
+});
 
 // Mock Expo modules
 jest.mock("expo-secure-store", () => ({
@@ -75,6 +98,7 @@ jest.mock("expo-router", () => ({
 jest.mock("expo-constants", () => ({
   default: {
     expoConfig: {
+      version: "1.0.0",
       extra: {
         apiUrl: "http://localhost:5000/api",
       },
@@ -242,6 +266,17 @@ jest.mock("expo-haptics", () => ({
   notificationAsync: jest.fn(),
   selectionAsync: jest.fn(),
 }));
+
+jest.mock("@expo/vector-icons", () => {
+  // Create a functional React component that returns null
+  const MaterialIcons = (props) => null;
+  // Attach glyphMap as a static property for code that reads MaterialIcons.glyphMap
+  MaterialIcons.glyphMap = {};
+  
+  return {
+    MaterialIcons,
+  };
+});
 
 // Mock React Native SVG
 jest.mock("react-native-svg", () => {

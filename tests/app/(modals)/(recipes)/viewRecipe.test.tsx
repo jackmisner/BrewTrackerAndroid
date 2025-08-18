@@ -304,7 +304,7 @@ describe("ViewRecipeScreen", () => {
       const { UNSAFE_getAllByType } = render(<ViewRecipeScreen />);
       
       // Find the first TouchableOpacity which should be the back button in the header
-      const touchableOpacities = UNSAFE_getAllByType("TouchableOpacity");
+      const touchableOpacities = UNSAFE_getAllByType("TouchableOpacity" as any);
       const backButton = touchableOpacities[0]; // First TouchableOpacity should be the back button
       
       // Simulate pressing the back button
@@ -347,7 +347,7 @@ describe("ViewRecipeScreen", () => {
       const { UNSAFE_getByType } = render(<ViewRecipeScreen />);
       
       // Find the ScrollView and trigger its RefreshControl onRefresh
-      const scrollView = UNSAFE_getByType("ScrollView");
+      const scrollView = UNSAFE_getByType("ScrollView" as any);
       const refreshControl = scrollView.props.refreshControl;
       
       // Simulate pull-to-refresh by calling onRefresh

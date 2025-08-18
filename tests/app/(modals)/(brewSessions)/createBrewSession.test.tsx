@@ -398,7 +398,7 @@ describe("CreateBrewSessionScreen", () => {
   describe("form validation", () => {
     beforeEach(() => {
       // Clear Alert.alert mock before each test
-      Alert.alert.mockClear();
+       jest.mocked(Alert.alert).mockClear();
     });
 
     it("should show error when session name is empty", async () => {

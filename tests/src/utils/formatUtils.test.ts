@@ -104,6 +104,11 @@ describe("formatUtils", () => {
       expect(convertHopTime(720, "minutes", "days")).toBe(0.5);
       expect(convertHopTime(721, "minutes", "days")).toBe(0.5); // Rounds to 0.5
     });
+
+    it("should return original value for unknown unit conversions", () => {
+      expect(convertHopTime(60, "hours" as any, "seconds" as any)).toBe(60);
+      expect(convertHopTime(120, "unknown" as any, "other" as any)).toBe(120);
+    });
   });
 
   describe("formatIngredientAmount", () => {

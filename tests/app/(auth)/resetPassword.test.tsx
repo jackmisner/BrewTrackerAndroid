@@ -2,6 +2,7 @@ import React from "react";
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import ResetPasswordScreen from "../../../app/(auth)/resetPassword";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 // Comprehensive React Native mocking to avoid ES6 module issues
 jest.mock("react-native", () => ({
@@ -351,7 +352,7 @@ describe("ResetPasswordScreen", () => {
       });
 
       const { getByTestId } = render(<ResetPasswordScreen />);
-      const submitButton = getByTestId("reset-password-button");
+      const submitButton = getByTestId(TEST_IDS.auth.resetPasswordButton);
 
       await act(async () => {
         fireEvent.press(submitButton);
@@ -366,7 +367,7 @@ describe("ResetPasswordScreen", () => {
 
     it("should show alert when fields are empty", async () => {
       const { getByTestId } = render(<ResetPasswordScreen />);
-      const submitButton = getByTestId("reset-password-button");
+      const submitButton = getByTestId(TEST_IDS.auth.resetPasswordButton);
 
       await act(async () => {
         fireEvent.press(submitButton);
@@ -385,7 +386,7 @@ describe("ResetPasswordScreen", () => {
       );
       const newPasswordInput = getByPlaceholderText("Enter new password");
       const confirmPasswordInput = getByPlaceholderText("Confirm new password");
-      const submitButton = getByTestId("reset-password-button");
+      const submitButton = getByTestId(TEST_IDS.auth.resetPasswordButton);
 
       fireEvent.changeText(newPasswordInput, "StrongP@ss123");
       fireEvent.changeText(confirmPasswordInput, "Different123");
@@ -407,7 +408,7 @@ describe("ResetPasswordScreen", () => {
       );
       const newPasswordInput = getByPlaceholderText("Enter new password");
       const confirmPasswordInput = getByPlaceholderText("Confirm new password");
-      const submitButton = getByTestId("reset-password-button");
+      const submitButton = getByTestId(TEST_IDS.auth.resetPasswordButton);
 
       fireEvent.changeText(newPasswordInput, " StrongP@ss123 ");
       fireEvent.changeText(confirmPasswordInput, " StrongP@ss123 ");
@@ -429,7 +430,7 @@ describe("ResetPasswordScreen", () => {
       );
       const newPasswordInput = getByPlaceholderText("Enter new password");
       const confirmPasswordInput = getByPlaceholderText("Confirm new password");
-      const submitButton = getByTestId("reset-password-button");
+      const submitButton = getByTestId(TEST_IDS.auth.resetPasswordButton);
 
       fireEvent.changeText(newPasswordInput, "   ");
       fireEvent.changeText(confirmPasswordInput, "   ");
@@ -453,7 +454,7 @@ describe("ResetPasswordScreen", () => {
       );
       const newPasswordInput = getByPlaceholderText("Enter new password");
       const confirmPasswordInput = getByPlaceholderText("Confirm new password");
-      const submitButton = getByTestId("reset-password-button");
+      const submitButton = getByTestId(TEST_IDS.auth.resetPasswordButton);
 
       fireEvent.changeText(newPasswordInput, "weak123");
       fireEvent.changeText(confirmPasswordInput, "weak123");
@@ -475,7 +476,7 @@ describe("ResetPasswordScreen", () => {
       );
       const newPasswordInput = getByPlaceholderText("Enter new password");
       const confirmPasswordInput = getByPlaceholderText("Confirm new password");
-      const submitButton = getByTestId("reset-password-button");
+      const submitButton = getByTestId(TEST_IDS.auth.resetPasswordButton);
 
       fireEvent.changeText(newPasswordInput, "StrongP@ss123");
       fireEvent.changeText(confirmPasswordInput, "Different123");
@@ -491,7 +492,7 @@ describe("ResetPasswordScreen", () => {
       );
       const newPasswordInput = getByPlaceholderText("Enter new password");
       const confirmPasswordInput = getByPlaceholderText("Confirm new password");
-      const submitButton = getByTestId("reset-password-button");
+      const submitButton = getByTestId(TEST_IDS.auth.resetPasswordButton);
 
       fireEvent.changeText(newPasswordInput, "weak123");
       fireEvent.changeText(confirmPasswordInput, "weak123");
@@ -507,7 +508,7 @@ describe("ResetPasswordScreen", () => {
       );
       const newPasswordInput = getByPlaceholderText("Enter new password");
       const confirmPasswordInput = getByPlaceholderText("Confirm new password");
-      const submitButton = getByTestId("reset-password-button");
+      const submitButton = getByTestId(TEST_IDS.auth.resetPasswordButton);
 
       fireEvent.changeText(newPasswordInput, "StrongP@ss123");
       fireEvent.changeText(confirmPasswordInput, "StrongP@ss123");
@@ -536,7 +537,7 @@ describe("ResetPasswordScreen", () => {
       );
       const newPasswordInput = getByPlaceholderText("Enter new password");
       const confirmPasswordInput = getByPlaceholderText("Confirm new password");
-      const submitButton = getByTestId("reset-password-button");
+      const submitButton = getByTestId(TEST_IDS.auth.resetPasswordButton);
 
       fireEvent.changeText(newPasswordInput, "StrongP@ss123");
       fireEvent.changeText(confirmPasswordInput, "StrongP@ss123");
@@ -560,7 +561,7 @@ describe("ResetPasswordScreen", () => {
       );
       const newPasswordInput = getByPlaceholderText("Enter new password");
       const confirmPasswordInput = getByPlaceholderText("Confirm new password");
-      const submitButton = getByTestId("reset-password-button");
+      const submitButton = getByTestId(TEST_IDS.auth.resetPasswordButton);
 
       fireEvent.changeText(newPasswordInput, "StrongP@ss123");
       fireEvent.changeText(confirmPasswordInput, "StrongP@ss123");
@@ -577,7 +578,7 @@ describe("ResetPasswordScreen", () => {
       expect(
         getByText("You can now log in with your new password.")
       ).toBeTruthy();
-      expect(getByText("Go to Login")).toBeTruthy();
+      expect(getByTestId(TEST_IDS.auth.goToLoginButton)).toBeTruthy();
     });
   });
 
@@ -592,7 +593,7 @@ describe("ResetPasswordScreen", () => {
       );
       const newPasswordInput = getByPlaceholderText("Enter new password");
       const confirmPasswordInput = getByPlaceholderText("Confirm new password");
-      const submitButton = getByTestId("reset-password-button");
+      const submitButton = getByTestId(TEST_IDS.auth.resetPasswordButton);
 
       fireEvent.changeText(newPasswordInput, "StrongP@ss123");
       fireEvent.changeText(confirmPasswordInput, "StrongP@ss123");
@@ -602,7 +603,7 @@ describe("ResetPasswordScreen", () => {
       });
 
       // Should not crash and should stay on form
-      expect(getByTestId("reset-password-title")).toBeTruthy();
+      expect(getByTestId(TEST_IDS.auth.resetPasswordTitle)).toBeTruthy();
       expect(mockAuth.resetPassword).toHaveBeenCalledWith(
         "valid-reset-token",
         "StrongP@ss123"
@@ -618,7 +619,7 @@ describe("ResetPasswordScreen", () => {
       );
       const newPasswordInput = getByPlaceholderText("Enter new password");
       const confirmPasswordInput = getByPlaceholderText("Confirm new password");
-      const submitButton = getByTestId("reset-password-button");
+      const submitButton = getByTestId(TEST_IDS.auth.resetPasswordButton);
 
       fireEvent.changeText(newPasswordInput, "StrongP@ss123");
       fireEvent.changeText(confirmPasswordInput, "StrongP@ss123");

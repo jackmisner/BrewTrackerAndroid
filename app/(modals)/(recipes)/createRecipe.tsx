@@ -46,6 +46,7 @@ import { ParametersForm } from "@src/components/recipes/RecipeForm/ParametersFor
 import { IngredientsForm } from "@src/components/recipes/RecipeForm/IngredientsForm";
 import { ReviewForm } from "@src/components/recipes/RecipeForm/ReviewForm";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 /**
  * Recipe creation wizard steps
@@ -348,7 +349,7 @@ export default function CreateRecipeScreen() {
   };
 
   const renderProgressBar = () => (
-    <View style={styles.progressContainer} testID="progress-indicator">
+    <View style={styles.progressContainer} testID={TEST_IDS.components.progressIndicator}>
       {STEP_TITLES.map((title, index) => (
         <View key={index} style={styles.progressStep}>
           <View

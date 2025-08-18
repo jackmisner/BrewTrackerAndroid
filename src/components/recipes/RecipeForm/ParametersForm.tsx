@@ -6,6 +6,7 @@ import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import { RecipeFormData } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 interface ParametersFormProps {
   recipeData: RecipeFormData;
@@ -272,7 +273,7 @@ export function ParametersForm({
         <Text style={styles.inputLabel}>Mash Time (minutes)</Text>
         <TextInput
           style={[styles.textInput, errors.mash_time && styles.textInputError]}
-          testID="mash-time-input"
+          testID={TEST_IDS.inputs.mashTimeInput}
           value={recipeData.mash_time?.toString() || ""}
           onChangeText={text => {
             const numValue = text ? parseFloat(text) || undefined : undefined;

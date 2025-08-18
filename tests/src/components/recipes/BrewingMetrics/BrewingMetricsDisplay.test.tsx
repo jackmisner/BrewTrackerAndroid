@@ -1,6 +1,7 @@
 import React from "react";
 import { render, fireEvent } from "@testing-library/react-native";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 // Mock dependencies
 jest.mock("@contexts/ThemeContext", () => ({
@@ -165,7 +166,7 @@ describe("BrewingMetricsDisplay", () => {
       );
 
       expect(getByText(errorMessage)).toBeTruthy();
-      expect(getByTestId("icon-error-outline")).toBeTruthy();
+      expect(getByTestId(TEST_IDS.icons.errorOutline)).toBeTruthy();
     });
 
     it("should show retry button when onRetry is provided", () => {
@@ -204,7 +205,7 @@ describe("BrewingMetricsDisplay", () => {
       expect(
         getByText("Metrics will appear as you add ingredients")
       ).toBeTruthy();
-      expect(getByTestId("icon-analytics")).toBeTruthy();
+      expect(getByTestId(TEST_IDS.icons.analytics)).toBeTruthy();
     });
 
     it("should show empty state when all metrics are undefined", () => {
@@ -427,7 +428,7 @@ describe("BrewingMetricsDisplay", () => {
       // In compact mode, empty state shows different text
       expect(getByText("Add ingredients to see metrics")).toBeTruthy();
       // Icon size should be smaller (24 vs 32)
-      expect(getByTestId("icon-analytics")).toBeTruthy();
+      expect(getByTestId(TEST_IDS.icons.analytics)).toBeTruthy();
     });
 
     it("should not show mash temperature in compact mode even if provided", () => {
