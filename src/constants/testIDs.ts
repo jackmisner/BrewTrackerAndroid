@@ -5,12 +5,19 @@
  * to ensure consistency and avoid duplication across components.
  */
 
+// Keep test IDs reasonably short and predictable
+export const MAX_SLUG_LENGTH = 80;
 const sanitizeId = (input: string): string => {
-  return input
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
+  // Guard against engines (e.g. Hermes) without normalize()
+  const normalized =
+    typeof String.prototype.normalize === "function"
+      ? String.prototype.normalize.call(input, "NFKD")
+      : input;
+  return normalized
+    .replace(/\p{M}+/gu, "") // Remove diacritics
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
+    .slice(0, MAX_SLUG_LENGTH)
     .replace(/^-+|-+$/g, "");
 };
 
@@ -25,9 +32,21 @@ function makeId(prefix: string, suffix: string) {
 const slugCache = new Map<string, string>();
 const MAX_SLUG_CACHE_ENTRIES = 200;
 
+/**
+ * Converts a string to a slug format suitable for test IDs.
+ * Caches results to improve performance and reduce redundant processing.
+ *
+ * @param value - The input string to convert.
+ * @returns A sanitized slug version of the input string.
+ */
+
 export const toSlug = (value: string): string => {
   if (slugCache.has(value)) {
-    return slugCache.get(value)!;
+    // Refresh recency by reinserting the entry
+    const cached = slugCache.get(value)!;
+    slugCache.delete(value);
+    slugCache.set(value, cached);
+    return cached;
   }
   const slug = sanitizeId(value) || "unknown";
   slugCache.set(value, slug);
