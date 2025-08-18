@@ -554,6 +554,28 @@ describe("IngredientsForm", () => {
       expect(component.getByText("Pale Malt 2-Row")).toBeTruthy();
       expect(component.getByText("Cascade")).toBeTruthy();
     });
+
+    it("should handle ingredients with and without IDs", () => {
+      const ingredientWithId = { ...mockGrainIngredient, id: "grain-123" };
+      const ingredientWithoutId = { ...mockHopIngredient, id: null };
+
+      const recipeWithIngredients = {
+        ...defaultRecipeData,
+        ingredients: [ingredientWithId, ingredientWithoutId],
+      };
+
+      const { getByText } = render(
+        <IngredientsForm
+          recipeData={recipeWithIngredients}
+          onUpdateField={mockOnUpdateField}
+        />
+      );
+
+      expect(getByText("Pale Malt 2-Row")).toBeTruthy();
+      expect(getByText("Cascade")).toBeTruthy();
+    });
+
+
   });
 
   describe("Display mappings", () => {

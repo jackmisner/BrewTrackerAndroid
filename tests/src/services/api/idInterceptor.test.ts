@@ -267,4 +267,287 @@ describe("idInterceptor", () => {
       );
     });
   });
+
+  describe("Response Interceptor Behavior", () => {
+    let responseInterceptor: {
+      fulfilled: (response: any) => any;
+      rejected: (error: any) => Promise<any>;
+    };
+
+    beforeEach(() => {
+      const requestUseSpy = jest.spyOn(apiInstance.interceptors.request, "use");
+      const responseUseSpy = jest.spyOn(apiInstance.interceptors.response, "use");
+      
+      setupIDInterceptors(apiInstance);
+      
+      // Extract the actual interceptor functions
+      const responseCall = responseUseSpy.mock.calls[0];
+      responseInterceptor = {
+        fulfilled: responseCall[0],
+        rejected: responseCall[1],
+      };
+      
+      requestUseSpy.mockRestore();
+      responseUseSpy.mockRestore();
+    });
+
+    it("should normalize recipe response data", () => {
+      mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue("recipe");
+      mockIdNormalization.normalizeResponseData.mockReturnValue({
+        id: "normalized-123",
+        name: "Test Recipe",
+      });
+
+      const response = {
+        data: { recipe_id: "backend-123", name: "Test Recipe" },
+        config: { url: "/recipes/123" },
+        status: 200,
+        statusText: "OK",
+        headers: {},
+      };
+
+      const result = responseInterceptor.fulfilled(response);
+
+      expect(mockIdNormalization.detectEntityTypeFromUrl).toHaveBeenCalledWith(
+        "/recipes/123"
+      );
+      expect(mockIdNormalization.normalizeResponseData).toHaveBeenCalledWith(
+        { recipe_id: "backend-123", name: "Test Recipe" },
+        "recipe"
+      );
+      expect(result.data).toEqual({
+        id: "normalized-123",
+        name: "Test Recipe",
+      });
+    });
+
+    it("should skip normalization for non-entity endpoints", () => {
+      mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue(null);
+
+      const response = {
+        data: { status: "healthy" },
+        config: { url: "/health" },
+        status: 200,
+        statusText: "OK",
+        headers: {},
+      };
+
+      const result = responseInterceptor.fulfilled(response);
+
+      expect(mockIdNormalization.normalizeResponseData).not.toHaveBeenCalled();
+      expect(result.data).toEqual({ status: "healthy" });
+    });
+
+    it("should handle normalization errors gracefully", () => {
+      mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue("recipe");
+      mockIdNormalization.normalizeResponseData.mockImplementation(() => {
+        throw new Error("Normalization failed");
+      });
+
+      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
+
+      const response = {
+        data: { recipe_id: "123", name: "Test Recipe" },
+        config: { url: "/recipes/123" },
+        status: 200,
+        statusText: "OK",
+        headers: {},
+      };
+
+      const result = responseInterceptor.fulfilled(response);
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "❌ ID Interceptor - Response normalization failed:",
+        expect.objectContaining({
+          error: "Normalization failed",
+          url: "/recipes/123",
+          entityType: "recipe",
+        })
+      );
+
+      // Should return original data when normalization fails
+      expect(result.data).toEqual({ recipe_id: "123", name: "Test Recipe" });
+
+      consoleSpy.mockRestore();
+    });
+
+    it("should debug array responses correctly", () => {
+      mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue("recipe");
+      mockIdNormalization.normalizeResponseData.mockReturnValue([
+        { id: "1", name: "Recipe 1" },
+        { id: "2", name: "Recipe 2" },
+      ]);
+
+      const response = {
+        data: [
+          { recipe_id: "1", name: "Recipe 1" },
+          { recipe_id: "2", name: "Recipe 2" },
+        ],
+        config: { url: "/recipes" },
+        status: 200,
+        statusText: "OK",
+        headers: {},
+      };
+
+      responseInterceptor.fulfilled(response);
+
+      expect(mockIdNormalization.debugEntityIds).toHaveBeenCalledWith(
+        { recipe_id: "1", name: "Recipe 1" },
+        "Original recipe (first item)"
+      );
+    });
+
+    it("should pass through errors unchanged", async () => {
+      const error = new Error("Network error");
+      
+      await expect(responseInterceptor.rejected(error)).rejects.toThrow(
+        "Network error"
+      );
+    });
+  });
+
+  describe("Request Interceptor Behavior", () => {
+    let requestInterceptor: {
+      fulfilled: (config: any) => any;
+      rejected: (error: any) => Promise<any>;
+    };
+
+    beforeEach(() => {
+      const requestUseSpy = jest.spyOn(apiInstance.interceptors.request, "use");
+      const responseUseSpy = jest.spyOn(apiInstance.interceptors.response, "use");
+      
+      setupIDInterceptors(apiInstance);
+      
+      // Extract the actual interceptor functions
+      const requestCall = requestUseSpy.mock.calls[0];
+      requestInterceptor = {
+        fulfilled: requestCall[0],
+        rejected: requestCall[1],
+      };
+      
+      requestUseSpy.mockRestore();
+      responseUseSpy.mockRestore();
+    });
+
+    it("should denormalize request data for recipe endpoints", () => {
+      mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue("recipe");
+      mockIdNormalization.denormalizeEntityIdDeep.mockReturnValue({
+        recipe_id: "backend-123",
+        name: "Test Recipe",
+      });
+
+      const config = {
+        url: "/recipes",
+        method: "post",
+        data: { id: "frontend-123", name: "Test Recipe" },
+      };
+
+      const result = requestInterceptor.fulfilled(config);
+
+      expect(mockIdNormalization.detectEntityTypeFromUrl).toHaveBeenCalledWith(
+        "/recipes"
+      );
+      expect(mockIdNormalization.denormalizeEntityIdDeep).toHaveBeenCalledWith(
+        { id: "frontend-123", name: "Test Recipe" },
+        "recipe"
+      );
+      expect(result.data).toEqual({
+        recipe_id: "backend-123",
+        name: "Test Recipe",
+      });
+    });
+
+    it("should skip denormalization for non-entity endpoints", () => {
+      mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue(null);
+
+      const config = {
+        url: "/health",
+        method: "get",
+        data: { check: true },
+      };
+
+      const result = requestInterceptor.fulfilled(config);
+
+      expect(mockIdNormalization.denormalizeEntityIdDeep).not.toHaveBeenCalled();
+      expect(result.data).toEqual({ check: true });
+    });
+
+    it("should skip denormalization when no data is present", () => {
+      mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue("recipe");
+
+      const config = {
+        url: "/recipes/123",
+        method: "get",
+      };
+
+      const result = requestInterceptor.fulfilled(config);
+
+      expect(mockIdNormalization.denormalizeEntityIdDeep).not.toHaveBeenCalled();
+      expect(result).toEqual(config);
+    });
+
+    it("should handle denormalization errors gracefully", () => {
+      mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue("recipe");
+      mockIdNormalization.denormalizeEntityIdDeep.mockImplementation(() => {
+        throw new Error("Denormalization failed");
+      });
+
+      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
+
+      const config = {
+        url: "/recipes",
+        method: "post",
+        data: { id: "frontend-123", name: "Test Recipe" },
+      };
+
+      const result = requestInterceptor.fulfilled(config);
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "❌ ID Interceptor - Request denormalization failed:",
+        expect.objectContaining({
+          error: "Denormalization failed",
+          url: "/recipes",
+          entityType: "recipe",
+        })
+      );
+
+      // Should return original data when denormalization fails
+      expect(result.data).toEqual({ id: "frontend-123", name: "Test Recipe" });
+
+      consoleSpy.mockRestore();
+    });
+
+    it("should debug request transformations", () => {
+      mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue("ingredient");
+      mockIdNormalization.denormalizeEntityIdDeep.mockReturnValue({
+        ingredient_id: "backend-123",
+        name: "Pale Malt",
+      });
+
+      const config = {
+        url: "/ingredients",
+        method: "post",
+        data: { id: "frontend-123", name: "Pale Malt" },
+      };
+
+      requestInterceptor.fulfilled(config);
+
+      expect(mockIdNormalization.debugEntityIds).toHaveBeenCalledWith(
+        { id: "frontend-123", name: "Pale Malt" },
+        "Original request data (ingredient)"
+      );
+      expect(mockIdNormalization.debugEntityIds).toHaveBeenCalledWith(
+        { ingredient_id: "backend-123", name: "Pale Malt" },
+        "Denormalized request data (ingredient)"
+      );
+    });
+
+    it("should pass through request errors unchanged", async () => {
+      const error = new Error("Request setup error");
+      
+      await expect(requestInterceptor.rejected(error)).rejects.toThrow(
+        "Request setup error"
+      );
+    });
+  });
 });

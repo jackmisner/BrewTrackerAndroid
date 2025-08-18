@@ -231,6 +231,63 @@ describe("useRecipeMetrics - Essential Tests", () => {
     ).toHaveBeenCalledTimes(1);
   });
 
+  it("should retry network errors up to 2 times", async () => {
+    jest.useFakeTimers();
+    
+    try {
+      const mockRecipeData = createMockRecipeData();
+      const networkError = {
+        response: { status: 500 },
+        message: "Network error",
+      };
+      mockedApiService.recipes.calculateMetricsPreview.mockRejectedValue(
+        networkError
+      );
+
+      const wrapper = createWrapper(queryClient);
+      renderHook(() => useRecipeMetrics(mockRecipeData), {
+        wrapper,
+      });
+
+      // Wait for initial query to complete
+      await act(async () => {
+        jest.runOnlyPendingTimers();
+      });
+
+      // Initial call should happen
+      expect(
+        mockedApiService.recipes.calculateMetricsPreview
+      ).toHaveBeenCalledTimes(1);
+
+      // Advance timers for first retry (1000ms delay)
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      
+      expect(
+        mockedApiService.recipes.calculateMetricsPreview
+      ).toHaveBeenCalledTimes(2);
+
+      // Advance timers for second retry (2000ms delay) 
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      expect(
+        mockedApiService.recipes.calculateMetricsPreview
+      ).toHaveBeenCalledTimes(3);
+
+      // Run remaining timers to complete retries
+      await act(async () => {
+        jest.runAllTimers();
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+
+
   it("should handle complex recipe data with all ingredient types", async () => {
     const complexRecipeData = createMockRecipeData({
       ingredients: [

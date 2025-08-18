@@ -430,6 +430,18 @@ describe("idNormalization", () => {
 
       expect(normalized).toEqual(data);
     });
+
+    it("should skip normalization for fermentation entries", () => {
+      const fermentationData = [
+        { temperature: 68, gravity: 1.050, date: "2024-01-01" },
+        { temperature: 66, gravity: 1.030, date: "2024-01-03" },
+      ];
+
+      const result = normalizeResponseData(fermentationData, "fermentationEntry");
+
+      // Should return data unchanged since fermentation entries don't have individual IDs
+      expect(result).toEqual(fermentationData);
+    });
   });
 
   describe("debugEntityIds", () => {
@@ -579,6 +591,50 @@ describe("idNormalization", () => {
       const result = denormalizeEntityIdDeep(data, "recipe");
 
       expect(result).toEqual(data);
+    });
+
+    it("should detect specific entity types from properties", () => {
+      // Test recipe detection
+      const recipeData = {
+        id: "recipe-123",
+        name: "Test Recipe",
+        ingredients: [],
+        style: "IPA",
+      };
+
+      const denormalizedRecipe = denormalizeEntityIdDeep(recipeData, "unknown");
+      expect(denormalizedRecipe.recipe_id).toBe("recipe-123");
+
+      // Test brewSession detection
+      const brewSessionData = {
+        id: "session-123",
+        brew_date: "2024-01-01",
+        recipe: { name: "Test Recipe" },
+      };
+
+      const denormalizedSession = denormalizeEntityIdDeep(brewSessionData, "unknown");
+      expect(denormalizedSession.session_id).toBe("session-123");
+
+      // Test user detection  
+      const userData = {
+        id: "user-123",
+        email: "test@example.com",
+        username: "testuser",
+      };
+
+      const denormalizedUser = denormalizeEntityIdDeep(userData, "unknown");
+      expect(denormalizedUser.user_id).toBe("user-123");
+
+      // Test fermentationEntry detection
+      const fermentationData = {
+        id: "entry-123",
+        temperature: 68,
+        gravity: 1.050,
+        date: "2024-01-01",
+      };
+
+      const denormalizedEntry = denormalizeEntityIdDeep(fermentationData, "unknown");
+      expect(denormalizedEntry.entry_id).toBe("entry-123");
     });
   });
 });

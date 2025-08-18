@@ -59,6 +59,7 @@ export default function SettingsScreen() {
       key={themeMode}
       style={styles.optionItem}
       onPress={() => handleThemeChange(themeMode)}
+      testID={`theme-${themeMode}-option`}
     >
       <View style={styles.optionContent}>
         <Text style={styles.optionTitle}>{title}</Text>
@@ -93,6 +94,7 @@ export default function SettingsScreen() {
       style={styles.optionItem}
       onPress={() => handleUnitSystemChange(unitSystemMode)}
       disabled={unitsLoading}
+      testID={`unit-${unitSystemMode}-option`}
     >
       <View style={styles.optionContent}>
         <Text style={styles.optionTitle}>{title}</Text>
@@ -139,7 +141,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Appearance</Text>
 
           <View style={styles.settingGroup}>
-            <Text style={styles.groupTitle}>Theme</Text>
+            <Text style={styles.groupTitle} testID="settings-theme-label">Theme</Text>
             <View style={styles.groupContent}>
               {renderThemeOption("light", "Light", "Always use light theme")}
               {renderThemeOption("dark", "Dark", "Always use dark theme")}
@@ -153,7 +155,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Brewing</Text>
 
           <View style={styles.settingGroup}>
-            <Text style={styles.groupTitle}>Unit System</Text>
+            <Text style={styles.groupTitle} testID="settings-unit-label">Unit System</Text>
             <View style={styles.groupContent}>
               {renderUnitSystemOption(
                 "imperial",

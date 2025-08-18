@@ -66,6 +66,8 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   ├── login.tsx                                 # Login screen with JWT authentication and navigation
 │   │   ├── register.tsx                              # User registration with real-time validation
 │   │   ├── verifyEmail.tsx                           # Email verification with token input and resend functionality
+│   │   ├── forgotPassword.tsx                        # Password reset request with email validation
+│   │   ├── resetPassword.tsx                         # Password reset confirmation with token validation
 │   │   └── _layout.tsx                               # Authentication layout configuration
 │   ├── (tabs)/                                       # Main application tab navigation
 │   │   ├── index.tsx                                 # Dashboard/home screen with brewing overview
@@ -83,7 +85,11 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   └── ingredientPicker.tsx                  # Full-screen ingredient selection with search and filtering
 │   │   ├── (brewSessions)/                           # Brew session detail screens
 │   │   │   ├── _layout.tsx                           # Brew session modals layout
-│   │   │   └── viewBrewSession.tsx                   # Individual brew session detail view with metrics and status
+│   │   │   ├── viewBrewSession.tsx                   # Individual brew session detail view with metrics and status
+│   │   │   ├── createBrewSession.tsx                 # Multi-step brew session creation wizard
+│   │   │   ├── editBrewSession.tsx                   # Brew session editing interface
+│   │   │   ├── addFermentationEntry.tsx              # Add new fermentation data entries
+│   │   │   └── editFermentationEntry.tsx             # Edit existing fermentation data entries
 │   │   └── (settings)/                               # Settings screens
 │   │       ├── _layout.tsx                           # Settings modals layout
 │   │       └── settings.tsx                          # User settings and preferences
@@ -92,7 +98,9 @@ BrewTrackerAndroid/                                   # React Native Android app
 ├── src/                                              # Source code for React Native components and services
 │   ├── components/                                   # Reusable UI components organized by feature
 │   │   ├── brewSessions/                             # Brew session specific components
-│   │   │   └── FermentationChart.tsx                 # Interactive fermentation tracking charts with dual-axis
+│   │   │   ├── FermentationChart.tsx                 # Interactive fermentation tracking charts with dual-axis
+│   │   │   ├── FermentationData.tsx                  # Fermentation data display and management component
+│   │   │   └── FermentationEntryContextMenu.tsx     # Context menu for fermentation entry actions
 │   │   ├── recipes/                                  # Recipe management components
 │   │   │   ├── BrewingMetrics/                       # Recipe metrics display components
 │   │   │   │   └── BrewingMetricsDisplay.tsx         # Reusable brewing metrics with SRM color visualization
@@ -105,7 +113,10 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │       └── ReviewForm.tsx                    # Final recipe review and submission
 │   │   └── ui/                                       # Generic UI components
 │   │       └── ContextMenu/                          # Context menu implementations
-│   │           └── RecipeContextMenu.tsx             # Recipe-specific context menu actions
+│   │           ├── BaseContextMenu.tsx               # Base context menu component with common functionality
+│   │           ├── RecipeContextMenu.tsx             # Recipe-specific context menu actions
+│   │           ├── BrewSessionContextMenu.tsx        # Brew session-specific context menu actions
+│   │           └── contextMenuUtils.ts               # Shared utilities for context menu operations
 │   ├── contexts/                                     # React contexts for global state
 │   │   ├── AuthContext.tsx                           # Authentication context with secure token storage
 │   │   ├── ThemeContext.tsx                          # Theme management with light/dark mode support
@@ -113,13 +124,15 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   ├── hooks/                                        # Custom React hooks
 │   │   ├── useBeerStyles.ts                          # Beer style data fetching and management
 │   │   ├── useDebounce.ts                            # Performance optimization for search inputs
-│   │   └── useRecipeMetrics.ts                       # Real-time recipe calculations hook
+│   │   ├── useRecipeMetrics.ts                       # Real-time recipe calculations hook
+│   │   └── useStoragePermissions.ts                  # Storage permission management for file operations
 │   ├── services/                                     # API services and business logic
 │   │   ├── api/                                      # API layer with React Query integration
 │   │   │   ├── apiService.ts                         # Hardened API service with validated base URL, timeout, error normalization, and retry logic
 │   │   │   ├── queryClient.ts                        # React Query client configuration
 │   │   │   └── idInterceptor.ts                      # MongoDB ObjectId to string normalization
-│   │   └── config.ts                                 # Service configuration and constants
+│   │   ├── config.ts                                 # Service configuration and constants
+│   │   └── storageService.ts                         # Storage service for file operations and permissions
 │   ├── constants/                                    # Shared constants and configuration
 │   │   └── hopConstants.ts                           # Hop usage options, time presets, and type definitions
 │   ├── utils/                                        # Utility functions
@@ -134,6 +147,33 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   ├── user.ts                                   # User account and authentication types
 │   │   └── index.ts                                  # Central type exports
 │   └── styles/                                       # StyleSheet definitions organized by feature
+│       ├── auth/                                     # Authentication screen styles
+│       │   ├── loginStyles.ts                        # Login screen styling with theme support
+│       │   ├── registerStyles.ts                     # Registration screen styling
+│       │   └── verifyEmailStyles.ts                  # Email verification screen styling
+│       ├── tabs/                                     # Tab navigation screen styles
+│       │   ├── dashboardStyles.ts                    # Dashboard/home screen styling
+│       │   ├── recipesStyles.ts                      # Recipe list screen styling
+│       │   ├── brewSessionsStyles.ts                 # Brew session list screen styling
+│       │   └── profileStyles.ts                      # Profile screen styling
+│       ├── modals/                                   # Modal screen styles
+│       │   ├── viewRecipeStyles.ts                   # Recipe detail view styling
+│       │   ├── createRecipeStyles.ts                 # Recipe creation wizard styling
+│       │   ├── ingredientPickerStyles.ts             # Ingredient picker styling
+│       │   ├── viewBrewSessionStyles.ts              # Brew session detail view styling
+│       │   ├── createBrewSessionStyles.ts            # Brew session creation styling
+│       │   ├── editBrewSessionStyles.ts              # Brew session editing styling
+│       │   └── settingsStyles.ts                     # Settings screen styling
+│       ├── components/                               # Component-specific styles
+│       │   └── brewingMetricsStyles.ts               # Brewing metrics display styling
+│       ├── recipes/                                  # Recipe component styles
+│       │   └── ingredientDetailEditorStyles.ts      # Ingredient editor styling
+│       ├── ui/                                       # UI component styles
+│       │   ├── baseContextMenuStyles.ts              # Base context menu styling
+│       │   └── recipeContextMenuStyles.ts            # Recipe context menu styling
+│       └── common/                                   # Shared styling utilities
+│           ├── colors.ts                             # Theme color definitions
+│           └── buttons.ts                            # Reusable button styles
 ├── tests/                                            # Test files and configuration
 ├── assets/                                           # Static assets (images, fonts, icons)
 ├── app.json                                          # Expo configuration for Android-only development
@@ -331,292 +371,6 @@ EXPO_PUBLIC_API_URL=https://api.brewtracker.com/v1  # Must be valid URL
 EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
 ```
 
-## Current Status
-
-**Version**: 0.6.3  
-**Test Coverage**: 13.45% (with comprehensive test infrastructure)  
-**Development Phase**: Phase 3 Complete, Phase 4 In Progress
-
-## Features Status
-
-### ✅ Completed (Phase 1, 2 & 3)
-
-**Core Infrastructure:**
-
-- Project setup with Expo Router and TypeScript
-- Authentication system with JWT and secure storage
-- Complete navigation structure with nested modal routing
-- Theme system with light/dark mode support
-- API service layer with React Query integration
-- Comprehensive TypeScript type definitions
-- Code quality tools (ESLint, Prettier, TypeScript)
-
-**User Interface:**
-
-- Authentication flow (login, register, email verification)
-- Dashboard with brewing overview and statistics
-- Recipe browsing and detailed recipe viewing
-- Brew session management and detailed session viewing
-- User profile with settings and logout functionality
-- Responsive design with proper touch targets
-
-**Data Management:**
-
-- Complete API integration with BrewTracker backend
-- React Query caching and background synchronization
-- Offline-capable data persistence
-- Error handling and loading states
-- Pull-to-refresh functionality
-
-**Advanced Data Visualization:**
-
-- Interactive fermentation tracking charts
-- Real-time data visualization with dual-axis support
-- Mobile-optimized chart interactions (pinch, zoom, toggle views)
-- Theme-aware chart styling with light/dark mode support
-- Unit system integration for temperature display
-- Dynamic chart scaling and reference line support
-
-### ✅ Completed (Phase 3)
-
-**Enhanced Fermentation Tracking:**
-
-- Interactive fermentation charts with react-native-gifted-charts
-- Dual-axis visualization (gravity + temperature)
-- Combined and separate chart views
-- Reference lines for expected final gravity
-- Mobile-optimized chart interactions
-- Theme-aware chart styling
-- Unit system integration (Celsius/Fahrenheit)
-- Empty state handling for sessions without data
-
-**Testing Infrastructure:**
-
-- Comprehensive Jest test framework with React Native Testing Library
-- Test coverage reporting with HTML output
-- Mock implementations for Expo SecureStore and API services
-- Path aliases in testing configuration
-- CI-ready test scripts with coverage thresholds
-
-**Development Improvements:**
-
-- Enhanced TypeScript configuration
-- Automated code formatting with Prettier
-- ESLint configuration for React Native
-- Version management scripts for package.json and app.json synchronization
-
-### 🚧 In Progress (Phase 4 - Recipe Builder Foundation)
-
-**Current Progress: 75% Complete (6/7 major components)**
-
-**✅ Recently Completed Components:**
-
-- **Full-Screen Ingredient Picker**: Complete ingredient selection with search, filtering, and detailed editing
-- **Ingredient Detail Editor**: Advanced ingredient editing with hop timing, usage selection, and unit conversion
-- **Shared Formatting Utilities**: Centralized constants and formatting functions across the app
-- **Performance Optimizations**: Debounced API calls, optimized search, and React key fixes
-
-**✅ Completed Earlier:**
-
-- Multi-step Recipe Wizard with progress tracking
-- Recipe input forms (Basic Info, Parameters, Review)
-- Navigation integration with modal presentation
-- Comprehensive styling system with theme support
-
-**🔄 Currently Working On:**
-
-- Real-time metrics calculation display
-- Recipe creation API integration
-- Enhanced form validation and error handling
-
-**Priority Tasks Remaining:**
-
-- Add real-time brewing calculations (IBU, ABV, SRM)
-- Implement complete recipe creation workflow
-- Add recipe editing capabilities
-
-## 📋 Feature Disparity Analysis & Implementation Roadmap
-
-### 🔍 Missing Features from BrewTracker Web Application
-
-Based on comprehensive analysis, BrewTrackerAndroid is missing ~75% of web features across 11 functional areas:
-
-#### 🔥 **HIGH PRIORITY - Core Functionality Gaps**
-
-##### **1. Recipe Creation & Editing System** 🟡 **IN PROGRESS (Phase 4 - 60% Complete)**
-
-**Web Features:**
-
-- ✅ Advanced Recipe Builder with real-time calculations
-- ✅ Interactive ingredient addition with autocomplete
-- ✅ Recipe validation with brewing logic
-- ✅ Recipe scaling with automatic recalculations
-- ✅ Recipe versioning and change tracking
-- ✅ Recipe templates and defaults
-- ✅ BeerXML export functionality
-
-**Android Status:** Multi-step creation wizard implemented with debounced ingredient picker. Real-time calculations, API integration, and editing pending.
-
-**Recent Progress:**
-
-- ✅ Multi-step recipe wizard (Basic Info → Parameters → Ingredients → Review)
-- ✅ Form validation and error handling
-- ✅ Beer style picker and efficiency presets
-- ✅ Ingredient picker with debounced search (performance optimized)
-- 🔄 Real-time metrics calculation integration
-- ⏳ Recipe creation API endpoint integration
-
-**Implementation Files:**
-
-- `app/(modals)/(recipes)/createRecipe.tsx` - Multi-step wizard
-- `app/(modals)/(recipes)/ingredientPicker.tsx` - Ingredient selection with search
-- `src/components/recipes/RecipeForm/` - Form components (4 files)
-- `src/styles/modals/createRecipeStyles.ts` - Theme-aware styling system
-
-##### **2. Brew Session Creation & Management** ❌ **MISSING ENTIRELY**
-
-**Web Features:**
-
-- ✅ Create brew sessions from recipes
-- ✅ Interactive brew session workflow
-- ✅ Real-time efficiency calculations
-- ✅ Fermentation data entry and tracking
-- ✅ Dry hop addition scheduling
-- ✅ Session status management (Planned → Active → Completed)
-- ✅ Brewing notes and observations
-
-**Android Status:** Can only VIEW brew sessions
-
-##### **3. Ingredient Management System** ❌ **MISSING ENTIRELY**
-
-**Web Features:**
-
-- ✅ Complete ingredient database CRUD
-- ✅ Custom ingredient creation
-- ✅ Ingredient usage analytics
-- ✅ Ingredient performance tracking
-- ✅ Advanced ingredient search and filtering
-
-**Android Status:** No ingredient management capabilities
-
-#### 🤖 **MEDIUM PRIORITY - Advanced Features**
-
-##### **4. AI-Powered Recipe Optimization** ❌ **COMPLETELY MISSING**
-
-- Flowchart-based optimization engine
-- Style compliance analysis
-- Cascading effects understanding
-- Multi-iteration optimization
-- AI-powered suggestions and improvements
-
-#### **5. BeerXML Import/Export System** ❌ **COMPLETELY MISSING**
-
-- BeerXML file import with parsing
-- Intelligent ingredient matching
-- Automatic ingredient creation
-- Recipe format conversion
-- Import validation and error handling
-
-#### **6. Advanced Analytics & Performance Tracking** ❌ **MOSTLY MISSING**
-
-- Yeast attenuation analytics
-- Real-world vs. theoretical performance comparison
-- System-wide brewing statistics
-- Recipe performance metrics
-- Brewing efficiency tracking
-- Historical data analysis
-
-**Current:** Has basic fermentation charts only
-
-### 📱 **MEDIUM-LOW PRIORITY - User Experience Features**
-
-#### **7. Advanced Search & Discovery** ⚠️ **BASIC IMPLEMENTATION**
-
-- Fuzzy search with advanced algorithms
-- Advanced filtering by multiple criteria
-- Recipe sorting and organization
-- Tag-based organization
-- Saved searches
-
-**Current:** Has basic search only
-
-#### **8. Recipe Sharing & Social Features** ⚠️ **VIEW-ONLY**
-
-- Public recipe sharing
-- Recipe rating system
-- Community features
-- Recipe cloning from public library
-- Privacy controls
-
-**Current:** Can browse but not share/rate
-
-#### **9. Advanced Brewing Calculations** ❌ **MISSING**
-
-- Real-time brewing calculations (IBU, ABV, SRM)
-- Temperature corrections
-- Hop utilization calculations
-- Gravity calculations with efficiency
-- Water chemistry calculations
-
-### 🔧 **LOW PRIORITY - Technical & Admin Features**
-
-#### **10. Data Management & Export** ❌ **MISSING**
-
-- Complete data export capabilities
-- Recipe backup and restore
-- Data migration tools
-- Bulk operations
-
-#### **11. Advanced User Settings** ⚠️ **BASIC SETTINGS**
-
-- Comprehensive brewing preferences
-- Advanced unit system customization
-- Calculation preferences
-- Default recipe templates
-- Brewing profile customization
-
-**Current:** Basic theme/unit preferences only
-
-#### **12. Help & Documentation System** ❌ **MISSING**
-
-- Interactive help system
-- Feature tutorials
-- Brewing guides and references
-- Troubleshooting guides
-
----
-
-## 🎯 **Implementation Priority Roadmap**
-
-### **Phase 4 (Immediate - Core Functionality)**
-
-1. **Recipe Builder** - Mobile recipe creation interface
-2. **Ingredient Selection** - Mobile ingredient picker and management
-3. **Brew Session Creation** - Start new sessions from recipes
-4. **Basic Data Entry** - Fermentation logging interface
-
-### **Phase 5 (Short-term - Enhanced UX)**
-
-1. **Recipe Editing** - Full CRUD operations for recipes
-2. **Advanced Search** - Filtering and sorting improvements
-3. **Session Management** - Edit sessions, update status
-4. **Recipe Sharing** - Basic sharing capabilities
-
-### **Phase 6 (Medium-term - Advanced Features)**
-
-1. **BeerXML Import/Export** - File handling and format support
-2. **Recipe Calculations** - Real-time brewing math
-3. **Basic Analytics** - Performance tracking
-4. **Recipe Cloning** - Clone from public library
-
-### **Phase 7 (Long-term - AI & Advanced)**
-
-1. **AI Optimization** - Mobile AI features
-2. **Advanced Analytics** - Performance comparison
-3. **Community Features** - Rating, reviews
-4. **Data Export** - Backup and export capabilities
-
----
 
 ## 💡 **Strategic Considerations**
 
@@ -632,7 +386,6 @@ Based on comprehensive analysis, BrewTrackerAndroid is missing ~75% of web featu
 - ✅ Most APIs exist for missing features (verify relevant endpoints per feature)
 - ✅ Mobile-optimized endpoints available
 - ✅ Comprehensive data models support all features
-- ✅ No backend changes required for Phase 4-5
 
 ### **Architecture Readiness:**
 

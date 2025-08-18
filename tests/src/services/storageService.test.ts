@@ -61,6 +61,21 @@ describe("StorageService", () => {
       expect(info.platform).toBe("ios");
       expect(info.androidVersion).toBeNull();
     });
+
+    it("should provide comprehensive platform info", () => {
+      (Platform as any).OS = "android";
+      (Platform as any).Version = 31;
+      const info = StorageService.getStorageInfo();
+      
+      expect(info).toHaveProperty('platform');
+      expect(info).toHaveProperty('androidVersion');
+      expect(info).toHaveProperty('isAndroid13Plus');
+      expect(info).toHaveProperty('isAndroid10Plus');
+      expect(info).toHaveProperty('hasScopedStorage');
+      expect(info).toHaveProperty('requiresGranularPermissions');
+      expect(info.androidVersion).toBe(31);
+      expect(info.platform).toBe("android");
+    });
   });
 
   describe("Media Permissions", () => {
@@ -409,6 +424,84 @@ describe("BeerXMLService", () => {
           dialogTitle: "Save My_Recipe_recipe.xml",
         }
       );
+    });
+  });
+
+  describe("Error handling edge cases", () => {
+    it("should handle media library permission errors", async () => {
+      mockMediaLibrary.requestPermissionsAsync.mockRejectedValue(
+        new Error("Permission system error")
+      );
+
+      const result = await StorageService.requestMediaPermissions();
+
+      expect(result).toBe(false);
+    });
+
+    it("should handle createAsset failure", async () => {
+      mockMediaLibrary.requestPermissionsAsync.mockResolvedValue({
+        status: MediaLibrary.PermissionStatus.GRANTED,
+        granted: true,
+        canAskAgain: true,
+        accessPrivileges: "all",
+        expires: "never",
+      });
+
+      mockMediaLibrary.createAssetAsync.mockRejectedValue(
+        new Error("Asset creation failed")
+      );
+
+      const result = await StorageService.saveImageToMediaLibrary("file://test.jpg");
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Asset creation failed");
+    });
+
+    it("should handle sharing service errors", async () => {
+      mockFileSystem.writeAsStringAsync.mockResolvedValue();
+      mockSharing.isAvailableAsync.mockResolvedValue(true);
+      mockSharing.shareAsync.mockRejectedValue(new Error("Share failed"));
+
+      const result = await StorageService.saveAndShareFile(
+        "content",
+        "test.txt"
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Share failed");
+    });
+
+    it("should handle document picker errors", async () => {
+      mockDocumentPicker.getDocumentAsync.mockRejectedValue(
+        new Error("Document picker error")
+      );
+
+      const result = await StorageService.pickDocument();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Document picker error");
+    });
+
+    it("should handle multiple documents picker errors", async () => {
+      mockDocumentPicker.getDocumentAsync.mockRejectedValue(
+        new Error("Multiple picker error")
+      );
+
+      const result = await StorageService.pickMultipleDocuments();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Multiple picker error");
+    });
+
+    it("should handle file read errors", async () => {
+      mockFileSystem.readAsStringAsync.mockRejectedValue(
+        new Error("File read failed")
+      );
+
+      const result = await StorageService.readDocumentFile("file://test.txt");
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("File read failed");
     });
   });
 });
