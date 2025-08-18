@@ -14,6 +14,12 @@ const sanitizeId = (input: string): string => {
     .replace(/^-+|-+$/g, '');
 };
 
+// Template literal types for dynamic test IDs
+export type ThemeOptionTestId = `theme-${string}-option`;
+export type UnitOptionTestId = `unit-${string}-option`;
+export type MetricValueTestId = `metric-${string}-value`;
+export type ContextMenuActionTestId = `context-menu-action-${string}`;
+
 export const TEST_IDS = {
   // Navigation & Headers
   header: {
@@ -55,6 +61,18 @@ export const TEST_IDS = {
     brewingMetricsDisplay: "brewing-metrics-display",
   },
 
+  // Context Menu Elements
+  contextMenu: {
+    modal: "context-menu-modal",
+    overlay: "context-menu-overlay",
+    container: "context-menu-container",
+    header: "context-menu-header",
+    title: "context-menu-title",
+    subtitle: "context-menu-subtitle",
+    actionsList: "context-menu-actions-list",
+    cancelButton: "context-menu-cancel-button",
+  },
+
   // Icons
   icons: {
     errorOutline: "icon-error-outline",
@@ -69,9 +87,22 @@ export const TEST_IDS = {
 
   // Dynamic Pattern Generators
   patterns: {
-    themeOption: (theme: string) => `theme-${sanitizeId(theme)}-option`,
-    unitOption: (unit: string) => `unit-${sanitizeId(unit)}-option`,
-    metricValue: (metric: string) => `metric-${sanitizeId(metric)}-value`,
+    themeOption: (theme: string): ThemeOptionTestId => {
+      const s = sanitizeId(theme) || 'unknown'
+      return `theme-${s}-option` as ThemeOptionTestId
+    },
+    unitOption: (unit: string): UnitOptionTestId => {
+      const s = sanitizeId(unit) || 'unknown'
+      return `unit-${s}-option` as UnitOptionTestId
+    },
+    metricValue: (metric: string): MetricValueTestId => {
+      const s = sanitizeId(metric) || 'unknown'
+      return `metric-${s}-value` as MetricValueTestId
+    },
+    contextMenuAction: (actionId: string): ContextMenuActionTestId => {
+      const s = sanitizeId(actionId) || 'unknown'
+      return `context-menu-action-${s}` as ContextMenuActionTestId
+    },
   },
 } as const;
 
