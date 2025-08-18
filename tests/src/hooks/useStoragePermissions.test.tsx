@@ -177,6 +177,40 @@ describe("useStoragePermissions", () => {
     expect(result.current.storageInfo.platform).toBe("ios");
     expect(result.current.storageInfo.androidVersion).toBeNull();
   });
+
+  it("should handle permission check errors", async () => {
+    // Make MediaLibrary.getPermissionsAsync throw an error
+    mockMediaLibrary.getPermissionsAsync.mockRejectedValue(
+      new Error("Permission check failed")
+    );
+
+    const { result } = renderHook(() => useStoragePermissions());
+
+    // Wait for async operations to complete
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    // Should have set error in permission state
+    expect(result.current.mediaPermission.error).toBe("Permission check failed");
+    expect(result.current.mediaPermission.granted).toBe(false);
+  });
+
+  it("should handle non-Error objects in permission check", async () => {
+    // Make MediaLibrary.getPermissionsAsync throw a non-Error object
+    mockMediaLibrary.getPermissionsAsync.mockRejectedValue("Something went wrong");
+
+    const { result } = renderHook(() => useStoragePermissions());
+
+    // Wait for async operations to complete
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    // Should use default error message for non-Error objects
+    expect(result.current.mediaPermission.error).toBe("Permission check failed");
+    expect(result.current.mediaPermission.granted).toBe(false);
+  });
 });
 
 describe("useDocumentPicker", () => {

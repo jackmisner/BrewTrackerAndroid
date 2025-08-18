@@ -503,5 +503,118 @@ describe("BeerXMLService", () => {
       expect(result.success).toBe(false);
       expect(result.error).toBe("File read failed");
     });
+
+    it("should handle album creation when album exists", async () => {
+      (Platform as any).Version = 33; // Android 13+ to trigger album logic
+      
+      const mockAsset = { uri: "media://test-asset", id: "asset-123" };
+      const mockAlbum = { id: "album-123", title: "TestAlbum" };
+      
+      mockMediaLibrary.createAssetAsync.mockResolvedValue(mockAsset);
+      mockMediaLibrary.getAlbumAsync.mockResolvedValue(mockAlbum); // Album exists (line 199)
+      mockMediaLibrary.addAssetsToAlbumAsync.mockResolvedValue(true);
+      
+      const result = await StorageService.saveImageToMediaLibrary(
+        "file://test.jpg",
+        "TestAlbum"
+      );
+      
+      expect(result.success).toBe(true);
+      expect(mockMediaLibrary.getAlbumAsync).toHaveBeenCalledWith("TestAlbum");
+      expect(mockMediaLibrary.addAssetsToAlbumAsync).toHaveBeenCalledWith(
+        [mockAsset],
+        mockAlbum,
+        false
+      );
+    });
+
+    it("should create new album when album doesn't exist", async () => {
+      (Platform as any).Version = 33; // Android 13+ to trigger album logic
+      
+      const mockAsset = { uri: "media://test-asset", id: "asset-123" };
+      
+      mockMediaLibrary.createAssetAsync.mockResolvedValue(mockAsset);
+      mockMediaLibrary.getAlbumAsync.mockResolvedValue(null); // Album doesn't exist
+      mockMediaLibrary.createAlbumAsync.mockResolvedValue(true);
+      
+      const result = await StorageService.saveImageToMediaLibrary(
+        "file://test.jpg",
+        "NewAlbum"
+      );
+      
+      expect(result.success).toBe(true);
+      expect(mockMediaLibrary.getAlbumAsync).toHaveBeenCalledWith("NewAlbum");
+      expect(mockMediaLibrary.createAlbumAsync).toHaveBeenCalledWith(
+        "NewAlbum",
+        mockAsset,
+        false
+      );
+    });
+  });
+
+  describe("BeerXML Service", () => {
+    it("should handle BeerXML import with file read failure", async () => {
+      const mockDocument = {
+        uri: "file://test.xml",
+        name: "test.xml",
+        size: 1024,
+        mimeType: "application/xml",
+      };
+      
+      // Mock StorageService.pickDocument to return success
+      const originalPickDocument = StorageService.pickDocument;
+      StorageService.pickDocument = jest.fn().mockResolvedValue({
+        success: true,
+        documents: [mockDocument],
+      });
+      
+      // Mock StorageService.readDocumentFile to return failure (line 283)
+      const originalReadDocumentFile = StorageService.readDocumentFile;
+      StorageService.readDocumentFile = jest.fn().mockResolvedValue({
+        success: false,
+        error: "Failed to read file",
+      });
+      
+      const result = await BeerXMLService.importBeerXML();
+      
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to read file");
+      
+      // Restore original methods
+      StorageService.readDocumentFile = originalReadDocumentFile;
+      StorageService.pickDocument = originalPickDocument;
+    });
+
+    it("should handle BeerXML import with exception", async () => {
+      // Mock StorageService.pickDocument to throw an error (line 295)
+      const originalPickDocument = StorageService.pickDocument;
+      StorageService.pickDocument = jest.fn().mockRejectedValue(
+        new Error("Picker failed")
+      );
+      
+      const result = await BeerXMLService.importBeerXML();
+      
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Picker failed");
+      
+      // Restore original method
+      StorageService.pickDocument = originalPickDocument;
+    });
+
+    it("should handle BeerXML import with non-Error exception", async () => {
+      // Mock StorageService.pickDocument to throw a non-Error object (line 295)
+      const originalPickDocument = StorageService.pickDocument;
+      StorageService.pickDocument = jest.fn().mockRejectedValue(
+        "Something went wrong"
+      );
+      
+      const result = await BeerXMLService.importBeerXML();
+      
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("BeerXML import failed");
+      
+      // Restore original method
+      StorageService.pickDocument = originalPickDocument;
+    });
   });
 });

@@ -408,5 +408,196 @@ describe("formatUtils", () => {
       const result = formatIngredientDetails(grainIngredient);
       expect(result).toBe("6 °L");
     });
+
+    it("should handle hop ingredient without use property", () => {
+      const hopIngredient = {
+        id: "hop-1",
+        type: "hop" as const,
+        // use is missing/undefined - should not call formatHopUsage
+        time: 60,
+        alpha_acid: 5.5,
+        name: "Test Hop",
+        amount: 1,
+        unit: "oz" as const,
+      };
+      
+      const result = formatIngredientDetails(hopIngredient);
+      // Should skip the use part but include time and alpha_acid
+      expect(result).toBe("60 mins • 5.5%");
+    });
+
+    it("should handle hop ingredient with null/undefined time", () => {
+      const hopWithNullTime = {
+        id: "hop-2",
+        type: "hop" as const,
+        use: "boil",
+        time: null, // null time - should not call formatHopTime
+        alpha_acid: 5.5,
+        name: "Test Hop",
+        amount: 1,
+        unit: "oz" as const,
+      };
+
+      const hopWithUndefinedTime = {
+        id: "hop-3", 
+        type: "hop" as const,
+        use: "boil",
+        time: undefined, // undefined time - should not call formatHopTime
+        alpha_acid: 5.5,
+        name: "Test Hop",
+        amount: 1,
+        unit: "oz" as const,
+      };
+      
+      const resultNull = formatIngredientDetails(hopWithNullTime);
+      const resultUndefined = formatIngredientDetails(hopWithUndefinedTime);
+      
+      // Should skip the time part but include use and alpha_acid
+      expect(resultNull).toBe("Boil • 5.5%");
+      expect(resultUndefined).toBe("Boil • 5.5%");
+    });
+
+    it("should handle hop ingredient without alpha_acid property", () => {
+      const hopIngredient = {
+        id: "hop-4",
+        type: "hop" as const,
+        use: "boil",
+        time: 60,
+        // alpha_acid is missing/undefined - should not call formatAlphaAcid
+        name: "Test Hop",
+        amount: 1,
+        unit: "oz" as const,
+      };
+      
+      const result = formatIngredientDetails(hopIngredient);
+      // Should skip the alpha_acid part but include use and time
+      expect(result).toBe("Boil • 60 mins");
+    });
+
+    it("should handle grain ingredient without color property", () => {
+      const grainIngredient = {
+        id: "grain-1",
+        type: "grain" as const,
+        // color is missing/undefined - should not call formatColor
+        potential: 37,
+        name: "Test Grain",
+        amount: 10,
+        unit: "lb" as const,
+      };
+      
+      const result = formatIngredientDetails(grainIngredient);
+      // Should skip the color part but include potential
+      expect(result).toBe("37 PPG");
+    });
+
+    it("should handle yeast ingredient without attenuation property", () => {
+      const yeastIngredient = {
+        id: "yeast-1",
+        type: "yeast" as const,
+        // attenuation is missing/undefined - should not call formatAttenuation
+        manufacturer: "Wyeast",
+        name: "Test Yeast",
+        amount: 1,
+        unit: "pkg" as const,
+      };
+      
+      const result = formatIngredientDetails(yeastIngredient);
+      // Should skip the attenuation part but include manufacturer
+      expect(result).toBe("Wyeast");
+    });
+
+    it("should handle yeast ingredient without manufacturer property", () => {
+      const yeastIngredient = {
+        id: "yeast-2",
+        type: "yeast" as const,
+        attenuation: 75,
+        // manufacturer is missing/undefined - should not add manufacturer
+        name: "Test Yeast",
+        amount: 1,
+        unit: "pkg" as const,
+      };
+      
+      const result = formatIngredientDetails(yeastIngredient);
+      // Should skip the manufacturer part but include attenuation
+      expect(result).toBe("75.0% Att.");
+    });
+
+    it("should handle completely empty hop ingredient", () => {
+      const emptyHopIngredient = {
+        id: "hop-empty",
+        type: "hop" as const,
+        // All optional properties missing - should trigger all false branches
+        name: "Empty Hop",
+        amount: 1,
+        unit: "oz" as const,
+      };
+      
+      const result = formatIngredientDetails(emptyHopIngredient);
+      // Should return empty string since no details are available
+      expect(result).toBe("");
+    });
+
+    it("should handle completely empty grain ingredient", () => {
+      const emptyGrainIngredient = {
+        id: "grain-empty",
+        type: "grain" as const,
+        // All optional properties missing
+        name: "Empty Grain",
+        amount: 1,
+        unit: "lb" as const,
+      };
+      
+      const result = formatIngredientDetails(emptyGrainIngredient);
+      // Should return empty string since no details are available
+      expect(result).toBe("");
+    });
+
+    it("should handle completely empty yeast ingredient", () => {
+      const emptyYeastIngredient = {
+        id: "yeast-empty",
+        type: "yeast" as const,
+        // All optional properties missing
+        name: "Empty Yeast",
+        amount: 1,
+        unit: "pkg" as const,
+      };
+      
+      const result = formatIngredientDetails(emptyYeastIngredient);
+      // Should return empty string since no details are available
+      expect(result).toBe("");
+    });
+
+    it("should handle hop ingredient with zero time (edge case)", () => {
+      const hopIngredient = {
+        id: "hop-zero",
+        type: "hop" as const,
+        use: "flame-out",
+        time: 0, // Zero is not null/undefined, so should be formatted
+        alpha_acid: 5.5,
+        name: "Test Hop",
+        amount: 1,
+        unit: "oz" as const,
+      };
+      
+      const result = formatIngredientDetails(hopIngredient);
+      // Should include time: 0 since 0 !== null && 0 !== undefined
+      expect(result).toBe("Flame Out • 0 mins • 5.5%");
+    });
+
+    it("should handle yeast ingredient with zero attenuation (edge case)", () => {
+      const yeastIngredient = {
+        id: "yeast-zero",
+        type: "yeast" as const, 
+        attenuation: 0, // Zero is falsy, so should NOT be formatted
+        manufacturer: "Test Lab",
+        name: "Test Yeast",
+        amount: 1,
+        unit: "pkg" as const,
+      };
+      
+      const result = formatIngredientDetails(yeastIngredient);
+      // Should NOT include attenuation since 0 is falsy in the condition
+      expect(result).toBe("Test Lab");
+    });
   });
 });

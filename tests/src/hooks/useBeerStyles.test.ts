@@ -427,4 +427,60 @@ describe("useBeerStyles", () => {
 
     jest.useRealTimers();
   });
+
+  it("should respect retry limit and not retry after 2 failures", async () => {
+    // Create an error that should trigger retries (500 server error)
+    const serverError = { status: 500, message: "Internal server error" };
+    mockedApiService.beerStyles.getAll.mockRejectedValue(serverError);
+
+    // Use a query client that allows retries to test the retry logic
+    const retryQueryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          gcTime: 0,
+        },
+      },
+    });
+
+    const wrapper = createWrapper(retryQueryClient);
+    const { result } = renderHook(() => useBeerStyles(), { wrapper });
+
+    await waitFor(
+      () => {
+        expect(result.current.isError).toBe(true);
+      },
+      { timeout: 5000 }
+    );
+
+    // Verify that the API was called the correct number of times (1 + 2 retries = 3 total)
+    expect(mockedApiService.beerStyles.getAll).toHaveBeenCalledTimes(3);
+    expect(result.current.error).toEqual(serverError);
+  });
+
+  it("should retry on 429 rate limit errors", async () => {
+    // Test the specific condition where 429 errors should be retried
+    const rateLimitError = { status: 429, message: "Too many requests" };
+    mockedApiService.beerStyles.getAll.mockRejectedValue(rateLimitError);
+
+    const retryQueryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          gcTime: 0,
+        },
+      },
+    });
+
+    const wrapper = createWrapper(retryQueryClient);
+    const { result } = renderHook(() => useBeerStyles(), { wrapper });
+
+    await waitFor(
+      () => {
+        expect(result.current.isError).toBe(true);
+      },
+      { timeout: 5000 }
+    );
+
+    // Should retry 429 errors (1 + 2 retries = 3 total)
+    expect(mockedApiService.beerStyles.getAll).toHaveBeenCalledTimes(3);
+  });
 });
