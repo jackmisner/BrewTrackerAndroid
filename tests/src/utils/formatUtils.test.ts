@@ -106,8 +106,8 @@ describe("formatUtils", () => {
     });
 
     it("should return original value for unknown unit conversions", () => {
-      expect(convertHopTime(60, "hours", "seconds")).toBe(60);
-      expect(convertHopTime(120, "unknown", "other")).toBe(120);
+      expect(convertHopTime(60, "hours" as any, "seconds" as any)).toBe(60);
+      expect(convertHopTime(120, "unknown" as any, "other" as any)).toBe(120);
     });
   });
 

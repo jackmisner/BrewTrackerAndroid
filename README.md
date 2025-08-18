@@ -299,7 +299,7 @@ flask run --host=0.0.0.0
 1. Configure app.json with your app details
 2. Build for Android:
    ```bash
-   expo build:android
+   eas build -p android
    ```
 
 ### Google Play Store
@@ -308,7 +308,7 @@ flask run --host=0.0.0.0
 2. Configure signing keys and app details
 3. Build AAB for Play Store:
    ```bash
-   expo build:android -t app-bundle
+   eas build -p android
    ```
 
 ## API Security & Hardening

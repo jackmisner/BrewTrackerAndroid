@@ -2,6 +2,7 @@ import React from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import { ParametersForm } from "@src/components/recipes/RecipeForm/ParametersForm";
 import { RecipeFormData } from "@src/types";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 // Comprehensive React Native mocking to avoid ES6 module issues
 jest.mock("react-native", () => ({
@@ -241,7 +242,7 @@ describe("ParametersForm", () => {
         />
       );
 
-      const mashTimeInput = getByTestId("mash-time-input");
+      const mashTimeInput = getByTestId(TEST_IDS.inputs.mashTimeInput);
       fireEvent.changeText(mashTimeInput, "90");
 
       expect(mockOnUpdateField).toHaveBeenCalledWith("mash_time", 90);

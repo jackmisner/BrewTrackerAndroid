@@ -84,6 +84,7 @@ export const mockData = {
   brewSession: (overrides: Record<string, any> = {}) => {
     mockData._sessionCounter++;
     return {
+      id: `test-session-id-${mockData._sessionCounter}`, // Add id property
       session_id: `test-session-id-${mockData._sessionCounter}`,
       name: `Test Brew Session ${mockData._sessionCounter}`,
       recipe_id: `test-recipe-id-${mockData._sessionCounter}`,
@@ -94,6 +95,8 @@ export const mockData = {
       actual_abv: null,
       notes: "Test brew session notes",
       fermentation_data: [],
+      target_fg: 1.012, // Add missing target_fg property
+      temperature_unit: "C", // Add missing temperature_unit property
       ...overrides,
     };
   },

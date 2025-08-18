@@ -3,6 +3,7 @@ import { Text } from "react-native";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import { IngredientsForm } from "@src/components/recipes/RecipeForm/IngredientsForm";
 import { RecipeFormData, RecipeIngredient } from "@src/types";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 // Comprehensive React Native mocking to avoid ES6 module issues
 jest.mock("react-native", () => ({
@@ -108,9 +109,10 @@ jest.mock(
   () => {
     const React = require("react");
     const { Text } = require("react-native");
+    const { TEST_IDS } = require("@src/constants/testIDs");
     return {
       BrewingMetricsDisplay: () => (
-        <Text testID="brewing-metrics-display">BrewingMetricsDisplay</Text>
+        <Text testID={TEST_IDS.components.brewingMetricsDisplay}>BrewingMetricsDisplay</Text>
       ),
     };
   }
@@ -561,7 +563,7 @@ describe("IngredientsForm", () => {
 
       const recipeWithIngredients = {
         ...defaultRecipeData,
-        ingredients: [ingredientWithId, ingredientWithoutId],
+        ingredients: [ingredientWithId, ingredientWithoutId] as any,
       };
 
       const { getByText } = render(
@@ -700,7 +702,7 @@ describe("IngredientsForm", () => {
 
       // BrewingMetricsDisplay should be rendered with the metrics data
       // Verify the mocked component is actually present in the DOM
-      expect(getByTestId("brewing-metrics-display")).toBeTruthy();
+      expect(getByTestId(TEST_IDS.components.brewingMetricsDisplay)).toBeTruthy();
     });
 
     it("should handle metrics loading state", () => {

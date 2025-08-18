@@ -602,7 +602,7 @@ describe("idNormalization", () => {
         style: "IPA",
       };
 
-      const denormalizedRecipe = denormalizeEntityIdDeep(recipeData, "unknown");
+      const denormalizedRecipe = denormalizeEntityIdDeep(recipeData, "unknown" as any);
       expect(denormalizedRecipe.recipe_id).toBe("recipe-123");
 
       // Test brewSession detection
@@ -612,7 +612,7 @@ describe("idNormalization", () => {
         recipe: { name: "Test Recipe" },
       };
 
-      const denormalizedSession = denormalizeEntityIdDeep(brewSessionData, "unknown");
+      const denormalizedSession = denormalizeEntityIdDeep(brewSessionData, "unknown" as any);
       expect(denormalizedSession.session_id).toBe("session-123");
 
       // Test user detection  
@@ -622,7 +622,7 @@ describe("idNormalization", () => {
         username: "testuser",
       };
 
-      const denormalizedUser = denormalizeEntityIdDeep(userData, "unknown");
+      const denormalizedUser = denormalizeEntityIdDeep(userData, "unknown" as any);
       expect(denormalizedUser.user_id).toBe("user-123");
 
       // Test fermentationEntry detection
@@ -633,7 +633,7 @@ describe("idNormalization", () => {
         date: "2024-01-01",
       };
 
-      const denormalizedEntry = denormalizeEntityIdDeep(fermentationData, "unknown");
+      const denormalizedEntry = denormalizeEntityIdDeep(fermentationData, "unknown" as any);
       expect(denormalizedEntry.entry_id).toBe("entry-123");
     });
   });

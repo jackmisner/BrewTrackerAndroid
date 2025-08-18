@@ -14,6 +14,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import zxcvbn from "zxcvbn";
 import { useAuth } from "@contexts/AuthContext";
 import { loginStyles } from "@styles/auth/loginStyles";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 const ResetPasswordScreen: React.FC = () => {
   const { resetPassword, isLoading, error, clearError } = useAuth();
@@ -158,7 +159,7 @@ const ResetPasswordScreen: React.FC = () => {
               <TouchableOpacity
                 style={loginStyles.resetPrimaryButton}
                 onPress={handleGoToLogin}
-                testID="go-to-login-button"
+                testID={TEST_IDS.auth.goToLoginButton}
               >
                 <Text style={loginStyles.resetPrimaryButtonText}>
                   Go to Login
@@ -180,7 +181,7 @@ const ResetPasswordScreen: React.FC = () => {
         <View style={loginStyles.formContainer}>
           <View style={loginStyles.header}>
             <MaterialIcons name="lock-reset" size={64} color="#2563eb" />
-            <Text style={loginStyles.title} testID="reset-password-title">
+            <Text style={loginStyles.title} testID={TEST_IDS.auth.resetPasswordTitle}>
               Reset Password
             </Text>
             <Text style={loginStyles.subtitle}>
@@ -275,7 +276,7 @@ const ResetPasswordScreen: React.FC = () => {
                 editable={!isLoading}
                 returnKeyType="send"
                 onSubmitEditing={handleResetPassword}
-                testID="confirm-password-input"
+                testID={TEST_IDS.inputs.confirmPasswordInput}
               />
               <TouchableOpacity
                 style={loginStyles.passwordToggle}
@@ -309,7 +310,7 @@ const ResetPasswordScreen: React.FC = () => {
                 !passwordsMatch ||
                 !isPasswordValid(formData.newPassword)
               }
-              testID="reset-password-button"
+              testID={TEST_IDS.auth.resetPasswordButton}
             >
               <Text
                 style={[

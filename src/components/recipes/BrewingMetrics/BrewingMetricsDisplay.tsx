@@ -4,6 +4,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { brewingMetricsStyles } from "@styles/components/brewingMetricsStyles";
+import { TEST_IDS } from "@constants/testIDs";
 import {
   formatGravity,
   formatABV,
@@ -130,6 +131,8 @@ export const BrewingMetricsDisplay: React.FC<BrewingMetricsProps> = ({
             name="error-outline"
             size={24}
             color={theme.colors.error}
+            testID={TEST_IDS.icons.errorOutline}
+            accessible={false}
           />
           <Text style={styles.errorText}>{error}</Text>
           {onRetry && (

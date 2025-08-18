@@ -2,6 +2,7 @@ import React from "react";
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
 import ViewBrewSessionScreen from "../../../../app/(modals)/(brewSessions)/viewBrewSession";
 import { mockData, testUtils } from "../../../testUtils";
+import { TEST_IDS } from "../../../../src/constants/testIDs";
 
 // Mock React Native
 jest.mock("react-native", () => ({
@@ -87,21 +88,29 @@ jest.mock("@styles/modals/viewBrewSessionStyles", () => ({
   })),
 }));
 
-jest.mock("@src/components/brewSessions/FermentationChart", () => ({
-  FermentationChart: jest.fn(({ fermentationData, expectedFG, actualOG, temperatureUnit, forceRefresh }) => (
-    <text testID="fermentation-chart">
-      Fermentation Chart - {fermentationData?.length || 0} entries
-    </text>
-  )),
-}));
+jest.mock("@src/components/brewSessions/FermentationChart", () => {
+  const React = require("react");
+  const { TEST_IDS } = require("../../../../src/constants/testIDs");
+  return {
+    FermentationChart: jest.fn(({ fermentationData, expectedFG, actualOG, temperatureUnit, forceRefresh }) =>
+      React.createElement("Text", { testID: TEST_IDS.charts.fermentationChart }, 
+        `Fermentation Chart - ${fermentationData?.length || 0} entries`
+      )
+    ),
+  };
+});
 
-jest.mock("@src/components/brewSessions/FermentationData", () => ({
-  FermentationData: jest.fn(({ fermentationData, expectedFG, actualOG, temperatureUnit, brewSessionId }) => (
-    <text testID="fermentation-data">
-      Fermentation Data - {fermentationData?.length || 0} entries
-    </text>
-  )),
-}));
+jest.mock("@src/components/brewSessions/FermentationData", () => {
+  const React = require("react");
+  const { TEST_IDS } = require("../../../../src/constants/testIDs");
+  return {
+    FermentationData: jest.fn(({ fermentationData, expectedFG, actualOG, temperatureUnit, brewSessionId }) =>
+      React.createElement("Text", { testID: TEST_IDS.charts.fermentationData }, 
+        `Fermentation Data - ${fermentationData?.length || 0} entries`
+      )
+    ),
+  };
+});
 
 const mockTheme = {
   colors: {
@@ -292,8 +301,8 @@ describe("ViewBrewSessionScreen", () => {
     it("should display fermentation chart and data", () => {
       const { getByTestId } = render(<ViewBrewSessionScreen />);
 
-      expect(getByTestId("fermentation-chart")).toBeTruthy();
-      expect(getByTestId("fermentation-data")).toBeTruthy();
+      expect(getByTestId(TEST_IDS.charts.fermentationChart)).toBeTruthy();
+      expect(getByTestId(TEST_IDS.charts.fermentationData)).toBeTruthy();
     });
   });
 
@@ -447,9 +456,9 @@ describe("ViewBrewSessionScreen", () => {
       const { getByTestId } = render(<ViewBrewSessionScreen />);
 
       // Missing metrics should display "—" for undefined actual_og, actual_fg, actual_abv
-      expect(getByTestId("metric-og-value")).toHaveTextContent("—");
-      expect(getByTestId("metric-fg-value")).toHaveTextContent("—");
-      expect(getByTestId("metric-abv-value")).toHaveTextContent("—");
+      expect(getByTestId(TEST_IDS.patterns.metricValue("OG"))).toHaveTextContent("—");
+      expect(getByTestId(TEST_IDS.patterns.metricValue("FG"))).toHaveTextContent("—");
+      expect(getByTestId(TEST_IDS.patterns.metricValue("ABV"))).toHaveTextContent("—");
     });
   });
 
@@ -465,11 +474,10 @@ describe("ViewBrewSessionScreen", () => {
     });
 
     it("should navigate back when back button is pressed", () => {
-      const { UNSAFE_getAllByType } = render(<ViewBrewSessionScreen />);
+      const { getByTestId } = render(<ViewBrewSessionScreen />);
       
-      // Find the first TouchableOpacity which should be the back button in the header
-      const touchableOpacities = UNSAFE_getAllByType("TouchableOpacity");
-      const backButton = touchableOpacities[0]; // First TouchableOpacity should be the back button
+      // Find the back button by its testID
+      const backButton = getByTestId(TEST_IDS.header.backButton);
       
       // Simulate pressing the back button
       fireEvent.press(backButton);

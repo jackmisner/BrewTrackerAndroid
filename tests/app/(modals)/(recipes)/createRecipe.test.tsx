@@ -3,6 +3,7 @@ import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import CreateRecipeScreen from "../../../../app/(modals)/(recipes)/createRecipe";
 import { mockData, testUtils } from "../../../testUtils";
+import { TEST_IDS } from "../../../../src/constants/testIDs";
 
 // Mock React Native
 jest.mock("react-native", () => ({
@@ -80,45 +81,49 @@ jest.mock("@styles/modals/createRecipeStyles", () => ({
   })),
 }));
 
-jest.mock("@src/components/recipes/RecipeForm/BasicInfoForm", () => ({
-  BasicInfoForm: jest.fn(({ recipeData, onUpdateField }) => {
-    return (
-      <text testID="basic-info-form">
-        Basic Info Form - {recipeData?.name || "Unnamed Recipe"}
-      </text>
-    );
-  }),
-}));
+jest.mock("@src/components/recipes/RecipeForm/BasicInfoForm", () => {
+  const React = require("react");
+  return {
+    BasicInfoForm: jest.fn(({ recipeData, onUpdateField }) => {
+      return React.createElement("Text", { testID: "basic-info-form" },
+        `Basic Info Form - ${recipeData?.name || "Unnamed Recipe"}`
+      );
+    }),
+  };
+});
 
-jest.mock("@src/components/recipes/RecipeForm/ParametersForm", () => ({
-  ParametersForm: jest.fn(({ recipeData, onUpdateField }) => {
-    return (
-      <text testID="parameters-form">
-        Parameters Form - OG: {recipeData?.original_gravity || "1.050"}
-      </text>
-    );
-  }),
-}));
+jest.mock("@src/components/recipes/RecipeForm/ParametersForm", () => {
+  const React = require("react");
+  return {
+    ParametersForm: jest.fn(({ recipeData, onUpdateField }) => {
+      return React.createElement("Text", { testID: "parameters-form" },
+        `Parameters Form - OG: ${recipeData?.original_gravity || "1.050"}`
+      );
+    }),
+  };
+});
 
-jest.mock("@src/components/recipes/RecipeForm/IngredientsForm", () => ({
-  IngredientsForm: jest.fn(({ recipeData, onUpdateField }) => {
-    return (
-      <text testID="ingredients-form">
-        Ingredients Form - {recipeData?.ingredients?.length || 0} ingredients
-      </text>
-    );
-  }),
-}));
+jest.mock("@src/components/recipes/RecipeForm/IngredientsForm", () => {
+  const React = require("react");
+  return {
+    IngredientsForm: jest.fn(({ recipeData, onUpdateField }) => {
+      return React.createElement("Text", { testID: "ingredients-form" },
+        `Ingredients Form - ${recipeData?.ingredients?.length || 0} ingredients`
+      );
+    }),
+  };
+});
 
-jest.mock("@src/components/recipes/RecipeForm/ReviewForm", () => ({
-  ReviewForm: jest.fn(({ recipeData, metrics, metricsLoading, metricsError, onRetryMetrics }) => {
-    return (
-      <text testID="review-form">
-        Review Form - {recipeData?.name || "Unnamed Recipe"}
-      </text>
-    );
-  }),
-}));
+jest.mock("@src/components/recipes/RecipeForm/ReviewForm", () => {
+  const React = require("react");
+  return {
+    ReviewForm: jest.fn(({ recipeData, metrics, metricsLoading, metricsError, onRetryMetrics }) => {
+      return React.createElement("Text", { testID: "review-form" },
+        `Review Form - ${recipeData?.name || "Unnamed Recipe"}`
+      );
+    }),
+  };
+});
 
 jest.mock("@src/hooks/useRecipeMetrics", () => ({
   useRecipeMetrics: jest.fn(),
@@ -188,7 +193,7 @@ describe("CreateRecipeScreen", () => {
 
       expect(getByText("Create Recipe")).toBeTruthy();
       expect(getByText("Basic Info")).toBeTruthy();
-      expect(getByTestId("basic-info-form")).toBeTruthy();
+      expect(getByTestId(TEST_IDS.forms.basicInfoForm)).toBeTruthy();
     });
 
     it("should show progress bar at 25% for first step", () => {
@@ -217,7 +222,7 @@ describe("CreateRecipeScreen", () => {
       fireEvent.press(nextButton);
 
       expect(getByText("Parameters")).toBeTruthy();
-      expect(getByTestId("parameters-form")).toBeTruthy();
+      expect(getByTestId(TEST_IDS.forms.parametersForm)).toBeTruthy();
     });
 
     it("should navigate to previous step when Previous button is pressed", () => {
@@ -232,7 +237,7 @@ describe("CreateRecipeScreen", () => {
       fireEvent.press(prevButton);
 
       expect(getByText("Basic Info")).toBeTruthy();
-      expect(getByTestId("basic-info-form")).toBeTruthy();
+      expect(getByTestId(TEST_IDS.forms.basicInfoForm)).toBeTruthy();
     });
 
     it("should navigate through all steps correctly", () => {
@@ -241,17 +246,17 @@ describe("CreateRecipeScreen", () => {
       // Step 1 -> Step 2
       fireEvent.press(getByText("Next"));
       expect(getByText("Parameters")).toBeTruthy();
-      expect(getByTestId("parameters-form")).toBeTruthy();
+      expect(getByTestId(TEST_IDS.forms.parametersForm)).toBeTruthy();
       
       // Step 2 -> Step 3
       fireEvent.press(getByText("Next"));
       expect(getByText("Ingredients")).toBeTruthy();
-      expect(getByTestId("ingredients-form")).toBeTruthy();
+      expect(getByTestId(TEST_IDS.forms.ingredientsForm)).toBeTruthy();
       
       // Step 3 -> Step 4
       fireEvent.press(getByText("Next"));
       expect(getByText("Review")).toBeTruthy();
-      expect(getByTestId("review-form")).toBeTruthy();
+      expect(getByTestId(TEST_IDS.forms.reviewForm)).toBeTruthy();
     });
 
     it("should disable Previous button on first step", () => {
@@ -279,7 +284,7 @@ describe("CreateRecipeScreen", () => {
       const { getByTestId } = render(<CreateRecipeScreen />);
       
       // Verify form persistence by checking component structure once
-      expect(getByTestId("basic-info-form")).toBeTruthy();
+      expect(getByTestId(TEST_IDS.forms.basicInfoForm)).toBeTruthy();
     });
 
     it("should handle form data changes", () => {
@@ -347,7 +352,7 @@ describe("CreateRecipeScreen", () => {
       
       // Should not crash during loading state and render review form
       expect(getByText("Review")).toBeTruthy(); // Verify we're on review step
-      expect(getByTestId("review-form")).toBeTruthy();
+      expect(getByTestId(TEST_IDS.forms.reviewForm)).toBeTruthy();
     });
 
     it("should handle metrics error state", () => {

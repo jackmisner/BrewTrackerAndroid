@@ -267,11 +267,16 @@ jest.mock("expo-haptics", () => ({
   selectionAsync: jest.fn(),
 }));
 
-jest.mock("@expo/vector-icons", () => ({
-  MaterialIcons: {
-    glyphMap: {},
-  },
-}));
+jest.mock("@expo/vector-icons", () => {
+  // Create a functional React component that returns null
+  const MaterialIcons = (props) => null;
+  // Attach glyphMap as a static property for code that reads MaterialIcons.glyphMap
+  MaterialIcons.glyphMap = {};
+  
+  return {
+    MaterialIcons,
+  };
+});
 
 // Mock React Native SVG
 jest.mock("react-native-svg", () => {

@@ -3,6 +3,27 @@ import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
 import { Alert, Linking } from "react-native";
 import ProfileScreen from "../../../app/(tabs)/profile";
 import { mockData, testUtils } from "../../testUtils";
+import type { AlertButton } from "react-native";
+
+
+// Shared style mock constant
+const styleMock = {
+  container: { flex: 1 },
+  header: { alignItems: "center", padding: 24 },
+  avatar: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center" },
+  username: { fontSize: 24, fontWeight: "bold", marginTop: 12 },
+  email: { fontSize: 16, color: "#666", marginTop: 4 },
+  verificationBadge: { flexDirection: "row", alignItems: "center", marginTop: 8 },
+  verificationText: { fontSize: 14, marginLeft: 4 },
+  section: { marginVertical: 8 },
+  menuItem: { flexDirection: "row", alignItems: "center", padding: 16 },
+  menuText: { flex: 1, fontSize: 16, marginLeft: 12 },
+  logoutText: { color: "#FF3B30" },
+  donateIcon: { width: 24, height: 24 },
+  footer: { alignItems: "center", padding: 24 },
+  version: { fontSize: 14, color: "#666" },
+  copyright: { fontSize: 12, color: "#999", marginTop: 4 },
+};
 
 // Comprehensive React Native mocking
 jest.mock("react-native", () => ({
@@ -54,23 +75,7 @@ jest.mock("@contexts/ThemeContext", () => ({
 }));
 
 jest.mock("@styles/tabs/profileStyles", () => ({
-  profileStyles: jest.fn(() => ({
-    container: { flex: 1 },
-    header: { alignItems: "center", padding: 24 },
-    avatar: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center" },
-    username: { fontSize: 24, fontWeight: "bold", marginTop: 12 },
-    email: { fontSize: 16, color: "#666", marginTop: 4 },
-    verificationBadge: { flexDirection: "row", alignItems: "center", marginTop: 8 },
-    verificationText: { fontSize: 14, marginLeft: 4 },
-    section: { marginVertical: 8 },
-    menuItem: { flexDirection: "row", alignItems: "center", padding: 16 },
-    menuText: { flex: 1, fontSize: 16, marginLeft: 12 },
-    logoutText: { color: "#FF3B30" },
-    donateIcon: { width: 24, height: 24 },
-    footer: { alignItems: "center", padding: 24 },
-    version: { fontSize: 14, color: "#666" },
-    copyright: { fontSize: 12, color: "#999", marginTop: 4 },
-  })),
+  profileStyles: jest.fn(() => styleMock),
 }));
 
 const mockAuth = {
@@ -95,14 +100,16 @@ const mockRouter = {
   replace: jest.fn(),
 };
 
-// Setup mocks
-require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
-require("@contexts/ThemeContext").useTheme.mockReturnValue(mockTheme);
-require("expo-router").useRouter.mockReturnValue(mockRouter);
-
 describe("ProfileScreen", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
+    
+    // Re-setup mocks after reset
+    require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
+    require("@contexts/ThemeContext").useTheme.mockReturnValue(mockTheme);
+    require("expo-router").useRouter.mockReturnValue(mockRouter);
+    require("@styles/tabs/profileStyles").profileStyles.mockReturnValue(styleMock);
+    
     testUtils.resetCounters();
   });
 
@@ -240,11 +247,13 @@ describe("ProfileScreen", () => {
 
     it("should perform logout and navigate when confirmed", async () => {
       const mockAlert = require("react-native").Alert.alert;
-      mockAlert.mockImplementation((title, message, buttons) => {
+      mockAlert.mockImplementationOnce((_title: string, _message?: string, buttons?: AlertButton[]) => {
         // Simulate pressing the "Sign Out" button
-        const signOutButton = buttons.find(button => button.text === "Sign Out");
-        if (signOutButton && signOutButton.onPress) {
-          signOutButton.onPress();
+        if (Array.isArray(buttons)) {
+          const signOutButton = buttons.find((button) => button.text === "Sign Out");
+          if (signOutButton && signOutButton.onPress) {
+            signOutButton.onPress();
+          }
         }
       });
 
@@ -261,9 +270,9 @@ describe("ProfileScreen", () => {
 
     it("should not perform logout when cancelled", () => {
       const mockAlert = require("react-native").Alert.alert;
-      mockAlert.mockImplementation((title, message, buttons) => {
+      mockAlert.mockImplementation((title: any, message: any, buttons: any) => {
         // Simulate pressing the "Cancel" button (which does nothing)
-        const cancelButton = buttons.find(button => button.text === "Cancel");
+        const cancelButton = buttons.find((button: any) => button.text === "Cancel");
         // Cancel button typically has no onPress handler or it's undefined
       });
 
@@ -304,15 +313,18 @@ describe("ProfileScreen", () => {
     });
 
     it("should display fallback version when expo config is not available", () => {
-      jest.doMock("expo-constants", () => ({
-        default: {
-          expoConfig: null,
-        },
-      }));
+      const Constants = require("expo-constants");
+      const originalExpoConfig = Constants.default.expoConfig;
+      
+      // Mock Constants.expoConfig to be null
+      Constants.default.expoConfig = null;
 
       const { getByText } = render(<ProfileScreen />);
 
       expect(getByText("BrewTracker v0.1.0")).toBeTruthy();
+      
+      // Restore original value
+      Constants.default.expoConfig = originalExpoConfig;
     });
   });
 

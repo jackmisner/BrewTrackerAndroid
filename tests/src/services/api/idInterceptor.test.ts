@@ -283,8 +283,8 @@ describe("idInterceptor", () => {
       // Extract the actual interceptor functions
       const responseCall = responseUseSpy.mock.calls[0];
       responseInterceptor = {
-        fulfilled: responseCall[0],
-        rejected: responseCall[1],
+        fulfilled: responseCall[0] as any,
+        rejected: responseCall[1] as any,
       };
       
       requestUseSpy.mockRestore();
@@ -421,8 +421,8 @@ describe("idInterceptor", () => {
       // Extract the actual interceptor functions
       const requestCall = requestUseSpy.mock.calls[0];
       requestInterceptor = {
-        fulfilled: requestCall[0],
-        rejected: requestCall[1],
+        fulfilled: requestCall[0] as any,
+        rejected: requestCall[1] as any,
       };
       
       requestUseSpy.mockRestore();

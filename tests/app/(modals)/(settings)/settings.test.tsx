@@ -3,10 +3,7 @@ import { render } from "@testing-library/react-native";
 
 // Mock Context providers needed by Settings screen
 
-// Mock MaterialIcons properly
-jest.mock("@expo/vector-icons", () => ({
-  MaterialIcons: "MaterialIcons",
-}));
+// Mock MaterialIcons properly - remove per-file mock to rely on global stub
 
 // Mock expo-router
 jest.mock("expo-router", () => ({
@@ -68,6 +65,7 @@ jest.mock("@styles/modals/settingsStyles", () => ({
 }));
 
 import SettingsScreen from "../../../../app/(modals)/(settings)/settings";
+import { TEST_IDS } from "../../../../src/constants/testIDs";
 
 describe("SettingsScreen", () => {
   it("should render without crashing", () => {
@@ -90,16 +88,16 @@ describe("SettingsScreen", () => {
 
   it("should display theme options", () => {
     const { getByTestId } = render(<SettingsScreen />);
-    expect(getByTestId("settings-theme-label")).toBeTruthy();
-    expect(getByTestId("theme-light-option")).toBeTruthy();
-    expect(getByTestId("theme-dark-option")).toBeTruthy();
-    expect(getByTestId("theme-system-option")).toBeTruthy();
+    expect(getByTestId(TEST_IDS.settings.themeLabel)).toBeTruthy();
+    expect(getByTestId(TEST_IDS.patterns.themeOption("light"))).toBeTruthy();
+    expect(getByTestId(TEST_IDS.patterns.themeOption("dark"))).toBeTruthy();
+    expect(getByTestId(TEST_IDS.patterns.themeOption("system"))).toBeTruthy();
   });
 
   it("should display unit system options", () => {
     const { getByTestId } = render(<SettingsScreen />);
-    expect(getByTestId("settings-unit-label")).toBeTruthy();
-    expect(getByTestId("unit-imperial-option")).toBeTruthy();
-    expect(getByTestId("unit-metric-option")).toBeTruthy();
+    expect(getByTestId(TEST_IDS.settings.unitLabel)).toBeTruthy();
+    expect(getByTestId(TEST_IDS.patterns.unitOption("imperial"))).toBeTruthy();
+    expect(getByTestId(TEST_IDS.patterns.unitOption("metric"))).toBeTruthy();
   });
 });
