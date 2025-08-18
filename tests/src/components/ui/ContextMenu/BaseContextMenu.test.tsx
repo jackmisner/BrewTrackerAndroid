@@ -304,6 +304,14 @@ describe("BaseContextMenu", () => {
           { cancelable: true }
         );
       });
+          // Trigger the destructive confirmation and ensure handler runs
+          const lastCall = (Alert.alert as jest.Mock).mock.calls.at(-1);
+          const buttons = lastCall?.[2] as { text: string; style?: string; onPress?: () => void }[];
+          const confirm = buttons?.find(b => b.style === "destructive");
+          confirm?.onPress?.();
+          await waitFor(() => {
+            expect(mockOnPress).toHaveBeenCalledWith(mockItem);
+          });
     });
 
     it("should not render when item is null", () => {

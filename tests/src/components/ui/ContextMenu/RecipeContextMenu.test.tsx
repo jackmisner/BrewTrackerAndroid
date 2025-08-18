@@ -444,6 +444,14 @@ describe("RecipeContextMenu Integration", () => {
         expect.any(Object)
       );
     });
+        // Trigger the destructive confirmation and ensure handler runs
+        const lastCall = (Alert.alert as jest.Mock).mock.calls.at(-1);
+        const buttons = lastCall?.[2] as { text: string; style?: string; onPress?: () => void }[];
+        const confirm = buttons?.find(b => b.style === "destructive");
+        confirm?.onPress?.();
+        await waitFor(() => {
+          expect(handlers.onDelete).toHaveBeenCalledWith(recipe);
+        });
   });
 
   it("should handle recipe ownership and visibility properly in integrated context", async () => {

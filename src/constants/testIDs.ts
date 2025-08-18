@@ -13,6 +13,16 @@ const sanitizeId = (input: string): string => {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 };
+const slugCache = new Map<string, string>();
+export const toSlug = (value: string): string => {
+  if (slugCache.has(value)) {
+    return slugCache.get(value)!;
+  }
+  const slug = sanitizeId(value) || 'unknown';
+  slugCache.set(value, slug);
+  return slug;
+};
+
 
 // Template literal types for dynamic test IDs
 export type ThemeOptionTestId = `theme-${string}-option`;
@@ -88,19 +98,19 @@ export const TEST_IDS = {
   // Dynamic Pattern Generators
   patterns: {
     themeOption: (theme: string): ThemeOptionTestId => {
-      const s = sanitizeId(theme) || 'unknown'
+      const s = toSlug(theme)
       return `theme-${s}-option` as ThemeOptionTestId
     },
     unitOption: (unit: string): UnitOptionTestId => {
-      const s = sanitizeId(unit) || 'unknown'
+      const s = toSlug(unit)
       return `unit-${s}-option` as UnitOptionTestId
     },
     metricValue: (metric: string): MetricValueTestId => {
-      const s = sanitizeId(metric) || 'unknown'
+      const s = toSlug(metric)
       return `metric-${s}-value` as MetricValueTestId
     },
     contextMenuAction: (actionId: string): ContextMenuActionTestId => {
-      const s = sanitizeId(actionId) || 'unknown'
+      const s = toSlug(actionId)
       return `context-menu-action-${s}` as ContextMenuActionTestId
     },
   },
