@@ -205,7 +205,7 @@ export default function EditFermentationEntryScreen() {
             <MaterialIcons name="close" size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Fermentation Entry</Text>
-          <View style={styles.saveButton} />
+          <View style={styles.saveButton} testID="save-button" />
         </View>
         <View style={styles.errorContainer}>
           <MaterialIcons name="error" size={64} color={theme.colors.error} />
@@ -236,6 +236,7 @@ export default function EditFermentationEntryScreen() {
           ]}
           onPress={handleSave}
           disabled={updateEntryMutation.isPending}
+          testID="save-button"
         >
           {updateEntryMutation.isPending ? (
             <ActivityIndicator size="small" color={theme.colors.primaryText} />
@@ -287,6 +288,7 @@ export default function EditFermentationEntryScreen() {
           <Text style={styles.label}>Specific Gravity *</Text>
           <TextInput
             style={styles.textInput}
+            testID="gravity-input"
             value={formData.gravity}
             onChangeText={value => setFormData({ ...formData, gravity: value })}
             placeholder="e.g., 1.050"

@@ -103,6 +103,15 @@ export const TEST_IDS = {
   inputs: {
     mashTimeInput: "mash-time-input",
     confirmPasswordInput: "confirm-password-input",
+    gravityInput: "gravity-input",
+    temperatureInput: "temperature-input",
+    phInput: "ph-input",
+    notesInput: "notes-input",
+  },
+
+  // Buttons
+  buttons: {
+    saveButton: "save-button",
   },
 
   // Settings Interface

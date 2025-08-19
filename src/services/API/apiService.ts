@@ -112,7 +112,10 @@ function validateAndGetApiConfig() {
 
   // Validate URL format
   try {
-    new URL(baseURL);
+    const url = new URL(baseURL);
+    if (!["http:", "https:"].includes(url.protocol)) {
+      throw new Error(`Invalid protocol: ${url.protocol}`);
+    }
   } catch {
     throw new Error(
       `Invalid API_URL format: ${baseURL}. Please provide a valid URL.`
@@ -120,7 +123,7 @@ function validateAndGetApiConfig() {
   }
 
   // Ensure URL doesn't end with trailing slash for consistency
-  const cleanBaseURL = baseURL.replace(/\/$/, "");
+  const cleanBaseURL = baseURL.replace(/\/+$/, "");
 
   return {
     BASE_URL: cleanBaseURL,
