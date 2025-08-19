@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react-native";
+import { renderHook, waitFor} from "@testing-library/react-native";
 import React from "react";
 
 // Mock the API service before importing anything that uses it
@@ -56,6 +56,13 @@ describe("useBeerStyles", () => {
   afterEach(() => {
     queryClient.clear();
   });
+
+  const getBeerStylesQuery = (queryClient: QueryClient) => {
+    const queries = queryClient.getQueryCache().getAll();
+    const beerStylesQuery = queries.find(q => q.queryKey[0] === 'beerStyles');
+    expect(beerStylesQuery).toBeDefined();
+    return beerStylesQuery!;
+  };
 
   it("should successfully fetch and transform beer styles data", async () => {
     // Mock successful API response with realistic data structure
@@ -428,59 +435,50 @@ describe("useBeerStyles", () => {
     jest.useRealTimers();
   });
 
-  it("should respect retry limit and not retry after 2 failures", async () => {
-    // Create an error that should trigger retries (500 server error)
-    const serverError = { status: 500, message: "Internal server error" };
-    mockedApiService.beerStyles.getAll.mockRejectedValue(serverError);
-
-    // Use a query client that allows retries to test the retry logic
-    const retryQueryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          gcTime: 0,
-        },
-      },
-    });
-
-    const wrapper = createWrapper(retryQueryClient);
+  it("should not retry after 2 failures based on retry logic", () => {
+    // Test the retry function directly rather than full retry behavior
+    const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useBeerStyles(), { wrapper });
 
-    await waitFor(
-      () => {
-        expect(result.current.isError).toBe(true);
-      },
-      { timeout: 5000 }
-    );
-
-    // Verify that the API was called the correct number of times (1 + 2 retries = 3 total)
-    expect(mockedApiService.beerStyles.getAll).toHaveBeenCalledTimes(3);
-    expect(result.current.error).toEqual(serverError);
+    // Access the query to get the retry function
+    const beerStylesQuery = getBeerStylesQuery(queryClient);
+    
+    {
+      const retryConfig = beerStylesQuery.options.retry as (failureCount: number, error: any) => boolean;
+      
+      // Test retry logic for server errors
+      const serverError = { response: { status: 500 } };
+      expect(retryConfig(0, serverError)).toBe(true);  // Should retry first failure
+      expect(retryConfig(1, serverError)).toBe(true);  // Should retry second failure  
+      expect(retryConfig(2, serverError)).toBe(false); // Should not retry third failure
+      
+      // Test that 4xx errors don't retry (except 429)
+      const clientError = { response: { status: 404 } };
+      expect(retryConfig(0, clientError)).toBe(false);
+      
+      // Test that 429 errors do retry
+      const rateLimitError = { response: { status: 429 } };
+      expect(retryConfig(0, rateLimitError)).toBe(true);
+    }
   });
 
-  it("should retry on 429 rate limit errors", async () => {
-    // Test the specific condition where 429 errors should be retried
-    const rateLimitError = { status: 429, message: "Too many requests" };
-    mockedApiService.beerStyles.getAll.mockRejectedValue(rateLimitError);
-
-    const retryQueryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          gcTime: 0,
-        },
-      },
-    });
-
-    const wrapper = createWrapper(retryQueryClient);
+  it("should have correct retry delay configuration", () => {
+    // Test the retry delay function directly
+    const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useBeerStyles(), { wrapper });
 
-    await waitFor(
-      () => {
-        expect(result.current.isError).toBe(true);
-      },
-      { timeout: 5000 }
-    );
-
-    // Should retry 429 errors (1 + 2 retries = 3 total)
-    expect(mockedApiService.beerStyles.getAll).toHaveBeenCalledTimes(3);
+    // Access the query to get the retry delay function
+    const beerStylesQuery = getBeerStylesQuery(queryClient);
+    
+    {
+      const retryDelayFn = beerStylesQuery.options.retryDelay as (attemptIndex: number) => number;
+      
+      // Test exponential backoff with cap at 5000ms
+      expect(retryDelayFn(0)).toBe(1000);  // 1000 * 2^0 = 1000
+      expect(retryDelayFn(1)).toBe(2000);  // 1000 * 2^1 = 2000
+      expect(retryDelayFn(2)).toBe(4000);  // 1000 * 2^2 = 4000
+      expect(retryDelayFn(3)).toBe(5000);  // Min(8000, 5000) = 5000 (capped)
+      expect(retryDelayFn(10)).toBe(5000); // Should remain capped at 5000
+    }
   });
 });

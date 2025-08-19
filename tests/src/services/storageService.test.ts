@@ -510,9 +510,19 @@ describe("BeerXMLService", () => {
       const mockAsset = { uri: "media://test-asset", id: "asset-123" };
       const mockAlbum = { id: "album-123", title: "TestAlbum" };
       
+      // Mock permissions as granted
+      mockMediaLibrary.getPermissionsAsync.mockResolvedValue({
+        status: MediaLibrary.PermissionStatus.GRANTED,
+        granted: true,
+        canAskAgain: true,
+        accessPrivileges: "all",
+        expires: "never",
+      });
+      
       mockMediaLibrary.createAssetAsync.mockResolvedValue(mockAsset);
-      mockMediaLibrary.getAlbumAsync.mockResolvedValue(mockAlbum); // Album exists (line 199)
+      mockMediaLibrary.getAlbumAsync.mockResolvedValue(mockAlbum); // Album exists
       mockMediaLibrary.addAssetsToAlbumAsync.mockResolvedValue(true);
+      mockMediaLibrary.createAlbumAsync.mockResolvedValue(true);
       
       const result = await StorageService.saveImageToMediaLibrary(
         "file://test.jpg",
@@ -526,6 +536,8 @@ describe("BeerXMLService", () => {
         mockAlbum,
         false
       );
+      // Verify the opposite branch was not called
+      expect(mockMediaLibrary.createAlbumAsync).not.toHaveBeenCalled();
     });
 
     it("should create new album when album doesn't exist", async () => {
@@ -533,9 +545,19 @@ describe("BeerXMLService", () => {
       
       const mockAsset = { uri: "media://test-asset", id: "asset-123" };
       
+      // Mock permissions as granted
+      mockMediaLibrary.getPermissionsAsync.mockResolvedValue({
+        status: MediaLibrary.PermissionStatus.GRANTED,
+        granted: true,
+        canAskAgain: true,
+        accessPrivileges: "all",
+        expires: "never",
+      });
+      
       mockMediaLibrary.createAssetAsync.mockResolvedValue(mockAsset);
       mockMediaLibrary.getAlbumAsync.mockResolvedValue(null); // Album doesn't exist
       mockMediaLibrary.createAlbumAsync.mockResolvedValue(true);
+      mockMediaLibrary.addAssetsToAlbumAsync.mockResolvedValue(true);
       
       const result = await StorageService.saveImageToMediaLibrary(
         "file://test.jpg",
@@ -549,10 +571,16 @@ describe("BeerXMLService", () => {
         mockAsset,
         false
       );
+      // Verify the opposite branch was not called
+      expect(mockMediaLibrary.addAssetsToAlbumAsync).not.toHaveBeenCalled();
     });
   });
 
   describe("BeerXML Service", () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it("should handle BeerXML import with file read failure", async () => {
       const mockDocument = {
         uri: "file://test.xml",
@@ -561,16 +589,12 @@ describe("BeerXMLService", () => {
         mimeType: "application/xml",
       };
       
-      // Mock StorageService.pickDocument to return success
-      const originalPickDocument = StorageService.pickDocument;
-      StorageService.pickDocument = jest.fn().mockResolvedValue({
+      jest.spyOn(StorageService, "pickDocument").mockResolvedValue({
         success: true,
         documents: [mockDocument],
       });
       
-      // Mock StorageService.readDocumentFile to return failure (line 283)
-      const originalReadDocumentFile = StorageService.readDocumentFile;
-      StorageService.readDocumentFile = jest.fn().mockResolvedValue({
+      jest.spyOn(StorageService, "readDocumentFile").mockResolvedValue({
         success: false,
         error: "Failed to read file",
       });
@@ -579,16 +603,10 @@ describe("BeerXMLService", () => {
       
       expect(result.success).toBe(false);
       expect(result.error).toBe("Failed to read file");
-      
-      // Restore original methods
-      StorageService.readDocumentFile = originalReadDocumentFile;
-      StorageService.pickDocument = originalPickDocument;
     });
 
     it("should handle BeerXML import with exception", async () => {
-      // Mock StorageService.pickDocument to throw an error (line 295)
-      const originalPickDocument = StorageService.pickDocument;
-      StorageService.pickDocument = jest.fn().mockRejectedValue(
+      jest.spyOn(StorageService, "pickDocument").mockRejectedValue(
         new Error("Picker failed")
       );
       
@@ -596,15 +614,10 @@ describe("BeerXMLService", () => {
       
       expect(result.success).toBe(false);
       expect(result.error).toBe("Picker failed");
-      
-      // Restore original method
-      StorageService.pickDocument = originalPickDocument;
     });
 
     it("should handle BeerXML import with non-Error exception", async () => {
-      // Mock StorageService.pickDocument to throw a non-Error object (line 295)
-      const originalPickDocument = StorageService.pickDocument;
-      StorageService.pickDocument = jest.fn().mockRejectedValue(
+      jest.spyOn(StorageService, "pickDocument").mockRejectedValue(
         "Something went wrong"
       );
       
@@ -612,9 +625,6 @@ describe("BeerXMLService", () => {
       
       expect(result.success).toBe(false);
       expect(result.error).toBe("BeerXML import failed");
-      
-      // Restore original method
-      StorageService.pickDocument = originalPickDocument;
     });
   });
 });
