@@ -490,10 +490,7 @@ describe("EditBrewSessionScreen", () => {
       const { getByTestId } = render(<EditBrewSessionScreen />);
       
       // Find and press the close button (cancel)
-      const closeButton = getByTestId("close-button") || 
-                         document.querySelector('[data-testid="close-button"]') ||
-                         getByText("Edit Brew Session").parent.querySelector('button');
-      
+      const closeButton = getByTestId("close-button");
       fireEvent.press(closeButton);
       
       // Verify router.back was called
@@ -528,12 +525,22 @@ describe("EditBrewSessionScreen", () => {
     it("should handle form submission navigation on successful save", async () => {
       const mockMutate = jest.fn();
       
-      const mockUseMutation = jest.spyOn(require('@tanstack/react-query'), 'useMutation');
-      mockUseMutation.mockReturnValue({
-        mutate: mockMutate,
-        isPending: false,
-      });
+      // Mock the router and query client for post-save effects
+      const { router } = require("expo-router");
+      const mockQueryClient = { invalidateQueries: jest.fn() };
+      jest.spyOn(require("@tanstack/react-query"), "useQueryClient")
+        .mockReturnValue(mockQueryClient);
+      jest.spyOn(require('@tanstack/react-query'), 'useMutation')
+        .mockImplementation((options: any) => ({
+          isPending: false,
+          error: null,
+          mutate: (_payload: any) => {
+            // simulate a successful update
+            options?.onSuccess?.({ data: { id: "123" } });
+          },
+        }));
 
+      // Existing query mock for initial data load
       const mockUseQuery = require("@tanstack/react-query").useQuery;
       mockUseQuery.mockReturnValue({
         data: { data: { id: "123", name: "Test Session", status: "planned" } },
@@ -546,9 +553,13 @@ describe("EditBrewSessionScreen", () => {
       // Press save button
       const saveButton = getByText("Save");
       fireEvent.press(saveButton);
-      
-      // Verify mutation was called
-      expect(mockMutate).toHaveBeenCalledWith(expect.any(Object));
+
+      // Verify post-save effects
+      expect(mockQueryClient.invalidateQueries)
+        .toHaveBeenCalledWith(["brewSession", "123"]);
+      expect(mockQueryClient.invalidateQueries)
+        .toHaveBeenCalledWith(["brewSessions"]);
+      expect(router.back).toHaveBeenCalledTimes(1);
     });
 
     it("should handle unsaved changes detection when navigating back", () => {
@@ -581,17 +592,9 @@ describe("EditBrewSessionScreen", () => {
     });
 
     it("should call API service on successful mutation and handle response", async () => {
-      const mockMutate = jest.fn();
-      
-      const mockApiService = jest.spyOn(require("@services/api/apiService").default.brewSessions, 'update');
-      mockApiService.mockResolvedValue({ data: { id: "123", name: "Updated" } });
-      
-      const mockUseMutation = jest.spyOn(require("@tanstack/react-query"), 'useMutation');
-      mockUseMutation.mockReturnValue({
-        mutate: mockMutate,
-        isPending: false,
-        error: null,
-      });
+      const mockApiUpdate = jest
+        .spyOn(require("@services/api/apiService").default.brewSessions, "update")
+        .mockResolvedValue({ data: { id: "123", name: "Updated" } });
 
       const mockUseQuery = require("@tanstack/react-query").useQuery;
       mockUseQuery.mockReturnValue({
@@ -605,8 +608,13 @@ describe("EditBrewSessionScreen", () => {
       // Trigger save to call mutation
       fireEvent.press(getByText("Save"));
       
-      // Verify mutation was called
-      expect(mockMutate).toHaveBeenCalledWith(expect.any(Object));
+      // Verify API update was called with correct arguments
+      await waitFor(() => {
+        expect(mockApiUpdate).toHaveBeenCalledWith(
+          "123",
+          expect.objectContaining({ name: expect.any(String) })
+        );
+      });
     });
 
     it("should display error message when mutation fails and show alert", async () => {
@@ -689,33 +697,35 @@ describe("EditBrewSessionScreen", () => {
         invalidateQueries: jest.fn(),
       };
       
-      jest.spyOn(require("@tanstack/react-query"), 'useQueryClient').mockReturnValue(mockQueryClient);
+      jest
+        .spyOn(require("@tanstack/react-query"), 'useQueryClient')
+        .mockReturnValue(mockQueryClient);
       
-      const mockMutate = jest.fn();
+      jest
+        .spyOn(require("@tanstack/react-query"), "useMutation")
+        .mockImplementation((options: any) => ({
+          isPending: false,
+          error: null,
+          // simulate successful mutation to trigger onSuccess
+          mutate: () => options?.onSuccess?.({ data: { id: "123" } }),
+        }));
       
-      const mockUseMutation = jest.spyOn(require("@tanstack/react-query"), 'useMutation');
-      mockUseMutation.mockReturnValue({
-        mutate: mockMutate,
-        isPending: false,
-        error: null,
-      });
-
       const mockUseQuery = require("@tanstack/react-query").useQuery;
       mockUseQuery.mockReturnValue({
         data: { data: { id: "123", name: "Test Session", status: "planned" } },
         isLoading: false,
         error: null,
       });
-
+      
       const { getByText } = render(<EditBrewSessionScreen />);
       
       // Trigger save
       fireEvent.press(getByText("Save"));
       
-      // Verify mutation was called
-      expect(mockMutate).toHaveBeenCalledWith(expect.any(Object));
+      // Verify invalidation occurred for both the entity and list
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith(["brewSession", "123"]);
+      expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith(["brewSessions"]);
     });
-  });
 
   describe("Brewing Metrics", () => {
     it("should handle OG (Original Gravity) input", () => {
