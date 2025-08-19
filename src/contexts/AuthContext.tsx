@@ -145,8 +145,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       const cachedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
       if (cachedUser) {
         const parsedUser = JSON.parse(cachedUser);
-        // Use the fresh data from API, but fallback to cached if API fails
-        setUser(response.data || parsedUser);
+        // Prefer cached data when available (better user experience), fallback to API data
+        setUser(parsedUser || response.data);
       }
     } catch (error: any) {
       console.error("Failed to initialize auth:", error);

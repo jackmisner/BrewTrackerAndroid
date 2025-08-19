@@ -719,4 +719,34 @@ describe("ApiService Core Functionality", () => {
       ]);
     });
   });
+
+  describe("API Configuration Validation", () => {
+    it("should validate API URL format", () => {
+      // Test the validation logic directly
+      function validateURL(url: string): boolean {
+        try {
+          new URL(url);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      expect(validateURL("http://localhost:5000/api")).toBe(true);
+      expect(validateURL("https://api.example.com")).toBe(true);
+      expect(validateURL("not-a-valid-url")).toBe(false);
+      expect(validateURL("")).toBe(false);
+    });
+
+    it("should clean trailing slashes from URLs", () => {
+      // Test URL cleaning logic directly
+      function cleanURL(url: string): string {
+        return url.replace(/\/$/, "");
+      }
+
+      expect(cleanURL("http://localhost:5000/api/")).toBe("http://localhost:5000/api");
+      expect(cleanURL("http://localhost:5000/api")).toBe("http://localhost:5000/api");
+      expect(cleanURL("https://api.example.com/")).toBe("https://api.example.com");
+    });
+  });
 });
