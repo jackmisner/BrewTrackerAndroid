@@ -431,6 +431,119 @@ describe("idNormalization", () => {
       expect(normalized).toEqual(data);
     });
 
+    it("should handle single object response that doesn't look like entity", () => {
+      // Test the path where the object exists but doesn't have ID fields
+      const nonEntityObject = {
+        status: "success",
+        message: "Operation completed",  
+        metadata: { timestamp: "2024-01-01" }
+      };
+
+      const result = normalizeResponseData(nonEntityObject, "recipe");
+      
+      // Should return unchanged since it doesn't look like an entity
+      expect(result).toEqual(nonEntityObject);
+      expect(result).not.toHaveProperty("id");
+    });
+
+    it("should handle empty object", () => {
+      const emptyObject = {};
+
+      const result = normalizeResponseData(emptyObject, "recipe");
+      
+      // Should return unchanged since it has no ID field
+      expect(result).toEqual(emptyObject);
+    });
+
+    it("should handle object with null values", () => {
+      const objectWithNulls = {
+        recipe_id: null,
+        name: "Test Recipe",
+        data: null
+      };
+
+      const result = normalizeResponseData(objectWithNulls, "recipe");
+      
+      // Should return unchanged since recipe_id is null (no valid ID)
+      expect(result).toEqual(objectWithNulls);
+    });
+
+    it("should detect recipe from single object with recipe-specific properties", () => {
+      const recipeObject = {
+        id: "generic-123",
+        name: "Test Recipe",
+        style: "IPA",
+        ingredients: [{ id: "hop1", name: "Cascade" }],
+        brewing_method: "all-grain"
+      };
+
+      const result = normalizeResponseData(recipeObject, "recipe");
+      
+      // Should detect as recipe entity and normalize
+      expect(result).toHaveProperty("id", "generic-123");
+      expect(result).toHaveProperty("name", "Test Recipe");
+    });
+
+    it("should detect ingredient from single object with ingredient properties", () => {
+      const ingredientObject = {
+        ingredient_id: "ingredient-456",
+        name: "Pale Malt",
+        type: "grain",
+        color: 3
+      };
+
+      const result = normalizeResponseData(ingredientObject, "ingredient");
+      
+      // Should normalize ingredient_id to id
+      expect(result).toEqual({
+        name: "Pale Malt",
+        type: "grain",
+        color: 3,
+        id: "ingredient-456"
+      });
+      expect(result).toHaveProperty("id", "ingredient-456");
+      expect(result).not.toHaveProperty("ingredient_id"); // Original field removed
+    });
+
+    it("should detect brew session from single object", () => {
+      const brewSessionObject = {
+        session_id: "session-789",
+        recipe_id: "recipe-123",
+        status: "in_progress",
+        start_date: "2024-01-01"
+      };
+
+      const result = normalizeResponseData(brewSessionObject, "brewSession");
+      
+      // Should normalize session_id to id
+      expect(result).toEqual({
+        recipe_id: "recipe-123",
+        status: "in_progress",
+        start_date: "2024-01-01",
+        id: "session-789"
+      });
+      expect(result).toHaveProperty("id", "session-789");
+      expect(result).not.toHaveProperty("session_id"); // Original field removed
+    });
+
+    it("should handle single object with fallback _id field", () => {
+      const objectWithMongoId = {
+        _id: "mongo-obj-id",
+        name: "Test Entity",
+        category: "test"
+      };
+
+      const result = normalizeResponseData(objectWithMongoId, "recipe");
+      
+      // Should use _id as fallback and normalize
+      expect(result).toEqual({
+        id: "mongo-obj-id",
+        _id: "mongo-obj-id",
+        name: "Test Entity",
+        category: "test"
+      });
+    });
+
     it("should skip normalization for fermentation entries", () => {
       const fermentationData = [
         { temperature: 68, gravity: 1.050, date: "2024-01-01" },
@@ -487,6 +600,28 @@ describe("idNormalization", () => {
       expect(denormalizeEntityIdDeep("string", "recipe")).toBe("string");
       expect(denormalizeEntityIdDeep(123, "recipe")).toBe(123);
       expect(denormalizeEntityIdDeep(true, "recipe")).toBe(true);
+    });
+
+    it("should handle primitive values in arrays", () => {
+      // Test array with mixed primitive and object values
+      const mixedArray = [
+        "string value",
+        123,
+        true,
+        null,
+        undefined,
+        { id: "test", name: "Entity" }
+      ];
+
+      const result = denormalizeEntityIdDeep(mixedArray, "recipe");
+      
+      // Primitives should be unchanged, object should be processed
+      expect(result[0]).toBe("string value");
+      expect(result[1]).toBe(123);
+      expect(result[2]).toBe(true);
+      expect(result[3]).toBeNull();
+      expect(result[4]).toBeUndefined();
+      expect(result[5]).toEqual({ recipe_id: "test", name: "Entity" });
     });
 
     it("should denormalize array of entities", () => {

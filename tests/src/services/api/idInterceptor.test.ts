@@ -100,6 +100,100 @@ describe("idInterceptor", () => {
 
       expect(() => removeIDInterceptors(mockInstance)).not.toThrow();
     });
+
+    it("should use fallback clearing when clear() method is not available", () => {
+      setupIDInterceptors(apiInstance);
+      
+      // Mock interceptors without clear() method
+      const mockRequestInterceptor = {
+        handlers: [{ fulfilled: jest.fn(), rejected: jest.fn() }],
+        // No clear method
+      };
+      
+      // Replace the interceptor with our mock
+      (apiInstance.interceptors as any).request = mockRequestInterceptor;
+      
+      // Should not throw and should use fallback
+      expect(() => removeIDInterceptors(apiInstance)).not.toThrow();
+      
+      // Should have cleared handlers array
+      expect(mockRequestInterceptor.handlers).toEqual([]);
+    });
+
+    it("should use fallback clearing for response interceptors when clear() method is not available", () => {
+      setupIDInterceptors(apiInstance);
+      
+      // Mock interceptors without clear() method
+      const mockResponseInterceptor = {
+        handlers: [{ fulfilled: jest.fn(), rejected: jest.fn() }],
+        // No clear method
+      };
+      
+      // Replace the interceptor with our mock
+      (apiInstance.interceptors as any).response = mockResponseInterceptor;
+      
+      // Should not throw and should use fallback
+      expect(() => removeIDInterceptors(apiInstance)).not.toThrow();
+      
+      // Should have cleared handlers array
+      expect(mockResponseInterceptor.handlers).toEqual([]);
+    });
+
+    it("should handle mixed interceptor clearing scenarios", () => {
+      setupIDInterceptors(apiInstance);
+      
+      // Mock request interceptor with clear() method
+      const mockRequestInterceptor = {
+        handlers: [{ fulfilled: jest.fn(), rejected: jest.fn() }],
+        clear: jest.fn(),
+      };
+      
+      // Mock response interceptor without clear() method
+      const mockResponseInterceptor = {
+        handlers: [{ fulfilled: jest.fn(), rejected: jest.fn() }],
+        // No clear method - should use fallback
+      };
+      
+      (apiInstance.interceptors as any).request = mockRequestInterceptor;
+      (apiInstance.interceptors as any).response = mockResponseInterceptor;
+      
+      removeIDInterceptors(apiInstance);
+      
+      // Request should use clear() method
+      expect(mockRequestInterceptor.clear).toHaveBeenCalled();
+      
+      // Response should use fallback (handlers array cleared)
+      expect(mockResponseInterceptor.handlers).toEqual([]);
+    });
+
+    it("should handle interceptors with handlers but no clear method", () => {
+      setupIDInterceptors(apiInstance);
+      
+      // Create mock interceptors with handlers but no clear method
+      const mockInterceptors = {
+        request: {
+          handlers: [
+            { fulfilled: jest.fn(), rejected: jest.fn() },
+            { fulfilled: jest.fn(), rejected: jest.fn() }
+          ]
+          // No clear method - should use fallback
+        },
+        response: {
+          handlers: [
+            { fulfilled: jest.fn(), rejected: jest.fn() }
+          ]
+          // No clear method - should use fallback
+        }
+      };
+      
+      (apiInstance as any).interceptors = mockInterceptors;
+      
+      removeIDInterceptors(apiInstance);
+      
+      // Should have cleared both handlers arrays using fallback
+      expect(mockInterceptors.request.handlers).toEqual([]);
+      expect(mockInterceptors.response.handlers).toEqual([]);
+    });
   });
 
   describe("getInterceptorStatus", () => {

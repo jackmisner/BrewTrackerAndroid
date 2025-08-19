@@ -243,6 +243,46 @@ describe("UnitContext", () => {
       );
       expect(result.current.formatValue(NaN, "kg", "weight")).toBe("0 kg");
     });
+
+    it("should handle invalid values gracefully in formatValue", () => {
+      const wrapper = createWrapper("metric");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+
+      // Test empty string
+      expect(result.current.formatValue("", "kg", "weight")).toBe("0 kg");
+    });
+
+    it("should apply specific precision rules for different measurement types", () => {
+      const wrapper = createWrapper("metric");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+
+      // Small weight in grams (< 10g) should use 1 decimal place
+      expect(result.current.formatValue(5.55, "g", "hop_weight")).toBe("5.5 g");
+
+      // Small weight in ounces (< 1oz) should use 2 decimal places
+      expect(result.current.formatValue(0.75, "oz", "hop_weight")).toBe("0.75 oz");
+
+      // Large weight in kg should use 1 decimal place when >= 1
+      expect(result.current.formatValue(2.333, "kg", "weight")).toBe("2.3 kg");
+
+      // Small weight in kg should use 2 decimal places when < 1
+      expect(result.current.formatValue(0.75, "kg", "weight")).toBe("0.75 kg");
+
+      // Large weight in lb should use 1 decimal place when >= 1
+      expect(result.current.formatValue(3.777, "lb", "weight")).toBe("3.8 lb");
+
+      // Small weight in lb should use 2 decimal places when < 1
+      expect(result.current.formatValue(0.5, "lb", "weight")).toBe("0.5 lb");
+
+      // Temperature should always use 1 decimal place
+      expect(result.current.formatValue(20.555, "c", "temperature")).toBe("20.6 c");
+
+      // Small volume should use 2 decimal places when < 1
+      expect(result.current.formatValue(0.5, "l", "volume")).toBe("0.5 l");
+
+      // Large volume should use 1 decimal place when >= 1
+      expect(result.current.formatValue(5.333, "l", "volume")).toBe("5.3 l");
+    });
   });
 
   describe("common units", () => {
@@ -369,6 +409,83 @@ describe("UnitContext", () => {
       expect(result_conv.unit).toBe("unknown");
       expect(consoleSpy).toHaveBeenCalledWith(
         "No conversion available from unknown to kg"
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it("should handle invalid string inputs in convertUnit", () => {
+      const wrapper = createWrapper("metric");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+
+      // Test invalid string input
+      const invalidConversion = result.current.convertUnit("invalid", "kg", "lb");
+      expect(invalidConversion.value).toBe(0);
+      expect(invalidConversion.unit).toBe("lb");
+
+      // Test empty string input
+      const emptyConversion = result.current.convertUnit("", "kg", "lb");
+      expect(emptyConversion.value).toBe(0);
+      expect(emptyConversion.unit).toBe("lb");
+
+      // Test NaN input
+      const nanConversion = result.current.convertUnit(NaN, "kg", "lb");
+      expect(nanConversion.value).toBe(0);
+      expect(nanConversion.unit).toBe("lb");
+    });
+
+    it("should handle additional weight conversions", () => {
+      const wrapper = createWrapper("metric");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+
+      // Test kg to g conversion
+      const kgToG = result.current.convertUnit(2, "kg", "g");
+      expect(kgToG.value).toBe(2000);
+      expect(kgToG.unit).toBe("g");
+
+      // Test g to kg conversion 
+      const gToKg = result.current.convertUnit(3000, "g", "kg");
+      expect(gToKg.value).toBe(3);
+      expect(gToKg.unit).toBe("kg");
+
+      // Test lb to oz conversion
+      const lbToOz = result.current.convertUnit(2, "lb", "oz");
+      expect(lbToOz.value).toBe(32);
+      expect(lbToOz.unit).toBe("oz");
+
+      // Test oz to lb conversion
+      const ozToLb = result.current.convertUnit(32, "oz", "lb");
+      expect(ozToLb.value).toBe(2);
+      expect(ozToLb.unit).toBe("lb");
+    });
+
+    it("should handle additional volume conversions", () => {
+      const wrapper = createWrapper("metric");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+
+      // Test ml to l conversion
+      const mlToL = result.current.convertUnit(2500, "ml", "l");
+      expect(mlToL.value).toBe(2.5);
+      expect(mlToL.unit).toBe("l");
+
+      // Test l to ml conversion
+      const lToMl = result.current.convertUnit(1.5, "l", "ml");
+      expect(lToMl.value).toBe(1500);
+      expect(lToMl.unit).toBe("ml");
+    });
+
+    it("should handle unsupported unit conversions with warning", () => {
+      const consoleSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+      const wrapper = createWrapper("metric");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+
+      // Attempt conversion between incompatible units
+      const invalidResult = result.current.convertUnit(100, "unknown_unit", "another_unit");
+
+      expect(invalidResult.value).toBe(100);
+      expect(invalidResult.unit).toBe("unknown_unit");
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "No conversion available from unknown_unit to another_unit"
       );
 
       consoleSpy.mockRestore();
@@ -534,6 +651,52 @@ describe("UnitContext", () => {
       expect(unitValues).toContain("g");
     });
 
+    it("should provide hop weight units with priority order", () => {
+      const imperialWrapper = createWrapper("imperial");
+      const { result: imperialResult } = renderHook(() => useUnits(), {
+        wrapper: imperialWrapper,
+      });
+
+      const hopUnits = imperialResult.current.getCommonUnits("hop_weight");
+      expect(hopUnits).toBeDefined();
+      expect(Array.isArray(hopUnits)).toBe(true);
+      expect(hopUnits.length).toBeGreaterThan(0);
+
+      // Imperial should prioritize oz first, then g
+      expect(hopUnits[0].value).toBe("oz");
+      expect(hopUnits[1].value).toBe("g");
+
+      const metricWrapper = createWrapper("metric");
+      const { result: metricResult } = renderHook(() => useUnits(), {
+        wrapper: metricWrapper,
+      });
+
+      const metricHopUnits = metricResult.current.getCommonUnits("hop_weight");
+      // Metric should prioritize g first, then oz
+      expect(metricHopUnits[0].value).toBe("g");
+      expect(metricHopUnits[1].value).toBe("oz");
+    });
+
+    it("should provide volume units with system preferences", () => {
+      const imperialWrapper = createWrapper("imperial");
+      const { result: imperialResult } = renderHook(() => useUnits(), {
+        wrapper: imperialWrapper,
+      });
+
+      const volumeUnits = imperialResult.current.getCommonUnits("volume");
+      expect(volumeUnits[0].value).toBe("gal");
+      expect(volumeUnits[1].value).toBe("qt");
+
+      const metricWrapper = createWrapper("metric");
+      const { result: metricResult } = renderHook(() => useUnits(), {
+        wrapper: metricWrapper,
+      });
+
+      const metricVolumeUnits = metricResult.current.getCommonUnits("volume");
+      expect(metricVolumeUnits[0].value).toBe("l");
+      expect(metricVolumeUnits[1].value).toBe("ml");
+    });
+
     it("should provide temperature units", () => {
       const imperialWrapper = createWrapper("imperial");
       const { result: imperialResult } = renderHook(() => useUnits(), {
@@ -601,6 +764,279 @@ describe("UnitContext", () => {
       expect(result.current.formatValue(20.555, "c", "temperature")).toBe(
         "20.6 c"
       );
+    });
+
+    it("should handle invalid temperature system conversion", () => {
+      const wrapper = createWrapper("imperial");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+
+      // Test conversion with invalid systems (should return original value)
+      const invalidConversion = result.current.convertTemperature(
+        75,
+        "invalid" as any,
+        "metric"
+      );
+      expect(invalidConversion).toBe(75);
+
+      const anotherInvalidConversion = result.current.convertTemperature(
+        75,
+        "imperial",
+        "invalid" as any
+      );
+      expect(anotherInvalidConversion).toBe(75);
+
+      // Test both systems invalid
+      const bothInvalidConversion = result.current.convertTemperature(
+        75,
+        "invalid" as any,
+        "also_invalid" as any
+      );
+      expect(bothInvalidConversion).toBe(75);
+    });
+
+    it("should handle temperature formatting with extreme precision values", () => {
+      const wrapper = createWrapper("imperial");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+
+      // Test with precision above 100 (should be clamped to 100)
+      const highPrecision = result.current.formatTemperature(75.123456789, "imperial", 150);
+      expect(highPrecision).toContain("75.123456789"); // Should preserve high precision
+
+      // Test with negative precision (should be clamped to 0)
+      const negativePrecision = result.current.formatTemperature(75.12345, "imperial", -5);
+      expect(negativePrecision).toBe("75°F");
+
+      // Test formatCurrentTemperature with extreme precision
+      const currentHighPrecision = result.current.formatCurrentTemperature(75.123456789, 150);
+      expect(currentHighPrecision).toContain("75.123456789");
+
+      const currentNegativePrecision = result.current.formatCurrentTemperature(75.12345, -5);
+      expect(currentNegativePrecision).toBe("75°F");
+    });
+  });
+
+  describe("AsyncStorage and API integration", () => {
+    it("should handle cached settings and background refresh", async () => {
+      // Mock cached settings in AsyncStorage
+      const cachedSettings = {
+        preferred_units: "metric",
+        other_setting: "value"
+      };
+      mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedSettings));
+      
+      const wrapper = createWrapper(); // No initial system to trigger loading
+      const { result } = renderHook(() => useUnits(), { wrapper });
+      
+      // Should start loading
+      expect(result.current.loading).toBe(true);
+      
+      // Wait for async operations to complete
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      });
+      
+      // Should use cached setting
+      expect(result.current.unitSystem).toBe("metric");
+      expect(result.current.loading).toBe(false);
+    });
+
+    it("should handle cache miss and fetch from API", async () => {
+      const ApiService = require("@services/api/apiService").default;
+      
+      // No cached settings
+      mockAsyncStorage.getItem.mockResolvedValue(null);
+      
+      // Mock API response
+      ApiService.user.getSettings.mockResolvedValue({
+        data: {
+          settings: {
+            preferred_units: "metric"
+          }
+        }
+      });
+      
+      const wrapper = createWrapper(); // No initial system
+      const { result } = renderHook(() => useUnits(), { wrapper });
+      
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      });
+      
+      expect(result.current.unitSystem).toBe("metric");
+      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
+        "user_settings",
+        JSON.stringify({ preferred_units: "metric" })
+      );
+    });
+
+    it("should handle background settings refresh with different units", async () => {
+      const ApiService = require("@services/api/apiService").default;
+      
+      // Mock cached settings
+      const cachedSettings = { preferred_units: "imperial" };
+      mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedSettings));
+      
+      // Mock fresh API response with different units
+      ApiService.user.getSettings.mockResolvedValue({
+        data: {
+          settings: {
+            preferred_units: "metric"
+          }
+        }
+      });
+      
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useUnits(), { wrapper });
+      
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
+      
+      // Should eventually use fresh settings
+      expect(result.current.unitSystem).toBe("metric");
+      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
+        "user_settings",
+        JSON.stringify({ preferred_units: "metric" })
+      );
+    });
+
+    it("should handle background fetch errors gracefully", async () => {
+      const ApiService = require("@services/api/apiService").default;
+      const consoleSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+      
+      // Mock cached settings
+      const cachedSettings = { preferred_units: "imperial" };
+      mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedSettings));
+      
+      // Mock API error for background fetch
+      ApiService.user.getSettings.mockRejectedValue(new Error("Network error"));
+      
+      const wrapper = createWrapper();
+      const { result } = renderHook(() => useUnits(), { wrapper });
+      
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      });
+      
+      // Should still use cached settings despite background error
+      expect(result.current.unitSystem).toBe("imperial");
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Background settings fetch failed:",
+        expect.any(Error)
+      );
+      
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe("updateUnitSystem advanced scenarios", () => {
+    it("should handle early return when system is the same", async () => {
+      const ApiService = require("@services/api/apiService").default;
+      
+      const wrapper = createWrapper("metric");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+      
+      // Try to update to the same system
+      await act(async () => {
+        await result.current.updateUnitSystem("metric");
+      });
+      
+      // Should not call API since no change needed
+      expect(ApiService.user.updateSettings).not.toHaveBeenCalled();
+    });
+
+    it("should handle cache update after successful API call", async () => {
+      const ApiService = require("@services/api/apiService").default;
+      
+      // Mock existing cache
+      const existingCache = { preferred_units: "imperial", other_setting: "value" };
+      mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(existingCache));
+      
+      ApiService.user.updateSettings.mockResolvedValue({});
+      
+      const wrapper = createWrapper("imperial");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+      
+      await act(async () => {
+        await result.current.updateUnitSystem("metric");
+      });
+      
+      expect(result.current.unitSystem).toBe("metric");
+      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
+        "user_settings",
+        JSON.stringify({ preferred_units: "metric", other_setting: "value" })
+      );
+    });
+
+    it("should handle updateUnitSystem error and revert", async () => {
+      const ApiService = require("@services/api/apiService").default;
+      const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+      
+      ApiService.user.updateSettings.mockRejectedValue(new Error("API Error"));
+      
+      const wrapper = createWrapper("imperial");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+      
+      await act(async () => {
+        await result.current.updateUnitSystem("metric");
+      });
+      
+      // Should revert to original system on error
+      expect(result.current.unitSystem).toBe("imperial");
+      expect(result.current.error).toBe("Failed to save unit preference");
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to update unit system:",
+        expect.any(Error)
+      );
+      
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe("additional unit conversions", () => {
+    it("should handle kg to lb conversion", () => {
+      const wrapper = createWrapper("imperial");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+
+      const conversion = result.current.convertUnit(1, "kg", "lb");
+      expect(conversion.value).toBeCloseTo(2.20462, 4);
+      expect(conversion.unit).toBe("lb");
+    });
+
+    it("should handle gal to l conversion", () => {
+      const wrapper = createWrapper("metric");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+
+      const conversion = result.current.convertUnit(1, "gal", "l");
+      expect(conversion.value).toBeCloseTo(3.78541, 4);
+      expect(conversion.unit).toBe("l");
+    });
+
+    it("should handle l to gal conversion", () => {
+      const wrapper = createWrapper("imperial");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+
+      const conversion = result.current.convertUnit(3.78541, "l", "gal");
+      expect(conversion.value).toBeCloseTo(1, 4);
+      expect(conversion.unit).toBe("gal");
+    });
+
+    it("should handle f to c temperature conversion", () => {
+      const wrapper = createWrapper("metric");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+
+      const conversion = result.current.convertUnit(32, "f", "c");
+      expect(conversion.value).toBeCloseTo(0, 1);
+      expect(conversion.unit).toBe("c");
+    });
+
+    it("should handle c to f temperature conversion", () => {
+      const wrapper = createWrapper("imperial");
+      const { result } = renderHook(() => useUnits(), { wrapper });
+
+      const conversion = result.current.convertUnit(0, "c", "f");
+      expect(conversion.value).toBeCloseTo(32, 1);
+      expect(conversion.unit).toBe("f");
     });
   });
 });
