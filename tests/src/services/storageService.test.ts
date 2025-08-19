@@ -511,7 +511,7 @@ describe("BeerXMLService", () => {
       const mockAlbum = { id: "album-123", title: "TestAlbum" };
       
       // Mock permissions as granted
-      mockMediaLibrary.getPermissionsAsync.mockResolvedValue({
+      mockMediaLibrary.requestPermissionsAsync.mockResolvedValue({
         status: MediaLibrary.PermissionStatus.GRANTED,
         granted: true,
         canAskAgain: true,
@@ -530,6 +530,7 @@ describe("BeerXMLService", () => {
       );
       
       expect(result.success).toBe(true);
+      expect(mockMediaLibrary.requestPermissionsAsync).toHaveBeenCalled();
       expect(mockMediaLibrary.getAlbumAsync).toHaveBeenCalledWith("TestAlbum");
       expect(mockMediaLibrary.addAssetsToAlbumAsync).toHaveBeenCalledWith(
         [mockAsset],
@@ -546,7 +547,7 @@ describe("BeerXMLService", () => {
       const mockAsset = { uri: "media://test-asset", id: "asset-123" };
       
       // Mock permissions as granted
-      mockMediaLibrary.getPermissionsAsync.mockResolvedValue({
+      mockMediaLibrary.requestPermissionsAsync.mockResolvedValue({
         status: MediaLibrary.PermissionStatus.GRANTED,
         granted: true,
         canAskAgain: true,
@@ -565,6 +566,7 @@ describe("BeerXMLService", () => {
       );
       
       expect(result.success).toBe(true);
+      expect(mockMediaLibrary.requestPermissionsAsync).toHaveBeenCalled();
       expect(mockMediaLibrary.getAlbumAsync).toHaveBeenCalledWith("NewAlbum");
       expect(mockMediaLibrary.createAlbumAsync).toHaveBeenCalledWith(
         "NewAlbum",

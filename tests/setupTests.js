@@ -430,6 +430,14 @@ const SUPPRESSED_ERROR_PATTERNS = [
   // UnitContext test-related errors
   /Failed to load unit preferences, using default:/,
   /Cannot read properties of undefined \(reading 'data'\)/,
+  /Background settings fetch failed:/,
+  // Profile screen test errors
+  /Failed to open in-app browser:/,
+  // Password reset test errors
+  /Password reset failed:/,
+  // Storage permissions test errors
+  /Error requesting media permissions:/,
+  /Permission check failed/,
 ];
 
 const SUPPRESSED_WARN_PATTERNS = [
@@ -443,6 +451,7 @@ const SUPPRESSED_WARN_PATTERNS = [
   /VirtualizedLists should never be nested/,
   // UnitContext test warnings
   /Failed to load unit preferences, using default:/,
+  /Background settings fetch failed:/,
 ];
 
 console.error = (...args) => {
