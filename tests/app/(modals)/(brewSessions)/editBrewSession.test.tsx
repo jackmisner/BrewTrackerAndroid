@@ -169,9 +169,6 @@ describe("EditBrewSessionScreen", () => {
       // Verify loading state elements are present
       expect(getByText("Loading brew session...")).toBeTruthy();
       
-      // Verify ActivityIndicator or spinner is present
-      const loadingContainer = getByText("Loading brew session...").parent;
-      expect(loadingContainer).toBeTruthy();
     });
 
     it("should display error message and retry button when error occurs", () => {
@@ -452,27 +449,24 @@ describe("EditBrewSessionScreen", () => {
 
   describe("Date Handling", () => {
     it("should handle date picker state", () => {
-      expect(() => {
-        render(<EditBrewSessionScreen />);
-      }).not.toThrow();
-    });
-
-    it("should handle date formatting", () => {
-      expect(() => {
-        render(<EditBrewSessionScreen />);
-      }).not.toThrow();
-    });
-
-    it("should handle date selection", () => {
-      expect(() => {
-        render(<EditBrewSessionScreen />);
-      }).not.toThrow();
-    });
-
-    it("should handle multiple date fields", () => {
-      expect(() => {
-        render(<EditBrewSessionScreen />);
-      }).not.toThrow();
+      const mockUseQuery = require("@tanstack/react-query").useQuery;
+      mockUseQuery.mockReturnValue({
+        data: { 
+          data: { 
+            id: "123", 
+            name: "Test",
+            fermentation_start_date: "2024-01-15"
+          }
+        },
+        isLoading: false,
+        error: null,
+      });
+      
+      const { getByText } = render(<EditBrewSessionScreen />);
+      
+      // Verify date is formatted for display
+      const formattedDate = new Date("2024-01-15").toLocaleDateString();
+      expect(getByText(formattedDate)).toBeTruthy();
     });
   });
 

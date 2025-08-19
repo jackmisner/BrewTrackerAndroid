@@ -33,12 +33,12 @@ jest.mock("react-native", () => ({
   TextInput: (props: any) => {
     const React = require("react");
     const [value, setValue] = React.useState(props.value || "");
-    
+
     React.useEffect(() => {
       setValue(props.value || "");
     }, [props.value]);
-    
-    return React.createElement("TextInput", { 
+
+    return React.createElement("TextInput", {
       ...props,
       value: value,
       onChangeText: (text: string) => {
@@ -47,7 +47,7 @@ jest.mock("react-native", () => ({
           props.onChangeText(text);
         }
       },
-      testID: props.testID || props.placeholder || "text-input"
+      testID: props.testID || props.placeholder || "text-input",
     });
   },
   KeyboardAvoidingView: ({ children, ...props }: any) => {
@@ -62,7 +62,8 @@ jest.mock("react-native", () => ({
   Alert: { alert: jest.fn() },
   StyleSheet: {
     create: (styles: any) => styles,
-    flatten: (styles: any) => Array.isArray(styles) ? Object.assign({}, ...styles) : styles,
+    flatten: (styles: any) =>
+      Array.isArray(styles) ? Object.assign({}, ...styles) : styles,
   },
 }));
 
@@ -77,7 +78,12 @@ jest.mock("@react-native-community/datetimepicker", () => {
 jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: ({ name, size, color, ...props }: any) => {
     const React = require("react");
-    return React.createElement("MaterialIcons", { name, size, color, ...props });
+    return React.createElement("MaterialIcons", {
+      name,
+      size,
+      color,
+      ...props,
+    });
   },
 }));
 
@@ -231,9 +237,7 @@ describe("EditFermentationEntryScreen", () => {
         },
       });
 
-      expect(() =>
-        render(<EditFermentationEntryScreen />)
-      ).not.toThrow();
+      expect(() => render(<EditFermentationEntryScreen />)).not.toThrow();
     });
 
     it("should render basic screen structure", () => {
@@ -270,15 +274,18 @@ describe("EditFermentationEntryScreen", () => {
     });
 
     it("should handle API errors gracefully", async () => {
-      mockApiService.brewSessions.getById.mockRejectedValue(
-        new Error("Failed to fetch session")
-      );
-
+      const mockUseQuery = require("@tanstack/react-query").useQuery;
+      mockUseQuery.mockReturnValue({
+        data: null,
+        isLoading: false,
+        error: new Error("Failed to fetch session"),
+      });
       const { getByText } = render(<EditFermentationEntryScreen />);
-
-      // Should not crash and should render some error state
       await waitFor(() => {
+        // Title still renders in error state header
         expect(getByText("Edit Fermentation Entry")).toBeTruthy();
+        // And the error body is present
+        expect(getByText("Entry Not Found")).toBeTruthy();
       });
     });
   });
@@ -358,9 +365,7 @@ describe("EditFermentationEntryScreen", () => {
       });
 
       // Render the component
-      expect(() =>
-        render(<EditFermentationEntryScreen />)
-      ).not.toThrow();
+      expect(() => render(<EditFermentationEntryScreen />)).not.toThrow();
 
       // Should have router methods available
       expect(mockRouter.back).toBeDefined();
@@ -397,7 +402,7 @@ describe("EditFermentationEntryScreen", () => {
         isLoading: false,
         error: null,
       });
-      
+
       const mockMutate = jest.fn();
       const mockUseMutation = require("@tanstack/react-query").useMutation;
       mockUseMutation.mockReturnValue({

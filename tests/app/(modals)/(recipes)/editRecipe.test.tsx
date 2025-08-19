@@ -20,7 +20,7 @@ jest.mock("expo-router", () => ({
     replace: jest.fn(),
   },
   useLocalSearchParams: jest.fn(() => ({
-    recipeId: "test-recipe-id",
+    recipe_id: "test-recipe-id",
   })),
 }));
 

@@ -151,6 +151,9 @@ jest.mock("@styles/modals/editBrewSessionStyles", () => ({
 }));
 
 describe("AddFermentationEntryScreen", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
   describe("Basic Rendering", () => {
     it("should render without crashing", () => {
       expect(() => {
