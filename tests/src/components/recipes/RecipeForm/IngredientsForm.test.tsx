@@ -112,7 +112,9 @@ jest.mock(
     const { TEST_IDS } = require("@src/constants/testIDs");
     return {
       BrewingMetricsDisplay: () => (
-        <Text testID={TEST_IDS.components.brewingMetricsDisplay}>BrewingMetricsDisplay</Text>
+        <Text testID={TEST_IDS.components.brewingMetricsDisplay}>
+          BrewingMetricsDisplay
+        </Text>
       ),
     };
   }
@@ -576,8 +578,6 @@ describe("IngredientsForm", () => {
       expect(getByText("Pale Malt 2-Row")).toBeTruthy();
       expect(getByText("Cascade")).toBeTruthy();
     });
-
-
   });
 
   describe("Display mappings", () => {
@@ -702,7 +702,9 @@ describe("IngredientsForm", () => {
 
       // BrewingMetricsDisplay should be rendered with the metrics data
       // Verify the mocked component is actually present in the DOM
-      expect(getByTestId(TEST_IDS.components.brewingMetricsDisplay)).toBeTruthy();
+      expect(
+        getByTestId(TEST_IDS.components.brewingMetricsDisplay)
+      ).toBeTruthy();
     });
 
     it("should handle metrics loading state", () => {

@@ -1,10 +1,10 @@
 /**
  * Login Screen Styles
- * 
+ *
  * StyleSheet definitions for the login authentication screen.
  * Provides a clean, professional login interface with proper spacing,
  * typography, and interactive elements.
- * 
+ *
  * Features:
  * - Responsive layout with keyboard handling
  * - Consistent form input styling

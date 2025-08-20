@@ -67,10 +67,18 @@ jest.mock("@styles/tabs/recipesStyles", () => ({
     activeTab: { borderBottomWidth: 2 },
     tabText: { fontSize: 16 },
     activeTabText: { fontWeight: "bold" },
-    searchContainer: { flexDirection: "row", alignItems: "center", padding: 12 },
+    searchContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 12,
+    },
     searchInput: { flex: 1, marginHorizontal: 8 },
     floatingButton: { position: "absolute", right: 16, bottom: 16 },
-    loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
     loadingText: { marginTop: 8 },
     errorContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
     errorText: { fontSize: 18, fontWeight: "bold", marginTop: 16 },
@@ -90,16 +98,21 @@ jest.mock("@styles/tabs/recipesStyles", () => ({
     emptyState: { flex: 1, justifyContent: "center", alignItems: "center" },
     emptyTitle: { fontSize: 18, fontWeight: "bold", marginTop: 16 },
     emptySubtitle: { fontSize: 14, textAlign: "center", marginTop: 8 },
-    createButton: { flexDirection: "row", alignItems: "center", padding: 12, marginTop: 16 },
+    createButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 12,
+      marginTop: 16,
+    },
     createButtonText: { color: "#fff", marginLeft: 8 },
     listContainer: { paddingHorizontal: 16 },
   })),
 }));
 
 jest.mock("@utils/formatUtils", () => ({
-  formatABV: jest.fn((value) => value ? `${value.toFixed(1)}%` : "—"),
-  formatIBU: jest.fn((value) => value ? value.toFixed(0) : "—"),
-  formatSRM: jest.fn((value) => value ? value.toFixed(1) : "—"),
+  formatABV: jest.fn(value => (value ? `${value.toFixed(1)}%` : "—")),
+  formatIBU: jest.fn(value => (value ? value.toFixed(0) : "—")),
+  formatSRM: jest.fn(value => (value ? value.toFixed(1) : "—")),
 }));
 
 jest.mock("@src/components/ui/ContextMenu/RecipeContextMenu", () => ({
@@ -144,7 +157,7 @@ describe("RecipesScreen", () => {
     jest.clearAllMocks();
     testUtils.resetCounters();
     mockUseLocalSearchParams.mockReturnValue({});
-    
+
     // Reset the useQuery mock to return default values for both queries
     mockUseQuery.mockImplementation(() => ({
       data: { recipes: [] },
@@ -168,7 +181,7 @@ describe("RecipesScreen", () => {
 
     it("should switch to public tab when URL parameter is set", () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "public" });
-      
+
       const { getByText } = render(<RecipesScreen />);
 
       expect(getByText("Public")).toBeTruthy();
@@ -176,7 +189,7 @@ describe("RecipesScreen", () => {
 
     it("should navigate to my recipes tab when pressed from public tab", () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "public" });
-      
+
       const { getByText } = render(<RecipesScreen />);
       const myRecipesTab = getByText("My Recipes");
 
@@ -237,7 +250,7 @@ describe("RecipesScreen", () => {
       const searchInput = getByPlaceholderText("Search public recipes...");
 
       fireEvent.changeText(searchInput, "IPA");
-      
+
       // Simulate clear button press by setting search to empty
       fireEvent.changeText(searchInput, "");
 
@@ -331,7 +344,11 @@ describe("RecipesScreen", () => {
       const { getByText } = render(<RecipesScreen />);
 
       expect(getByText("Backend Not Available")).toBeTruthy();
-      expect(getByText("Recipes require a backend connection. The app will show empty states until the backend is running.")).toBeTruthy();
+      expect(
+        getByText(
+          "Recipes require a backend connection. The app will show empty states until the backend is running."
+        )
+      ).toBeTruthy();
     });
 
     it("should allow retry when error occurs", () => {
@@ -446,18 +463,22 @@ describe("RecipesScreen", () => {
 
     it("should handle context menu logic", () => {
       const mockShowMenu = jest.fn();
-      require("@src/components/ui/ContextMenu/BaseContextMenu").useContextMenu.mockReturnValue({
-        visible: false,
-        selectedItem: null,
-        position: { x: 0, y: 0 },
-        showMenu: mockShowMenu,
-        hideMenu: jest.fn(),
-      });
+      require("@src/components/ui/ContextMenu/BaseContextMenu").useContextMenu.mockReturnValue(
+        {
+          visible: false,
+          selectedItem: null,
+          position: { x: 0, y: 0 },
+          showMenu: mockShowMenu,
+          hideMenu: jest.fn(),
+        }
+      );
 
       const { queryByText } = render(<RecipesScreen />);
 
       // Verify context menu hook was called and component renders correctly
-      expect(require("@src/components/ui/ContextMenu/BaseContextMenu").useContextMenu).toHaveBeenCalled();
+      expect(
+        require("@src/components/ui/ContextMenu/BaseContextMenu").useContextMenu
+      ).toHaveBeenCalled();
       expect(queryByText("My Recipes")).toBeTruthy();
     });
   });
@@ -471,7 +492,9 @@ describe("RecipesScreen", () => {
       const { getByText } = render(<RecipesScreen />);
 
       expect(getByText("No Recipes Yet")).toBeTruthy();
-      expect(getByText("Create your first recipe to start brewing!")).toBeTruthy();
+      expect(
+        getByText("Create your first recipe to start brewing!")
+      ).toBeTruthy();
       expect(getByText("Create Recipe")).toBeTruthy();
     });
 
@@ -490,7 +513,9 @@ describe("RecipesScreen", () => {
 
       fireEvent.press(createButton);
 
-      expect(mockRouter.push).toHaveBeenCalledWith("/(modals)/(recipes)/createRecipe");
+      expect(mockRouter.push).toHaveBeenCalledWith(
+        "/(modals)/(recipes)/createRecipe"
+      );
     });
   });
 
@@ -525,7 +550,7 @@ describe("RecipesScreen", () => {
       mockUseQuery.mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
-          // First query (my recipes) 
+          // First query (my recipes)
           return {
             data: { recipes: [] },
             isLoading: false,
@@ -623,7 +648,10 @@ describe("RecipesScreen", () => {
     });
 
     it("should handle anonymous user display logic", () => {
-      const anonymousRecipe = { ...mockPublicRecipe, username: "Anonymous User" };
+      const anonymousRecipe = {
+        ...mockPublicRecipe,
+        username: "Anonymous User",
+      };
       let callCount = 0;
       mockUseQuery.mockImplementation(() => {
         callCount++;
@@ -666,15 +694,19 @@ describe("RecipesScreen", () => {
     };
 
     beforeEach(() => {
-      require("@src/components/ui/ContextMenu/RecipeContextMenu").createDefaultRecipeActions
-        .mockReturnValue(mockActions);
+      require("@src/components/ui/ContextMenu/RecipeContextMenu").createDefaultRecipeActions.mockReturnValue(
+        mockActions
+      );
     });
 
     it("should create context menu actions with correct handlers", () => {
       render(<RecipesScreen />);
 
-      expect(require("@src/components/ui/ContextMenu/RecipeContextMenu").createDefaultRecipeActions)
-        .toHaveBeenCalledWith(expect.objectContaining({
+      expect(
+        require("@src/components/ui/ContextMenu/RecipeContextMenu")
+          .createDefaultRecipeActions
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
           onView: expect.any(Function),
           onEdit: expect.any(Function),
           onClone: expect.any(Function),
@@ -682,7 +714,8 @@ describe("RecipesScreen", () => {
           onStartBrewing: expect.any(Function),
           onShare: expect.any(Function),
           onDelete: expect.any(Function),
-        }));
+        })
+      );
     });
   });
 

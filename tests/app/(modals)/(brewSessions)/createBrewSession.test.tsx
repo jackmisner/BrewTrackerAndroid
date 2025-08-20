@@ -52,7 +52,9 @@ jest.mock("@services/api/apiService", () => ({
     brewSessions: {
       create: jest.fn(),
     },
-    handleApiError: jest.fn((error) => ({ message: error.message || "Unknown error" })),
+    handleApiError: jest.fn(error => ({
+      message: error.message || "Unknown error",
+    })),
   },
 }));
 
@@ -67,31 +69,69 @@ jest.mock("@contexts/UnitContext", () => ({
 jest.mock("@styles/modals/createBrewSessionStyles", () => ({
   createBrewSessionStyles: jest.fn(() => ({
     container: { flex: 1 },
-    loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
     loadingText: { marginTop: 8 },
     errorContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
     errorText: { fontSize: 18, fontWeight: "bold", marginTop: 16 },
     errorSubtext: { fontSize: 14, textAlign: "center", marginTop: 8 },
     retryButton: { padding: 12, borderRadius: 6, marginTop: 16 },
     retryButtonText: { color: "#fff" },
-    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16 },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: 16,
+    },
     headerButton: { padding: 8 },
-    headerTitle: { fontSize: 20, fontWeight: "bold", flex: 1, textAlign: "center" },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: "bold",
+      flex: 1,
+      textAlign: "center",
+    },
     saveButton: { backgroundColor: "#007AFF", borderRadius: 8 },
     saveButtonDisabled: { opacity: 0.5 },
     saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
     content: { flex: 1 },
-    promptContainer: { backgroundColor: "#fff", padding: 16, marginBottom: 16, borderRadius: 8 },
-    promptHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
+    promptContainer: {
+      backgroundColor: "#fff",
+      padding: 16,
+      marginBottom: 16,
+      borderRadius: 8,
+    },
+    promptHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 8,
+    },
     promptTitle: { fontSize: 16, fontWeight: "bold", marginLeft: 8 },
     promptText: { fontSize: 14, lineHeight: 20, marginBottom: 12 },
     unitButtonContainer: { flexDirection: "row", gap: 8 },
-    unitButton: { flex: 1, padding: 12, borderRadius: 8, borderWidth: 1, alignItems: "center" },
+    unitButton: {
+      flex: 1,
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      alignItems: "center",
+    },
     unitButtonSelected: { backgroundColor: "#007AFF" },
     unitButtonText: { fontSize: 14, fontWeight: "600" },
     unitButtonTextSelected: { color: "#fff" },
-    recipePreview: { backgroundColor: "#f9f9f9", padding: 16, marginBottom: 16, borderRadius: 8 },
-    recipeHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
+    recipePreview: {
+      backgroundColor: "#f9f9f9",
+      padding: 16,
+      marginBottom: 16,
+      borderRadius: 8,
+    },
+    recipeHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 8,
+    },
     recipeTitle: { fontSize: 18, fontWeight: "bold", marginLeft: 8 },
     recipeStyle: { fontSize: 14, color: "#666", marginBottom: 8 },
     recipeDescription: { fontSize: 14, marginBottom: 12 },
@@ -104,9 +144,23 @@ jest.mock("@styles/modals/createBrewSessionStyles", () => ({
     sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 16 },
     formGroup: { marginBottom: 16 },
     label: { fontSize: 14, fontWeight: "600", marginBottom: 8 },
-    textInput: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, fontSize: 16 },
+    textInput: {
+      borderWidth: 1,
+      borderColor: "#ddd",
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 16,
+    },
     textArea: { height: 80, textAlignVertical: "top" },
-    datePickerButton: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 },
+    datePickerButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderWidth: 1,
+      borderColor: "#ddd",
+      borderRadius: 8,
+      padding: 12,
+    },
     datePickerText: { fontSize: 16 },
     statusContainer: { flexDirection: "row", alignItems: "center" },
     statusText: { fontSize: 14, color: "#666", marginLeft: 8 },
@@ -115,10 +169,10 @@ jest.mock("@styles/modals/createBrewSessionStyles", () => ({
 }));
 
 jest.mock("@utils/formatUtils", () => ({
-  formatGravity: jest.fn((value) => value ? value.toFixed(3) : "—"),
-  formatABV: jest.fn((value) => value ? `${value.toFixed(1)}%` : "—"),
-  formatIBU: jest.fn((value) => value ? Math.round(value).toString() : "—"),
-  formatSRM: jest.fn((value) => value ? value.toFixed(1) : "—"),
+  formatGravity: jest.fn(value => (value ? value.toFixed(3) : "—")),
+  formatABV: jest.fn(value => (value ? `${value.toFixed(1)}%` : "—")),
+  formatIBU: jest.fn(value => (value ? Math.round(value).toString() : "—")),
+  formatSRM: jest.fn(value => (value ? value.toFixed(1) : "—")),
 }));
 
 jest.mock("@react-native-community/datetimepicker", () => "DateTimePicker");
@@ -175,7 +229,7 @@ describe("CreateBrewSessionScreen", () => {
     testUtils.resetCounters();
     mockUseLocalSearchParams.mockReturnValue({ recipeId: "test-recipe-1" });
     mockUseQueryClient.mockReturnValue(mockQueryClient);
-    
+
     // Reset unit context to imperial
     require("@contexts/UnitContext").useUnits.mockReturnValue({
       unitSystem: "imperial",
@@ -183,7 +237,7 @@ describe("CreateBrewSessionScreen", () => {
       volume: "gal",
       temperature: "F",
     });
-    
+
     // Mock successful recipe fetch
     mockUseQuery.mockReturnValue({
       data: { data: mockRecipe },
@@ -202,7 +256,7 @@ describe("CreateBrewSessionScreen", () => {
   describe("route parameters", () => {
     it("should handle missing recipeId parameter", () => {
       mockUseLocalSearchParams.mockReturnValue({});
-      
+
       render(<CreateBrewSessionScreen />);
 
       expect(require("react-native").Alert.alert).toHaveBeenCalledWith(
@@ -213,8 +267,10 @@ describe("CreateBrewSessionScreen", () => {
     });
 
     it("should handle array recipeId parameter", () => {
-      mockUseLocalSearchParams.mockReturnValue({ recipeId: ["test-recipe-1", "extra"] });
-      
+      mockUseLocalSearchParams.mockReturnValue({
+        recipeId: ["test-recipe-1", "extra"],
+      });
+
       render(<CreateBrewSessionScreen />);
 
       // Should use the first element of the array
@@ -295,8 +351,12 @@ describe("CreateBrewSessionScreen", () => {
     it("should display recipe metrics", () => {
       render(<CreateBrewSessionScreen />);
 
-      expect(require("@utils/formatUtils").formatGravity).toHaveBeenCalledWith(1.065);
-      expect(require("@utils/formatUtils").formatGravity).toHaveBeenCalledWith(1.012);
+      expect(require("@utils/formatUtils").formatGravity).toHaveBeenCalledWith(
+        1.065
+      );
+      expect(require("@utils/formatUtils").formatGravity).toHaveBeenCalledWith(
+        1.012
+      );
       expect(require("@utils/formatUtils").formatABV).toHaveBeenCalledWith(6.9);
       expect(require("@utils/formatUtils").formatIBU).toHaveBeenCalledWith(65);
       expect(require("@utils/formatUtils").formatSRM).toHaveBeenCalledWith(6.5);
@@ -331,7 +391,9 @@ describe("CreateBrewSessionScreen", () => {
       const { getByText } = render(<CreateBrewSessionScreen />);
 
       expect(getByText("Temperature Unit Preference")).toBeTruthy();
-      expect(getByText(/This recipe uses Fahrenheit temperatures/)).toBeTruthy();
+      expect(
+        getByText(/This recipe uses Fahrenheit temperatures/)
+      ).toBeTruthy();
     });
 
     it("should allow user to select their preferred unit", () => {
@@ -398,7 +460,7 @@ describe("CreateBrewSessionScreen", () => {
   describe("form validation", () => {
     beforeEach(() => {
       // Clear Alert.alert mock before each test
-       jest.mocked(Alert.alert).mockClear();
+      jest.mocked(Alert.alert).mockClear();
     });
 
     it("should show error when session name is empty", async () => {
@@ -410,19 +472,24 @@ describe("CreateBrewSessionScreen", () => {
         error: null,
       });
 
-      const { getByText, getByPlaceholderText } = render(<CreateBrewSessionScreen />);
-      
+      const { getByText, getByPlaceholderText } = render(
+        <CreateBrewSessionScreen />
+      );
+
       // Clear the session name field to trigger validation
       const nameInput = getByPlaceholderText("Enter session name");
       fireEvent.changeText(nameInput, "   "); // Use spaces to trigger trim() validation
-      
+
       // Press the submit button
       const submitButton = getByText("Start");
       fireEvent.press(submitButton);
-      
+
       // Wait for validation alert to appear
       await waitFor(() => {
-        expect(Alert.alert).toHaveBeenCalledWith("Error", "Session name is required");
+        expect(Alert.alert).toHaveBeenCalledWith(
+          "Error",
+          "Session name is required"
+        );
       });
     });
 
@@ -434,7 +501,7 @@ describe("CreateBrewSessionScreen", () => {
       });
 
       const { queryByText } = render(<CreateBrewSessionScreen />);
-      
+
       // Verify component handles missing recipe data gracefully
       expect(queryByText("Failed to Load Recipe")).toBeTruthy();
       expect(queryByText("Recipe not found")).toBeTruthy();
@@ -452,8 +519,10 @@ describe("CreateBrewSessionScreen", () => {
         error: null,
       });
 
-      const { getByText, getByPlaceholderText } = render(<CreateBrewSessionScreen />);
-      
+      const { getByText, getByPlaceholderText } = render(
+        <CreateBrewSessionScreen />
+      );
+
       // Fill out form
       const nameInput = getByPlaceholderText("Enter session name");
       fireEvent.changeText(nameInput, "Test Brew Session");
@@ -489,7 +558,7 @@ describe("CreateBrewSessionScreen", () => {
 
     it("should handle successful creation", () => {
       const mockMutate = jest.fn();
-      
+
       mockUseMutation.mockReturnValue({
         mutate: mockMutate,
         isPending: false,
@@ -507,7 +576,7 @@ describe("CreateBrewSessionScreen", () => {
 
     it("should handle creation error", () => {
       const mockMutate = jest.fn();
-      
+
       mockUseMutation.mockReturnValue({
         mutate: mockMutate,
         isPending: false,
@@ -527,10 +596,10 @@ describe("CreateBrewSessionScreen", () => {
   describe("navigation", () => {
     it("should navigate back when cancel button is pressed", () => {
       const { getByText } = render(<CreateBrewSessionScreen />);
-      
+
       // Find cancel button through header
       const header = getByText("Start Brew Session").parent;
-      
+
       expect(mockRouter.back).toBeDefined();
     });
   });
@@ -541,14 +610,14 @@ describe("CreateBrewSessionScreen", () => {
 
       const today = new Date();
       const expectedDate = today.toLocaleDateString();
-      
+
       // Date should be set to today by default
       expect(getByText(expectedDate)).toBeTruthy();
     });
 
     it("should handle date picker changes", () => {
       const { queryByText } = render(<CreateBrewSessionScreen />);
-      
+
       // Verify component handles date picker changes correctly
       expect(queryByText("Start Brew Session")).toBeTruthy();
       // Component should render date handling functionality without errors
@@ -559,7 +628,7 @@ describe("CreateBrewSessionScreen", () => {
   describe("keyboard avoiding behavior", () => {
     it("should handle keyboard on Android", () => {
       require("react-native").Platform.OS = "android";
-      
+
       const { queryByText } = render(<CreateBrewSessionScreen />);
 
       // Verify component renders correctly with Android keyboard configuration
@@ -571,7 +640,10 @@ describe("CreateBrewSessionScreen", () => {
     it("should use theme colors correctly", () => {
       render(<CreateBrewSessionScreen />);
 
-      expect(require("@styles/modals/createBrewSessionStyles").createBrewSessionStyles).toHaveBeenCalledWith(mockTheme);
+      expect(
+        require("@styles/modals/createBrewSessionStyles")
+          .createBrewSessionStyles
+      ).toHaveBeenCalledWith(mockTheme);
     });
   });
 
@@ -584,8 +656,10 @@ describe("CreateBrewSessionScreen", () => {
         error: null,
       });
 
-      const { getByText, getByPlaceholderText } = render(<CreateBrewSessionScreen />);
-      
+      const { getByText, getByPlaceholderText } = render(
+        <CreateBrewSessionScreen />
+      );
+
       // Add whitespace to inputs
       const nameInput = getByPlaceholderText("Enter session name");
       fireEvent.changeText(nameInput, "  Test Session  ");

@@ -1,9 +1,9 @@
 /**
  * API Type Definitions
- * 
+ *
  * TypeScript definitions for all API request and response structures.
  * Defines the contract between the mobile app and the Flask backend API.
- * 
+ *
  * Key Types:
  * - API response wrappers with success/error states
  * - Request/response types for all endpoints

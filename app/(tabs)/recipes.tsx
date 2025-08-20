@@ -1,20 +1,18 @@
 /**
  * Recipes Tab Screen
- * 
- * Main recipes listing screen that displays all user recipes with search, filter,
- * and sort capabilities. Provides recipe management functionality including creation,
- * viewing, editing, and deletion of recipes.
- * 
+ *
+ * Main recipes listing screen that displays user and public recipes with search.
+ * Provides recipe management navigation including creation and viewing; edit/delete
+ * are currently routed via context menu with placeholder actions where noted.
+ *
  * Features:
- * - Real-time recipe search with debounced input
+ * - Real-time recipe search
  * - Pull-to-refresh functionality
- * - Recipe context menu (view, edit, delete, create brew session)
- * - Sort by name, creation date, or batch size
- * - Filter by beer style or favorites
+ * - Recipe context menu (view, edit, clone/beerXML/share/delete as placeholders, create brew session)
  * - Recipe cards with key metrics (OG, FG, ABV, IBU, SRM)
  * - Empty state handling with call-to-action
  * - Error state handling with retry functionality
- * 
+ *
  * Navigation:
  * - Tap recipe: View recipe details
  * - Long press: Show context menu

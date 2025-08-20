@@ -1,11 +1,11 @@
 /**
  * @fileoverview Brew sessions management screen - fermentation tracking hub
- * 
+ *
  * @description
  * This screen provides a comprehensive interface for managing brew sessions throughout
  * the fermentation process. It features a tabbed layout separating active and completed
  * brew sessions, with detailed progress tracking, metric displays, and context-aware actions.
- * 
+ *
  * @key_features
  * - Tabbed interface for active vs completed brew sessions
  * - Detailed session progress tracking with visual progress bars
@@ -14,20 +14,20 @@
  * - Pull-to-refresh functionality for real-time updates
  * - Status-based color coding and iconography
  * - Floating action button for quick session creation
- * 
+ *
  * @navigation_patterns
  * - URL parameter-driven tab selection for deep linking
  * - Modal navigation for session creation and viewing
  * - Context menu navigation for edit/delete operations
  * - Integration with recipe selection flow
  * - Back navigation with preserved tab state
- * 
+ *
  * @security_considerations
  * - User authentication required for session access
  * - Personal brew session data isolation
  * - JWT-authenticated API requests for all operations
  * - Context menu actions validate user permissions
- * 
+ *
  * @data_handling
  * - React Query caching with 2-minute stale time for session data
  * - Real-time progress calculations based on brew dates
@@ -246,6 +246,9 @@ export default function BrewSessionsScreen() {
       const totalDays = Math.floor(
         (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
       );
+      if (totalDays <= 0) {
+        return { daysPassed, totalDays: null, progress: null };
+      }
       return {
         daysPassed,
         totalDays,
@@ -335,12 +338,14 @@ export default function BrewSessionsScreen() {
         </View>
 
         <View style={styles.brewSessionMetrics}>
-          <View style={styles.metric}>
-            <Text style={styles.metricLabel}>Started</Text>
-            <Text style={styles.metricValue}>
-              {formatDate(brewSession.brew_date)}
-            </Text>
-          </View>
+          {brewSession.brew_date && (
+            <View style={styles.metric}>
+              <Text style={styles.metricLabel}>Started</Text>
+              <Text style={styles.metricValue}>
+                {formatDate(brewSession.brew_date)}
+              </Text>
+            </View>
+          )}
 
           {brewSession.original_gravity && (
             <View style={styles.metric}>

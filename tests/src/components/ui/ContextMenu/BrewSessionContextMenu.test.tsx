@@ -63,7 +63,10 @@ jest.mock("@styles/ui/baseContextMenuStyles", () => ({
 }));
 
 jest.mock("@src/components/ui/ContextMenu/contextMenuUtils", () => ({
-  calculateMenuPosition: jest.fn((position, dimensions) => ({ x: position.x, y: position.y })),
+  calculateMenuPosition: jest.fn((position, dimensions) => ({
+    x: position.x,
+    y: position.y,
+  })),
   calculateMenuHeight: jest.fn(() => 200),
   MENU_DIMENSIONS: { width: 250, height: 200 },
 }));
@@ -75,7 +78,9 @@ jest.mock("expo-haptics", () => ({
 // Mock Alert
 jest.spyOn(Alert, "alert");
 
-const createMockBrewSession = (overrides: Partial<BrewSession> = {}): BrewSession => ({
+const createMockBrewSession = (
+  overrides: Partial<BrewSession> = {}
+): BrewSession => ({
   id: "session-1",
   recipe_id: "recipe-1",
   name: "Test Session",
@@ -88,7 +93,7 @@ const createMockBrewSession = (overrides: Partial<BrewSession> = {}): BrewSessio
   updated_at: "2023-01-01T00:00:00Z",
   user_id: "user-1",
   fermentation_entries: [
-    { entry_date: "2023-01-01", temperature: 65, gravity: 1.050 },
+    { entry_date: "2023-01-01", temperature: 65, gravity: 1.05 },
   ],
   ...overrides,
 });
@@ -143,8 +148,12 @@ describe("BrewSessionContextMenu", () => {
       );
 
       expect(getByTestId(TEST_IDS.contextMenu.modal)).toBeTruthy();
-      expect(getByTestId(TEST_IDS.contextMenu.title)).toHaveTextContent("Test Session");
-      expect(getByTestId(TEST_IDS.contextMenu.subtitle)).toHaveTextContent("Active");
+      expect(getByTestId(TEST_IDS.contextMenu.title)).toHaveTextContent(
+        "Test Session"
+      );
+      expect(getByTestId(TEST_IDS.contextMenu.subtitle)).toHaveTextContent(
+        "Active"
+      );
     });
 
     it("should display unnamed session title when name is missing", () => {
@@ -160,7 +169,9 @@ describe("BrewSessionContextMenu", () => {
         />
       );
 
-      expect(getByTestId(TEST_IDS.contextMenu.title)).toHaveTextContent("Unnamed Session");
+      expect(getByTestId(TEST_IDS.contextMenu.title)).toHaveTextContent(
+        "Unnamed Session"
+      );
     });
   });
 
@@ -194,7 +205,9 @@ describe("BrewSessionContextMenu", () => {
           />
         );
 
-        expect(getByTestId(TEST_IDS.contextMenu.subtitle)).toHaveTextContent(expectedDisplay);
+        expect(getByTestId(TEST_IDS.contextMenu.subtitle)).toHaveTextContent(
+          expectedDisplay
+        );
       });
     });
 
@@ -212,7 +225,9 @@ describe("BrewSessionContextMenu", () => {
         />
       );
 
-      expect(getByTestId(TEST_IDS.contextMenu.subtitle)).toHaveTextContent("Unknown Status");
+      expect(getByTestId(TEST_IDS.contextMenu.subtitle)).toHaveTextContent(
+        "Unknown Status"
+      );
     });
   });
 
@@ -241,7 +256,9 @@ describe("BrewSessionContextMenu", () => {
       );
 
       // Should pass the action through to BaseContextMenu
-      expect(getByTestId(TEST_IDS.patterns.contextMenuAction("test-action"))).toBeTruthy();
+      expect(
+        getByTestId(TEST_IDS.patterns.contextMenuAction("test-action"))
+      ).toBeTruthy();
 
       // Should apply position
       const container = getByTestId(TEST_IDS.contextMenu.container);
@@ -252,7 +269,7 @@ describe("BrewSessionContextMenu", () => {
             top: position.y,
             left: position.x,
             width: 250,
-          })
+          }),
         ])
       );
     });
@@ -329,20 +346,46 @@ describe("createDefaultBrewSessionActions", () => {
       const actions = createDefaultBrewSessionActions(handlers);
       const fermentationAction = actions.find(a => a.id === "add-fermentation");
 
-      expect(fermentationAction?.hidden?.(createMockBrewSession({ status: "active" }))).toBe(false);
-      expect(fermentationAction?.hidden?.(createMockBrewSession({ status: "fermenting" }))).toBe(false);
-      expect(fermentationAction?.hidden?.(createMockBrewSession({ status: "in-progress" }))).toBe(false);
-      expect(fermentationAction?.hidden?.(createMockBrewSession({ status: "completed" }))).toBe(true);
-      expect(fermentationAction?.hidden?.(createMockBrewSession({ status: "planned" }))).toBe(true);
+      expect(
+        fermentationAction?.hidden?.(
+          createMockBrewSession({ status: "active" })
+        )
+      ).toBe(false);
+      expect(
+        fermentationAction?.hidden?.(
+          createMockBrewSession({ status: "fermenting" })
+        )
+      ).toBe(false);
+      expect(
+        fermentationAction?.hidden?.(
+          createMockBrewSession({ status: "in-progress" })
+        )
+      ).toBe(false);
+      expect(
+        fermentationAction?.hidden?.(
+          createMockBrewSession({ status: "completed" })
+        )
+      ).toBe(true);
+      expect(
+        fermentationAction?.hidden?.(
+          createMockBrewSession({ status: "planned" })
+        )
+      ).toBe(true);
     });
 
     it("should show archive action only for completed sessions", () => {
       const actions = createDefaultBrewSessionActions(handlers);
       const archiveAction = actions.find(a => a.id === "archive");
 
-      expect(archiveAction?.hidden?.(createMockBrewSession({ status: "completed" }))).toBe(false);
-      expect(archiveAction?.hidden?.(createMockBrewSession({ status: "active" }))).toBe(true);
-      expect(archiveAction?.hidden?.(createMockBrewSession({ status: "archived" }))).toBe(true);
+      expect(
+        archiveAction?.hidden?.(createMockBrewSession({ status: "completed" }))
+      ).toBe(false);
+      expect(
+        archiveAction?.hidden?.(createMockBrewSession({ status: "active" }))
+      ).toBe(true);
+      expect(
+        archiveAction?.hidden?.(createMockBrewSession({ status: "archived" }))
+      ).toBe(true);
     });
   });
 
@@ -370,10 +413,20 @@ describe("createDefaultBrewSessionActions", () => {
       const actions = createDefaultBrewSessionActions(handlers);
       const deleteAction = actions.find(a => a.id === "delete");
 
-      expect(deleteAction?.disabled?.(createMockBrewSession({ status: "active" }))).toBe(true);
-      expect(deleteAction?.disabled?.(createMockBrewSession({ status: "fermenting" }))).toBe(true);
-      expect(deleteAction?.disabled?.(createMockBrewSession({ status: "completed" }))).toBe(false);
-      expect(deleteAction?.disabled?.(createMockBrewSession({ status: "planned" }))).toBe(false);
+      expect(
+        deleteAction?.disabled?.(createMockBrewSession({ status: "active" }))
+      ).toBe(true);
+      expect(
+        deleteAction?.disabled?.(
+          createMockBrewSession({ status: "fermenting" })
+        )
+      ).toBe(true);
+      expect(
+        deleteAction?.disabled?.(createMockBrewSession({ status: "completed" }))
+      ).toBe(false);
+      expect(
+        deleteAction?.disabled?.(createMockBrewSession({ status: "planned" }))
+      ).toBe(false);
     });
   });
 
@@ -424,7 +477,9 @@ describe("BrewSessionContextMenu Integration", () => {
     });
 
     // Test destructive action shows confirmation
-    const deleteAction = getByTestId(TEST_IDS.patterns.contextMenuAction("delete"));
+    const deleteAction = getByTestId(
+      TEST_IDS.patterns.contextMenuAction("delete")
+    );
     await act(async () => {
       fireEvent.press(deleteAction);
     });
@@ -439,7 +494,11 @@ describe("BrewSessionContextMenu Integration", () => {
     });
     // Trigger the destructive confirmation and ensure handler runs
     const lastCall = (Alert.alert as jest.Mock).mock.calls.at(-1);
-    const buttons = lastCall?.[2] as { text: string; style?: string; onPress?: () => void }[];
+    const buttons = lastCall?.[2] as {
+      text: string;
+      style?: string;
+      onPress?: () => void;
+    }[];
     const confirm = buttons?.find(b => b.style === "destructive");
     confirm?.onPress?.();
     await waitFor(() => {

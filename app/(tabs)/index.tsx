@@ -1,11 +1,11 @@
 /**
  * @fileoverview Main dashboard screen - primary home tab of the BrewTracker application
- * 
+ *
  * @description
  * The dashboard serves as the central hub for users to view their brewing statistics,
  * recent activity, and quick actions. It provides an overview of user's recipes, brew sessions,
  * and community engagement with intelligent fallback handling for offline scenarios.
- * 
+ *
  * @key_features
  * - User statistics overview (total recipes, active brews, public recipes)
  * - Recent recipes and active brew sessions display
@@ -13,25 +13,31 @@
  * - Pull-to-refresh functionality for data synchronization
  * - Context menus with haptic feedback for item interactions
  * - Offline-first design with graceful backend disconnection handling
- * 
+ *
  * @navigation_patterns
  * - Direct navigation to recipe and brew session creation modals
  * - Tab-based navigation to specific sections (My Recipes, Public, Active Brews)
  * - Context menu navigation for detailed item actions (view, edit, clone, etc.)
  * - Deep linking support for individual recipes and brew sessions
- * 
+ *
  * @security_considerations
  * - User authentication required (handled by parent tab navigator)
  * - Personal data isolation (user recipes vs public recipes)
  * - Secure API calls with JWT authentication headers
  * - Context menu actions respect user permissions
- * 
+ *
  * @data_handling
  * - React Query for server state management with 5-minute cache
  * - Combined API calls for efficient data fetching
  * - Real-time statistics calculation from server responses
  * - Optimistic UI updates for better user experience
  * - Error boundaries with meaningful fallback displays
+ *
+ * @accessibility
+ * - Ensure readable color contrast, support dynamic font scaling, and adequate touch targets
+ *
+ * @testing_notes
+ * - Covered by integration tests for data loading states (loading, error, success) and menu actions
  */
 import React, { useState } from "react";
 import {

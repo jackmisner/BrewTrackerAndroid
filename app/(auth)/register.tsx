@@ -1,12 +1,12 @@
 /**
  * @fileoverview User registration screen for new account creation
- * 
+ *
  * @description
  * This screen handles new user account creation with comprehensive form validation,
  * secure password handling, and integration with the authentication system. It provides
  * a user-friendly registration flow with proper error handling and email verification
  * requirements.
- * 
+ *
  * @key_features
  * - Multi-field registration form (username, email, password, confirm password)
  * - Client-side form validation with immediate feedback
@@ -15,13 +15,13 @@
  * - Password confirmation matching validation
  * - Loading states with activity indicators
  * - Keyboard-aware scrollable interface
- * 
+ *
  * @navigation_patterns
  * - Navigation from login screen for new users
  * - Automatic redirect to login after successful registration
  * - Back navigation to login screen for existing users
  * - Modal alert flow for registration success/failure
- * 
+ *
  * @security_considerations
  * - Secure password input with secureTextEntry
  * - Client-side validation prevents malformed data submission
@@ -29,7 +29,7 @@
  * - Email verification requirement before account access
  * - Secure storage of authentication tokens in SecureStore
  * - Error messages protect against information disclosure
- * 
+ *
  * @data_handling
  * - Form state managed with React hooks
  * - Real-time validation feedback for user experience
@@ -110,7 +110,7 @@ export default function RegisterScreen() {
     } catch (error: any) {
       Alert.alert(
         "Registration Failed",
-        error.message || "An error occurred during registration"
+        "An error occurred during registration, Please try again."
       );
     } finally {
       setIsLoading(false);

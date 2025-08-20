@@ -1,4 +1,4 @@
-import { renderHook, waitFor} from "@testing-library/react-native";
+import { renderHook, waitFor } from "@testing-library/react-native";
 import React from "react";
 
 // Mock the API service before importing anything that uses it
@@ -59,7 +59,7 @@ describe("useBeerStyles", () => {
 
   const getBeerStylesQuery = (queryClient: QueryClient) => {
     const queries = queryClient.getQueryCache().getAll();
-    const beerStylesQuery = queries.find(q => q.queryKey[0] === 'beerStyles');
+    const beerStylesQuery = queries.find(q => q.queryKey[0] === "beerStyles");
     expect(beerStylesQuery).toBeDefined();
     return beerStylesQuery!;
   };
@@ -442,20 +442,23 @@ describe("useBeerStyles", () => {
 
     // Access the query to get the retry function
     const beerStylesQuery = getBeerStylesQuery(queryClient);
-    
+
     {
-      const retryConfig = beerStylesQuery.options.retry as (failureCount: number, error: any) => boolean;
-      
+      const retryConfig = beerStylesQuery.options.retry as (
+        failureCount: number,
+        error: any
+      ) => boolean;
+
       // Test retry logic for server errors
       const serverError = { response: { status: 500 } };
-      expect(retryConfig(0, serverError)).toBe(true);  // Should retry first failure
-      expect(retryConfig(1, serverError)).toBe(true);  // Should retry second failure  
+      expect(retryConfig(0, serverError)).toBe(true); // Should retry first failure
+      expect(retryConfig(1, serverError)).toBe(true); // Should retry second failure
       expect(retryConfig(2, serverError)).toBe(false); // Should not retry third failure
-      
+
       // Test that 4xx errors don't retry (except 429)
       const clientError = { response: { status: 404 } };
       expect(retryConfig(0, clientError)).toBe(false);
-      
+
       // Test that 429 errors do retry
       const rateLimitError = { response: { status: 429 } };
       expect(retryConfig(0, rateLimitError)).toBe(true);
@@ -469,15 +472,17 @@ describe("useBeerStyles", () => {
 
     // Access the query to get the retry delay function
     const beerStylesQuery = getBeerStylesQuery(queryClient);
-    
+
     {
-      const retryDelayFn = beerStylesQuery.options.retryDelay as (attemptIndex: number) => number;
-      
+      const retryDelayFn = beerStylesQuery.options.retryDelay as (
+        attemptIndex: number
+      ) => number;
+
       // Test exponential backoff with cap at 5000ms
-      expect(retryDelayFn(0)).toBe(1000);  // 1000 * 2^0 = 1000
-      expect(retryDelayFn(1)).toBe(2000);  // 1000 * 2^1 = 2000
-      expect(retryDelayFn(2)).toBe(4000);  // 1000 * 2^2 = 4000
-      expect(retryDelayFn(3)).toBe(5000);  // Min(8000, 5000) = 5000 (capped)
+      expect(retryDelayFn(0)).toBe(1000); // 1000 * 2^0 = 1000
+      expect(retryDelayFn(1)).toBe(2000); // 1000 * 2^1 = 2000
+      expect(retryDelayFn(2)).toBe(4000); // 1000 * 2^2 = 4000
+      expect(retryDelayFn(3)).toBe(5000); // Min(8000, 5000) = 5000 (capped)
       expect(retryDelayFn(10)).toBe(5000); // Should remain capped at 5000
     }
   });

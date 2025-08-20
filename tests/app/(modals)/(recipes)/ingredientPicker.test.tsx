@@ -3,7 +3,12 @@
  */
 
 import React from "react";
-import { render, fireEvent, waitFor, within } from "@testing-library/react-native";
+import {
+  render,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import IngredientPickerScreen from "../../../../app/(modals)/(recipes)/ingredientPicker";
 
@@ -87,7 +92,7 @@ jest.mock("@services/api/apiService", () => ({
 }));
 
 jest.mock("@src/hooks/useDebounce", () => ({
-  useDebounce: jest.fn((value) => value),
+  useDebounce: jest.fn(value => value),
 }));
 
 // Mock styles
@@ -127,24 +132,33 @@ jest.mock("@styles/modals/ingredientPickerStyles", () => ({
 }));
 
 // Mock the IngredientDetailEditor component
-jest.mock("@src/components/recipes/IngredientEditor/IngredientDetailEditor", () => ({
-  IngredientDetailEditor: () => {
-    const React = require("react");
-    const { Text } = require("react-native");
-    return React.createElement(Text, {}, "Ingredient Detail Editor");
-  },
-}));
+jest.mock(
+  "@src/components/recipes/IngredientEditor/IngredientDetailEditor",
+  () => ({
+    IngredientDetailEditor: () => {
+      const React = require("react");
+      const { Text } = require("react-native");
+      return React.createElement(Text, {}, "Ingredient Detail Editor");
+    },
+  })
+);
 
 // Mock utilities
 jest.mock("@utils/formatUtils", () => ({
-  formatIngredientDetails: jest.fn((ingredient) => `${ingredient.name} details`),
+  formatIngredientDetails: jest.fn(ingredient => `${ingredient.name} details`),
 }));
 
 jest.mock("@constants/hopConstants", () => ({
   HOP_USAGE_OPTIONS: [
-    { value: "boil", label: "Boil", defaultTime: 60 },
-    { value: "aroma", label: "Aroma", defaultTime: 5 },
+    { value: "boil", display: "Boil", defaultTime: 60 },
+    { value: "dry-hop", display: "Dry Hop", defaultTime: 1440 * 3 },
+    { value: "whirlpool", display: "Whirlpool", defaultTime: 15 },
   ],
+  HOP_TIME_PRESETS: {
+    boil: [60, 30, 15, 5, 0],
+    "dry-hop": [3 * 1440, 5 * 1440, 7 * 1440],
+    whirlpool: [15, 10, 5],
+  },
 }));
 
 const mockApiService = require("@services/api/apiService").default;
@@ -166,7 +180,7 @@ describe("IngredientPickerScreen", () => {
       potential: 1.037,
     },
     {
-      id: "2", 
+      id: "2",
       name: "Cascade Hops",
       description: "American hop variety",
       type: "hop",
@@ -206,7 +220,8 @@ describe("IngredientPickerScreen", () => {
 
     it("shows loading state while fetching ingredients", async () => {
       mockApiService.ingredients.getAll.mockImplementation(
-        () => new Promise(resolve => setTimeout(() => resolve({ data: [] }), 100))
+        () =>
+          new Promise(resolve => setTimeout(() => resolve({ data: [] }), 100))
       );
 
       const { getByText } = render(<IngredientPickerScreen />, {
@@ -228,9 +243,13 @@ describe("IngredientPickerScreen", () => {
 
       // Should handle error gracefully and show appropriate UI
       await waitFor(() => {
-        expect(queryByText("Error") || queryByText("Grains & Fermentables") || queryByText("No ingredients found")).toBeTruthy();
+        expect(
+          queryByText("Error") ||
+            queryByText("Grains & Fermentables") ||
+            queryByText("No ingredients found")
+        ).toBeTruthy();
       });
-      
+
       // Component should not crash
       expect(getByText("Grains & Fermentables")).toBeTruthy();
     });
@@ -419,9 +438,9 @@ describe("IngredientPickerScreen", () => {
 
   describe("Error Handling", () => {
     it("should handle network errors", async () => {
-      mockApiService.ingredients.getAll.mockRejectedValue(
-        { response: { status: 500 } }
-      );
+      mockApiService.ingredients.getAll.mockRejectedValue({
+        response: { status: 500 },
+      });
 
       expect(() =>
         render(<IngredientPickerScreen />, {
@@ -431,9 +450,9 @@ describe("IngredientPickerScreen", () => {
     });
 
     it("should handle authentication errors", async () => {
-      mockApiService.ingredients.getAll.mockRejectedValue(
-        { response: { status: 401 } }
-      );
+      mockApiService.ingredients.getAll.mockRejectedValue({
+        response: { status: 401 },
+      });
 
       expect(() =>
         render(<IngredientPickerScreen />, {

@@ -203,7 +203,8 @@ describe("EditRecipeScreen", () => {
 
     it("should handle API loading state", async () => {
       mockApiService.recipes.getById.mockImplementation(
-        () => new Promise(resolve => setTimeout(() => resolve({ data: {} }), 100))
+        () =>
+          new Promise(resolve => setTimeout(() => resolve({ data: {} }), 100))
       );
 
       const { getByText } = render(<EditRecipeScreen />, {
@@ -264,7 +265,7 @@ describe("EditRecipeScreen", () => {
         wrapper: createWrapper,
       });
 
-      // Should render the screen successfully  
+      // Should render the screen successfully
       await waitFor(() => {
         expect(getByText("Edit Recipe")).toBeTruthy();
       });
@@ -390,7 +391,8 @@ describe("EditRecipeScreen", () => {
   });
 
   describe("Metrics Integration", () => {
-    const mockUseRecipeMetrics = require("@src/hooks/useRecipeMetrics").useRecipeMetrics;
+    const mockUseRecipeMetrics =
+      require("@src/hooks/useRecipeMetrics").useRecipeMetrics;
 
     it("should handle recipe metrics hook", () => {
       mockUseRecipeMetrics.mockReturnValue({

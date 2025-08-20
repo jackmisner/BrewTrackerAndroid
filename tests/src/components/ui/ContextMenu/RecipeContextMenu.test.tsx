@@ -63,7 +63,10 @@ jest.mock("@styles/ui/baseContextMenuStyles", () => ({
 }));
 
 jest.mock("@src/components/ui/ContextMenu/contextMenuUtils", () => ({
-  calculateMenuPosition: jest.fn((position, dimensions) => ({ x: position.x, y: position.y })),
+  calculateMenuPosition: jest.fn((position, dimensions) => ({
+    x: position.x,
+    y: position.y,
+  })),
   calculateMenuHeight: jest.fn(() => 200),
   MENU_DIMENSIONS: { width: 250, height: 200 },
 }));
@@ -148,8 +151,12 @@ describe("RecipeContextMenu", () => {
       );
 
       expect(getByTestId(TEST_IDS.contextMenu.modal)).toBeTruthy();
-      expect(getByTestId(TEST_IDS.contextMenu.title)).toHaveTextContent("Test IPA");
-      expect(getByTestId(TEST_IDS.contextMenu.subtitle)).toHaveTextContent("American IPA");
+      expect(getByTestId(TEST_IDS.contextMenu.title)).toHaveTextContent(
+        "Test IPA"
+      );
+      expect(getByTestId(TEST_IDS.contextMenu.subtitle)).toHaveTextContent(
+        "American IPA"
+      );
     });
 
     it("should display fallback values when name and style are missing", () => {
@@ -165,8 +172,12 @@ describe("RecipeContextMenu", () => {
         />
       );
 
-      expect(getByTestId(TEST_IDS.contextMenu.title)).toHaveTextContent("Unnamed Recipe");
-      expect(getByTestId(TEST_IDS.contextMenu.subtitle)).toHaveTextContent("Unknown Style");
+      expect(getByTestId(TEST_IDS.contextMenu.title)).toHaveTextContent(
+        "Unnamed Recipe"
+      );
+      expect(getByTestId(TEST_IDS.contextMenu.subtitle)).toHaveTextContent(
+        "Unknown Style"
+      );
     });
   });
 
@@ -195,7 +206,9 @@ describe("RecipeContextMenu", () => {
       );
 
       // Should pass the action through to BaseContextMenu
-      expect(getByTestId(TEST_IDS.patterns.contextMenuAction("test-action"))).toBeTruthy();
+      expect(
+        getByTestId(TEST_IDS.patterns.contextMenuAction("test-action"))
+      ).toBeTruthy();
 
       // Should apply position
       const container = getByTestId(TEST_IDS.contextMenu.container);
@@ -206,7 +219,7 @@ describe("RecipeContextMenu", () => {
             top: position.y,
             left: position.x,
             width: 250,
-          })
+          }),
         ])
       );
     });
@@ -260,9 +273,9 @@ describe("createDefaultRecipeActions", () => {
       it("should hide edit action for public recipes that user doesn't own", () => {
         const actions = createDefaultRecipeActions(handlers);
         const editAction = actions.find(a => a.id === "edit");
-        const publicNotOwnedRecipe = createMockRecipe({ 
-          is_public: true, 
-          is_owner: false 
+        const publicNotOwnedRecipe = createMockRecipe({
+          is_public: true,
+          is_owner: false,
         });
 
         expect(editAction?.hidden?.(publicNotOwnedRecipe)).toBe(true);
@@ -271,9 +284,9 @@ describe("createDefaultRecipeActions", () => {
       it("should show edit action for public recipes that user owns", () => {
         const actions = createDefaultRecipeActions(handlers);
         const editAction = actions.find(a => a.id === "edit");
-        const publicOwnedRecipe = createMockRecipe({ 
-          is_public: true, 
-          is_owner: true 
+        const publicOwnedRecipe = createMockRecipe({
+          is_public: true,
+          is_owner: true,
         });
 
         expect(editAction?.hidden?.(publicOwnedRecipe)).toBe(false);
@@ -282,9 +295,9 @@ describe("createDefaultRecipeActions", () => {
       it("should show edit action for private recipes", () => {
         const actions = createDefaultRecipeActions(handlers);
         const editAction = actions.find(a => a.id === "edit");
-        const privateRecipe = createMockRecipe({ 
-          is_public: false, 
-          is_owner: true 
+        const privateRecipe = createMockRecipe({
+          is_public: false,
+          is_owner: true,
         });
 
         expect(editAction?.hidden?.(privateRecipe)).toBe(false);
@@ -313,9 +326,9 @@ describe("createDefaultRecipeActions", () => {
       it("should hide delete action for public recipes that user doesn't own", () => {
         const actions = createDefaultRecipeActions(handlers);
         const deleteAction = actions.find(a => a.id === "delete");
-        const publicNotOwnedRecipe = createMockRecipe({ 
-          is_public: true, 
-          is_owner: false 
+        const publicNotOwnedRecipe = createMockRecipe({
+          is_public: true,
+          is_owner: false,
         });
 
         expect(deleteAction?.hidden?.(publicNotOwnedRecipe)).toBe(true);
@@ -324,9 +337,9 @@ describe("createDefaultRecipeActions", () => {
       it("should show delete action for public recipes that user owns", () => {
         const actions = createDefaultRecipeActions(handlers);
         const deleteAction = actions.find(a => a.id === "delete");
-        const publicOwnedRecipe = createMockRecipe({ 
-          is_public: true, 
-          is_owner: true 
+        const publicOwnedRecipe = createMockRecipe({
+          is_public: true,
+          is_owner: true,
         });
 
         expect(deleteAction?.hidden?.(publicOwnedRecipe)).toBe(false);
@@ -335,9 +348,9 @@ describe("createDefaultRecipeActions", () => {
       it("should show delete action for private recipes", () => {
         const actions = createDefaultRecipeActions(handlers);
         const deleteAction = actions.find(a => a.id === "delete");
-        const privateRecipe = createMockRecipe({ 
-          is_public: false, 
-          is_owner: true 
+        const privateRecipe = createMockRecipe({
+          is_public: false,
+          is_owner: true,
         });
 
         expect(deleteAction?.hidden?.(privateRecipe)).toBe(false);
@@ -389,7 +402,11 @@ describe("createDefaultRecipeActions", () => {
         { id: "view", title: "View Recipe", icon: "visibility" },
         { id: "edit", title: "Edit Recipe", icon: "edit" },
         { id: "clone", title: "Clone Recipe", icon: "content-copy" },
-        { id: "beerxml-export", title: "Export BeerXML", icon: "file-download" },
+        {
+          id: "beerxml-export",
+          title: "Export BeerXML",
+          icon: "file-download",
+        },
         { id: "brew", title: "Start Brewing", icon: "play-arrow" },
         { id: "share", title: "Share Recipe", icon: "share" },
         { id: "delete", title: "Delete Recipe", icon: "delete" },
@@ -431,7 +448,9 @@ describe("RecipeContextMenu Integration", () => {
     });
 
     // Test destructive action shows confirmation
-    const deleteAction = getByTestId(TEST_IDS.patterns.contextMenuAction("delete"));
+    const deleteAction = getByTestId(
+      TEST_IDS.patterns.contextMenuAction("delete")
+    );
     await act(async () => {
       fireEvent.press(deleteAction);
     });
@@ -444,23 +463,27 @@ describe("RecipeContextMenu Integration", () => {
         expect.any(Object)
       );
     });
-        // Trigger the destructive confirmation and ensure handler runs
-        const lastCall = (Alert.alert as jest.Mock).mock.calls.at(-1);
-        const buttons = lastCall?.[2] as { text: string; style?: string; onPress?: () => void }[];
-        const confirm = buttons?.find(b => b.style === "destructive");
-        confirm?.onPress?.();
-        await waitFor(() => {
-          expect(handlers.onDelete).toHaveBeenCalledWith(recipe);
-        });
+    // Trigger the destructive confirmation and ensure handler runs
+    const lastCall = (Alert.alert as jest.Mock).mock.calls.at(-1);
+    const buttons = lastCall?.[2] as {
+      text: string;
+      style?: string;
+      onPress?: () => void;
+    }[];
+    const confirm = buttons?.find(b => b.style === "destructive");
+    confirm?.onPress?.();
+    await waitFor(() => {
+      expect(handlers.onDelete).toHaveBeenCalledWith(recipe);
+    });
   });
 
   it("should handle recipe ownership and visibility properly in integrated context", async () => {
     const handlers = createMockActionHandlers();
     const actions = createDefaultRecipeActions(handlers);
-    const publicNotOwnedRecipe = createMockRecipe({ 
-      is_public: true, 
+    const publicNotOwnedRecipe = createMockRecipe({
+      is_public: true,
       is_owner: false,
-      name: "Public Recipe" 
+      name: "Public Recipe",
     });
 
     const { queryByTestId } = render(
@@ -473,16 +496,30 @@ describe("RecipeContextMenu Integration", () => {
     );
 
     // Edit and delete actions should be hidden
-    expect(queryByTestId(TEST_IDS.patterns.contextMenuAction("edit"))).toBeNull();
-    expect(queryByTestId(TEST_IDS.patterns.contextMenuAction("delete"))).toBeNull();
-    
+    expect(
+      queryByTestId(TEST_IDS.patterns.contextMenuAction("edit"))
+    ).toBeNull();
+    expect(
+      queryByTestId(TEST_IDS.patterns.contextMenuAction("delete"))
+    ).toBeNull();
+
     // Share action should be hidden for public recipes
-    expect(queryByTestId(TEST_IDS.patterns.contextMenuAction("share"))).toBeNull();
+    expect(
+      queryByTestId(TEST_IDS.patterns.contextMenuAction("share"))
+    ).toBeNull();
 
     // View, clone, export, and brew should still be visible
-    expect(queryByTestId(TEST_IDS.patterns.contextMenuAction("view"))).toBeTruthy();
-    expect(queryByTestId(TEST_IDS.patterns.contextMenuAction("clone"))).toBeTruthy();
-    expect(queryByTestId(TEST_IDS.patterns.contextMenuAction("beerxml-export"))).toBeTruthy();
-    expect(queryByTestId(TEST_IDS.patterns.contextMenuAction("brew"))).toBeTruthy();
+    expect(
+      queryByTestId(TEST_IDS.patterns.contextMenuAction("view"))
+    ).toBeTruthy();
+    expect(
+      queryByTestId(TEST_IDS.patterns.contextMenuAction("clone"))
+    ).toBeTruthy();
+    expect(
+      queryByTestId(TEST_IDS.patterns.contextMenuAction("beerxml-export"))
+    ).toBeTruthy();
+    expect(
+      queryByTestId(TEST_IDS.patterns.contextMenuAction("brew"))
+    ).toBeTruthy();
   });
 });
