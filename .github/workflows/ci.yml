@@ -75,11 +75,3 @@ jobs:
       - name: Build application (Expo prebuild check)
         run: npx expo install --fix
 
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
-        with:
-          directory: ./coverage
-          flags: android
-          name: brewtracker-android-coverage
-          fail_ci_if_error: false
-          use_oidc: true

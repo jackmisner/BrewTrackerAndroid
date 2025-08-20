@@ -17,10 +17,7 @@
       "edgeToEdgeEnabled": true,
       "package": "com.brewtracker.android",
       "versionCode": 40,
-      "permissions": [
-        "CAMERA",
-        "VIBRATE"
-      ]
+      "permissions": ["CAMERA", "VIBRATE"]
     },
     "plugins": [
       "expo-router",
