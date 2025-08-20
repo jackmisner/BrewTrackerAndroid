@@ -5,8 +5,8 @@ import { Alert } from "react-native";
 import {
   BrewSessionContextMenu,
   createDefaultBrewSessionActions,
-  BrewSessionAction,
 } from "@src/components/ui/ContextMenu/BrewSessionContextMenu";
+import { BaseAction } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { BrewSession, BrewSessionStatus } from "@src/types";
 import { TEST_IDS } from "@src/constants/testIDs";
 
@@ -114,7 +114,7 @@ describe("BrewSessionContextMenu", () => {
 
   describe("Visibility and Basic Rendering", () => {
     it("should not render when brewSession is null", () => {
-      const actions: BrewSessionAction[] = [];
+      const actions: BaseAction<BrewSession>[] = [];
       const { queryByTestId } = render(
         <BrewSessionContextMenu
           visible={true}
@@ -129,7 +129,7 @@ describe("BrewSessionContextMenu", () => {
 
     it("should render menu when visible and brewSession provided", () => {
       const brewSession = createMockBrewSession();
-      const actions: BrewSessionAction[] = [
+      const actions: BaseAction<BrewSession>[] = [
         {
           id: "view",
           title: "View",
@@ -158,7 +158,7 @@ describe("BrewSessionContextMenu", () => {
 
     it("should display unnamed session title when name is missing", () => {
       const brewSession = createMockBrewSession({ name: "" });
-      const actions: BrewSessionAction[] = [];
+      const actions: BaseAction<BrewSession>[] = [];
 
       const { getByTestId } = render(
         <BrewSessionContextMenu
@@ -194,7 +194,7 @@ describe("BrewSessionContextMenu", () => {
     testCases.forEach(({ status, expectedDisplay }) => {
       it(`should display "${expectedDisplay}" for status "${status}"`, () => {
         const brewSession = createMockBrewSession({ status });
-        const actions: BrewSessionAction[] = [];
+        const actions: BaseAction<BrewSession>[] = [];
 
         const { getByTestId } = render(
           <BrewSessionContextMenu
@@ -214,7 +214,7 @@ describe("BrewSessionContextMenu", () => {
     it("should handle undefined status", () => {
       const brewSession = createMockBrewSession();
       delete (brewSession as any).status;
-      const actions: BrewSessionAction[] = [];
+      const actions: BaseAction<BrewSession>[] = [];
 
       const { getByTestId } = render(
         <BrewSessionContextMenu
@@ -234,7 +234,7 @@ describe("BrewSessionContextMenu", () => {
   describe("Action Passing", () => {
     it("should pass through all props to BaseContextMenu", () => {
       const brewSession = createMockBrewSession();
-      const actions: BrewSessionAction[] = [
+      const actions: BaseAction<BrewSession>[] = [
         {
           id: "test-action",
           title: "Test Action",

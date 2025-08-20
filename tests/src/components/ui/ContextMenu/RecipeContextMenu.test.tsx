@@ -5,8 +5,8 @@ import { Alert } from "react-native";
 import {
   RecipeContextMenu,
   createDefaultRecipeActions,
-  RecipeAction,
 } from "@src/components/ui/ContextMenu/RecipeContextMenu";
+import { BaseAction } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { Recipe } from "@src/types";
 import { TEST_IDS } from "@src/constants/testIDs";
 
@@ -117,7 +117,7 @@ describe("RecipeContextMenu", () => {
 
   describe("Visibility and Basic Rendering", () => {
     it("should not render when recipe is null", () => {
-      const actions: RecipeAction[] = [];
+      const actions: BaseAction<Recipe>[] = [];
       const { queryByTestId } = render(
         <RecipeContextMenu
           visible={true}
@@ -132,7 +132,7 @@ describe("RecipeContextMenu", () => {
 
     it("should render menu when visible and recipe provided", () => {
       const recipe = createMockRecipe();
-      const actions: RecipeAction[] = [
+      const actions: BaseAction<Recipe>[] = [
         {
           id: "view",
           title: "View",
@@ -161,7 +161,7 @@ describe("RecipeContextMenu", () => {
 
     it("should display fallback values when name and style are missing", () => {
       const recipe = createMockRecipe({ name: "", style: "" });
-      const actions: RecipeAction[] = [];
+      const actions: BaseAction<Recipe>[] = [];
 
       const { getByTestId } = render(
         <RecipeContextMenu
@@ -184,7 +184,7 @@ describe("RecipeContextMenu", () => {
   describe("Action Passing", () => {
     it("should pass through all props to BaseContextMenu", () => {
       const recipe = createMockRecipe();
-      const actions: RecipeAction[] = [
+      const actions: BaseAction<Recipe>[] = [
         {
           id: "test-action",
           title: "Test Action",
