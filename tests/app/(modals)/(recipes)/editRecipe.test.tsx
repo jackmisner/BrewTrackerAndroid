@@ -203,8 +203,7 @@ describe("EditRecipeScreen", () => {
 
     it("should handle API loading state", async () => {
       mockApiService.recipes.getById.mockImplementation(
-        () =>
-          new Promise(resolve => setTimeout(() => resolve({ data: {} }), 100))
+        () => new Promise(resolve => setTimeout(() => resolve({ data: {} }), 0))
       );
 
       const { getByText } = render(<EditRecipeScreen />, {

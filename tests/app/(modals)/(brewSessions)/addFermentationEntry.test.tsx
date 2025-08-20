@@ -338,33 +338,57 @@ describe("AddFermentationEntryScreen", () => {
 
   describe("API Integration", () => {
     it("should handle mutation success", () => {
-      const mockUseMutation = require("@tanstack/react-query").useMutation;
-      mockUseMutation.mockReturnValue({
-        mutate: jest.fn(),
-        mutateAsync: jest.fn().mockResolvedValue({}),
-        isLoading: false,
-        isPending: false,
-        error: null,
-      });
+      const { router } = require("expo-router");
+      const invalidateQueries = jest.fn();
+      jest
+        .spyOn(require("@tanstack/react-query"), "useQueryClient")
+        .mockReturnValue({ invalidateQueries } as any);
+      jest
+        .spyOn(require("@tanstack/react-query"), "useMutation")
+        .mockImplementation(
+          (options: any) =>
+            ({
+              mutate: (vars: any) => {
+                options?.onSuccess?.({}, vars, null);
+              },
+              isPending: false,
+              error: null,
+            }) as any
+        );
 
-      expect(() => {
-        render(<AddFermentationEntryScreen />);
-      }).not.toThrow();
+      const { getByTestId } = render(<AddFermentationEntryScreen />);
+      // Provide required input and save
+      fireEvent.changeText(getByTestId(TEST_IDS.inputs.gravityInput), "1.040");
+      fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
+
+      expect(invalidateQueries).toHaveBeenCalled();
+      expect(router.back).toHaveBeenCalled();
     });
-
     it("should handle mutation error", () => {
-      const mockUseMutation = require("@tanstack/react-query").useMutation;
-      mockUseMutation.mockReturnValue({
-        mutate: jest.fn(),
-        mutateAsync: jest.fn().mockRejectedValue(new Error("Save failed")),
-        isLoading: false,
-        isPending: false,
-        error: new Error("Save failed"),
-      });
+      const { Alert } = require("react-native");
+      jest
+        .spyOn(require("@tanstack/react-query"), "useMutation")
+        .mockImplementation(
+          (options: any) =>
+            ({
+              mutate: (_vars: any) => {
+                options?.onError?.(new Error("Save failed"), _vars, null);
+              },
+              isPending: false,
+              error: new Error("Save failed"),
+            }) as any
+        );
 
-      expect(() => {
-        render(<AddFermentationEntryScreen />);
-      }).not.toThrow();
+      const { getByTestId } = render(<AddFermentationEntryScreen />);
+      fireEvent.changeText(getByTestId(TEST_IDS.inputs.gravityInput), "1.040");
+      fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
+
+      expect(Alert.alert).toHaveBeenCalled();
+      expect(Alert.alert).toHaveBeenCalledWith(
+        expect.stringMatching(/save failed/i),
+        expect.any(String),
+        expect.any(Array<string>)
+      );
     });
 
     it("should handle mutation pending state", () => {
@@ -377,9 +401,11 @@ describe("AddFermentationEntryScreen", () => {
         error: null,
       });
 
-      expect(() => {
-        render(<AddFermentationEntryScreen />);
-      }).not.toThrow();
+      const { getByTestId, queryByTestId } = render(
+        <AddFermentationEntryScreen />
+      );
+      const saveButton = getByTestId(TEST_IDS.buttons.saveButton);
+      expect(saveButton.props.disabled).toBe(true);
     });
 
     it("should have API service methods available", () => {

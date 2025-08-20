@@ -254,7 +254,7 @@ describe("IngredientsForm", () => {
     });
 
     it("should render BrewingMetricsDisplay component", () => {
-      const { getByText } = render(
+      const { getByTestId } = render(
         <IngredientsForm
           recipeData={defaultRecipeData}
           onUpdateField={mockOnUpdateField}
@@ -262,7 +262,9 @@ describe("IngredientsForm", () => {
       );
 
       // Verify the mocked BrewingMetricsDisplay component is rendered
-      expect(getByText("BrewingMetricsDisplay")).toBeTruthy();
+      expect(
+        getByTestId(TEST_IDS.components.brewingMetricsDisplay)
+      ).toBeTruthy();
     });
   });
 

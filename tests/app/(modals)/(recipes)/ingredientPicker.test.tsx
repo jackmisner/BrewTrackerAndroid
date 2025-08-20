@@ -220,8 +220,7 @@ describe("IngredientPickerScreen", () => {
 
     it("shows loading state while fetching ingredients", async () => {
       mockApiService.ingredients.getAll.mockImplementation(
-        () =>
-          new Promise(resolve => setTimeout(() => resolve({ data: [] }), 100))
+        () => new Promise(resolve => setTimeout(() => resolve({ data: [] }), 0))
       );
 
       const { getByText } = render(<IngredientPickerScreen />, {
@@ -243,11 +242,11 @@ describe("IngredientPickerScreen", () => {
 
       // Should handle error gracefully and show appropriate UI
       await waitFor(() => {
-        expect(
-          queryByText("Error") ||
-            queryByText("Grains & Fermentables") ||
-            queryByText("No ingredients found")
-        ).toBeTruthy();
+        const anyMessage =
+          queryByText(/error/i) ||
+          queryByText(/grains & fermentables/i) ||
+          queryByText(/no ingredients found/i);
+        expect(anyMessage).toBeTruthy();
       });
 
       // Component should not crash

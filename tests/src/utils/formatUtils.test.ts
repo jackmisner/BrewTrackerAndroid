@@ -80,7 +80,7 @@ describe("formatUtils", () => {
     });
 
     it("should return default time in days for dry-hop", () => {
-      expect(getHopTimePlaceholder("dry-hop", "days")).toBe("3"); // 10080 / 1440
+      expect(getHopTimePlaceholder("dry-hop", "days")).toBe("3"); // 4320 / 1440
     });
 
     it("should return default for unknown usage", () => {

@@ -356,7 +356,7 @@ describe("ViewBrewSessionScreen", () => {
   });
 
   describe("status handling", () => {
-    it("should display correct status colors and text for different statuses", () => {
+    it("should display correct status text for different statuses", () => {
       const statuses = [
         "planned",
         "in-progress",
@@ -631,7 +631,7 @@ describe("ViewBrewSessionScreen", () => {
 
       const mockUseFocusEffect = require("expo-router").useFocusEffect;
 
-      render(<ViewBrewSessionScreen />);
+      const { rerender } = render(<ViewBrewSessionScreen />);
 
       // Verify useFocusEffect was called to set up focus behavior
       expect(mockUseFocusEffect).toHaveBeenCalled();
@@ -649,11 +649,16 @@ describe("ViewBrewSessionScreen", () => {
         focusCallback();
       });
 
-      // Re-render the component to trigger the chart update
-      render(<ViewBrewSessionScreen />);
+      // Re-render the SAME instance to trigger the chart update
+      const before = FermentationChart.mock.calls.length;
+      rerender(<ViewBrewSessionScreen />);
+      const after = FermentationChart.mock.calls.length;
 
-      // Verify the chart was rendered after focus callback
-      expect(FermentationChart).toHaveBeenCalled();
+      // Verify the chart rendered again due to focus-driven refresh
+      expect(after).toBeGreaterThan(before);
+      // Optional: ensure forceRefresh bumped
+      const lastCall = FermentationChart.mock.calls[after - 1][0];
+      expect(typeof lastCall.forceRefresh).toBe("number");
     });
   });
 
@@ -761,6 +766,13 @@ describe("ViewBrewSessionScreen", () => {
       expect(chartCall.expectedFG).toEqual(brewSession.target_fg);
       expect(chartCall.actualOG).toEqual(brewSession.actual_og);
       expect(chartCall.temperatureUnit).toEqual(brewSession.temperature_unit);
+      // And the same for FermentationData
+      const dataCall = FermentationData.mock.calls[0][0];
+      expect(dataCall.fermentationData).toEqual(brewSession.fermentation_data);
+      expect(dataCall.expectedFG).toEqual(brewSession.target_fg);
+      expect(dataCall.actualOG).toEqual(brewSession.actual_og);
+      expect(dataCall.temperatureUnit).toEqual(brewSession.temperature_unit);
+      expect(dataCall.brewSessionId).toEqual("test-brew-session-1");
     });
   });
 

@@ -28,16 +28,19 @@ jest.mock("react-native", () => ({
     addEventListener: jest.fn(() => ({
       remove: jest.fn(),
     })),
+    removeEventListener: jest.fn(),
   },
 }));
 
 // Mock the chart library
-jest.mock("react-native-gifted-charts", () => ({
-  LineChart: ({ data, ...props }: any) => {
-    const React = require("react");
-    return React.createElement("LineChart", { data, ...props });
-  },
-}));
+jest.mock("react-native-gifted-charts", () => {
+  const React = require("react");
+  return {
+    LineChart: jest.fn(({ data, ...props }: any) =>
+      React.createElement("LineChart", { data, ...props })
+    ),
+  };
+});
 
 // Mock external dependencies
 jest.mock("@contexts/ThemeContext", () => ({
@@ -63,10 +66,6 @@ jest.mock("@contexts/UnitContext", () => ({
     temperatureUnit: "F",
     getTemperatureSymbol: jest.fn(() => "°F"),
   }),
-}));
-
-jest.mock("@src/types", () => ({
-  FermentationEntry: {},
 }));
 
 // Mock props for the component
