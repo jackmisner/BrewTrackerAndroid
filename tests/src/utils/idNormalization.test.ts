@@ -435,12 +435,12 @@ describe("idNormalization", () => {
       // Test the path where the object exists but doesn't have ID fields
       const nonEntityObject = {
         status: "success",
-        message: "Operation completed",  
-        metadata: { timestamp: "2024-01-01" }
+        message: "Operation completed",
+        metadata: { timestamp: "2024-01-01" },
       };
 
       const result = normalizeResponseData(nonEntityObject, "recipe");
-      
+
       // Should return unchanged since it doesn't look like an entity
       expect(result).toEqual(nonEntityObject);
       expect(result).not.toHaveProperty("id");
@@ -450,7 +450,7 @@ describe("idNormalization", () => {
       const emptyObject = {};
 
       const result = normalizeResponseData(emptyObject, "recipe");
-      
+
       // Should return unchanged since it has no ID field
       expect(result).toEqual(emptyObject);
     });
@@ -459,11 +459,11 @@ describe("idNormalization", () => {
       const objectWithNulls = {
         recipe_id: null,
         name: "Test Recipe",
-        data: null
+        data: null,
       };
 
       const result = normalizeResponseData(objectWithNulls, "recipe");
-      
+
       // Should return unchanged since recipe_id is null (no valid ID)
       expect(result).toEqual(objectWithNulls);
     });
@@ -474,11 +474,11 @@ describe("idNormalization", () => {
         name: "Test Recipe",
         style: "IPA",
         ingredients: [{ id: "hop1", name: "Cascade" }],
-        brewing_method: "all-grain"
+        brewing_method: "all-grain",
       };
 
       const result = normalizeResponseData(recipeObject, "recipe");
-      
+
       // Should detect as recipe entity and normalize
       expect(result).toHaveProperty("id", "generic-123");
       expect(result).toHaveProperty("name", "Test Recipe");
@@ -489,17 +489,17 @@ describe("idNormalization", () => {
         ingredient_id: "ingredient-456",
         name: "Pale Malt",
         type: "grain",
-        color: 3
+        color: 3,
       };
 
       const result = normalizeResponseData(ingredientObject, "ingredient");
-      
+
       // Should normalize ingredient_id to id
       expect(result).toEqual({
         name: "Pale Malt",
         type: "grain",
         color: 3,
-        id: "ingredient-456"
+        id: "ingredient-456",
       });
       expect(result).toHaveProperty("id", "ingredient-456");
       expect(result).not.toHaveProperty("ingredient_id"); // Original field removed
@@ -510,17 +510,17 @@ describe("idNormalization", () => {
         session_id: "session-789",
         recipe_id: "recipe-123",
         status: "in_progress",
-        start_date: "2024-01-01"
+        start_date: "2024-01-01",
       };
 
       const result = normalizeResponseData(brewSessionObject, "brewSession");
-      
+
       // Should normalize session_id to id
       expect(result).toEqual({
         recipe_id: "recipe-123",
         status: "in_progress",
         start_date: "2024-01-01",
-        id: "session-789"
+        id: "session-789",
       });
       expect(result).toHaveProperty("id", "session-789");
       expect(result).not.toHaveProperty("session_id"); // Original field removed
@@ -530,27 +530,30 @@ describe("idNormalization", () => {
       const objectWithMongoId = {
         _id: "mongo-obj-id",
         name: "Test Entity",
-        category: "test"
+        category: "test",
       };
 
       const result = normalizeResponseData(objectWithMongoId, "recipe");
-      
+
       // Should use _id as fallback and normalize
       expect(result).toEqual({
         id: "mongo-obj-id",
         _id: "mongo-obj-id",
         name: "Test Entity",
-        category: "test"
+        category: "test",
       });
     });
 
     it("should skip normalization for fermentation entries", () => {
       const fermentationData = [
-        { temperature: 68, gravity: 1.050, date: "2024-01-01" },
-        { temperature: 66, gravity: 1.030, date: "2024-01-03" },
+        { temperature: 68, gravity: 1.05, date: "2024-01-01" },
+        { temperature: 66, gravity: 1.03, date: "2024-01-03" },
       ];
 
-      const result = normalizeResponseData(fermentationData, "fermentationEntry");
+      const result = normalizeResponseData(
+        fermentationData,
+        "fermentationEntry"
+      );
 
       // Should return data unchanged since fermentation entries don't have individual IDs
       expect(result).toEqual(fermentationData);
@@ -610,11 +613,11 @@ describe("idNormalization", () => {
         true,
         null,
         undefined,
-        { id: "test", name: "Entity" }
+        { id: "test", name: "Entity" },
       ];
 
       const result = denormalizeEntityIdDeep(mixedArray, "recipe");
-      
+
       // Primitives should be unchanged, object should be processed
       expect(result[0]).toBe("string value");
       expect(result[1]).toBe(123);
@@ -737,7 +740,10 @@ describe("idNormalization", () => {
         style: "IPA",
       };
 
-      const denormalizedRecipe = denormalizeEntityIdDeep(recipeData, "unknown" as any);
+      const denormalizedRecipe = denormalizeEntityIdDeep(
+        recipeData,
+        "unknown" as any
+      );
       expect(denormalizedRecipe.recipe_id).toBe("recipe-123");
 
       // Test brewSession detection
@@ -747,28 +753,37 @@ describe("idNormalization", () => {
         recipe: { name: "Test Recipe" },
       };
 
-      const denormalizedSession = denormalizeEntityIdDeep(brewSessionData, "unknown" as any);
+      const denormalizedSession = denormalizeEntityIdDeep(
+        brewSessionData,
+        "unknown" as any
+      );
       expect(denormalizedSession.session_id).toBe("session-123");
 
-      // Test user detection  
+      // Test user detection
       const userData = {
         id: "user-123",
         email: "test@example.com",
         username: "testuser",
       };
 
-      const denormalizedUser = denormalizeEntityIdDeep(userData, "unknown" as any);
+      const denormalizedUser = denormalizeEntityIdDeep(
+        userData,
+        "unknown" as any
+      );
       expect(denormalizedUser.user_id).toBe("user-123");
 
       // Test fermentationEntry detection
       const fermentationData = {
         id: "entry-123",
         temperature: 68,
-        gravity: 1.050,
+        gravity: 1.05,
         date: "2024-01-01",
       };
 
-      const denormalizedEntry = denormalizeEntityIdDeep(fermentationData, "unknown" as any);
+      const denormalizedEntry = denormalizeEntityIdDeep(
+        fermentationData,
+        "unknown" as any
+      );
       expect(denormalizedEntry.entry_id).toBe("entry-123");
     });
   });

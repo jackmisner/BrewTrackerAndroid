@@ -233,7 +233,7 @@ describe("useRecipeMetrics - Essential Tests", () => {
 
   it("should retry network errors up to 2 times", async () => {
     jest.useFakeTimers();
-    
+
     try {
       const mockRecipeData = createMockRecipeData();
       const networkError = {
@@ -263,12 +263,12 @@ describe("useRecipeMetrics - Essential Tests", () => {
       await act(async () => {
         jest.advanceTimersByTime(1000);
       });
-      
+
       expect(
         mockedApiService.recipes.calculateMetricsPreview
       ).toHaveBeenCalledTimes(2);
 
-      // Advance timers for second retry (2000ms delay) 
+      // Advance timers for second retry (2000ms delay)
       await act(async () => {
         jest.advanceTimersByTime(2000);
       });
@@ -285,8 +285,6 @@ describe("useRecipeMetrics - Essential Tests", () => {
       jest.useRealTimers();
     }
   });
-
-
 
   it("should handle complex recipe data with all ingredient types", async () => {
     const complexRecipeData = createMockRecipeData({

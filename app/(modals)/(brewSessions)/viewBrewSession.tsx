@@ -142,7 +142,7 @@ export default function ViewBrewSession() {
   ) => {
     // Generate testID based on label for testing
     const testId = TEST_IDS.patterns.metricValue(label);
-    
+
     return (
       <View style={styles.metricCard}>
         <Text style={styles.metricLabel}>{label}</Text>
@@ -150,7 +150,8 @@ export default function ViewBrewSession() {
           {(() => {
             if (value === undefined || value === null) return "—";
             if (typeof value === "number") {
-              const decimals = label === "ABV" ? 1 : label.includes("G") ? 3 : 0;
+              const decimals =
+                label === "ABV" ? 1 : label.includes("G") ? 3 : 0;
               return `${formatMetric(value, decimals)}${unit || ""}`;
             }
             return `${value}${unit || ""}`;
@@ -168,9 +169,9 @@ export default function ViewBrewSession() {
       <View style={styles.container}>
         {/* Header with back button - always visible */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={handleGoBack} 
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleGoBack}
             testID={TEST_IDS.header.backButton}
             accessible={true}
             accessibilityRole="button"
@@ -197,9 +198,9 @@ export default function ViewBrewSession() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={handleGoBack} 
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleGoBack}
             testID={TEST_IDS.header.backButton}
             accessible={true}
             accessibilityRole="button"
@@ -235,9 +236,9 @@ export default function ViewBrewSession() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={handleGoBack} 
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleGoBack}
             testID={TEST_IDS.header.backButton}
             accessible={true}
             accessibilityRole="button"
@@ -272,9 +273,9 @@ export default function ViewBrewSession() {
     <View style={styles.container}>
       {/* Header with back button - always visible */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={handleGoBack} 
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={handleGoBack}
           testID={TEST_IDS.header.backButton}
           accessible={true}
           accessibilityRole="button"

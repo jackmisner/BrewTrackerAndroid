@@ -1,3 +1,40 @@
+/**
+ * @fileoverview Brew sessions management screen - fermentation tracking hub
+ *
+ * @description
+ * This screen provides a comprehensive interface for managing brew sessions throughout
+ * the fermentation process. It features a tabbed layout separating active and completed
+ * brew sessions, with detailed progress tracking, metric displays, and context-aware actions.
+ *
+ * @key_features
+ * - Tabbed interface for active vs completed brew sessions
+ * - Detailed session progress tracking with visual progress bars
+ * - Brewing metrics display (OG, FG, ABV, fermentation days)
+ * - Context menus for session management actions
+ * - Pull-to-refresh functionality for real-time updates
+ * - Status-based color coding and iconography
+ * - Floating action button for quick session creation
+ *
+ * @navigation_patterns
+ * - URL parameter-driven tab selection for deep linking
+ * - Modal navigation for session creation and viewing
+ * - Context menu navigation for edit/delete operations
+ * - Integration with recipe selection flow
+ * - Back navigation with preserved tab state
+ *
+ * @security_considerations
+ * - User authentication required for session access
+ * - Personal brew session data isolation
+ * - JWT-authenticated API requests for all operations
+ * - Context menu actions validate user permissions
+ *
+ * @data_handling
+ * - React Query caching with 2-minute stale time for session data
+ * - Real-time progress calculations based on brew dates
+ * - Status filtering for active vs completed sessions
+ * - Optimized list rendering with FlatList for performance
+ * - Error handling with retry mechanisms and offline support
+ */
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -23,12 +60,6 @@ import {
 } from "@src/components/ui/ContextMenu/BrewSessionContextMenu";
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
-
-/**
- * Displays a tabbed interface for viewing, refreshing, and navigating brew sessions.
- *
- * Shows lists of active and completed brew sessions, allows switching between tabs, supports pull-to-refresh, and provides navigation to session details or starting a new brew session. Handles loading, error, and empty states with appropriate UI feedback.
- */
 export default function BrewSessionsScreen() {
   const theme = useTheme();
   const styles = brewSessionsStyles(theme);
@@ -215,6 +246,9 @@ export default function BrewSessionsScreen() {
       const totalDays = Math.floor(
         (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
       );
+      if (totalDays <= 0) {
+        return { daysPassed, totalDays: null, progress: null };
+      }
       return {
         daysPassed,
         totalDays,
@@ -304,12 +338,14 @@ export default function BrewSessionsScreen() {
         </View>
 
         <View style={styles.brewSessionMetrics}>
-          <View style={styles.metric}>
-            <Text style={styles.metricLabel}>Started</Text>
-            <Text style={styles.metricValue}>
-              {formatDate(brewSession.brew_date)}
-            </Text>
-          </View>
+          {brewSession.brew_date && (
+            <View style={styles.metric}>
+              <Text style={styles.metricLabel}>Started</Text>
+              <Text style={styles.metricValue}>
+                {formatDate(brewSession.brew_date)}
+              </Text>
+            </View>
+          )}
 
           {brewSession.original_gravity && (
             <View style={styles.metric}>

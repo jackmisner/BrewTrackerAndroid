@@ -903,7 +903,7 @@ describe("AuthContext", () => {
 
     it("should use cached user fallback during successful initialization", async () => {
       const mockUser = createMockUser({ username: "cached-user" });
-      
+
       mockApiService.token.getToken.mockResolvedValue("token");
       mockApiService.auth.getProfile.mockResolvedValue({ data: null }); // API returns null data
       mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(mockUser));
@@ -926,7 +926,7 @@ describe("AuthContext", () => {
       mockApiService.auth.getProfile.mockRejectedValue(
         new Error("Network error")
       );
-      
+
       // First call for successful case, second call throws error
       mockAsyncStorage.getItem
         .mockResolvedValueOnce(null) // No cached data in success path
@@ -947,7 +947,7 @@ describe("AuthContext", () => {
     it("should use API data when different from cached data", async () => {
       const cachedUser = createMockUser({ username: "cached-user" });
       const apiUser = createMockUser({ username: "api-user" });
-      
+
       mockApiService.token.getToken.mockResolvedValue("token");
       mockApiService.auth.getProfile.mockResolvedValue({ data: apiUser });
       mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedUser));
@@ -967,7 +967,7 @@ describe("AuthContext", () => {
 
     it("should not update user when cached and API data are identical", async () => {
       const user = createMockUser({ username: "same-user" });
-      
+
       mockApiService.token.getToken.mockResolvedValue("token");
       mockApiService.auth.getProfile.mockResolvedValue({ data: user });
       mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(user));

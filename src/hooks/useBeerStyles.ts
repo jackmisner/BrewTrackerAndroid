@@ -1,3 +1,18 @@
+/**
+ * Beer Styles Hook
+ *
+ * React Query hook for fetching and managing beer styles data from the API.
+ * Provides cached beer style options for recipe creation and filtering.
+ *
+ * Features:
+ * - Cached beer styles with React Query
+ * - Auto-retry on failure
+ * - Loading and error state management
+ * - Formatted style options for dropdowns
+ *
+ * @returns Object containing beer styles data, loading state, and error state
+ */
+
 import { useQuery } from "@tanstack/react-query";
 import ApiService from "@services/api/apiService";
 

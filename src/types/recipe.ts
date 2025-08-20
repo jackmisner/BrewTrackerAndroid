@@ -1,3 +1,22 @@
+/**
+ * Recipe Type Definitions
+ *
+ * TypeScript definitions for all recipe-related data structures including
+ * recipes, ingredients, brewing parameters, and form data.
+ *
+ * Key Types:
+ * - Recipe: Complete recipe with all ingredients and parameters
+ * - RecipeIngredient: Individual ingredient with type-specific properties
+ * - RecipeFormData: Form data structure for recipe creation/editing
+ * - IngredientType: Grain, hop, yeast, or other ingredient types
+ * - Various unit types for measurements and conversions
+ *
+ * Notes:
+ * - Units: BatchSizeUnit ("gal" | "l"), IngredientUnit (e.g., "lb", "kg", "oz", "g", "ml", "l")
+ * - Metrics: RecipeMetrics captures calculated OG, FG, ABV, IBU, SRM
+ * - Optional fields: Many type-specific fields are optional (e.g., alpha_acid for hops)
+ */
+
 import { ID } from "./common";
 
 // Recipe types

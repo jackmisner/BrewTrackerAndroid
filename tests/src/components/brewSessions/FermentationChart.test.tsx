@@ -1,15 +1,12 @@
 /**
- * FermentationChart Tests
- * 
- * Start simple - test basic rendering first, following our established zero-coverage high-impact strategy
- * This file has 643 uncovered lines - MASSIVE impact potential!
+ * FermentationChart Component Test Suite
  */
 
 import React from "react";
 import { render } from "@testing-library/react-native";
 import { FermentationChart } from "../../../../src/components/brewSessions/FermentationChart";
 
-// Mock React Native components (reusing successful pattern)
+// Mock React Native components
 jest.mock("react-native", () => ({
   View: ({ children, ...props }: any) => {
     const React = require("react");
@@ -24,25 +21,28 @@ jest.mock("react-native", () => ({
     return React.createElement("TouchableOpacity", props, children);
   },
   StyleSheet: {
-    create: jest.fn((styles) => styles),
+    create: jest.fn(styles => styles),
   },
   Dimensions: {
     get: jest.fn(() => ({ width: 375, height: 667 })),
     addEventListener: jest.fn(() => ({
       remove: jest.fn(),
     })),
+    removeEventListener: jest.fn(),
   },
 }));
 
 // Mock the chart library
-jest.mock("react-native-gifted-charts", () => ({
-  LineChart: ({ data, ...props }: any) => {
-    const React = require("react");
-    return React.createElement("LineChart", { data, ...props });
-  },
-}));
+jest.mock("react-native-gifted-charts", () => {
+  const React = require("react");
+  return {
+    LineChart: jest.fn(({ data, ...props }: any) =>
+      React.createElement("LineChart", { data, ...props })
+    ),
+  };
+});
 
-// Mock dependencies following our established patterns
+// Mock external dependencies
 jest.mock("@contexts/ThemeContext", () => ({
   useTheme: () => ({
     colors: {
@@ -68,10 +68,6 @@ jest.mock("@contexts/UnitContext", () => ({
   }),
 }));
 
-jest.mock("@src/types", () => ({
-  FermentationEntry: {},
-}));
-
 // Mock props for the component
 const mockFermentationData = [
   {
@@ -82,7 +78,7 @@ const mockFermentationData = [
     entry_date: "2023-12-01T10:00:00Z",
   },
   {
-    gravity: 1.020,
+    gravity: 1.02,
     temperature: 70,
     ph: 4.0,
     notes: "Day 3",

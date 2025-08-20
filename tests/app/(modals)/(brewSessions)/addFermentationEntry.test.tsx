@@ -1,7 +1,5 @@
 /**
- * AddFermentationEntry Tests
- * 
- * Start simple - test basic rendering first
+ * AddFermentationEntryScreen Component Test Suite
  */
 
 import React from "react";
@@ -21,10 +19,14 @@ jest.mock("react-native", () => ({
   },
   TouchableOpacity: ({ children, ...props }: any) => {
     const React = require("react");
-    return React.createElement("TouchableOpacity", { 
-      ...props, 
-      testID: props.testID || "touchable-opacity"
-    }, children);
+    return React.createElement(
+      "TouchableOpacity",
+      {
+        ...props,
+        testID: props.testID || "touchable-opacity",
+      },
+      children
+    );
   },
   ScrollView: ({ children, ...props }: any) => {
     const React = require("react");
@@ -33,12 +35,12 @@ jest.mock("react-native", () => ({
   TextInput: (props: any) => {
     const React = require("react");
     const [value, setValue] = React.useState(props.value || "");
-    
+
     React.useEffect(() => {
       setValue(props.value || "");
     }, [props.value]);
-    
-    return React.createElement("TextInput", { 
+
+    return React.createElement("TextInput", {
       ...props,
       value: value,
       onChangeText: (text: string) => {
@@ -47,7 +49,7 @@ jest.mock("react-native", () => ({
           props.onChangeText(text);
         }
       },
-      testID: props.testID || props.placeholder || "text-input"
+      testID: props.testID || props.placeholder || "text-input",
     });
   },
   KeyboardAvoidingView: ({ children, ...props }: any) => {
@@ -62,11 +64,12 @@ jest.mock("react-native", () => ({
   Alert: { alert: jest.fn() },
   StyleSheet: {
     create: (styles: any) => styles,
-    flatten: (styles: any) => Array.isArray(styles) ? Object.assign({}, ...styles) : styles,
+    flatten: (styles: any) =>
+      Array.isArray(styles) ? Object.assign({}, ...styles) : styles,
   },
 }));
 
-// Mock dependencies following our established patterns
+// Mock external dependencies
 jest.mock("@react-native-community/datetimepicker", () => {
   const React = require("react");
   return {
@@ -133,7 +136,12 @@ jest.mock("@src/types", () => ({
 jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: ({ name, size, color, ...props }: any) => {
     const React = require("react");
-    return React.createElement("MaterialIcons", { name, size, color, ...props });
+    return React.createElement("MaterialIcons", {
+      name,
+      size,
+      color,
+      ...props,
+    });
   },
 }));
 
@@ -311,7 +319,7 @@ describe("AddFermentationEntryScreen", () => {
       expect(() => {
         render(<AddFermentationEntryScreen />);
       }).not.toThrow();
-      
+
       expect(mockRouter.back).toBeDefined();
     });
 
@@ -330,33 +338,57 @@ describe("AddFermentationEntryScreen", () => {
 
   describe("API Integration", () => {
     it("should handle mutation success", () => {
-      const mockUseMutation = require("@tanstack/react-query").useMutation;
-      mockUseMutation.mockReturnValue({
-        mutate: jest.fn(),
-        mutateAsync: jest.fn().mockResolvedValue({}),
-        isLoading: false,
-        isPending: false,
-        error: null,
-      });
+      const { router } = require("expo-router");
+      const invalidateQueries = jest.fn();
+      jest
+        .spyOn(require("@tanstack/react-query"), "useQueryClient")
+        .mockReturnValue({ invalidateQueries } as any);
+      jest
+        .spyOn(require("@tanstack/react-query"), "useMutation")
+        .mockImplementation(
+          (options: any) =>
+            ({
+              mutate: (vars: any) => {
+                options?.onSuccess?.({}, vars, null);
+              },
+              isPending: false,
+              error: null,
+            }) as any
+        );
 
-      expect(() => {
-        render(<AddFermentationEntryScreen />);
-      }).not.toThrow();
+      const { getByTestId } = render(<AddFermentationEntryScreen />);
+      // Provide required input and save
+      fireEvent.changeText(getByTestId(TEST_IDS.inputs.gravityInput), "1.040");
+      fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
+
+      expect(invalidateQueries).toHaveBeenCalled();
+      expect(router.back).toHaveBeenCalled();
     });
-
     it("should handle mutation error", () => {
-      const mockUseMutation = require("@tanstack/react-query").useMutation;
-      mockUseMutation.mockReturnValue({
-        mutate: jest.fn(),
-        mutateAsync: jest.fn().mockRejectedValue(new Error("Save failed")),
-        isLoading: false,
-        isPending: false,
-        error: new Error("Save failed"),
-      });
+      const { Alert } = require("react-native");
+      jest
+        .spyOn(require("@tanstack/react-query"), "useMutation")
+        .mockImplementation(
+          (options: any) =>
+            ({
+              mutate: (_vars: any) => {
+                options?.onError?.(new Error("Save failed"), _vars, null);
+              },
+              isPending: false,
+              error: new Error("Save failed"),
+            }) as any
+        );
 
-      expect(() => {
-        render(<AddFermentationEntryScreen />);
-      }).not.toThrow();
+      const { getByTestId } = render(<AddFermentationEntryScreen />);
+      fireEvent.changeText(getByTestId(TEST_IDS.inputs.gravityInput), "1.040");
+      fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
+
+      expect(Alert.alert).toHaveBeenCalled();
+      expect(Alert.alert).toHaveBeenCalledWith(
+        expect.stringMatching(/save failed/i),
+        expect.any(String),
+        expect.any(Array)
+      );
     });
 
     it("should handle mutation pending state", () => {
@@ -369,18 +401,22 @@ describe("AddFermentationEntryScreen", () => {
         error: null,
       });
 
-      expect(() => {
-        render(<AddFermentationEntryScreen />);
-      }).not.toThrow();
+      const { getByTestId, queryByTestId } = render(
+        <AddFermentationEntryScreen />
+      );
+      const saveButton = getByTestId(TEST_IDS.buttons.saveButton);
+      expect(saveButton.props.disabled).toBe(true);
     });
 
     it("should have API service methods available", () => {
       const mockApiService = require("@services/api/apiService").default;
-      
+
       expect(mockApiService.brewSessions.getById).toBeDefined();
       expect(typeof mockApiService.brewSessions.getById).toBe("function");
       expect(mockApiService.brewSessions.addFermentationEntry).toBeDefined();
-      expect(typeof mockApiService.brewSessions.addFermentationEntry).toBe("function");
+      expect(typeof mockApiService.brewSessions.addFermentationEntry).toBe(
+        "function"
+      );
     });
   });
 
@@ -464,15 +500,21 @@ describe("AddFermentationEntryScreen", () => {
 
     it("should convert numeric strings to numbers and format data correctly", async () => {
       const { getByTestId } = render(<AddFermentationEntryScreen />);
-      
+
       // Test that form fields accept input and save button is pressable
       expect(() => {
-        fireEvent.changeText(getByTestId(TEST_IDS.inputs.gravityInput), '1.050');
-        fireEvent.changeText(getByTestId(TEST_IDS.inputs.temperatureInput), '68');
-        fireEvent.changeText(getByTestId(TEST_IDS.inputs.phInput), '4.2');
+        fireEvent.changeText(
+          getByTestId(TEST_IDS.inputs.gravityInput),
+          "1.050"
+        );
+        fireEvent.changeText(
+          getByTestId(TEST_IDS.inputs.temperatureInput),
+          "68"
+        );
+        fireEvent.changeText(getByTestId(TEST_IDS.inputs.phInput), "4.2");
         fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
       }).not.toThrow();
-      
+
       // Verify the form elements exist and are interactive
       expect(getByTestId(TEST_IDS.inputs.gravityInput)).toBeTruthy();
       expect(getByTestId(TEST_IDS.inputs.temperatureInput)).toBeTruthy();
@@ -482,45 +524,56 @@ describe("AddFermentationEntryScreen", () => {
 
     it("should handle optional fields correctly - omit empty fields", async () => {
       const mockMutate = jest.fn();
-      jest.spyOn(require('@tanstack/react-query'), 'useMutation').mockReturnValue({
-        mutate: mockMutate,
-        isPending: false,
-      });
+      jest
+        .spyOn(require("@tanstack/react-query"), "useMutation")
+        .mockReturnValue({
+          mutate: mockMutate,
+          isPending: false,
+        });
 
       const { getByTestId } = render(<AddFermentationEntryScreen />);
-      
+
       // Only fill required gravity field
-      fireEvent.changeText(getByTestId(TEST_IDS.inputs.gravityInput), '1.040');
-      
+      fireEvent.changeText(getByTestId(TEST_IDS.inputs.gravityInput), "1.040");
+
       // Submit form
       fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
-      
+
       await waitFor(() => {
         expect(mockMutate).toHaveBeenCalledWith({
-          gravity: 1.040,
+          gravity: 1.04,
           entry_date: expect.any(String),
           // Optional fields should not be present
         });
-        
+
         const callArgs = mockMutate.mock.calls[0][0];
-        expect(callArgs).not.toHaveProperty('temperature');
-        expect(callArgs).not.toHaveProperty('ph');
-        expect(callArgs).not.toHaveProperty('notes');
+        expect(callArgs).not.toHaveProperty("temperature");
+        expect(callArgs).not.toHaveProperty("ph");
+        expect(callArgs).not.toHaveProperty("notes");
       });
     });
 
     it("should include optional fields when provided", async () => {
       const { getByTestId } = render(<AddFermentationEntryScreen />);
-      
+
       // Test that all form fields including optional ones accept input
       expect(() => {
-        fireEvent.changeText(getByTestId(TEST_IDS.inputs.gravityInput), '1.035');
-        fireEvent.changeText(getByTestId(TEST_IDS.inputs.temperatureInput), '72');
-        fireEvent.changeText(getByTestId(TEST_IDS.inputs.phInput), '3.8');
-        fireEvent.changeText(getByTestId(TEST_IDS.inputs.notesInput), 'Active fermentation');
+        fireEvent.changeText(
+          getByTestId(TEST_IDS.inputs.gravityInput),
+          "1.035"
+        );
+        fireEvent.changeText(
+          getByTestId(TEST_IDS.inputs.temperatureInput),
+          "72"
+        );
+        fireEvent.changeText(getByTestId(TEST_IDS.inputs.phInput), "3.8");
+        fireEvent.changeText(
+          getByTestId(TEST_IDS.inputs.notesInput),
+          "Active fermentation"
+        );
         fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
       }).not.toThrow();
-      
+
       // Verify all form elements exist and are interactive
       expect(getByTestId(TEST_IDS.inputs.gravityInput)).toBeTruthy();
       expect(getByTestId(TEST_IDS.inputs.temperatureInput)).toBeTruthy();
@@ -531,25 +584,29 @@ describe("AddFermentationEntryScreen", () => {
 
     it("should format date to ISO string", async () => {
       const mockMutate = jest.fn();
-      const testDate = new Date('2024-03-15T10:30:00Z');
-      
-      jest.spyOn(require('@tanstack/react-query'), 'useMutation').mockReturnValue({
-        mutate: mockMutate,
-        isPending: false,
-      });
+      const testDate = new Date("2024-03-15T10:30:00Z");
+
+      jest
+        .spyOn(require("@tanstack/react-query"), "useMutation")
+        .mockReturnValue({
+          mutate: mockMutate,
+          isPending: false,
+        });
 
       const { getByTestId } = render(<AddFermentationEntryScreen />);
-      
+
       // Fill required field
-      fireEvent.changeText(getByTestId(TEST_IDS.inputs.gravityInput), '1.045');
-      
+      fireEvent.changeText(getByTestId(TEST_IDS.inputs.gravityInput), "1.045");
+
       // Submit form
       fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
-      
+
       await waitFor(() => {
         expect(mockMutate).toHaveBeenCalled();
         const callArgs = mockMutate.mock.calls[0][0];
-        expect(callArgs.entry_date).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+        expect(callArgs.entry_date).toMatch(
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
+        );
       });
     });
   });

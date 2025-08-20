@@ -52,7 +52,11 @@ jest.mock("@contexts/ThemeContext", () => ({
 jest.mock("@styles/modals/viewRecipeStyles", () => ({
   viewRecipeStyles: jest.fn(() => ({
     container: { flex: 1 },
-    loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
     loadingText: { marginTop: 8 },
     errorContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
     errorText: { fontSize: 18, fontWeight: "bold", marginTop: 16 },
@@ -68,27 +72,39 @@ jest.mock("@styles/modals/viewRecipeStyles", () => ({
     recipeDescription: { fontSize: 14, marginBottom: 16 },
     section: { marginBottom: 24 },
     sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 12 },
-    ingredientItem: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8 },
+    ingredientItem: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 8,
+    },
     ingredientName: { fontSize: 14, flex: 1 },
     ingredientAmount: { fontSize: 14, fontWeight: "600" },
     ingredientDetails: { fontSize: 12, color: "#666" },
     instructionItem: { marginBottom: 12 },
     instructionStep: { fontSize: 14, fontWeight: "600", marginBottom: 4 },
     instructionText: { fontSize: 14 },
-    actionButton: { flexDirection: "row", alignItems: "center", padding: 16, marginVertical: 8 },
+    actionButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+      marginVertical: 8,
+    },
     actionButtonText: { fontSize: 16, fontWeight: "600", marginLeft: 12 },
     placeholder: { alignItems: "center", padding: 40 },
     placeholderText: { fontSize: 16, color: "#666", marginTop: 8 },
   })),
 }));
 
-jest.mock("@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay", () => ({
-  BrewingMetricsDisplay: "BrewingMetricsDisplay",
-}));
+jest.mock(
+  "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay",
+  () => ({
+    BrewingMetricsDisplay: "BrewingMetricsDisplay",
+  })
+);
 
 jest.mock("@src/utils/formatUtils", () => ({
-  formatHopTime: jest.fn((time) => `${time} min`),
-  formatHopUsage: jest.fn((usage) => usage),
+  formatHopTime: jest.fn(time => `${time} min`),
+  formatHopUsage: jest.fn(usage => usage),
 }));
 
 const mockTheme = {
@@ -204,8 +220,20 @@ describe("ViewRecipeScreen", () => {
       const recipeWithMalts = {
         ...mockRecipe,
         ingredients: [
-          { name: "Pale Malt", amount: 5.0, color: 2, type: "grain", unit: "lb" },
-          { name: "Munich Malt", amount: 1.0, color: 9, type: "grain", unit: "lb" },
+          {
+            name: "Pale Malt",
+            amount: 5.0,
+            color: 2,
+            type: "grain",
+            unit: "lb",
+          },
+          {
+            name: "Munich Malt",
+            amount: 1.0,
+            color: 9,
+            type: "grain",
+            unit: "lb",
+          },
         ],
       };
 
@@ -227,8 +255,24 @@ describe("ViewRecipeScreen", () => {
       const recipeWithHops = {
         ...mockRecipe,
         ingredients: [
-          { name: "Cascade", amount: 1.0, time: 60, use: "Boil", alpha_acid: 5.5, type: "hop", unit: "oz" },
-          { name: "Centennial", amount: 0.5, time: 15, use: "Boil", alpha_acid: 10.0, type: "hop", unit: "oz" },
+          {
+            name: "Cascade",
+            amount: 1.0,
+            time: 60,
+            use: "Boil",
+            alpha_acid: 5.5,
+            type: "hop",
+            unit: "oz",
+          },
+          {
+            name: "Centennial",
+            amount: 0.5,
+            time: 15,
+            use: "Boil",
+            alpha_acid: 10.0,
+            type: "hop",
+            unit: "oz",
+          },
         ],
       };
 
@@ -250,7 +294,13 @@ describe("ViewRecipeScreen", () => {
       const recipeWithYeast = {
         ...mockRecipe,
         ingredients: [
-          { name: "Safale US-05", type: "yeast", attenuation: 81, amount: 1, unit: "packet" },
+          {
+            name: "Safale US-05",
+            type: "yeast",
+            attenuation: 81,
+            amount: 1,
+            unit: "packet",
+          },
         ],
       };
 
@@ -287,7 +337,6 @@ describe("ViewRecipeScreen", () => {
       expect(getByText("Other")).toBeTruthy();
       expect(getByText("Gypsum")).toBeTruthy();
     });
-
   });
 
   describe("navigation", () => {
@@ -302,21 +351,21 @@ describe("ViewRecipeScreen", () => {
 
     it("should navigate back when back button is pressed", () => {
       const { UNSAFE_getAllByType } = render(<ViewRecipeScreen />);
-      
+
       // Find the first TouchableOpacity which should be the back button in the header
       const touchableOpacities = UNSAFE_getAllByType("TouchableOpacity" as any);
       const backButton = touchableOpacities[0]; // First TouchableOpacity should be the back button
-      
+
       // Simulate pressing the back button
       fireEvent.press(backButton);
-      
+
       // Verify router.back was called
       expect(mockRouter.back).toHaveBeenCalledTimes(1);
     });
 
     it("should navigate to edit recipe when edit action is pressed", () => {
       render(<ViewRecipeScreen />);
-      
+
       // Edit button is an icon button in the header - test that navigation is configured
       expect(mockRouter.push).toBeDefined();
     });
@@ -345,16 +394,16 @@ describe("ViewRecipeScreen", () => {
       });
 
       const { UNSAFE_getByType } = render(<ViewRecipeScreen />);
-      
+
       // Find the ScrollView and trigger its RefreshControl onRefresh
       const scrollView = UNSAFE_getByType("ScrollView" as any);
       const refreshControl = scrollView.props.refreshControl;
-      
+
       // Simulate pull-to-refresh by calling onRefresh
       await act(async () => {
         await refreshControl.props.onRefresh();
       });
-      
+
       // Verify refetch was called
       expect(mockRefetch).toHaveBeenCalledTimes(1);
     });
@@ -397,7 +446,11 @@ describe("ViewRecipeScreen", () => {
       const { getByText } = render(<ViewRecipeScreen />);
 
       expect(getByText("Brewing Instructions")).toBeTruthy();
-      expect(getByText("Brewing instructions will be displayed here when available from the API")).toBeTruthy();
+      expect(
+        getByText(
+          "Brewing instructions will be displayed here when available from the API"
+        )
+      ).toBeTruthy();
     });
   });
 
@@ -422,7 +475,15 @@ describe("ViewRecipeScreen", () => {
       const recipeWithHops = {
         ...mockData.recipe(),
         ingredients: [
-          { name: "Cascade", amount: 1.0, time: 60, use: "Boil", alpha_acid: 5.5, type: "hop", unit: "oz" },
+          {
+            name: "Cascade",
+            amount: 1.0,
+            time: 60,
+            use: "Boil",
+            alpha_acid: 5.5,
+            type: "hop",
+            unit: "oz",
+          },
         ],
       };
 
@@ -435,8 +496,12 @@ describe("ViewRecipeScreen", () => {
 
       render(<ViewRecipeScreen />);
 
-      expect(require("@src/utils/formatUtils").formatHopTime).toHaveBeenCalledWith(60, "Boil");
-      expect(require("@src/utils/formatUtils").formatHopUsage).toHaveBeenCalledWith("Boil");
+      expect(
+        require("@src/utils/formatUtils").formatHopTime
+      ).toHaveBeenCalledWith(60, "Boil");
+      expect(
+        require("@src/utils/formatUtils").formatHopUsage
+      ).toHaveBeenCalledWith("Boil");
     });
   });
 
@@ -451,7 +516,9 @@ describe("ViewRecipeScreen", () => {
 
       render(<ViewRecipeScreen />);
 
-      expect(require("@styles/modals/viewRecipeStyles").viewRecipeStyles).toHaveBeenCalledWith(mockTheme);
+      expect(
+        require("@styles/modals/viewRecipeStyles").viewRecipeStyles
+      ).toHaveBeenCalledWith(mockTheme);
     });
   });
 });

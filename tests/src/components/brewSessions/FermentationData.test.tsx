@@ -1,14 +1,12 @@
 /**
- * FermentationData Tests
- * 
- * Start simple - test basic rendering first
+ * FermentationData Component Test Suite
  */
 
 import React from "react";
 import { render } from "@testing-library/react-native";
 import { FermentationData } from "@src/components/brewSessions/FermentationData";
 
-// Mock dependencies following our established patterns
+// Mock external dependencies
 jest.mock("expo-router", () => ({
   router: {
     push: jest.fn(),
@@ -44,8 +42,8 @@ jest.mock("@src/components/brewSessions/FermentationEntryContextMenu", () => ({
 describe("FermentationData", () => {
   const defaultProps = {
     fermentationData: [],
-    expectedFG: 1.010,
-    actualOG: 1.050,
+    expectedFG: 1.01,
+    actualOG: 1.05,
     temperatureUnit: "C",
     brewSessionId: "session-123",
   };

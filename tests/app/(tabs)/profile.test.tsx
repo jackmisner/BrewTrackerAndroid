@@ -5,15 +5,24 @@ import ProfileScreen from "../../../app/(tabs)/profile";
 import { mockData, testUtils } from "../../testUtils";
 import type { AlertButton } from "react-native";
 
-
 // Shared style mock constant
 const styleMock = {
   container: { flex: 1 },
   header: { alignItems: "center", padding: 24 },
-  avatar: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center" },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   username: { fontSize: 24, fontWeight: "bold", marginTop: 12 },
   email: { fontSize: 16, color: "#666", marginTop: 4 },
-  verificationBadge: { flexDirection: "row", alignItems: "center", marginTop: 8 },
+  verificationBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
   verificationText: { fontSize: 14, marginLeft: 4 },
   section: { marginVertical: 8 },
   menuItem: { flexDirection: "row", alignItems: "center", padding: 16 },
@@ -103,13 +112,15 @@ const mockRouter = {
 describe("ProfileScreen", () => {
   beforeEach(() => {
     jest.resetAllMocks();
-    
+
     // Re-setup mocks after reset
     require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
     require("@contexts/ThemeContext").useTheme.mockReturnValue(mockTheme);
     require("expo-router").useRouter.mockReturnValue(mockRouter);
-    require("@styles/tabs/profileStyles").profileStyles.mockReturnValue(styleMock);
-    
+    require("@styles/tabs/profileStyles").profileStyles.mockReturnValue(
+      styleMock
+    );
+
     testUtils.resetCounters();
   });
 
@@ -153,7 +164,9 @@ describe("ProfileScreen", () => {
 
       fireEvent.press(settingsItem);
 
-      expect(mockRouter.push).toHaveBeenCalledWith("/(modals)/(settings)/settings");
+      expect(mockRouter.push).toHaveBeenCalledWith(
+        "/(modals)/(settings)/settings"
+      );
     });
 
     it("should render help & support menu item", () => {
@@ -181,13 +194,15 @@ describe("ProfileScreen", () => {
         fireEvent.press(donateButton);
       });
 
-      expect(mockOpenBrowserAsync).toHaveBeenCalledWith("https://ko-fi.com/jackmisner");
+      expect(mockOpenBrowserAsync).toHaveBeenCalledWith(
+        "https://ko-fi.com/jackmisner"
+      );
     });
 
     it("should fallback to external browser if in-app browser fails", async () => {
       const mockOpenBrowserAsync = require("expo-web-browser").openBrowserAsync;
       const mockLinkingOpenURL = require("react-native").Linking.openURL;
-      
+
       mockOpenBrowserAsync.mockRejectedValue(new Error("Browser failed"));
       mockLinkingOpenURL.mockResolvedValue(true);
 
@@ -198,15 +213,19 @@ describe("ProfileScreen", () => {
         fireEvent.press(donateButton);
       });
 
-      expect(mockOpenBrowserAsync).toHaveBeenCalledWith("https://ko-fi.com/jackmisner");
-      expect(mockLinkingOpenURL).toHaveBeenCalledWith("https://ko-fi.com/jackmisner");
+      expect(mockOpenBrowserAsync).toHaveBeenCalledWith(
+        "https://ko-fi.com/jackmisner"
+      );
+      expect(mockLinkingOpenURL).toHaveBeenCalledWith(
+        "https://ko-fi.com/jackmisner"
+      );
     });
 
     it("should handle both browser failures gracefully", async () => {
       const mockOpenBrowserAsync = require("expo-web-browser").openBrowserAsync;
       const mockLinkingOpenURL = require("react-native").Linking.openURL;
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-      
+
       mockOpenBrowserAsync.mockRejectedValue(new Error("Browser failed"));
       mockLinkingOpenURL.mockRejectedValue(new Error("Linking failed"));
 
@@ -217,9 +236,15 @@ describe("ProfileScreen", () => {
         fireEvent.press(donateButton);
       });
 
-      expect(consoleSpy).toHaveBeenCalledWith("Failed to open in-app browser:", expect.any(Error));
-      expect(consoleSpy).toHaveBeenCalledWith("Failed to open external browser:", expect.any(Error));
-      
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to open in-app browser:",
+        expect.any(Error)
+      );
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Failed to open external browser:",
+        expect.any(Error)
+      );
+
       consoleSpy.mockRestore();
     });
   });
@@ -236,10 +261,10 @@ describe("ProfileScreen", () => {
         "Are you sure you want to sign out?",
         expect.arrayContaining([
           expect.objectContaining({ text: "Cancel", style: "cancel" }),
-          expect.objectContaining({ 
-            text: "Sign Out", 
+          expect.objectContaining({
+            text: "Sign Out",
             style: "destructive",
-            onPress: expect.any(Function)
+            onPress: expect.any(Function),
           }),
         ])
       );
@@ -247,15 +272,19 @@ describe("ProfileScreen", () => {
 
     it("should perform logout and navigate when confirmed", async () => {
       const mockAlert = require("react-native").Alert.alert;
-      mockAlert.mockImplementationOnce((_title: string, _message?: string, buttons?: AlertButton[]) => {
-        // Simulate pressing the "Sign Out" button
-        if (Array.isArray(buttons)) {
-          const signOutButton = buttons.find((button) => button.text === "Sign Out");
-          if (signOutButton && signOutButton.onPress) {
-            signOutButton.onPress();
+      mockAlert.mockImplementationOnce(
+        (_title: string, _message?: string, buttons?: AlertButton[]) => {
+          // Simulate pressing the "Sign Out" button
+          if (Array.isArray(buttons)) {
+            const signOutButton = buttons.find(
+              button => button.text === "Sign Out"
+            );
+            if (signOutButton && signOutButton.onPress) {
+              signOutButton.onPress();
+            }
           }
         }
-      });
+      );
 
       const { getByText } = render(<ProfileScreen />);
       const logoutButton = getByText("Sign Out");
@@ -272,7 +301,9 @@ describe("ProfileScreen", () => {
       const mockAlert = require("react-native").Alert.alert;
       mockAlert.mockImplementation((title: any, message: any, buttons: any) => {
         // Simulate pressing the "Cancel" button (which does nothing)
-        const cancelButton = buttons.find((button: any) => button.text === "Cancel");
+        const cancelButton = buttons.find(
+          (button: any) => button.text === "Cancel"
+        );
         // Cancel button typically has no onPress handler or it's undefined
       });
 
@@ -315,14 +346,14 @@ describe("ProfileScreen", () => {
     it("should display fallback version when expo config is not available", () => {
       const Constants = require("expo-constants");
       const originalExpoConfig = Constants.default.expoConfig;
-      
+
       // Mock Constants.expoConfig to be null
       Constants.default.expoConfig = null;
 
       const { getByText } = render(<ProfileScreen />);
 
       expect(getByText("BrewTracker v0.1.0")).toBeTruthy();
-      
+
       // Restore original value
       Constants.default.expoConfig = originalExpoConfig;
     });
@@ -348,7 +379,7 @@ describe("ProfileScreen", () => {
       render(<ProfileScreen />);
 
       const { queryByText } = render(<ProfileScreen />);
-      
+
       // Verify component renders with avatar functionality
       expect(queryByText("testuser")).toBeTruthy();
       expect(queryByText("Settings")).toBeTruthy();
@@ -402,7 +433,9 @@ describe("ProfileScreen", () => {
       render(<ProfileScreen />);
 
       // Verify that theme colors are passed to styles
-      expect(require("@styles/tabs/profileStyles").profileStyles).toHaveBeenCalledWith(mockTheme);
+      expect(
+        require("@styles/tabs/profileStyles").profileStyles
+      ).toHaveBeenCalledWith(mockTheme);
     });
   });
 });

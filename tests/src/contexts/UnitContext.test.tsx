@@ -260,7 +260,9 @@ describe("UnitContext", () => {
       expect(result.current.formatValue(5.55, "g", "hop_weight")).toBe("5.5 g");
 
       // Small weight in ounces (< 1oz) should use 2 decimal places
-      expect(result.current.formatValue(0.75, "oz", "hop_weight")).toBe("0.75 oz");
+      expect(result.current.formatValue(0.75, "oz", "hop_weight")).toBe(
+        "0.75 oz"
+      );
 
       // Large weight in kg should use 1 decimal place when >= 1
       expect(result.current.formatValue(2.333, "kg", "weight")).toBe("2.3 kg");
@@ -275,7 +277,9 @@ describe("UnitContext", () => {
       expect(result.current.formatValue(0.5, "lb", "weight")).toBe("0.5 lb");
 
       // Temperature should always use 1 decimal place
-      expect(result.current.formatValue(20.555, "c", "temperature")).toBe("20.6 c");
+      expect(result.current.formatValue(20.555, "c", "temperature")).toBe(
+        "20.6 c"
+      );
 
       // Small volume should use 2 decimal places when < 1
       expect(result.current.formatValue(0.5, "l", "volume")).toBe("0.5 l");
@@ -419,7 +423,11 @@ describe("UnitContext", () => {
       const { result } = renderHook(() => useUnits(), { wrapper });
 
       // Test invalid string input
-      const invalidConversion = result.current.convertUnit("invalid", "kg", "lb");
+      const invalidConversion = result.current.convertUnit(
+        "invalid",
+        "kg",
+        "lb"
+      );
       expect(invalidConversion.value).toBe(0);
       expect(invalidConversion.unit).toBe("lb");
 
@@ -443,7 +451,7 @@ describe("UnitContext", () => {
       expect(kgToG.value).toBe(2000);
       expect(kgToG.unit).toBe("g");
 
-      // Test g to kg conversion 
+      // Test g to kg conversion
       const gToKg = result.current.convertUnit(3000, "g", "kg");
       expect(gToKg.value).toBe(3);
       expect(gToKg.unit).toBe("kg");
@@ -475,12 +483,18 @@ describe("UnitContext", () => {
     });
 
     it("should handle unsupported unit conversions with warning", () => {
-      const consoleSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+      const consoleSpy = jest
+        .spyOn(console, "warn")
+        .mockImplementation(() => {});
       const wrapper = createWrapper("metric");
       const { result } = renderHook(() => useUnits(), { wrapper });
 
       // Attempt conversion between incompatible units
-      const invalidResult = result.current.convertUnit(100, "unknown_unit", "another_unit");
+      const invalidResult = result.current.convertUnit(
+        100,
+        "unknown_unit",
+        "another_unit"
+      );
 
       expect(invalidResult.value).toBe(100);
       expect(invalidResult.unit).toBe("unknown_unit");
@@ -799,18 +813,32 @@ describe("UnitContext", () => {
       const { result } = renderHook(() => useUnits(), { wrapper });
 
       // Test with precision above 100 (should be clamped to 100)
-      const highPrecision = result.current.formatTemperature(75.123456789, "imperial", 150);
+      const highPrecision = result.current.formatTemperature(
+        75.123456789,
+        "imperial",
+        150
+      );
       expect(highPrecision).toContain("75.123456789"); // Should preserve high precision
 
       // Test with negative precision (should be clamped to 0)
-      const negativePrecision = result.current.formatTemperature(75.12345, "imperial", -5);
+      const negativePrecision = result.current.formatTemperature(
+        75.12345,
+        "imperial",
+        -5
+      );
       expect(negativePrecision).toBe("75°F");
 
       // Test formatCurrentTemperature with extreme precision
-      const currentHighPrecision = result.current.formatCurrentTemperature(75.123456789, 150);
+      const currentHighPrecision = result.current.formatCurrentTemperature(
+        75.123456789,
+        150
+      );
       expect(currentHighPrecision).toContain("75.123456789");
 
-      const currentNegativePrecision = result.current.formatCurrentTemperature(75.12345, -5);
+      const currentNegativePrecision = result.current.formatCurrentTemperature(
+        75.12345,
+        -5
+      );
       expect(currentNegativePrecision).toBe("75°F");
     });
   });
@@ -820,21 +848,23 @@ describe("UnitContext", () => {
       // Mock cached settings in AsyncStorage
       const cachedSettings = {
         preferred_units: "metric",
-        other_setting: "value"
+        other_setting: "value",
       };
-      mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedSettings));
-      
+      mockAsyncStorage.getItem.mockResolvedValue(
+        JSON.stringify(cachedSettings)
+      );
+
       const wrapper = createWrapper(); // No initial system to trigger loading
       const { result } = renderHook(() => useUnits(), { wrapper });
-      
+
       // Should start loading
       expect(result.current.loading).toBe(true);
-      
+
       // Wait for async operations to complete
       await act(async () => {
         await new Promise(resolve => setTimeout(resolve, 10));
       });
-      
+
       // Should use cached setting
       expect(result.current.unitSystem).toBe("metric");
       expect(result.current.loading).toBe(false);
@@ -842,26 +872,26 @@ describe("UnitContext", () => {
 
     it("should handle cache miss and fetch from API", async () => {
       const ApiService = require("@services/api/apiService").default;
-      
+
       // No cached settings
       mockAsyncStorage.getItem.mockResolvedValue(null);
-      
+
       // Mock API response
       ApiService.user.getSettings.mockResolvedValue({
         data: {
           settings: {
-            preferred_units: "metric"
-          }
-        }
+            preferred_units: "metric",
+          },
+        },
       });
-      
+
       const wrapper = createWrapper(); // No initial system
       const { result } = renderHook(() => useUnits(), { wrapper });
-      
+
       await act(async () => {
         await new Promise(resolve => setTimeout(resolve, 10));
       });
-      
+
       expect(result.current.unitSystem).toBe("metric");
       expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
         "user_settings",
@@ -871,27 +901,29 @@ describe("UnitContext", () => {
 
     it("should handle background settings refresh with different units", async () => {
       const ApiService = require("@services/api/apiService").default;
-      
+
       // Mock cached settings
       const cachedSettings = { preferred_units: "imperial" };
-      mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedSettings));
-      
+      mockAsyncStorage.getItem.mockResolvedValue(
+        JSON.stringify(cachedSettings)
+      );
+
       // Mock fresh API response with different units
       ApiService.user.getSettings.mockResolvedValue({
         data: {
           settings: {
-            preferred_units: "metric"
-          }
-        }
+            preferred_units: "metric",
+          },
+        },
       });
-      
+
       const wrapper = createWrapper();
       const { result } = renderHook(() => useUnits(), { wrapper });
-      
+
       await act(async () => {
         await new Promise(resolve => setTimeout(resolve, 50));
       });
-      
+
       // Should eventually use fresh settings
       expect(result.current.unitSystem).toBe("metric");
       expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
@@ -902,29 +934,33 @@ describe("UnitContext", () => {
 
     it("should handle background fetch errors gracefully", async () => {
       const ApiService = require("@services/api/apiService").default;
-      const consoleSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
-      
+      const consoleSpy = jest
+        .spyOn(console, "warn")
+        .mockImplementation(() => {});
+
       // Mock cached settings
       const cachedSettings = { preferred_units: "imperial" };
-      mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedSettings));
-      
+      mockAsyncStorage.getItem.mockResolvedValue(
+        JSON.stringify(cachedSettings)
+      );
+
       // Mock API error for background fetch
       ApiService.user.getSettings.mockRejectedValue(new Error("Network error"));
-      
+
       const wrapper = createWrapper();
       const { result } = renderHook(() => useUnits(), { wrapper });
-      
+
       await act(async () => {
         await new Promise(resolve => setTimeout(resolve, 10));
       });
-      
+
       // Should still use cached settings despite background error
       expect(result.current.unitSystem).toBe("imperial");
       expect(consoleSpy).toHaveBeenCalledWith(
         "Background settings fetch failed:",
         expect.any(Error)
       );
-      
+
       consoleSpy.mockRestore();
     });
   });
@@ -932,35 +968,38 @@ describe("UnitContext", () => {
   describe("updateUnitSystem advanced scenarios", () => {
     it("should handle early return when system is the same", async () => {
       const ApiService = require("@services/api/apiService").default;
-      
+
       const wrapper = createWrapper("metric");
       const { result } = renderHook(() => useUnits(), { wrapper });
-      
+
       // Try to update to the same system
       await act(async () => {
         await result.current.updateUnitSystem("metric");
       });
-      
+
       // Should not call API since no change needed
       expect(ApiService.user.updateSettings).not.toHaveBeenCalled();
     });
 
     it("should handle cache update after successful API call", async () => {
       const ApiService = require("@services/api/apiService").default;
-      
+
       // Mock existing cache
-      const existingCache = { preferred_units: "imperial", other_setting: "value" };
+      const existingCache = {
+        preferred_units: "imperial",
+        other_setting: "value",
+      };
       mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(existingCache));
-      
+
       ApiService.user.updateSettings.mockResolvedValue({});
-      
+
       const wrapper = createWrapper("imperial");
       const { result } = renderHook(() => useUnits(), { wrapper });
-      
+
       await act(async () => {
         await result.current.updateUnitSystem("metric");
       });
-      
+
       expect(result.current.unitSystem).toBe("metric");
       expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
         "user_settings",
@@ -970,17 +1009,19 @@ describe("UnitContext", () => {
 
     it("should handle updateUnitSystem error and revert", async () => {
       const ApiService = require("@services/api/apiService").default;
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
-      
+      const consoleSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
       ApiService.user.updateSettings.mockRejectedValue(new Error("API Error"));
-      
+
       const wrapper = createWrapper("imperial");
       const { result } = renderHook(() => useUnits(), { wrapper });
-      
+
       await act(async () => {
         await result.current.updateUnitSystem("metric");
       });
-      
+
       // Should revert to original system on error
       expect(result.current.unitSystem).toBe("imperial");
       expect(result.current.error).toBe("Failed to save unit preference");
@@ -988,7 +1029,7 @@ describe("UnitContext", () => {
         "Failed to update unit system:",
         expect.any(Error)
       );
-      
+
       consoleSpy.mockRestore();
     });
   });

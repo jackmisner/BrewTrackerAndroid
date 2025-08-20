@@ -1,15 +1,12 @@
 /**
- * IngredientDetailEditor Tests
- * 
- * Start simple - test basic rendering first, following our established zero-coverage high-impact strategy
- * This file has 793 uncovered lines - MASSIVE impact potential!
+ * IngredientDetailEditor Component Test Suite
  */
 
 import React from "react";
 import { render } from "@testing-library/react-native";
 import { IngredientDetailEditor } from "../../../../../src/components/recipes/IngredientEditor/IngredientDetailEditor";
 
-// Mock React Native components (reusing successful pattern)
+// Mock React Native components
 jest.mock("react-native", () => ({
   View: ({ children, ...props }: any) => {
     const React = require("react");
@@ -35,11 +32,16 @@ jest.mock("react-native", () => ({
   Keyboard: { dismiss: jest.fn() },
 }));
 
-// Mock dependencies following our established patterns
+// Mock external dependencies
 jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: ({ name, size, color, ...props }: any) => {
     const React = require("react");
-    return React.createElement("MaterialIcons", { name, size, color, ...props });
+    return React.createElement("MaterialIcons", {
+      name,
+      size,
+      color,
+      ...props,
+    });
   },
 }));
 
@@ -86,11 +88,15 @@ jest.mock("@styles/recipes/ingredientDetailEditorStyles", () => ({
 }));
 
 jest.mock("@constants/hopConstants", () => ({
-  HOP_USAGE_OPTIONS: ["Boil", "Dry Hop", "Whirlpool"],
+  HOP_USAGE_OPTIONS: [
+    { value: "boil", display: "Boil", defaultTime: 60 },
+    { value: "dry-hop", display: "Dry Hop", defaultTime: 1440 * 3 },
+    { value: "whirlpool", display: "Whirlpool", defaultTime: 15 },
+  ],
   HOP_TIME_PRESETS: {
-    Boil: [60, 30, 15, 5, 0],
-    "Dry Hop": [3, 5, 7],
-    Whirlpool: [15, 10, 5],
+    boil: [60, 30, 15, 5, 0],
+    "dry-hop": [3 * 1440, 5 * 1440, 7 * 1440],
+    whirlpool: [15, 10, 5],
   },
 }));
 
@@ -109,8 +115,9 @@ const mockIngredient = {
 
 const mockProps = {
   ingredient: mockIngredient,
-  onSave: jest.fn(),
+  onUpdate: jest.fn(),
   onCancel: jest.fn(),
+  onRemove: jest.fn(),
   isVisible: true,
 };
 

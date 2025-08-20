@@ -371,7 +371,6 @@ EXPO_PUBLIC_API_URL=https://api.brewtracker.com/v1  # Must be valid URL
 EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
 ```
 
-
 ## 💡 **Strategic Considerations**
 
 ### **Mobile-First Adaptations Needed:**

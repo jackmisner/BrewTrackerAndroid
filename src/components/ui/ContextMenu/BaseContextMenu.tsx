@@ -63,7 +63,7 @@ export function BaseContextMenu<T>({
 
     // Provide haptic feedback (best-effort)
     try {
-    await Haptics.selectionAsync();
+      await Haptics.selectionAsync();
     } catch {
       // no-op
     }
@@ -160,15 +160,30 @@ export function BaseContextMenu<T>({
               testID={TEST_IDS.contextMenu.container}
             >
               {/* Menu Header */}
-              <View style={styles.menuHeader} testID={TEST_IDS.contextMenu.header}>
-                <Text style={styles.menuTitle} numberOfLines={1} testID={TEST_IDS.contextMenu.title}>
+              <View
+                style={styles.menuHeader}
+                testID={TEST_IDS.contextMenu.header}
+              >
+                <Text
+                  style={styles.menuTitle}
+                  numberOfLines={1}
+                  testID={TEST_IDS.contextMenu.title}
+                >
                   {title}
                 </Text>
-                <Text style={styles.menuSubtitle} testID={TEST_IDS.contextMenu.subtitle}>{subtitle}</Text>
+                <Text
+                  style={styles.menuSubtitle}
+                  testID={TEST_IDS.contextMenu.subtitle}
+                >
+                  {subtitle}
+                </Text>
               </View>
 
               {/* Action List */}
-              <View style={styles.actionsList} testID={TEST_IDS.contextMenu.actionsList}>
+              <View
+                style={styles.actionsList}
+                testID={TEST_IDS.contextMenu.actionsList}
+              >
                 {visibleActions.map(action => {
                   const disabled = isActionDisabled(action);
 

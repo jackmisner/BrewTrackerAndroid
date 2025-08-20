@@ -103,93 +103,91 @@ describe("idInterceptor", () => {
 
     it("should use fallback clearing when clear() method is not available", () => {
       setupIDInterceptors(apiInstance);
-      
+
       // Mock interceptors without clear() method
       const mockRequestInterceptor = {
         handlers: [{ fulfilled: jest.fn(), rejected: jest.fn() }],
         // No clear method
       };
-      
+
       // Replace the interceptor with our mock
       (apiInstance.interceptors as any).request = mockRequestInterceptor;
-      
+
       // Should not throw and should use fallback
       expect(() => removeIDInterceptors(apiInstance)).not.toThrow();
-      
+
       // Should have cleared handlers array
       expect(mockRequestInterceptor.handlers).toEqual([]);
     });
 
     it("should use fallback clearing for response interceptors when clear() method is not available", () => {
       setupIDInterceptors(apiInstance);
-      
+
       // Mock interceptors without clear() method
       const mockResponseInterceptor = {
         handlers: [{ fulfilled: jest.fn(), rejected: jest.fn() }],
         // No clear method
       };
-      
+
       // Replace the interceptor with our mock
       (apiInstance.interceptors as any).response = mockResponseInterceptor;
-      
+
       // Should not throw and should use fallback
       expect(() => removeIDInterceptors(apiInstance)).not.toThrow();
-      
+
       // Should have cleared handlers array
       expect(mockResponseInterceptor.handlers).toEqual([]);
     });
 
     it("should handle mixed interceptor clearing scenarios", () => {
       setupIDInterceptors(apiInstance);
-      
+
       // Mock request interceptor with clear() method
       const mockRequestInterceptor = {
         handlers: [{ fulfilled: jest.fn(), rejected: jest.fn() }],
         clear: jest.fn(),
       };
-      
+
       // Mock response interceptor without clear() method
       const mockResponseInterceptor = {
         handlers: [{ fulfilled: jest.fn(), rejected: jest.fn() }],
         // No clear method - should use fallback
       };
-      
+
       (apiInstance.interceptors as any).request = mockRequestInterceptor;
       (apiInstance.interceptors as any).response = mockResponseInterceptor;
-      
+
       removeIDInterceptors(apiInstance);
-      
+
       // Request should use clear() method
       expect(mockRequestInterceptor.clear).toHaveBeenCalled();
-      
+
       // Response should use fallback (handlers array cleared)
       expect(mockResponseInterceptor.handlers).toEqual([]);
     });
 
     it("should handle interceptors with handlers but no clear method", () => {
       setupIDInterceptors(apiInstance);
-      
+
       // Create mock interceptors with handlers but no clear method
       const mockInterceptors = {
         request: {
           handlers: [
             { fulfilled: jest.fn(), rejected: jest.fn() },
-            { fulfilled: jest.fn(), rejected: jest.fn() }
-          ]
+            { fulfilled: jest.fn(), rejected: jest.fn() },
+          ],
           // No clear method - should use fallback
         },
         response: {
-          handlers: [
-            { fulfilled: jest.fn(), rejected: jest.fn() }
-          ]
+          handlers: [{ fulfilled: jest.fn(), rejected: jest.fn() }],
           // No clear method - should use fallback
-        }
+        },
       };
-      
+
       (apiInstance as any).interceptors = mockInterceptors;
-      
+
       removeIDInterceptors(apiInstance);
-      
+
       // Should have cleared both handlers arrays using fallback
       expect(mockInterceptors.request.handlers).toEqual([]);
       expect(mockInterceptors.response.handlers).toEqual([]);
@@ -370,17 +368,20 @@ describe("idInterceptor", () => {
 
     beforeEach(() => {
       const requestUseSpy = jest.spyOn(apiInstance.interceptors.request, "use");
-      const responseUseSpy = jest.spyOn(apiInstance.interceptors.response, "use");
-      
+      const responseUseSpy = jest.spyOn(
+        apiInstance.interceptors.response,
+        "use"
+      );
+
       setupIDInterceptors(apiInstance);
-      
+
       // Extract the actual interceptor functions
       const responseCall = responseUseSpy.mock.calls[0];
       responseInterceptor = {
         fulfilled: responseCall[0] as any,
         rejected: responseCall[1] as any,
       };
-      
+
       requestUseSpy.mockRestore();
       responseUseSpy.mockRestore();
     });
@@ -493,7 +494,7 @@ describe("idInterceptor", () => {
 
     it("should pass through errors unchanged", async () => {
       const error = new Error("Network error");
-      
+
       await expect(responseInterceptor.rejected(error)).rejects.toThrow(
         "Network error"
       );
@@ -508,17 +509,20 @@ describe("idInterceptor", () => {
 
     beforeEach(() => {
       const requestUseSpy = jest.spyOn(apiInstance.interceptors.request, "use");
-      const responseUseSpy = jest.spyOn(apiInstance.interceptors.response, "use");
-      
+      const responseUseSpy = jest.spyOn(
+        apiInstance.interceptors.response,
+        "use"
+      );
+
       setupIDInterceptors(apiInstance);
-      
+
       // Extract the actual interceptor functions
       const requestCall = requestUseSpy.mock.calls[0];
       requestInterceptor = {
         fulfilled: requestCall[0] as any,
         rejected: requestCall[1] as any,
       };
-      
+
       requestUseSpy.mockRestore();
       responseUseSpy.mockRestore();
     });
@@ -562,7 +566,9 @@ describe("idInterceptor", () => {
 
       const result = requestInterceptor.fulfilled(config);
 
-      expect(mockIdNormalization.denormalizeEntityIdDeep).not.toHaveBeenCalled();
+      expect(
+        mockIdNormalization.denormalizeEntityIdDeep
+      ).not.toHaveBeenCalled();
       expect(result.data).toEqual({ check: true });
     });
 
@@ -576,7 +582,9 @@ describe("idInterceptor", () => {
 
       const result = requestInterceptor.fulfilled(config);
 
-      expect(mockIdNormalization.denormalizeEntityIdDeep).not.toHaveBeenCalled();
+      expect(
+        mockIdNormalization.denormalizeEntityIdDeep
+      ).not.toHaveBeenCalled();
       expect(result).toEqual(config);
     });
 
@@ -638,7 +646,7 @@ describe("idInterceptor", () => {
 
     it("should pass through request errors unchanged", async () => {
       const error = new Error("Request setup error");
-      
+
       await expect(requestInterceptor.rejected(error)).rejects.toThrow(
         "Request setup error"
       );
@@ -653,7 +661,10 @@ describe("idInterceptor", () => {
     };
 
     beforeEach(() => {
-      const responseUseSpy = jest.spyOn(apiInstance.interceptors.response, "use");
+      const responseUseSpy = jest.spyOn(
+        apiInstance.interceptors.response,
+        "use"
+      );
       setupIDInterceptors(apiInstance);
       const responseCall = responseUseSpy.mock.calls[0];
       responseInterceptor = {
@@ -679,7 +690,7 @@ describe("idInterceptor", () => {
             { recipe_id: "1", name: "Recipe 1" },
             { recipe_id: "2", name: "Recipe 2" },
           ],
-          pagination: { total: 2, page: 1 }
+          pagination: { total: 2, page: 1 },
         },
         config: { url: "/recipes" },
         status: 200,
@@ -733,7 +744,7 @@ describe("idInterceptor", () => {
     it("should debug normalized wrapped data format (response.data.data array)", () => {
       // Line 86: response.data.data && Array.isArray(response.data.data) && response.data.data.length > 0
       mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue("recipe");
-      
+
       const originalData = {
         data: [
           { recipe_id: "1", name: "Recipe 1" },
@@ -770,17 +781,13 @@ describe("idInterceptor", () => {
     it("should debug normalized ingredients format", () => {
       // Line 95: response.data.ingredients && Array.isArray(response.data.ingredients) && response.data.ingredients.length > 0
       mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue("ingredient");
-      
+
       const originalData = {
-        ingredients: [
-          { ingredient_id: "ing1", name: "Pale Malt" },
-        ],
+        ingredients: [{ ingredient_id: "ing1", name: "Pale Malt" }],
       };
 
       const normalizedData = {
-        ingredients: [
-          { id: "ing1", name: "Pale Malt" },
-        ],
+        ingredients: [{ id: "ing1", name: "Pale Malt" }],
       };
 
       mockIdNormalization.normalizeResponseData.mockReturnValue(normalizedData);
@@ -810,7 +817,10 @@ describe("idInterceptor", () => {
     };
 
     beforeEach(() => {
-      const responseUseSpy = jest.spyOn(apiInstance.interceptors.response, "use");
+      const responseUseSpy = jest.spyOn(
+        apiInstance.interceptors.response,
+        "use"
+      );
       setupIDInterceptors(apiInstance);
       const responseCall = responseUseSpy.mock.calls[0];
       responseInterceptor = {
@@ -829,7 +839,7 @@ describe("idInterceptor", () => {
       const response = {
         data: {
           data: [], // Empty array - should not trigger debugging
-          pagination: { total: 0, page: 1 }
+          pagination: { total: 0, page: 1 },
         },
         config: { url: "/recipes" },
         status: 200,
@@ -932,42 +942,42 @@ describe("idInterceptor", () => {
     it("should use clear() method when available on response interceptors", () => {
       // Line 171: typeof apiInstance.interceptors.response.clear === "function"
       setupIDInterceptors(apiInstance);
-      
+
       // Mock the response interceptor to have a clear method
       const mockClear = jest.fn();
       (apiInstance.interceptors.response as any).clear = mockClear;
-      
+
       removeIDInterceptors(apiInstance);
-      
+
       // Should have called the clear() method
       expect(mockClear).toHaveBeenCalled();
     });
 
     it("should use clear() method when available on request interceptors", () => {
       setupIDInterceptors(apiInstance);
-      
+
       // Mock the request interceptor to have a clear method
       const mockClear = jest.fn();
       (apiInstance.interceptors.request as any).clear = mockClear;
-      
+
       removeIDInterceptors(apiInstance);
-      
+
       // Should have called the clear() method
       expect(mockClear).toHaveBeenCalled();
     });
 
     it("should handle interceptors that have both clear method and handlers", () => {
       setupIDInterceptors(apiInstance);
-      
+
       // Mock both interceptors to have clear methods
       const mockRequestClear = jest.fn();
       const mockResponseClear = jest.fn();
-      
+
       (apiInstance.interceptors.request as any).clear = mockRequestClear;
       (apiInstance.interceptors.response as any).clear = mockResponseClear;
-      
+
       removeIDInterceptors(apiInstance);
-      
+
       // Both clear methods should have been called
       expect(mockRequestClear).toHaveBeenCalled();
       expect(mockResponseClear).toHaveBeenCalled();
@@ -1012,7 +1022,10 @@ describe("idInterceptor", () => {
     };
 
     beforeEach(() => {
-      const responseUseSpy = jest.spyOn(apiInstance.interceptors.response, "use");
+      const responseUseSpy = jest.spyOn(
+        apiInstance.interceptors.response,
+        "use"
+      );
       setupIDInterceptors(apiInstance);
       const responseCall = responseUseSpy.mock.calls[0];
       responseInterceptor = {
@@ -1026,19 +1039,15 @@ describe("idInterceptor", () => {
       mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue("recipe");
       mockIdNormalization.normalizeResponseData.mockReturnValue({
         data: {
-          recipes: [
-            { id: "1", name: "Recipe 1" },
-          ]
-        }
+          recipes: [{ id: "1", name: "Recipe 1" }],
+        },
       });
 
       const response = {
         data: {
           data: {
-            recipes: [
-              { recipe_id: "1", name: "Recipe 1" },
-            ]
-          }
+            recipes: [{ recipe_id: "1", name: "Recipe 1" }],
+          },
         },
         config: { url: "/recipes" },
         status: 200,
@@ -1053,22 +1062,18 @@ describe("idInterceptor", () => {
     it("should handle response data with mixed array and object structures", () => {
       mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue("ingredient");
       mockIdNormalization.normalizeResponseData.mockReturnValue({
-        ingredients: [
-          { id: "ing1", name: "Malt" },
-        ],
+        ingredients: [{ id: "ing1", name: "Malt" }],
         categories: {
-          grains: ["ing1"]
-        }
+          grains: ["ing1"],
+        },
       });
 
       const response = {
         data: {
-          ingredients: [
-            { ingredient_id: "ing1", name: "Malt" },
-          ],
+          ingredients: [{ ingredient_id: "ing1", name: "Malt" }],
           categories: {
-            grains: ["ing1"]
-          }
+            grains: ["ing1"],
+          },
         },
         config: { url: "/ingredients" },
         status: 200,
@@ -1077,7 +1082,7 @@ describe("idInterceptor", () => {
       };
 
       expect(() => responseInterceptor.fulfilled(response)).not.toThrow();
-      
+
       expect(mockIdNormalization.debugEntityIds).toHaveBeenCalledWith(
         { ingredient_id: "ing1", name: "Malt" },
         "Original ingredient (first item)"
@@ -1086,7 +1091,7 @@ describe("idInterceptor", () => {
 
     it("should handle normalization that returns identical data", () => {
       mockIdNormalization.detectEntityTypeFromUrl.mockReturnValue("recipe");
-      
+
       const originalData = { id: "1", name: "Recipe 1" };
       // Return the SAME object reference to trigger the response.data === originalData condition
       mockIdNormalization.normalizeResponseData.mockReturnValue(originalData);
@@ -1126,9 +1131,11 @@ describe("idInterceptor", () => {
 
       // Should handle undefined URL gracefully
       expect(() => responseInterceptor.fulfilled(response)).not.toThrow();
-      
+
       // detectEntityTypeFromUrl should be called with empty string
-      expect(mockIdNormalization.detectEntityTypeFromUrl).toHaveBeenCalledWith("");
+      expect(mockIdNormalization.detectEntityTypeFromUrl).toHaveBeenCalledWith(
+        ""
+      );
     });
   });
 
@@ -1139,7 +1146,10 @@ describe("idInterceptor", () => {
     };
 
     beforeEach(() => {
-      const responseUseSpy = jest.spyOn(apiInstance.interceptors.response, "use");
+      const responseUseSpy = jest.spyOn(
+        apiInstance.interceptors.response,
+        "use"
+      );
       setupIDInterceptors(apiInstance);
       const responseCall = responseUseSpy.mock.calls[0];
       responseInterceptor = {

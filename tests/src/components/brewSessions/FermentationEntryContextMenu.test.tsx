@@ -1,14 +1,12 @@
 /**
- * FermentationEntryContextMenu Tests
- * 
- * Start simple - test basic rendering first
+ * FermentationEntryContextMenu Component Test Suite
  */
 
 import React from "react";
 import { render } from "@testing-library/react-native";
 import { FermentationEntryContextMenu } from "@src/components/brewSessions/FermentationEntryContextMenu";
 
-// Mock dependencies following our established patterns
+// Mock external dependencies
 jest.mock("expo-router", () => ({
   router: {
     push: jest.fn(),
@@ -54,7 +52,7 @@ describe("FermentationEntryContextMenu", () => {
     id: "entry-1",
     brew_session_id: "session-123",
     date: "2024-01-15T10:30:00Z",
-    specific_gravity: 1.050,
+    specific_gravity: 1.05,
     temperature_c: 20,
     ph: 4.5,
     notes: "Initial fermentation reading",

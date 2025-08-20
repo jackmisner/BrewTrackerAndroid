@@ -28,12 +28,12 @@ jest.mock("react-native", () => ({
   TextInput: (props: any) => {
     const React = require("react");
     const [value, setValue] = React.useState(props.value || "");
-    
+
     React.useEffect(() => {
       setValue(props.value || "");
     }, [props.value]);
-    
-    return React.createElement("TextInput", { 
+
+    return React.createElement("TextInput", {
       ...props,
       value: value,
       onChangeText: (text: string) => {
@@ -42,7 +42,7 @@ jest.mock("react-native", () => ({
           props.onChangeText(text);
         }
       },
-      testID: props.testID || props.placeholder || "text-input"
+      testID: props.testID || props.placeholder || "text-input",
     });
   },
   KeyboardAvoidingView: ({ children, ...props }: any) => {
@@ -57,7 +57,8 @@ jest.mock("react-native", () => ({
   Alert: { alert: jest.fn() },
   StyleSheet: {
     create: (styles: any) => styles,
-    flatten: (styles: any) => Array.isArray(styles) ? Object.assign({}, ...styles) : styles,
+    flatten: (styles: any) =>
+      Array.isArray(styles) ? Object.assign({}, ...styles) : styles,
   },
 }));
 
@@ -74,8 +75,7 @@ jest.mock("expo-router", () => ({
   useLocalSearchParams: () => ({ brewSessionId: "session-123" }),
 }));
 
-
-// Mock React Query hooks instead of using real QueryClient
+// Mock React Query hooks
 jest.mock("@tanstack/react-query", () => ({
   useQuery: jest.fn(),
   useMutation: jest.fn(),
@@ -116,7 +116,12 @@ jest.mock("@contexts/ThemeContext", () => ({
 jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: ({ name, size, color, ...props }: any) => {
     const React = require("react");
-    return React.createElement("MaterialIcons", { name, size, color, ...props });
+    return React.createElement("MaterialIcons", {
+      name,
+      size,
+      color,
+      ...props,
+    });
   },
 }));
 
@@ -149,7 +154,7 @@ const mockUseMutation = require("@tanstack/react-query").useMutation;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  
+
   // Set up default successful useQuery mock
   mockUseQuery.mockReturnValue({
     data: {
@@ -160,7 +165,7 @@ beforeEach(() => {
         notes: "Test notes",
         tasting_notes: "",
         mash_temp: 152,
-        actual_og: 1.050,
+        actual_og: 1.05,
         actual_fg: 1.012,
         actual_abv: 5.2,
         actual_efficiency: 75,
@@ -168,12 +173,12 @@ beforeEach(() => {
         fermentation_end_date: "2024-01-14",
         packaging_date: "2024-01-21",
         batch_rating: 4,
-      }
+      },
     },
     isLoading: false,
     error: null,
   });
-  
+
   // Set up default successful useMutation mock
   mockUseMutation.mockReturnValue({
     mutate: jest.fn(),
@@ -191,7 +196,7 @@ describe("EditBrewSessionScreen", () => {
       notes: "Test notes",
       tasting_notes: "",
       mash_temp: 152,
-      actual_og: 1.050,
+      actual_og: 1.05,
       actual_fg: 1.012,
       actual_abv: 5.2,
       actual_efficiency: 75,
@@ -199,7 +204,7 @@ describe("EditBrewSessionScreen", () => {
       fermentation_end_date: "2024-01-14",
       packaging_date: "2024-01-21",
       batch_rating: 4,
-    }
+    },
   };
 
   describe("Basic Rendering", () => {
@@ -216,7 +221,7 @@ describe("EditBrewSessionScreen", () => {
         isLoading: true,
         error: null,
       });
-      
+
       const { getByText } = renderWithClient(<EditBrewSessionScreen />);
       await waitFor(() => {
         expect(getByText("Loading brew session...")).toBeTruthy();
@@ -229,7 +234,7 @@ describe("EditBrewSessionScreen", () => {
         isLoading: false,
         error: new Error("Failed to load"),
       });
-      
+
       const { getByText } = renderWithClient(<EditBrewSessionScreen />);
       await waitFor(() => {
         expect(getByText("Failed to Load Session")).toBeTruthy();
@@ -240,7 +245,7 @@ describe("EditBrewSessionScreen", () => {
   describe("Form Interactions", () => {
     it("renders form with loaded session data", async () => {
       const { getByDisplayValue } = renderWithClient(<EditBrewSessionScreen />);
-      
+
       await waitFor(() => {
         expect(getByDisplayValue("Test Session")).toBeTruthy();
         expect(getByDisplayValue("Test notes")).toBeTruthy();
@@ -252,7 +257,7 @@ describe("EditBrewSessionScreen", () => {
 
     it("updates form fields when user types", async () => {
       const { getByDisplayValue } = renderWithClient(<EditBrewSessionScreen />);
-      
+
       await waitFor(() => {
         const nameField = getByDisplayValue("Test Session");
         fireEvent.changeText(nameField, "Updated Session");
@@ -269,7 +274,7 @@ describe("EditBrewSessionScreen", () => {
       });
 
       const { getByText } = renderWithClient(<EditBrewSessionScreen />);
-      
+
       await waitFor(() => {
         const saveButton = getByText("Save");
         fireEvent.press(saveButton);
@@ -284,7 +289,7 @@ describe("EditBrewSessionScreen", () => {
   describe("Navigation", () => {
     it("navigates back when close button pressed", async () => {
       const { getByTestId } = renderWithClient(<EditBrewSessionScreen />);
-      
+
       await waitFor(() => {
         const closeButton = getByTestId("close-button");
         fireEvent.press(closeButton);

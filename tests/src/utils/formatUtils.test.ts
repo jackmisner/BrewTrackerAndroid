@@ -22,10 +22,14 @@ import {
 jest.mock("@constants/hopConstants", () => ({
   HOP_USAGE_OPTIONS: [
     { value: "boil", display: "Boil", defaultTime: 60 },
+    { value: "dry-hop", display: "Dry Hop", defaultTime: 1440 * 3 },
     { value: "whirlpool", display: "Whirlpool", defaultTime: 15 },
-    { value: "dry-hop", display: "Dry Hop", defaultTime: 10080 }, // 7 days in minutes
-    { value: "flame-out", display: "Flame Out", defaultTime: 0 },
   ],
+  HOP_TIME_PRESETS: {
+    boil: [60, 30, 15, 5, 0],
+    "dry-hop": [3 * 1440, 5 * 1440, 7 * 1440],
+    whirlpool: [15, 10, 5],
+  },
 }));
 
 describe("formatUtils", () => {
@@ -60,7 +64,6 @@ describe("formatUtils", () => {
       expect(formatHopUsage("boil")).toBe("Boil");
       expect(formatHopUsage("whirlpool")).toBe("Whirlpool");
       expect(formatHopUsage("dry-hop")).toBe("Dry Hop");
-      expect(formatHopUsage("flame-out")).toBe("Flame Out");
     });
 
     it("should handle unknown usage values", () => {
@@ -74,11 +77,10 @@ describe("formatUtils", () => {
     it("should return default time in minutes", () => {
       expect(getHopTimePlaceholder("boil", "minutes")).toBe("60");
       expect(getHopTimePlaceholder("whirlpool", "minutes")).toBe("15");
-      expect(getHopTimePlaceholder("flame-out", "minutes")).toBe("0");
     });
 
     it("should return default time in days for dry-hop", () => {
-      expect(getHopTimePlaceholder("dry-hop", "days")).toBe("7"); // 10080 / 1440
+      expect(getHopTimePlaceholder("dry-hop", "days")).toBe("3"); // 4320 / 1440
     });
 
     it("should return default for unknown usage", () => {
@@ -420,7 +422,7 @@ describe("formatUtils", () => {
         amount: 1,
         unit: "oz" as const,
       };
-      
+
       const result = formatIngredientDetails(hopIngredient);
       // Should skip the use part but include time and alpha_acid
       expect(result).toBe("60 mins • 5.5%");
@@ -439,7 +441,7 @@ describe("formatUtils", () => {
       };
 
       const hopWithUndefinedTime = {
-        id: "hop-3", 
+        id: "hop-3",
         type: "hop" as const,
         use: "boil",
         time: undefined, // undefined time - should not call formatHopTime
@@ -448,10 +450,10 @@ describe("formatUtils", () => {
         amount: 1,
         unit: "oz" as const,
       };
-      
+
       const resultNull = formatIngredientDetails(hopWithNullTime);
       const resultUndefined = formatIngredientDetails(hopWithUndefinedTime);
-      
+
       // Should skip the time part but include use and alpha_acid
       expect(resultNull).toBe("Boil • 5.5%");
       expect(resultUndefined).toBe("Boil • 5.5%");
@@ -468,7 +470,7 @@ describe("formatUtils", () => {
         amount: 1,
         unit: "oz" as const,
       };
-      
+
       const result = formatIngredientDetails(hopIngredient);
       // Should skip the alpha_acid part but include use and time
       expect(result).toBe("Boil • 60 mins");
@@ -484,7 +486,7 @@ describe("formatUtils", () => {
         amount: 10,
         unit: "lb" as const,
       };
-      
+
       const result = formatIngredientDetails(grainIngredient);
       // Should skip the color part but include potential
       expect(result).toBe("37 PPG");
@@ -500,7 +502,7 @@ describe("formatUtils", () => {
         amount: 1,
         unit: "pkg" as const,
       };
-      
+
       const result = formatIngredientDetails(yeastIngredient);
       // Should skip the attenuation part but include manufacturer
       expect(result).toBe("Wyeast");
@@ -516,7 +518,7 @@ describe("formatUtils", () => {
         amount: 1,
         unit: "pkg" as const,
       };
-      
+
       const result = formatIngredientDetails(yeastIngredient);
       // Should skip the manufacturer part but include attenuation
       expect(result).toBe("75.0% Att.");
@@ -531,7 +533,7 @@ describe("formatUtils", () => {
         amount: 1,
         unit: "oz" as const,
       };
-      
+
       const result = formatIngredientDetails(emptyHopIngredient);
       // Should return empty string since no details are available
       expect(result).toBe("");
@@ -546,7 +548,7 @@ describe("formatUtils", () => {
         amount: 1,
         unit: "lb" as const,
       };
-      
+
       const result = formatIngredientDetails(emptyGrainIngredient);
       // Should return empty string since no details are available
       expect(result).toBe("");
@@ -561,7 +563,7 @@ describe("formatUtils", () => {
         amount: 1,
         unit: "pkg" as const,
       };
-      
+
       const result = formatIngredientDetails(emptyYeastIngredient);
       // Should return empty string since no details are available
       expect(result).toBe("");
@@ -571,30 +573,30 @@ describe("formatUtils", () => {
       const hopIngredient = {
         id: "hop-zero",
         type: "hop" as const,
-        use: "flame-out",
+        use: "boil",
         time: 0, // Zero is not null/undefined, so should be formatted
         alpha_acid: 5.5,
         name: "Test Hop",
         amount: 1,
         unit: "oz" as const,
       };
-      
+
       const result = formatIngredientDetails(hopIngredient);
       // Should include time: 0 since 0 !== null && 0 !== undefined
-      expect(result).toBe("Flame Out • 0 mins • 5.5%");
+      expect(result).toBe("Boil • 0 mins • 5.5%");
     });
 
     it("should handle yeast ingredient with zero attenuation (edge case)", () => {
       const yeastIngredient = {
         id: "yeast-zero",
-        type: "yeast" as const, 
+        type: "yeast" as const,
         attenuation: 0, // Zero is falsy, so should NOT be formatted
         manufacturer: "Test Lab",
         name: "Test Yeast",
         amount: 1,
         unit: "pkg" as const,
       };
-      
+
       const result = formatIngredientDetails(yeastIngredient);
       // Should NOT include attenuation since 0 is falsy in the condition
       expect(result).toBe("Test Lab");
