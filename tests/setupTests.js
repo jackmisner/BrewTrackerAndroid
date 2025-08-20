@@ -8,10 +8,10 @@ process.env.EXPO_PUBLIC_API_URL = "http://localhost:5000/api";
 // Mock React Native modules - don't create circular dependency
 jest.mock("react-native", () => {
   const React = require("react");
-  
+
   return {
     View: "View",
-    Text: "Text", 
+    Text: "Text",
     ScrollView: "ScrollView",
     TouchableOpacity: "TouchableOpacity",
     Switch: "Switch",
@@ -269,10 +269,10 @@ jest.mock("expo-haptics", () => ({
 
 jest.mock("@expo/vector-icons", () => {
   // Create a functional React component that returns null
-  const MaterialIcons = (props) => null;
+  const MaterialIcons = props => null;
   // Attach glyphMap as a static property for code that reads MaterialIcons.glyphMap
   MaterialIcons.glyphMap = {};
-  
+
   return {
     MaterialIcons,
   };

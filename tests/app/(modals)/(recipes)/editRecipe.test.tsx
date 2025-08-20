@@ -3,7 +3,7 @@
  *
  * Tests for the recipe editing screen component.
  * Follows patterns from DEVELOPMENT_KNOWLEDGE.md for high-impact 0% coverage files.
- * 
+ *
  * Strategy: Start with basic render tests, then add incremental functionality tests.
  * Target: 0% → 40%+ coverage
  */
@@ -209,7 +209,8 @@ describe("EditRecipeScreen", () => {
 
     it("should handle API loading state", async () => {
       mockApiService.recipes.getById.mockImplementation(
-        () => new Promise(resolve => setTimeout(() => resolve({ data: {} }), 100))
+        () =>
+          new Promise(resolve => setTimeout(() => resolve({ data: {} }), 100))
       );
 
       const { getByText } = render(<EditRecipeScreen />, {
@@ -270,7 +271,7 @@ describe("EditRecipeScreen", () => {
         wrapper: createWrapper,
       });
 
-      // Should render the screen successfully  
+      // Should render the screen successfully
       await waitFor(() => {
         expect(getByText("Edit Recipe")).toBeTruthy();
       });
@@ -396,7 +397,8 @@ describe("EditRecipeScreen", () => {
   });
 
   describe("Metrics Integration", () => {
-    const mockUseRecipeMetrics = require("@src/hooks/useRecipeMetrics").useRecipeMetrics;
+    const mockUseRecipeMetrics =
+      require("@src/hooks/useRecipeMetrics").useRecipeMetrics;
 
     it("should handle recipe metrics hook", () => {
       mockUseRecipeMetrics.mockReturnValue({

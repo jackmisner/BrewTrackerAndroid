@@ -1,6 +1,6 @@
 /**
  * IngredientDetailEditor Tests
- * 
+ *
  * Start simple - test basic rendering first, following our established zero-coverage high-impact strategy
  * This file has 793 uncovered lines - MASSIVE impact potential!
  */
@@ -39,7 +39,12 @@ jest.mock("react-native", () => ({
 jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: ({ name, size, color, ...props }: any) => {
     const React = require("react");
-    return React.createElement("MaterialIcons", { name, size, color, ...props });
+    return React.createElement("MaterialIcons", {
+      name,
+      size,
+      color,
+      ...props,
+    });
   },
 }));
 
@@ -100,17 +105,19 @@ jest.mock("@utils/formatUtils", () => ({
 
 // Mock props for the component
 const mockIngredient = {
+  id: "test-ingredient-1",
   name: "Test Ingredient",
   type: "grain" as const,
   amount: 1,
-  unit: "oz",
+  unit: "oz" as const,
   notes: "",
 };
 
 const mockProps = {
   ingredient: mockIngredient,
-  onSave: jest.fn(),
+  onUpdate: jest.fn(),
   onCancel: jest.fn(),
+  onRemove: jest.fn(),
   isVisible: true,
 };
 

@@ -61,7 +61,11 @@ jest.mock("@styles/modals/viewBrewSessionStyles", () => ({
     header: { flexDirection: "row", alignItems: "center", padding: 16 },
     backButton: { marginRight: 16 },
     headerTitle: { fontSize: 20, fontWeight: "bold", flex: 1 },
-    loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
     loadingText: { marginTop: 8 },
     errorContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
     errorTitle: { fontSize: 18, fontWeight: "bold", marginTop: 16 },
@@ -69,14 +73,33 @@ jest.mock("@styles/modals/viewBrewSessionStyles", () => ({
     retryButton: { padding: 12, borderRadius: 6, marginTop: 16 },
     retryButtonText: { color: "#fff" },
     scrollContent: { paddingBottom: 20 },
-    titleContainer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16 },
+    titleContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 16,
+    },
     title: { fontSize: 24, fontWeight: "bold", flex: 1 },
-    statusBadge: { flexDirection: "row", alignItems: "center", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+    statusBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
     statusText: { color: "#fff", fontSize: 12 },
     metadataContainer: { padding: 16 },
     metadataText: { fontSize: 14, color: "#666", marginBottom: 4 },
     metricsContainer: { flexDirection: "row", flexWrap: "wrap", padding: 16 },
-    metricCard: { flex: 1, minWidth: "45%", backgroundColor: "#f5f5f5", padding: 12, marginBottom: 8, marginHorizontal: 4, borderRadius: 8 },
+    metricCard: {
+      flex: 1,
+      minWidth: "45%",
+      backgroundColor: "#f5f5f5",
+      padding: 12,
+      marginBottom: 8,
+      marginHorizontal: 4,
+      borderRadius: 8,
+    },
     metricLabel: { fontSize: 12, color: "#666", marginBottom: 4 },
     metricValue: { fontSize: 16, fontWeight: "bold" },
     detailsContainer: { padding: 16 },
@@ -92,10 +115,19 @@ jest.mock("@src/components/brewSessions/FermentationChart", () => {
   const React = require("react");
   const { TEST_IDS } = require("../../../../src/constants/testIDs");
   return {
-    FermentationChart: jest.fn(({ fermentationData, expectedFG, actualOG, temperatureUnit, forceRefresh }) =>
-      React.createElement("Text", { testID: TEST_IDS.charts.fermentationChart }, 
-        `Fermentation Chart - ${fermentationData?.length || 0} entries`
-      )
+    FermentationChart: jest.fn(
+      ({
+        fermentationData,
+        expectedFG,
+        actualOG,
+        temperatureUnit,
+        forceRefresh,
+      }) =>
+        React.createElement(
+          "Text",
+          { testID: TEST_IDS.charts.fermentationChart },
+          `Fermentation Chart - ${fermentationData?.length || 0} entries`
+        )
     ),
   };
 });
@@ -104,10 +136,19 @@ jest.mock("@src/components/brewSessions/FermentationData", () => {
   const React = require("react");
   const { TEST_IDS } = require("../../../../src/constants/testIDs");
   return {
-    FermentationData: jest.fn(({ fermentationData, expectedFG, actualOG, temperatureUnit, brewSessionId }) =>
-      React.createElement("Text", { testID: TEST_IDS.charts.fermentationData }, 
-        `Fermentation Data - ${fermentationData?.length || 0} entries`
-      )
+    FermentationData: jest.fn(
+      ({
+        fermentationData,
+        expectedFG,
+        actualOG,
+        temperatureUnit,
+        brewSessionId,
+      }) =>
+        React.createElement(
+          "Text",
+          { testID: TEST_IDS.charts.fermentationData },
+          `Fermentation Data - ${fermentationData?.length || 0} entries`
+        )
     ),
   };
 });
@@ -140,7 +181,9 @@ describe("ViewBrewSessionScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     testUtils.resetCounters();
-    mockUseLocalSearchParams.mockReturnValue({ brewSessionId: "test-brew-session-1" });
+    mockUseLocalSearchParams.mockReturnValue({
+      brewSessionId: "test-brew-session-1",
+    });
   });
 
   describe("loading state", () => {
@@ -207,7 +250,11 @@ describe("ViewBrewSessionScreen", () => {
       const { getByText } = render(<ViewBrewSessionScreen />);
 
       expect(getByText("Brew Session Not Found")).toBeTruthy();
-      expect(getByText("This brew session could not be found or may have been deleted.")).toBeTruthy();
+      expect(
+        getByText(
+          "This brew session could not be found or may have been deleted."
+        )
+      ).toBeTruthy();
     });
 
     it("should navigate back when go back button is pressed in empty state", () => {
@@ -243,7 +290,7 @@ describe("ViewBrewSessionScreen", () => {
       batch_rating: 4,
       fermentation_data: [
         { date: "2024-01-16", specific_gravity: 1.065, temperature: 68 },
-        { date: "2024-01-18", specific_gravity: 1.040, temperature: 70 },
+        { date: "2024-01-18", specific_gravity: 1.04, temperature: 70 },
       ],
     });
 
@@ -262,7 +309,9 @@ describe("ViewBrewSessionScreen", () => {
 
       expect(getByText("Test IPA Brew Session")).toBeTruthy();
       expect(getByText("Fermenting")).toBeTruthy();
-      expect(getByText("Great brew day, everything went smoothly")).toBeTruthy();
+      expect(
+        getByText("Great brew day, everything went smoothly")
+      ).toBeTruthy();
       expect(getByText("Hoppy and balanced")).toBeTruthy();
     });
 
@@ -279,14 +328,14 @@ describe("ViewBrewSessionScreen", () => {
       // Test that OG metric is displayed correctly (shows 1.065 from mock data)
       expect(getByText("OG")).toBeTruthy();
       expect(getByText("1.065")).toBeTruthy();
-      
+
       // Test that FG and ABV metrics are displayed with their values
       expect(getByText("FG")).toBeTruthy();
       expect(getByText("1.012")).toBeTruthy();
       expect(getByText("ABV")).toBeTruthy();
       expect(getByText("6.9%")).toBeTruthy();
-      
-      // Test that efficiency metric is shown  
+
+      // Test that efficiency metric is shown
       expect(getByText("Efficiency")).toBeTruthy();
       expect(getByText("75%")).toBeTruthy();
     });
@@ -308,11 +357,18 @@ describe("ViewBrewSessionScreen", () => {
 
   describe("status handling", () => {
     it("should display correct status colors and text for different statuses", () => {
-      const statuses = ["planned", "in-progress", "fermenting", "conditioning", "completed", "archived"];
-      
+      const statuses = [
+        "planned",
+        "in-progress",
+        "fermenting",
+        "conditioning",
+        "completed",
+        "archived",
+      ];
+
       statuses.forEach(status => {
         const brewSession = mockData.brewSession({ status: status as any });
-        
+
         mockUseQuery.mockReturnValue({
           data: brewSession,
           isLoading: false,
@@ -322,7 +378,7 @@ describe("ViewBrewSessionScreen", () => {
         });
 
         const { getByText } = render(<ViewBrewSessionScreen />);
-        
+
         // Status should be capitalized
         const expectedText = status.charAt(0).toUpperCase() + status.slice(1);
         expect(getByText(expectedText)).toBeTruthy();
@@ -331,7 +387,7 @@ describe("ViewBrewSessionScreen", () => {
 
     it("should handle invalid status gracefully", () => {
       const brewSession = mockData.brewSession({ status: null as any });
-      
+
       mockUseQuery.mockReturnValue({
         data: brewSession,
         isLoading: false,
@@ -341,7 +397,7 @@ describe("ViewBrewSessionScreen", () => {
       });
 
       const { getByText } = render(<ViewBrewSessionScreen />);
-      
+
       expect(getByText("Unknown")).toBeTruthy();
     });
   });
@@ -352,7 +408,7 @@ describe("ViewBrewSessionScreen", () => {
         brew_date: "2024-01-15T00:00:00Z",
         fermentation_start_date: "2024-01-16T00:00:00Z",
       });
-      
+
       mockUseQuery.mockReturnValue({
         data: brewSession,
         isLoading: false,
@@ -364,12 +420,18 @@ describe("ViewBrewSessionScreen", () => {
       const { getByText } = render(<ViewBrewSessionScreen />);
 
       // Test that brew date is formatted correctly
-      const expectedBrewDate = new Date("2024-01-15T00:00:00Z").toLocaleDateString();
+      const expectedBrewDate = new Date(
+        "2024-01-15T00:00:00Z"
+      ).toLocaleDateString();
       expect(getByText(`Brew Date: ${expectedBrewDate}`)).toBeTruthy();
-      
+
       // Test that fermentation start date is formatted correctly
-      const expectedFermentationDate = new Date("2024-01-16T00:00:00Z").toLocaleDateString();
-      expect(getByText(`Fermentation Started: ${expectedFermentationDate}`)).toBeTruthy();
+      const expectedFermentationDate = new Date(
+        "2024-01-16T00:00:00Z"
+      ).toLocaleDateString();
+      expect(
+        getByText(`Fermentation Started: ${expectedFermentationDate}`)
+      ).toBeTruthy();
     });
 
     it("should handle missing dates gracefully", () => {
@@ -377,7 +439,7 @@ describe("ViewBrewSessionScreen", () => {
         brew_date: undefined,
         fermentation_start_date: undefined,
       });
-      
+
       mockUseQuery.mockReturnValue({
         data: brewSession,
         isLoading: false,
@@ -395,7 +457,7 @@ describe("ViewBrewSessionScreen", () => {
       const brewSession = mockData.brewSession({
         brew_date: "invalid-date",
       });
-      
+
       mockUseQuery.mockReturnValue({
         data: brewSession,
         isLoading: false,
@@ -418,7 +480,7 @@ describe("ViewBrewSessionScreen", () => {
         actual_abv: 6.789,
         actual_efficiency: 75.5,
       });
-      
+
       mockUseQuery.mockReturnValue({
         data: brewSession,
         isLoading: false,
@@ -427,10 +489,10 @@ describe("ViewBrewSessionScreen", () => {
         dataUpdatedAt: Date.now(),
       });
 
-            const { getByText } = render(<ViewBrewSessionScreen />);
+      const { getByText } = render(<ViewBrewSessionScreen />);
       // Verify OG is formatted with 3 decimals
       expect(getByText("1.065")).toBeTruthy();
-      // Verify FG is formatted with 3 decimals  
+      // Verify FG is formatted with 3 decimals
       expect(getByText("1.012")).toBeTruthy();
       // Verify ABV is formatted with 1 decimal
       expect(getByText("6.8%")).toBeTruthy();
@@ -444,7 +506,7 @@ describe("ViewBrewSessionScreen", () => {
         actual_fg: undefined,
         actual_abv: undefined,
       });
-      
+
       mockUseQuery.mockReturnValue({
         data: brewSession,
         isLoading: false,
@@ -456,9 +518,15 @@ describe("ViewBrewSessionScreen", () => {
       const { getByTestId } = render(<ViewBrewSessionScreen />);
 
       // Missing metrics should display "—" for undefined actual_og, actual_fg, actual_abv
-      expect(getByTestId(TEST_IDS.patterns.metricValue("OG"))).toHaveTextContent("—");
-      expect(getByTestId(TEST_IDS.patterns.metricValue("FG"))).toHaveTextContent("—");
-      expect(getByTestId(TEST_IDS.patterns.metricValue("ABV"))).toHaveTextContent("—");
+      expect(
+        getByTestId(TEST_IDS.patterns.metricValue("OG"))
+      ).toHaveTextContent("—");
+      expect(
+        getByTestId(TEST_IDS.patterns.metricValue("FG"))
+      ).toHaveTextContent("—");
+      expect(
+        getByTestId(TEST_IDS.patterns.metricValue("ABV"))
+      ).toHaveTextContent("—");
     });
   });
 
@@ -475,13 +543,13 @@ describe("ViewBrewSessionScreen", () => {
 
     it("should navigate back when back button is pressed", () => {
       const { getByTestId } = render(<ViewBrewSessionScreen />);
-      
+
       // Find the back button by its testID
       const backButton = getByTestId(TEST_IDS.header.backButton);
-      
+
       // Simulate pressing the back button
       fireEvent.press(backButton);
-      
+
       // Verify router.back was called
       expect(mockRouter.back).toHaveBeenCalledTimes(1);
     });
@@ -507,10 +575,11 @@ describe("ViewBrewSessionScreen", () => {
 
   describe("chart refresh behavior", () => {
     it("should refresh chart when data is updated", () => {
-      const FermentationChart = require("@src/components/brewSessions/FermentationChart").FermentationChart;
+      const FermentationChart =
+        require("@src/components/brewSessions/FermentationChart").FermentationChart;
       // Clear any previous calls to start fresh
       FermentationChart.mockClear();
-      
+
       const brewSession = mockData.brewSession({
         fermentation_data: [
           { date: "2024-01-16", specific_gravity: 1.065, temperature: 68 },
@@ -544,14 +613,14 @@ describe("ViewBrewSessionScreen", () => {
       expect(calls.length).toBeGreaterThanOrEqual(2);
       const firstCall = calls[0][0];
       const lastCall = calls[calls.length - 1][0];
-      
+
       // forceRefresh should have incremented between first and last calls due to dataUpdatedAt change
       expect(lastCall.forceRefresh).toBeGreaterThan(firstCall.forceRefresh);
     });
 
     it("should refresh chart when screen comes into focus", async () => {
       const brewSession = mockData.brewSession();
-      
+
       mockUseQuery.mockReturnValue({
         data: brewSession,
         isLoading: false,
@@ -561,19 +630,20 @@ describe("ViewBrewSessionScreen", () => {
       });
 
       const mockUseFocusEffect = require("expo-router").useFocusEffect;
-      
+
       render(<ViewBrewSessionScreen />);
 
       // Verify useFocusEffect was called to set up focus behavior
       expect(mockUseFocusEffect).toHaveBeenCalled();
-      
+
       // Get the callback function passed to useFocusEffect and simulate focus
       const focusCallback = mockUseFocusEffect.mock.calls[0][0];
-      const FermentationChart = require("@src/components/brewSessions/FermentationChart").FermentationChart;
-      
+      const FermentationChart =
+        require("@src/components/brewSessions/FermentationChart").FermentationChart;
+
       // Clear previous chart calls
       FermentationChart.mockClear();
-      
+
       // Simulate the focus effect callback
       await act(async () => {
         focusCallback();
@@ -581,7 +651,7 @@ describe("ViewBrewSessionScreen", () => {
 
       // Re-render the component to trigger the chart update
       render(<ViewBrewSessionScreen />);
-      
+
       // Verify the chart was rendered after focus callback
       expect(FermentationChart).toHaveBeenCalled();
     });
@@ -594,7 +664,7 @@ describe("ViewBrewSessionScreen", () => {
         tasting_notes: null,
         batch_rating: null,
       });
-      
+
       mockUseQuery.mockReturnValue({
         data: brewSession,
         isLoading: false,
@@ -618,7 +688,7 @@ describe("ViewBrewSessionScreen", () => {
         packaging_date: "2024-01-30T00:00:00Z",
         fermentation_end_date: "2024-01-25T00:00:00Z",
       });
-      
+
       mockUseQuery.mockReturnValue({
         data: brewSession,
         isLoading: false,
@@ -659,13 +729,13 @@ describe("ViewBrewSessionScreen", () => {
       const brewSession = mockData.brewSession({
         fermentation_data: [
           { date: "2024-01-16", specific_gravity: 1.065, temperature: 68 },
-          { date: "2024-01-18", specific_gravity: 1.040, temperature: 70 },
+          { date: "2024-01-18", specific_gravity: 1.04, temperature: 70 },
         ],
         target_fg: 1.012,
         actual_og: 1.065,
         temperature_unit: "F",
       });
-      
+
       mockUseQuery.mockReturnValue({
         data: brewSession,
         isLoading: false,
@@ -676,13 +746,15 @@ describe("ViewBrewSessionScreen", () => {
 
       render(<ViewBrewSessionScreen />);
 
-      const FermentationChart = require("@src/components/brewSessions/FermentationChart").FermentationChart;
-      const FermentationData = require("@src/components/brewSessions/FermentationData").FermentationData;
+      const FermentationChart =
+        require("@src/components/brewSessions/FermentationChart").FermentationChart;
+      const FermentationData =
+        require("@src/components/brewSessions/FermentationData").FermentationData;
 
       // Verify that components were called with correct data
       expect(FermentationChart).toHaveBeenCalled();
       expect(FermentationData).toHaveBeenCalled();
-      
+
       // Check that fermentation data is passed correctly
       const chartCall = FermentationChart.mock.calls[0][0];
       expect(chartCall.fermentationData).toEqual(brewSession.fermentation_data);
@@ -704,7 +776,9 @@ describe("ViewBrewSessionScreen", () => {
 
       render(<ViewBrewSessionScreen />);
 
-      expect(require("@styles/modals/viewBrewSessionStyles").viewBrewSessionStyles).toHaveBeenCalledWith(mockTheme);
+      expect(
+        require("@styles/modals/viewBrewSessionStyles").viewBrewSessionStyles
+      ).toHaveBeenCalledWith(mockTheme);
     });
   });
 });

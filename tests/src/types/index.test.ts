@@ -67,7 +67,7 @@ describe("Types Index Exports", () => {
     it("should support type imports", async () => {
       // Test that type modules can be imported and provide accessible exports
       const indexModule = await import("@src/types");
-      
+
       // Verify the main types module imports successfully
       expect(indexModule).toBeDefined();
       // Since this is a TypeScript compilation test, successful import means types are accessible

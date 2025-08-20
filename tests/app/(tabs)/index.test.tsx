@@ -182,7 +182,9 @@ describe("DashboardScreen", () => {
       expect(getByText("Welcome back, testuser!")).toBeTruthy();
       expect(getByText("Ready to brew something amazing?")).toBeTruthy();
       expect(getByText("Backend Not Connected")).toBeTruthy();
-      expect(getByText("Start the Flask backend to see real brewing data")).toBeTruthy();
+      expect(
+        getByText("Start the Flask backend to see real brewing data")
+      ).toBeTruthy();
     });
 
     it("should show zero stats in fallback mode", () => {
@@ -214,11 +216,11 @@ describe("DashboardScreen", () => {
           mockData.recipe({ name: "Stout Recipe", style: "Stout" }),
         ],
         active_brew_sessions: [
-          mockData.brewSession({ 
+          mockData.brewSession({
             id: "test-brew-session-1",
-            name: "IPA Brew", 
+            name: "IPA Brew",
             status: "fermenting",
-            brew_date: "2024-01-15T00:00:00Z"
+            brew_date: "2024-01-15T00:00:00Z",
           }),
         ],
       },
@@ -288,7 +290,12 @@ describe("DashboardScreen", () => {
       mockUseQuery.mockReturnValue({
         data: {
           data: {
-            user_stats: { total_recipes: 0, public_recipes: 0, total_brew_sessions: 0, active_brew_sessions: 0 },
+            user_stats: {
+              total_recipes: 0,
+              public_recipes: 0,
+              total_brew_sessions: 0,
+              active_brew_sessions: 0,
+            },
             recent_recipes: [],
             active_brew_sessions: [],
           },
@@ -305,7 +312,9 @@ describe("DashboardScreen", () => {
 
       fireEvent.press(createRecipeButton);
 
-      expect(mockRouter.push).toHaveBeenCalledWith("/(modals)/(recipes)/createRecipe");
+      expect(mockRouter.push).toHaveBeenCalledWith(
+        "/(modals)/(recipes)/createRecipe"
+      );
     });
 
     it("should navigate to recipes tab when recipes stat is pressed", () => {
@@ -361,7 +370,12 @@ describe("DashboardScreen", () => {
       mockUseQuery.mockReturnValue({
         data: {
           data: {
-            user_stats: { total_recipes: 1, public_recipes: 0, total_brew_sessions: 0, active_brew_sessions: 0 },
+            user_stats: {
+              total_recipes: 1,
+              public_recipes: 0,
+              total_brew_sessions: 0,
+              active_brew_sessions: 0,
+            },
             recent_recipes: [mockRecipe],
             active_brew_sessions: [],
           },
@@ -386,36 +400,45 @@ describe("DashboardScreen", () => {
 
     it("should show context menu on recipe long press", () => {
       const mockShowMenu = jest.fn();
-      require("@src/components/ui/ContextMenu/BaseContextMenu").useContextMenu.mockReturnValue({
-        visible: false,
-        selectedItem: null,
-        position: { x: 0, y: 0 },
-        showMenu: mockShowMenu,
-        hideMenu: jest.fn(),
-      });
+      require("@src/components/ui/ContextMenu/BaseContextMenu").useContextMenu.mockReturnValue(
+        {
+          visible: false,
+          selectedItem: null,
+          position: { x: 0, y: 0 },
+          showMenu: mockShowMenu,
+          hideMenu: jest.fn(),
+        }
+      );
 
       const { getByText } = render(<DashboardScreen />);
       const recipeCard = getByText("Test Recipe");
 
-      fireEvent(recipeCard, "longPress", { nativeEvent: { pageX: 100, pageY: 200 } });
+      fireEvent(recipeCard, "longPress", {
+        nativeEvent: { pageX: 100, pageY: 200 },
+      });
 
       expect(mockShowMenu).toHaveBeenCalledWith(mockRecipe, { x: 0, y: 0 });
     });
   });
 
   describe("brew session interactions", () => {
-    const mockBrewSession = mockData.brewSession({ 
+    const mockBrewSession = mockData.brewSession({
       id: "test-brew-session-1",
-      name: "Test Brew", 
+      name: "Test Brew",
       status: "fermenting",
-      brew_date: "2024-01-15T00:00:00Z"
+      brew_date: "2024-01-15T00:00:00Z",
     });
 
     beforeEach(() => {
       mockUseQuery.mockReturnValue({
         data: {
           data: {
-            user_stats: { total_recipes: 0, public_recipes: 0, total_brew_sessions: 1, active_brew_sessions: 1 },
+            user_stats: {
+              total_recipes: 0,
+              public_recipes: 0,
+              total_brew_sessions: 1,
+              active_brew_sessions: 1,
+            },
             recent_recipes: [],
             active_brew_sessions: [mockBrewSession],
           },
@@ -440,8 +463,8 @@ describe("DashboardScreen", () => {
 
     it("should show context menu on brew session long press", () => {
       const mockShowMenu = jest.fn();
-      require("@src/components/ui/ContextMenu/BaseContextMenu").useContextMenu
-        .mockReturnValueOnce({
+      require("@src/components/ui/ContextMenu/BaseContextMenu")
+        .useContextMenu.mockReturnValueOnce({
           visible: false,
           selectedItem: null,
           position: { x: 0, y: 0 },
@@ -459,9 +482,14 @@ describe("DashboardScreen", () => {
       const { getByText } = render(<DashboardScreen />);
       const sessionCard = getByText("Test Brew");
 
-      fireEvent(sessionCard, "longPress", { nativeEvent: { pageX: 100, pageY: 200 } });
+      fireEvent(sessionCard, "longPress", {
+        nativeEvent: { pageX: 100, pageY: 200 },
+      });
 
-      expect(mockShowMenu).toHaveBeenCalledWith(mockBrewSession, { x: 0, y: 0 });
+      expect(mockShowMenu).toHaveBeenCalledWith(mockBrewSession, {
+        x: 0,
+        y: 0,
+      });
     });
   });
 
@@ -470,7 +498,12 @@ describe("DashboardScreen", () => {
       mockUseQuery.mockReturnValue({
         data: {
           data: {
-            user_stats: { total_recipes: 0, public_recipes: 0, total_brew_sessions: 0, active_brew_sessions: 0 },
+            user_stats: {
+              total_recipes: 0,
+              public_recipes: 0,
+              total_brew_sessions: 0,
+              active_brew_sessions: 0,
+            },
             recent_recipes: [],
             active_brew_sessions: [],
           },
@@ -485,7 +518,9 @@ describe("DashboardScreen", () => {
       const { getByText } = render(<DashboardScreen />);
 
       expect(getByText("No brew sessions yet")).toBeTruthy();
-      expect(getByText("Start your first brew session to track progress!")).toBeTruthy();
+      expect(
+        getByText("Start your first brew session to track progress!")
+      ).toBeTruthy();
     });
 
     it("should not show recent recipes section when no recipes exist", () => {
@@ -499,7 +534,13 @@ describe("DashboardScreen", () => {
     it("should trigger refetch when refreshing", async () => {
       const mockRefetch = jest.fn();
       mockUseQuery.mockReturnValue({
-        data: { data: { user_stats: {}, recent_recipes: [], active_brew_sessions: [] } },
+        data: {
+          data: {
+            user_stats: {},
+            recent_recipes: [],
+            active_brew_sessions: [],
+          },
+        },
         isLoading: false,
         error: null,
         refetch: mockRefetch,
@@ -516,9 +557,15 @@ describe("DashboardScreen", () => {
   describe("start brew session action", () => {
     it("should log message for start brew session (not implemented)", () => {
       const consoleSpy = jest.spyOn(console, "log").mockImplementation();
-      
+
       mockUseQuery.mockReturnValue({
-        data: { data: { user_stats: {}, recent_recipes: [], active_brew_sessions: [] } },
+        data: {
+          data: {
+            user_stats: {},
+            recent_recipes: [],
+            active_brew_sessions: [],
+          },
+        },
         isLoading: false,
         error: null,
         refetch: jest.fn(),
@@ -529,25 +576,32 @@ describe("DashboardScreen", () => {
 
       fireEvent.press(startBrewButton);
 
-      expect(consoleSpy).toHaveBeenCalledWith("Navigate to create brew session");
-      
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Navigate to create brew session"
+      );
+
       consoleSpy.mockRestore();
     });
   });
 
   describe("status color utility", () => {
-    const mockBrewSession = mockData.brewSession({ 
+    const mockBrewSession = mockData.brewSession({
       id: "test-brew-session-1",
       name: "Test Brew Session",
       status: "fermenting",
-      brew_date: "2024-01-15T00:00:00Z"
+      brew_date: "2024-01-15T00:00:00Z",
     });
 
     beforeEach(() => {
       mockUseQuery.mockReturnValue({
         data: {
           data: {
-            user_stats: { total_recipes: 0, public_recipes: 0, total_brew_sessions: 1, active_brew_sessions: 1 },
+            user_stats: {
+              total_recipes: 0,
+              public_recipes: 0,
+              total_brew_sessions: 1,
+              active_brew_sessions: 1,
+            },
             recent_recipes: [],
             active_brew_sessions: [mockBrewSession],
           },

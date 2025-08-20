@@ -1,8 +1,4 @@
-import {
-  HOP_USAGE_OPTIONS,
-  HOP_TIME_PRESETS,
-  HopUsageValue,
-} from "@src/constants/hopConstants";
+import { HOP_USAGE_OPTIONS } from "@src/constants/hopConstants";
 import { RecipeIngredient } from "@src/types";
 
 /**

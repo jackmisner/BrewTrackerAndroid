@@ -1,6 +1,6 @@
 /**
  * Test ID Utilities Tests
- * 
+ *
  * Tests for the testIDs.ts module including slug generation,
  * caching logic, pattern generators, and edge cases.
  */
@@ -86,7 +86,7 @@ describe("testIDs Constants", () => {
       const testString = "cache-test-string";
       const slug1 = toSlug(testString);
       const slug2 = toSlug(testString);
-      
+
       expect(slug1).toBe(slug2);
       expect(slug1).toBe("cache-test-string");
     });
@@ -115,7 +115,7 @@ describe("testIDs Constants", () => {
       // Add entries to cache
       toSlug("first-entry");
       toSlug("second-entry");
-      
+
       // Access first entry again (should refresh its position)
       const refreshed = toSlug("first-entry");
       expect(refreshed).toBe("first-entry");
@@ -214,19 +214,20 @@ describe("testIDs Constants", () => {
     it("should handle normalize function availability", () => {
       // Mock normalize function being unavailable
       const originalNormalize = String.prototype.normalize;
-      
-      // Test with normalize function available (normal case)
-      expect(toSlug("café")).toBe("cafe");
-      
-      // Temporarily remove normalize to test fallback path
-      // @ts-ignore - Intentionally testing runtime behavior
-      delete String.prototype.normalize;
-      
-      // Should still work without normalize
-      expect(toSlug("test-string")).toBe("test-string");
-      
-      // Restore normalize function
-      String.prototype.normalize = originalNormalize;
+      try {
+        // Test with normalize function available (normal case)
+        expect(toSlug("café")).toBe("cafe");
+
+        // Temporarily remove normalize to test fallback path
+        // @ts-ignore - Intentionally testing runtime behavior
+        delete (String.prototype as any).normalize;
+
+        // Should still work without normalize
+        expect(toSlug("test-string")).toBe("test-string");
+      } finally {
+        // Always restore normalize function
+        String.prototype.normalize = originalNormalize;
+      }
     });
 
     it("should handle complex Unicode characters", () => {

@@ -65,7 +65,11 @@ jest.mock("@styles/tabs/brewSessionsStyles", () => ({
     tabText: { fontSize: 16 },
     activeTabText: { fontWeight: "bold" },
     floatingButton: { position: "absolute", right: 16, bottom: 16 },
-    loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
     loadingText: { marginTop: 8 },
     errorContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
     errorText: { fontSize: 18, fontWeight: "bold", marginTop: 16 },
@@ -74,33 +78,59 @@ jest.mock("@styles/tabs/brewSessionsStyles", () => ({
     retryButtonText: { color: "#fff" },
     brewSessionCard: { padding: 16, marginVertical: 8 },
     brewSessionHeader: { marginBottom: 12 },
-    brewSessionTitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+    brewSessionTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
     brewSessionName: { fontSize: 18, fontWeight: "bold", flex: 1 },
-    statusBadge: { flexDirection: "row", alignItems: "center", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+    statusBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
     statusText: { color: "#fff", fontSize: 12, marginLeft: 4 },
     recipeStyle: { fontSize: 14, color: "#666", marginTop: 4 },
     progressContainer: { marginBottom: 12 },
-    progressInfo: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
+    progressInfo: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
     progressLabel: { fontSize: 14, fontWeight: "600" },
     stageText: { fontSize: 12, color: "#666" },
     progressBar: { height: 4, backgroundColor: "#e0e0e0", borderRadius: 2 },
-    progressFill: { height: "100%", backgroundColor: "#4CAF50", borderRadius: 2 },
-    brewSessionMetrics: { flexDirection: "row", justifyContent: "space-between" },
+    progressFill: {
+      height: "100%",
+      backgroundColor: "#4CAF50",
+      borderRadius: 2,
+    },
+    brewSessionMetrics: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
     metric: { alignItems: "center" },
     metricLabel: { fontSize: 12, color: "#666" },
     metricValue: { fontSize: 14, fontWeight: "600" },
     emptyState: { flex: 1, justifyContent: "center", alignItems: "center" },
     emptyTitle: { fontSize: 18, fontWeight: "bold", marginTop: 16 },
     emptySubtitle: { fontSize: 14, textAlign: "center", marginTop: 8 },
-    createButton: { flexDirection: "row", alignItems: "center", padding: 12, marginTop: 16 },
+    createButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 12,
+      marginTop: 16,
+    },
     createButtonText: { color: "#fff", marginLeft: 8 },
     listContainer: { paddingHorizontal: 16 },
   })),
 }));
 
 jest.mock("@utils/formatUtils", () => ({
-  formatGravity: jest.fn((value) => value ? value.toFixed(3) : "—"),
-  formatABV: jest.fn((value) => value ? `${value.toFixed(1)}%` : "—"),
+  formatGravity: jest.fn(value => (value ? value.toFixed(3) : "—")),
+  formatABV: jest.fn(value => (value ? `${value.toFixed(1)}%` : "—")),
 }));
 
 jest.mock("@src/components/ui/ContextMenu/BrewSessionContextMenu", () => ({
@@ -144,7 +174,7 @@ describe("BrewSessionsScreen", () => {
     jest.clearAllMocks();
     testUtils.resetCounters();
     mockUseLocalSearchParams.mockReturnValue({});
-    
+
     // Reset the useQuery mock to return default values
     mockUseQuery.mockImplementation(() => ({
       data: { brew_sessions: [] },
@@ -187,7 +217,7 @@ describe("BrewSessionsScreen", () => {
 
     it("should navigate to active tab when pressed from completed tab", () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "completed" });
-      
+
       const { getByText } = render(<BrewSessionsScreen />);
       const activeTab = getByText("Active (2)");
 
@@ -246,7 +276,11 @@ describe("BrewSessionsScreen", () => {
       const { getByText } = render(<BrewSessionsScreen />);
 
       expect(getByText("Backend Not Available")).toBeTruthy();
-      expect(getByText("Brew sessions require a backend connection. The app will show empty states until the backend is running.")).toBeTruthy();
+      expect(
+        getByText(
+          "Brew sessions require a backend connection. The app will show empty states until the backend is running."
+        )
+      ).toBeTruthy();
     });
 
     it("should allow retry when error occurs", () => {
@@ -321,22 +355,24 @@ describe("BrewSessionsScreen", () => {
 
       // Verify component processes data correctly by checking the data structure
       // mockUseQuery should have been called with correct query key
-      expect(mockUseQuery).toHaveBeenCalledWith(expect.objectContaining({
-        queryKey: ["brewSessions"],
-      }));
+      expect(mockUseQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ["brewSessions"],
+        })
+      );
       // Component should render tabs showing correct data counts
       expect(queryByText("Active (1)")).toBeTruthy();
     });
 
     it("should handle brew session navigation logic", () => {
       const mockPush = jest.spyOn(require("expo-router").router, "push");
-      
+
       const { getByText } = render(<BrewSessionsScreen />);
 
       // Test tab navigation - click on Completed tab
       const completedTab = getByText("Completed (1)");
       fireEvent.press(completedTab);
-      
+
       expect(mockPush).toHaveBeenCalledWith({
         pathname: "/(tabs)/brewSessions",
         params: { activeTab: "completed" },
@@ -347,18 +383,22 @@ describe("BrewSessionsScreen", () => {
 
     it("should handle context menu setup", () => {
       const mockShowMenu = jest.fn();
-      require("@src/components/ui/ContextMenu/BaseContextMenu").useContextMenu.mockReturnValue({
-        visible: false,
-        selectedItem: null,
-        position: { x: 0, y: 0 },
-        showMenu: mockShowMenu,
-        hideMenu: jest.fn(),
-      });
+      require("@src/components/ui/ContextMenu/BaseContextMenu").useContextMenu.mockReturnValue(
+        {
+          visible: false,
+          selectedItem: null,
+          position: { x: 0, y: 0 },
+          showMenu: mockShowMenu,
+          hideMenu: jest.fn(),
+        }
+      );
 
       render(<BrewSessionsScreen />);
 
       // Verify context menu hook was called (indicates context menu setup)
-      expect(require("@src/components/ui/ContextMenu/BaseContextMenu").useContextMenu).toHaveBeenCalled();
+      expect(
+        require("@src/components/ui/ContextMenu/BaseContextMenu").useContextMenu
+      ).toHaveBeenCalled();
       // Verify showMenu function is available for context menu interactions
       expect(mockShowMenu).toBeDefined();
     });
@@ -373,7 +413,9 @@ describe("BrewSessionsScreen", () => {
       const { getByText } = render(<BrewSessionsScreen />);
 
       expect(getByText("No Active Brews")).toBeTruthy();
-      expect(getByText("Start a brew session to track your fermentation progress")).toBeTruthy();
+      expect(
+        getByText("Start a brew session to track your fermentation progress")
+      ).toBeTruthy();
       expect(getByText("Start Brewing")).toBeTruthy();
     });
 
@@ -383,7 +425,9 @@ describe("BrewSessionsScreen", () => {
       const { getByText } = render(<BrewSessionsScreen />);
 
       expect(getByText("No Completed Brews")).toBeTruthy();
-      expect(getByText("Completed brew sessions will appear here")).toBeTruthy();
+      expect(
+        getByText("Completed brew sessions will appear here")
+      ).toBeTruthy();
     });
 
     it("should navigate to recipes when start brewing is pressed", () => {
@@ -424,7 +468,6 @@ describe("BrewSessionsScreen", () => {
       // Component should render without errors even when FAB logic is conditional
       expect(queryByText("Active (0)")).toBeTruthy();
     });
-
   });
 
   describe("pull to refresh", () => {
@@ -497,7 +540,7 @@ describe("BrewSessionsScreen", () => {
       // The component should not crash and should display the tabs with counts
       expect(queryByText("Active (1)")).toBeTruthy();
       expect(queryByText("Completed (0)")).toBeTruthy();
-      
+
       // Since FlatList is mocked, the actual progress calculation happens in the renderItem function
       // which isn't called. The test verifies the component structure and data handling.
     });
@@ -514,22 +557,27 @@ describe("BrewSessionsScreen", () => {
     };
 
     beforeEach(() => {
-      require("@src/components/ui/ContextMenu/BrewSessionContextMenu").createDefaultBrewSessionActions
-        .mockReturnValue(mockActions);
+      require("@src/components/ui/ContextMenu/BrewSessionContextMenu").createDefaultBrewSessionActions.mockReturnValue(
+        mockActions
+      );
     });
 
     it("should create context menu actions with correct handlers", () => {
       render(<BrewSessionsScreen />);
 
-      expect(require("@src/components/ui/ContextMenu/BrewSessionContextMenu").createDefaultBrewSessionActions)
-        .toHaveBeenCalledWith(expect.objectContaining({
+      expect(
+        require("@src/components/ui/ContextMenu/BrewSessionContextMenu")
+          .createDefaultBrewSessionActions
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
           onView: expect.any(Function),
           onEdit: expect.any(Function),
           onAddFermentationEntry: expect.any(Function),
           onExportData: expect.any(Function),
           onArchive: expect.any(Function),
           onDelete: expect.any(Function),
-        }));
+        })
+      );
     });
   });
 

@@ -22,7 +22,6 @@ import { formatABV, formatIBU, formatSRM } from "@utils/formatUtils";
 import {
   RecipeContextMenu,
   createDefaultRecipeActions,
-  RecipeAction,
 } from "@src/components/ui/ContextMenu/RecipeContextMenu";
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
@@ -143,7 +142,7 @@ export default function RecipesScreen() {
     const position = getTouchPosition(event);
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch (error) {
+    } catch {
       // Silently handle devices without haptic support
     }
     contextMenu.showMenu(recipe, position);

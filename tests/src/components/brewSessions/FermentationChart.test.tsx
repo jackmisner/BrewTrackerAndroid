@@ -1,6 +1,6 @@
 /**
  * FermentationChart Tests
- * 
+ *
  * Start simple - test basic rendering first, following our established zero-coverage high-impact strategy
  * This file has 643 uncovered lines - MASSIVE impact potential!
  */
@@ -24,7 +24,7 @@ jest.mock("react-native", () => ({
     return React.createElement("TouchableOpacity", props, children);
   },
   StyleSheet: {
-    create: jest.fn((styles) => styles),
+    create: jest.fn(styles => styles),
   },
   Dimensions: {
     get: jest.fn(() => ({ width: 375, height: 667 })),
@@ -82,7 +82,7 @@ const mockFermentationData = [
     entry_date: "2023-12-01T10:00:00Z",
   },
   {
-    gravity: 1.020,
+    gravity: 1.02,
     temperature: 70,
     ph: 4.0,
     notes: "Day 3",

@@ -1,6 +1,6 @@
 /**
  * Index Route Tests
- * 
+ *
  * Simple index component test
  */
 

@@ -744,9 +744,15 @@ describe("ApiService Core Functionality", () => {
         return url.replace(/\/$/, "");
       }
 
-      expect(cleanURL("http://localhost:5000/api/")).toBe("http://localhost:5000/api");
-      expect(cleanURL("http://localhost:5000/api")).toBe("http://localhost:5000/api");
-      expect(cleanURL("https://api.example.com/")).toBe("https://api.example.com");
+      expect(cleanURL("http://localhost:5000/api/")).toBe(
+        "http://localhost:5000/api"
+      );
+      expect(cleanURL("http://localhost:5000/api")).toBe(
+        "http://localhost:5000/api"
+      );
+      expect(cleanURL("https://api.example.com/")).toBe(
+        "https://api.example.com"
+      );
     });
   });
 
@@ -787,7 +793,8 @@ describe("ApiService Core Functionality", () => {
             normalized.message =
               "Network error. Please check your internet connection.";
           } else {
-            normalized.message = "Unable to connect to server. Please try again.";
+            normalized.message =
+              "Unable to connect to server. Please try again.";
           }
 
           normalized.code = axiosError.code;
@@ -801,7 +808,8 @@ describe("ApiService Core Functionality", () => {
         // Handle specific HTTP status codes
         switch (response.status) {
           case 400:
-            normalized.message = "Invalid request data. Please check your input.";
+            normalized.message =
+              "Invalid request data. Please check your input.";
             break;
           case 401:
             normalized.message = "Authentication failed. Please log in again.";
@@ -879,14 +887,16 @@ describe("ApiService Core Functionality", () => {
         message: "Network Error",
         isAxiosError: true,
       } as AxiosError;
-      
+
       mockAxios.isAxiosError.mockReturnValue(true);
 
       const result = normalizeError(networkError);
 
       expect(result.isNetworkError).toBe(true);
       expect(result.isRetryable).toBe(true);
-      expect(result.message).toBe("Network error. Please check your internet connection.");
+      expect(result.message).toBe(
+        "Network error. Please check your internet connection."
+      );
       expect(result.code).toBe("NETWORK_ERROR");
     });
 
@@ -896,14 +906,16 @@ describe("ApiService Core Functionality", () => {
         message: "timeout of 15000ms exceeded",
         isAxiosError: true,
       } as AxiosError;
-      
+
       mockAxios.isAxiosError.mockReturnValue(true);
 
       const result = normalizeError(timeoutError);
 
       expect(result.isTimeout).toBe(true);
       expect(result.isRetryable).toBe(true);
-      expect(result.message).toBe("Request timed out. Please check your connection and try again.");
+      expect(result.message).toBe(
+        "Request timed out. Please check your connection and try again."
+      );
     });
 
     it("should normalize HTTP 403 errors correctly", () => {
@@ -914,7 +926,7 @@ describe("ApiService Core Functionality", () => {
         },
         isAxiosError: true,
       } as AxiosError;
-      
+
       mockAxios.isAxiosError.mockReturnValue(true);
 
       const result = normalizeError(forbiddenError);
@@ -932,7 +944,7 @@ describe("ApiService Core Functionality", () => {
         },
         isAxiosError: true,
       } as AxiosError;
-      
+
       mockAxios.isAxiosError.mockReturnValue(true);
 
       const result = normalizeError(conflictError);
@@ -950,7 +962,7 @@ describe("ApiService Core Functionality", () => {
         },
         isAxiosError: true,
       } as AxiosError;
-      
+
       mockAxios.isAxiosError.mockReturnValue(true);
 
       const result = normalizeError(validationError);
@@ -962,7 +974,7 @@ describe("ApiService Core Functionality", () => {
 
     it("should normalize HTTP 502/503/504 errors as retryable", () => {
       const serviceErrors = [502, 503, 504];
-      
+
       serviceErrors.forEach(status => {
         const serviceError = {
           response: {
@@ -971,13 +983,15 @@ describe("ApiService Core Functionality", () => {
           },
           isAxiosError: true,
         } as AxiosError;
-        
+
         mockAxios.isAxiosError.mockReturnValue(true);
 
         const result = normalizeError(serviceError);
 
         expect(result.status).toBe(status);
-        expect(result.message).toBe("Service temporarily unavailable. Please try again.");
+        expect(result.message).toBe(
+          "Service temporarily unavailable. Please try again."
+        );
         expect(result.isRetryable).toBe(true);
       });
     });
@@ -990,7 +1004,7 @@ describe("ApiService Core Functionality", () => {
         },
         isAxiosError: true,
       } as AxiosError;
-      
+
       mockAxios.isAxiosError.mockReturnValue(true);
 
       const result = normalizeError(serverError);
@@ -1033,7 +1047,7 @@ describe("ApiService Core Functionality", () => {
     it("should handle exponential backoff timing", async () => {
       let attemptCount = 0;
       const timestamps: number[] = [];
-      
+
       const failingOperation = jest.fn().mockImplementation(async () => {
         timestamps.push(Date.now());
         attemptCount++;
@@ -1041,7 +1055,7 @@ describe("ApiService Core Functionality", () => {
       });
 
       const start = Date.now();
-      
+
       try {
         await withRetry(failingOperation, () => true, 3, 50);
       } catch (error) {
@@ -1049,7 +1063,7 @@ describe("ApiService Core Functionality", () => {
       }
 
       const duration = Date.now() - start;
-      
+
       expect(failingOperation).toHaveBeenCalledTimes(3);
       // Should have some delay between attempts (at least 100ms total for 2 delays)
       expect(duration).toBeGreaterThanOrEqual(100);
@@ -1058,7 +1072,7 @@ describe("ApiService Core Functionality", () => {
     it("should handle conditional retry logic", async () => {
       const networkError = { code: "NETWORK_ERROR", isRetryable: true };
       const authError = { code: "UNAUTHORIZED", isRetryable: false };
-      
+
       const operation = jest
         .fn()
         .mockRejectedValueOnce(networkError)
@@ -1066,9 +1080,9 @@ describe("ApiService Core Functionality", () => {
 
       const isRetryableFn = (error: any) => error.isRetryable;
 
-      await expect(
-        withRetry(operation, isRetryableFn, 3, 0)
-      ).rejects.toEqual(authError);
+      await expect(withRetry(operation, isRetryableFn, 3, 0)).rejects.toEqual(
+        authError
+      );
 
       expect(operation).toHaveBeenCalledTimes(2);
     });
@@ -1077,9 +1091,9 @@ describe("ApiService Core Functionality", () => {
       const errors = [
         new Error("Network timeout"),
         { message: "Server overloaded", retryable: true },
-        "String error message"
+        "String error message",
       ];
-      
+
       let errorIndex = 0;
       const operation = jest.fn().mockImplementation(async () => {
         if (errorIndex < errors.length) {
@@ -1129,7 +1143,7 @@ describe("ApiService Core Functionality", () => {
         { code: "STORAGE_ERROR", message: "Device storage full" },
         "Permission denied",
         null,
-        undefined
+        undefined,
       ];
 
       for (const error of errorScenarios) {
@@ -1143,7 +1157,9 @@ describe("ApiService Core Functionality", () => {
       const invalidTokens = ["", "   ", null, undefined];
 
       for (const invalidToken of invalidTokens) {
-        mockSecureStore.getItemAsync.mockResolvedValue(invalidToken);
+        mockSecureStore.getItemAsync.mockResolvedValue(
+          invalidToken as string | null
+        );
         const token = await TestTokenManager.getToken();
         expect(token).toBe(invalidToken);
       }
@@ -1154,19 +1170,22 @@ describe("ApiService Core Functionality", () => {
         "very.long.jwt.token.with.many.segments.that.might.exceed.storage.limits",
         "token with spaces and special chars !@#$%^&*()",
         "🔐🛡️🚀", // Emoji token
-        "token\nwith\nnewlines"
+        "token\nwith\nnewlines",
       ];
 
       for (const token of edgeCaseTokens) {
         mockSecureStore.setItemAsync.mockResolvedValue();
         await TestTokenManager.setToken(token);
-        expect(mockSecureStore.setItemAsync).toHaveBeenCalledWith("ACCESS_TOKEN", token);
+        expect(mockSecureStore.setItemAsync).toHaveBeenCalledWith(
+          "ACCESS_TOKEN",
+          token
+        );
       }
     });
 
     it("should handle concurrent token operations", async () => {
       const tokens = ["token1", "token2", "token3"];
-      
+
       mockSecureStore.setItemAsync.mockImplementation(async (key, value) => {
         // Simulate async delay
         await new Promise(resolve => setTimeout(resolve, 10));
@@ -1175,9 +1194,9 @@ describe("ApiService Core Functionality", () => {
 
       // Attempt to set multiple tokens concurrently
       const promises = tokens.map(token => TestTokenManager.setToken(token));
-      
+
       await Promise.all(promises);
-      
+
       expect(mockSecureStore.setItemAsync).toHaveBeenCalledTimes(3);
     });
   });
@@ -1219,7 +1238,7 @@ describe("ApiService Core Functionality", () => {
         "https://api.example.com/v1/graphql",
         "http://localhost:3000/api/v2",
         "https://subdomain.domain.com:8080/path",
-        "https://192.168.1.100:5000/api"
+        "https://192.168.1.100:5000/api",
       ];
 
       validUrls.forEach(url => {
@@ -1243,9 +1262,9 @@ describe("ApiService Core Functionality", () => {
     it("should reject URLs with invalid protocols", () => {
       const invalidUrls = [
         "ftp://api.example.com",
-        "ws://api.example.com", 
+        "ws://api.example.com",
         "file:///path/to/api",
-        "data:text/plain,api"
+        "data:text/plain,api",
       ];
 
       invalidUrls.forEach(url => {
@@ -1267,25 +1286,25 @@ describe("ApiService Core Functionality", () => {
           error: {
             code: "ECONNREFUSED",
             isAxiosError: true,
-            message: "Connection refused"
+            message: "Connection refused",
           },
-          expectedMessage: "Unable to connect to server. Please try again."
+          expectedMessage: "Unable to connect to server. Please try again.",
         },
         {
           error: {
             response: {
               status: 429,
-              data: { error: "Rate limit exceeded", retryAfter: 60 }
+              data: { error: "Rate limit exceeded", retryAfter: 60 },
             },
-            isAxiosError: true
+            isAxiosError: true,
           },
-          expectedMessage: "Rate limit exceeded"
-        }
+          expectedMessage: "Rate limit exceeded",
+        },
       ];
 
       for (const scenario of errorScenarios) {
         mockAxiosInstance.get.mockRejectedValue(scenario.error);
-        
+
         try {
           await mockAxiosInstance.get("/test");
         } catch (error) {
@@ -1299,7 +1318,7 @@ describe("ApiService Core Functionality", () => {
         data: {
           items: [
             { id: "1", name: "Item 1" },
-            { id: "2", name: "Item 2" }
+            { id: "2", name: "Item 2" },
           ],
           pagination: {
             current_page: 1,
@@ -1307,19 +1326,21 @@ describe("ApiService Core Functionality", () => {
             total_items: 50,
             per_page: 10,
             has_next: true,
-            has_previous: false
-          }
+            has_previous: false,
+          },
         },
-        status: 200
+        status: 200,
       };
 
       mockAxiosInstance.get.mockResolvedValue(paginatedResponse);
 
-      return mockAxiosInstance.get("/recipes?page=1&per_page=10").then(response => {
-        expect(response.data.items).toHaveLength(2);
-        expect(response.data.pagination.has_next).toBe(true);
-        expect(response.data.pagination.total_items).toBe(50);
-      });
+      return mockAxiosInstance
+        .get("/recipes?page=1&per_page=10")
+        .then((response: any) => {
+          expect(response.data.items).toHaveLength(2);
+          expect(response.data.pagination.has_next).toBe(true);
+          expect(response.data.pagination.total_items).toBe(50);
+        });
     });
 
     it("should simulate nested resource responses", () => {
@@ -1334,10 +1355,10 @@ describe("ApiService Core Functionality", () => {
                 name: "Pale Malt",
                 amount: 10,
                 unit: "lb",
-                type: "grain"
+                type: "grain",
               },
               {
-                id: "ing-2", 
+                id: "ing-2",
                 name: "Cascade Hops",
                 amount: 1,
                 unit: "oz",
@@ -1345,27 +1366,31 @@ describe("ApiService Core Functionality", () => {
                 properties: {
                   alpha_acids: 5.5,
                   beta_acids: 4.8,
-                  cohumulone: 33
-                }
-              }
+                  cohumulone: 33,
+                },
+              },
             ],
             metrics: {
               estimated_abv: 6.2,
               estimated_ibu: 45,
-              estimated_srm: 6
-            }
-          }
+              estimated_srm: 6,
+            },
+          },
         },
-        status: 200
+        status: 200,
       };
 
       mockAxiosInstance.get.mockResolvedValue(nestedResponse);
 
-      return mockAxiosInstance.get("/recipes/recipe-1").then(response => {
-        expect(response.data.recipe.ingredients).toHaveLength(2);
-        expect(response.data.recipe.metrics.estimated_abv).toBe(6.2);
-        expect(response.data.recipe.ingredients[1].properties.alpha_acids).toBe(5.5);
-      });
+      return mockAxiosInstance
+        .get("/recipes/recipe-1")
+        .then((response: any) => {
+          expect(response.data.recipe.ingredients).toHaveLength(2);
+          expect(response.data.recipe.metrics.estimated_abv).toBe(6.2);
+          expect(
+            response.data.recipe.ingredients[1].properties.alpha_acids
+          ).toBe(5.5);
+        });
     });
   });
 });

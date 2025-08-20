@@ -14,7 +14,6 @@ import ApiService from "@services/api/apiService";
 import { BrewSession, BrewSessionStatus } from "@/src/types";
 import { viewBrewSessionStyles } from "@styles/modals/viewBrewSessionStyles";
 import { useTheme } from "@contexts/ThemeContext";
-import { useUnits } from "@contexts/UnitContext";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { FermentationChart } from "@src/components/brewSessions/FermentationChart";
 import { FermentationData } from "@src/components/brewSessions/FermentationData";
@@ -25,7 +24,6 @@ export default function ViewBrewSession() {
   const [refreshing, setRefreshing] = useState(false);
   const [chartRefreshCounter, setChartRefreshCounter] = useState(0);
   const theme = useTheme();
-  const units = useUnits();
   const styles = viewBrewSessionStyles(theme);
   const {
     data: brewSessionData,
@@ -142,7 +140,7 @@ export default function ViewBrewSession() {
   ) => {
     // Generate testID based on label for testing
     const testId = TEST_IDS.patterns.metricValue(label);
-    
+
     return (
       <View style={styles.metricCard}>
         <Text style={styles.metricLabel}>{label}</Text>
@@ -150,7 +148,8 @@ export default function ViewBrewSession() {
           {(() => {
             if (value === undefined || value === null) return "—";
             if (typeof value === "number") {
-              const decimals = label === "ABV" ? 1 : label.includes("G") ? 3 : 0;
+              const decimals =
+                label === "ABV" ? 1 : label.includes("G") ? 3 : 0;
               return `${formatMetric(value, decimals)}${unit || ""}`;
             }
             return `${value}${unit || ""}`;
@@ -168,9 +167,9 @@ export default function ViewBrewSession() {
       <View style={styles.container}>
         {/* Header with back button - always visible */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={handleGoBack} 
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleGoBack}
             testID={TEST_IDS.header.backButton}
             accessible={true}
             accessibilityRole="button"
@@ -197,9 +196,9 @@ export default function ViewBrewSession() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={handleGoBack} 
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleGoBack}
             testID={TEST_IDS.header.backButton}
             accessible={true}
             accessibilityRole="button"
@@ -235,9 +234,9 @@ export default function ViewBrewSession() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={handleGoBack} 
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleGoBack}
             testID={TEST_IDS.header.backButton}
             accessible={true}
             accessibilityRole="button"
@@ -272,9 +271,9 @@ export default function ViewBrewSession() {
     <View style={styles.container}>
       {/* Header with back button - always visible */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={handleGoBack} 
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={handleGoBack}
           testID={TEST_IDS.header.backButton}
           accessible={true}
           accessibilityRole="button"

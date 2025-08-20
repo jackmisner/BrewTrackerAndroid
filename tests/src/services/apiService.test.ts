@@ -389,10 +389,19 @@ describe("ApiService - Essential Functionality", () => {
 
         // Since we can't import the actual ApiService due to mocking,
         // we'll test the pattern directly
-        const loginRequest = { email: "test@example.com", password: "password123" };
-        const result = await mockAxiosInstance.post("/auth/login", loginRequest);
+        const loginRequest = {
+          email: "test@example.com",
+          password: "password123",
+        };
+        const result = await mockAxiosInstance.post(
+          "/auth/login",
+          loginRequest
+        );
 
-        expect(mockAxiosInstance.post).toHaveBeenCalledWith("/auth/login", loginRequest);
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+          "/auth/login",
+          loginRequest
+        );
         expect(result.data.user.email).toBe("test@example.com");
         expect(result.data.token).toBe("jwt-token");
       });
@@ -408,7 +417,10 @@ describe("ApiService - Essential Functionality", () => {
         mockAxiosInstance.post.mockRejectedValue(mockError);
 
         await expect(
-          mockAxiosInstance.post("/auth/login", { email: "test@example.com", password: "wrong" })
+          mockAxiosInstance.post("/auth/login", {
+            email: "test@example.com",
+            password: "wrong",
+          })
         ).rejects.toMatchObject({
           response: {
             status: 401,
@@ -433,9 +445,15 @@ describe("ApiService - Essential Functionality", () => {
           password: "password123",
           confirmPassword: "password123",
         };
-        const result = await mockAxiosInstance.post("/auth/register", registerRequest);
+        const result = await mockAxiosInstance.post(
+          "/auth/register",
+          registerRequest
+        );
 
-        expect(mockAxiosInstance.post).toHaveBeenCalledWith("/auth/register", registerRequest);
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+          "/auth/register",
+          registerRequest
+        );
         expect(result.status).toBe(201);
         expect(result.data.user.email).toBe("new@example.com");
       });
@@ -469,7 +487,13 @@ describe("ApiService - Essential Functionality", () => {
             name: "Test Recipe",
             style: "American IPA",
             ingredients: [
-              { id: "ing1", type: "grain", name: "Pale Malt", amount: 10, unit: "lb" },
+              {
+                id: "ing1",
+                type: "grain",
+                name: "Pale Malt",
+                amount: 10,
+                unit: "lb",
+              },
             ],
           },
           status: 200,
@@ -502,7 +526,10 @@ describe("ApiService - Essential Functionality", () => {
         };
         const result = await mockAxiosInstance.post("/recipes", createRequest);
 
-        expect(mockAxiosInstance.post).toHaveBeenCalledWith("/recipes", createRequest);
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+          "/recipes",
+          createRequest
+        );
         expect(result.status).toBe(201);
         expect(result.data.name).toBe("New Recipe");
       });
@@ -525,7 +552,10 @@ describe("ApiService - Essential Functionality", () => {
         };
         const result = await mockAxiosInstance.put("/recipes/1", updateRequest);
 
-        expect(mockAxiosInstance.put).toHaveBeenCalledWith("/recipes/1", updateRequest);
+        expect(mockAxiosInstance.put).toHaveBeenCalledWith(
+          "/recipes/1",
+          updateRequest
+        );
         expect(result.data.name).toBe("Updated Recipe");
       });
 
@@ -587,9 +617,15 @@ describe("ApiService - Essential Functionality", () => {
           name: "New Batch",
           plannedStartDate: "2024-01-01T00:00:00Z",
         };
-        const result = await mockAxiosInstance.post("/brew-sessions", createRequest);
+        const result = await mockAxiosInstance.post(
+          "/brew-sessions",
+          createRequest
+        );
 
-        expect(mockAxiosInstance.post).toHaveBeenCalledWith("/brew-sessions", createRequest);
+        expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+          "/brew-sessions",
+          createRequest
+        );
         expect(result.status).toBe(201);
         expect(result.data.status).toBe("planning");
       });
@@ -690,7 +726,9 @@ describe("ApiService - Essential Functionality", () => {
         };
         mockAxiosInstance.get.mockRejectedValue(clientError);
 
-        await expect(mockAxiosInstance.get("/recipes/nonexistent")).rejects.toMatchObject({
+        await expect(
+          mockAxiosInstance.get("/recipes/nonexistent")
+        ).rejects.toMatchObject({
           response: {
             status: 404,
             data: { message: "Recipe not found" },
@@ -701,12 +739,19 @@ describe("ApiService - Essential Functionality", () => {
 
     describe("Connection checking", () => {
       it("should return true for successful health check", async () => {
-        mockAxiosInstance.get.mockResolvedValue({ status: 200, data: { status: "ok" } });
+        mockAxiosInstance.get.mockResolvedValue({
+          status: 200,
+          data: { status: "ok" },
+        });
 
-        const result = await mockAxiosInstance.get("/health", { timeout: 5000 });
+        const result = await mockAxiosInstance.get("/health", {
+          timeout: 5000,
+        });
 
         expect(result.status).toBe(200);
-        expect(mockAxiosInstance.get).toHaveBeenCalledWith("/health", { timeout: 5000 });
+        expect(mockAxiosInstance.get).toHaveBeenCalledWith("/health", {
+          timeout: 5000,
+        });
       });
 
       it("should handle failed health check", async () => {

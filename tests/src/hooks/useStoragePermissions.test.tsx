@@ -192,13 +192,17 @@ describe("useStoragePermissions", () => {
     });
 
     // Should have set error in permission state
-    expect(result.current.mediaPermission.error).toBe("Permission check failed");
+    expect(result.current.mediaPermission.error).toBe(
+      "Permission check failed"
+    );
     expect(result.current.mediaPermission.granted).toBe(false);
   });
 
   it("should handle non-Error objects in permission check", async () => {
     // Make MediaLibrary.getPermissionsAsync throw a non-Error object
-    mockMediaLibrary.getPermissionsAsync.mockRejectedValue("Something went wrong");
+    mockMediaLibrary.getPermissionsAsync.mockRejectedValue(
+      "Something went wrong"
+    );
 
     const { result } = renderHook(() => useStoragePermissions());
 
@@ -208,7 +212,9 @@ describe("useStoragePermissions", () => {
     });
 
     // Should use default error message for non-Error objects
-    expect(result.current.mediaPermission.error).toBe("Permission check failed");
+    expect(result.current.mediaPermission.error).toBe(
+      "Permission check failed"
+    );
     expect(result.current.mediaPermission.granted).toBe(false);
   });
 });

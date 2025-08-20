@@ -181,7 +181,10 @@ const ResetPasswordScreen: React.FC = () => {
         <View style={loginStyles.formContainer}>
           <View style={loginStyles.header}>
             <MaterialIcons name="lock-reset" size={64} color="#2563eb" />
-            <Text style={loginStyles.title} testID={TEST_IDS.auth.resetPasswordTitle}>
+            <Text
+              style={loginStyles.title}
+              testID={TEST_IDS.auth.resetPasswordTitle}
+            >
               Reset Password
             </Text>
             <Text style={loginStyles.subtitle}>

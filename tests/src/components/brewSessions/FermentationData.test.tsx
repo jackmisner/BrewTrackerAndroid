@@ -1,6 +1,6 @@
 /**
  * FermentationData Tests
- * 
+ *
  * Start simple - test basic rendering first
  */
 
@@ -44,8 +44,8 @@ jest.mock("@src/components/brewSessions/FermentationEntryContextMenu", () => ({
 describe("FermentationData", () => {
   const defaultProps = {
     fermentationData: [],
-    expectedFG: 1.010,
-    actualOG: 1.050,
+    expectedFG: 1.01,
+    actualOG: 1.05,
     temperatureUnit: "C",
     brewSessionId: "session-123",
   };

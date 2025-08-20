@@ -3,7 +3,11 @@ import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
 import { Alert, TouchableOpacity, Text } from "react-native";
 import * as Haptics from "expo-haptics";
 
-import { BaseContextMenu, useContextMenu, BaseAction } from "@src/components/ui/ContextMenu/BaseContextMenu";
+import {
+  BaseContextMenu,
+  useContextMenu,
+  BaseAction,
+} from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { TEST_IDS } from "@src/constants/testIDs";
 
 // Comprehensive React Native mocking to avoid ES6 module issues
@@ -59,7 +63,10 @@ jest.mock("@styles/ui/baseContextMenuStyles", () => ({
 }));
 
 jest.mock("@src/components/ui/ContextMenu/contextMenuUtils", () => ({
-  calculateMenuPosition: jest.fn((position, dimensions) => ({ x: position.x, y: position.y })),
+  calculateMenuPosition: jest.fn((position, dimensions) => ({
+    x: position.x,
+    y: position.y,
+  })),
   calculateMenuHeight: jest.fn(() => 200),
   MENU_DIMENSIONS: { width: 250, height: 200 },
 }));
@@ -83,7 +90,9 @@ const mockItem: TestItem = {
   status: "active",
 };
 
-const createMockActions = (overrides: Partial<BaseAction<TestItem>>[] = []): BaseAction<TestItem>[] => [
+const createMockActions = (
+  overrides: Partial<BaseAction<TestItem>>[] = []
+): BaseAction<TestItem>[] => [
   {
     id: "view",
     title: "View",
@@ -96,7 +105,7 @@ const createMockActions = (overrides: Partial<BaseAction<TestItem>>[] = []): Bas
     title: "Edit",
     icon: "edit",
     onPress: jest.fn(),
-    disabled: (item) => item.status === "inactive",
+    disabled: item => item.status === "inactive",
     ...overrides[1],
   },
   {
@@ -186,8 +195,12 @@ describe("BaseContextMenu", () => {
         />
       );
 
-      expect(getByTestId(TEST_IDS.contextMenu.title)).toHaveTextContent("Test Menu Title");
-      expect(getByTestId(TEST_IDS.contextMenu.subtitle)).toHaveTextContent("Test Menu Subtitle");
+      expect(getByTestId(TEST_IDS.contextMenu.title)).toHaveTextContent(
+        "Test Menu Title"
+      );
+      expect(getByTestId(TEST_IDS.contextMenu.subtitle)).toHaveTextContent(
+        "Test Menu Subtitle"
+      );
     });
   });
 
@@ -206,12 +219,20 @@ describe("BaseContextMenu", () => {
       );
 
       // Should show non-hidden actions
-      expect(getByTestId(TEST_IDS.patterns.contextMenuAction("view"))).toBeTruthy();
-      expect(getByTestId(TEST_IDS.patterns.contextMenuAction("edit"))).toBeTruthy();
-      expect(getByTestId(TEST_IDS.patterns.contextMenuAction("delete"))).toBeTruthy();
+      expect(
+        getByTestId(TEST_IDS.patterns.contextMenuAction("view"))
+      ).toBeTruthy();
+      expect(
+        getByTestId(TEST_IDS.patterns.contextMenuAction("edit"))
+      ).toBeTruthy();
+      expect(
+        getByTestId(TEST_IDS.patterns.contextMenuAction("delete"))
+      ).toBeTruthy();
 
       // Should hide hidden action
-      expect(queryByTestId(TEST_IDS.patterns.contextMenuAction("hidden"))).toBeNull();
+      expect(
+        queryByTestId(TEST_IDS.patterns.contextMenuAction("hidden"))
+      ).toBeNull();
     });
 
     it("should properly disable actions based on disabled condition", () => {
@@ -228,8 +249,12 @@ describe("BaseContextMenu", () => {
         />
       );
 
-      const editAction = getByTestId(TEST_IDS.patterns.contextMenuAction("edit"));
-      const viewAction = getByTestId(TEST_IDS.patterns.contextMenuAction("view"));
+      const editAction = getByTestId(
+        TEST_IDS.patterns.contextMenuAction("edit")
+      );
+      const viewAction = getByTestId(
+        TEST_IDS.patterns.contextMenuAction("view")
+      );
 
       // Edit should be disabled, view should be enabled
       expect(editAction.props.disabled).toBe(true);
@@ -255,8 +280,10 @@ describe("BaseContextMenu", () => {
         />
       );
 
-      const viewAction = getByTestId(TEST_IDS.patterns.contextMenuAction("view"));
-      
+      const viewAction = getByTestId(
+        TEST_IDS.patterns.contextMenuAction("view")
+      );
+
       await act(async () => {
         fireEvent.press(viewAction);
       });
@@ -285,8 +312,10 @@ describe("BaseContextMenu", () => {
         />
       );
 
-      const deleteAction = getByTestId(TEST_IDS.patterns.contextMenuAction("delete"));
-      
+      const deleteAction = getByTestId(
+        TEST_IDS.patterns.contextMenuAction("delete")
+      );
+
       await act(async () => {
         fireEvent.press(deleteAction);
       });
@@ -299,19 +328,27 @@ describe("BaseContextMenu", () => {
           "Are you sure you want to delete?",
           [
             { text: "Cancel", style: "cancel" },
-            { text: "Delete", style: "destructive", onPress: expect.any(Function) },
+            {
+              text: "Delete",
+              style: "destructive",
+              onPress: expect.any(Function),
+            },
           ],
           { cancelable: true }
         );
       });
-          // Trigger the destructive confirmation and ensure handler runs
-          const lastCall = (Alert.alert as jest.Mock).mock.calls.at(-1);
-          const buttons = lastCall?.[2] as { text: string; style?: string; onPress?: () => void }[];
-          const confirm = buttons?.find(b => b.style === "destructive");
-          confirm?.onPress?.();
-          await waitFor(() => {
-            expect(mockOnPress).toHaveBeenCalledWith(mockItem);
-          });
+      // Trigger the destructive confirmation and ensure handler runs
+      const lastCall = (Alert.alert as jest.Mock).mock.calls.at(-1);
+      const buttons = lastCall?.[2] as {
+        text: string;
+        style?: string;
+        onPress?: () => void;
+      }[];
+      const confirm = buttons?.find(b => b.style === "destructive");
+      confirm?.onPress?.();
+      await waitFor(() => {
+        expect(mockOnPress).toHaveBeenCalledWith(mockItem);
+      });
     });
 
     it("should not render when item is null", () => {
@@ -413,7 +450,7 @@ describe("BaseContextMenu", () => {
             top: position.y,
             left: position.x,
             width: 250, // MENU_DIMENSIONS.width
-          })
+          }),
         ])
       );
     });
@@ -423,23 +460,27 @@ describe("BaseContextMenu", () => {
 describe("useContextMenu Hook", () => {
   const TestComponent = () => {
     const contextMenu = useContextMenu<TestItem>();
-    
+
     return (
       <>
         {/* Test buttons to trigger hook functions */}
-        <TouchableOpacity 
+        <TouchableOpacity
           testID="show-menu-btn"
           onPress={() => contextMenu.showMenu(mockItem, { x: 50, y: 100 })}
         />
-        <TouchableOpacity 
+        <TouchableOpacity
           testID="hide-menu-btn"
           onPress={contextMenu.hideMenu}
         />
-        
+
         {/* Display current state for testing */}
         <Text testID="visible-state">{contextMenu.visible.toString()}</Text>
-        <Text testID="selected-item">{contextMenu.selectedItem?.id || "none"}</Text>
-        <Text testID="position">{JSON.stringify(contextMenu.position || {})}</Text>
+        <Text testID="selected-item">
+          {contextMenu.selectedItem?.id || "none"}
+        </Text>
+        <Text testID="position">
+          {JSON.stringify(contextMenu.position || {})}
+        </Text>
       </>
     );
   };

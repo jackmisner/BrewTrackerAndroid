@@ -3,13 +3,18 @@
  *
  * Tests for the ingredient picker modal screen component.
  * Follows patterns from DEVELOPMENT_KNOWLEDGE.md for high-impact 0% coverage files.
- * 
+ *
  * Strategy: Start with basic render tests, then add incremental functionality tests.
  * Target: 0% → 40%+ coverage
  */
 
 import React from "react";
-import { render, fireEvent, waitFor, within } from "@testing-library/react-native";
+import {
+  render,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import IngredientPickerScreen from "../../../../app/(modals)/(recipes)/ingredientPicker";
 
@@ -93,7 +98,7 @@ jest.mock("@services/api/apiService", () => ({
 }));
 
 jest.mock("@src/hooks/useDebounce", () => ({
-  useDebounce: jest.fn((value) => value),
+  useDebounce: jest.fn(value => value),
 }));
 
 // Mock styles following the pattern from other modal tests
@@ -133,17 +138,20 @@ jest.mock("@styles/modals/ingredientPickerStyles", () => ({
 }));
 
 // Mock the IngredientDetailEditor component
-jest.mock("@src/components/recipes/IngredientEditor/IngredientDetailEditor", () => ({
-  IngredientDetailEditor: () => {
-    const React = require("react");
-    const { Text } = require("react-native");
-    return React.createElement(Text, {}, "Ingredient Detail Editor");
-  },
-}));
+jest.mock(
+  "@src/components/recipes/IngredientEditor/IngredientDetailEditor",
+  () => ({
+    IngredientDetailEditor: () => {
+      const React = require("react");
+      const { Text } = require("react-native");
+      return React.createElement(Text, {}, "Ingredient Detail Editor");
+    },
+  })
+);
 
 // Mock utilities
 jest.mock("@utils/formatUtils", () => ({
-  formatIngredientDetails: jest.fn((ingredient) => `${ingredient.name} details`),
+  formatIngredientDetails: jest.fn(ingredient => `${ingredient.name} details`),
 }));
 
 jest.mock("@constants/hopConstants", () => ({
@@ -172,7 +180,7 @@ describe("IngredientPickerScreen", () => {
       potential: 1.037,
     },
     {
-      id: "2", 
+      id: "2",
       name: "Cascade Hops",
       description: "American hop variety",
       type: "hop",
@@ -212,7 +220,8 @@ describe("IngredientPickerScreen", () => {
 
     it("shows loading state while fetching ingredients", async () => {
       mockApiService.ingredients.getAll.mockImplementation(
-        () => new Promise(resolve => setTimeout(() => resolve({ data: [] }), 100))
+        () =>
+          new Promise(resolve => setTimeout(() => resolve({ data: [] }), 100))
       );
 
       const { getByText } = render(<IngredientPickerScreen />, {
@@ -234,9 +243,13 @@ describe("IngredientPickerScreen", () => {
 
       // Should handle error gracefully and show appropriate UI
       await waitFor(() => {
-        expect(queryByText("Error") || queryByText("Grains & Fermentables") || queryByText("No ingredients found")).toBeTruthy();
+        expect(
+          queryByText("Error") ||
+            queryByText("Grains & Fermentables") ||
+            queryByText("No ingredients found")
+        ).toBeTruthy();
       });
-      
+
       // Component should not crash
       expect(getByText("Grains & Fermentables")).toBeTruthy();
     });
@@ -425,9 +438,9 @@ describe("IngredientPickerScreen", () => {
 
   describe("Error Handling", () => {
     it("should handle network errors", async () => {
-      mockApiService.ingredients.getAll.mockRejectedValue(
-        { response: { status: 500 } }
-      );
+      mockApiService.ingredients.getAll.mockRejectedValue({
+        response: { status: 500 },
+      });
 
       expect(() =>
         render(<IngredientPickerScreen />, {
@@ -437,9 +450,9 @@ describe("IngredientPickerScreen", () => {
     });
 
     it("should handle authentication errors", async () => {
-      mockApiService.ingredients.getAll.mockRejectedValue(
-        { response: { status: 401 } }
-      );
+      mockApiService.ingredients.getAll.mockRejectedValue({
+        response: { status: 401 },
+      });
 
       expect(() =>
         render(<IngredientPickerScreen />, {

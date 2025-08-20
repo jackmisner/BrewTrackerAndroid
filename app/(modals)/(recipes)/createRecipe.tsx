@@ -32,14 +32,14 @@ import {
   KeyboardAvoidingView,
   ActivityIndicator,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import ApiService from "@services/api/apiService";
-import { RecipeFormData, RecipeIngredient, IngredientType } from "@src/types";
+import { RecipeFormData, RecipeIngredient } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
 import { ParametersForm } from "@src/components/recipes/RecipeForm/ParametersForm";
@@ -271,10 +271,6 @@ export default function CreateRecipeScreen() {
     dispatch({ type: "UPDATE_FIELD", field, value });
   }, []);
 
-  const handleReset = useCallback(() => {
-    dispatch({ type: "RESET", unitSystem });
-  }, [unitSystem]);
-
   const handleNext = () => {
     if (currentStep < RecipeStep.REVIEW) {
       setCurrentStep(currentStep + 1);
@@ -349,7 +345,10 @@ export default function CreateRecipeScreen() {
   };
 
   const renderProgressBar = () => (
-    <View style={styles.progressContainer} testID={TEST_IDS.components.progressIndicator}>
+    <View
+      style={styles.progressContainer}
+      testID={TEST_IDS.components.progressIndicator}
+    >
       {STEP_TITLES.map((title, index) => (
         <View key={index} style={styles.progressStep}>
           <View

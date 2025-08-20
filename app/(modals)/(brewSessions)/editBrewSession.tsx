@@ -15,11 +15,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import ApiService from "@services/api/apiService";
-import {
-  BrewSession,
-  UpdateBrewSessionRequest,
-  BrewSessionStatus,
-} from "@src/types";
+import { UpdateBrewSessionRequest, BrewSessionStatus } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { editBrewSessionStyles } from "@styles/modals/editBrewSessionStyles";
 
@@ -272,7 +268,11 @@ export default function EditBrewSessionScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerButton} onPress={handleCancel} testID="close-button">
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={handleCancel}
+          testID="close-button"
+        >
           <MaterialIcons name="close" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Brew Session</Text>
