@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  TouchableWithoutFeedback,
   Pressable,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";

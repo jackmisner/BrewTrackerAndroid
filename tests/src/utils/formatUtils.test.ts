@@ -433,7 +433,7 @@ describe("formatUtils", () => {
         id: "hop-2",
         type: "hop" as const,
         use: "boil",
-        time: null, // null time - should not call formatHopTime
+        time: undefined, // undefined time - should not call formatHopTime
         alpha_acid: 5.5,
         name: "Test Hop",
         amount: 1,

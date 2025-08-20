@@ -26,7 +26,7 @@
  * ```
  */
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -34,8 +34,6 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
   ScrollView,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -178,8 +176,6 @@ export default function IngredientPickerScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedQuery = useDebounce(searchQuery, 300);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [selectedIngredient, setSelectedIngredient] =
-    useState<RecipeIngredient | null>(null);
 
   // New state for IngredientDetailEditor integration
   const [editingIngredient, setEditingIngredient] =

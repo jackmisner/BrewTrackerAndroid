@@ -24,19 +24,20 @@
  */
 
 import { QueryClient } from "@tanstack/react-query";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+// import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 
 /**
  * AsyncStorage persister for future offline support
  * Enables data persistence across app sessions
  */
-const _asyncStoragePersister = createAsyncStoragePersister({
-  storage: AsyncStorage,
-  key: "BREWTRACKER_CACHE",
-  serialize: JSON.stringify,
-  deserialize: JSON.parse,
-});
+// Note: Persister created but not yet enabled - reserved for future offline support
+// const _asyncStoragePersister = createAsyncStoragePersister({
+//   storage: AsyncStorage,
+//   key: "BREWTRACKER_CACHE",
+//   serialize: JSON.stringify,
+//   deserialize: JSON.parse,
+// });
 
 /**
  * Main React Query client with mobile-optimized configuration
