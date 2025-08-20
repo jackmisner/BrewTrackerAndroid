@@ -468,7 +468,7 @@ describe("RegisterScreen", () => {
 
       expect(require("react-native").Alert.alert).toHaveBeenCalledWith(
         "Registration Failed",
-        "An error occurred during registration, Please try again."
+        "An error occurred during registration. Please try again."
       );
     });
 

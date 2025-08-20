@@ -387,7 +387,7 @@ describe("AddFermentationEntryScreen", () => {
       expect(Alert.alert).toHaveBeenCalledWith(
         expect.stringMatching(/save failed/i),
         expect.any(String),
-        expect.any(Array<string>)
+        expect.any(Array)
       );
     });
 

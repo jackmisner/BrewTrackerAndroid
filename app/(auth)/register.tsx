@@ -110,7 +110,7 @@ export default function RegisterScreen() {
     } catch (error: any) {
       Alert.alert(
         "Registration Failed",
-        "An error occurred during registration, Please try again."
+        "An error occurred during registration. Please try again."
       );
     } finally {
       setIsLoading(false);
