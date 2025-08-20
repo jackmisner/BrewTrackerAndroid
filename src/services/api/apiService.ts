@@ -24,6 +24,7 @@ import axios, {
   AxiosResponse,
   AxiosError,
   InternalAxiosRequestConfig,
+  isAxiosError,
 } from "axios";
 import * as SecureStore from "expo-secure-store";
 import { STORAGE_KEYS, ENDPOINTS } from "@services/config";
@@ -167,7 +168,7 @@ function normalizeError(error: any): NormalizedApiError {
   };
 
   // Handle Axios errors
-  if (axios.isAxiosError(error)) {
+  if (isAxiosError(error)) {
     const axiosError = error as AxiosError;
 
     // Network or timeout errors

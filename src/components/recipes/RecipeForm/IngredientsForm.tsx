@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useGlobalSearchParams } from "expo-router";
@@ -53,9 +53,10 @@ export function IngredientsForm({
   const params = useGlobalSearchParams();
 
   // Ensure ingredients is always an array to prevent crashes
-  const safeIngredients = Array.isArray(recipeData.ingredients)
-    ? recipeData.ingredients
-    : [];
+  const safeIngredients = useMemo(
+    () => (Array.isArray(recipeData.ingredients) ? recipeData.ingredients : []),
+    [recipeData.ingredients]
+  );
 
   const processedParamRef = useRef<string | null>(null);
 

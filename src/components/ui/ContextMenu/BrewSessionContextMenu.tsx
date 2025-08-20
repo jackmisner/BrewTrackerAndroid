@@ -2,12 +2,10 @@ import React from "react";
 import { BrewSession } from "@src/types";
 import { BaseContextMenu, BaseAction } from "./BaseContextMenu";
 
-export interface BrewSessionAction extends BaseAction<BrewSession> {}
-
 interface BrewSessionContextMenuProps {
   visible: boolean;
   brewSession: BrewSession | null;
-  actions: BrewSessionAction[];
+  actions: BaseAction<BrewSession>[];
   onClose: () => void;
   position?: { x: number; y: number };
 }
@@ -85,7 +83,7 @@ export function createDefaultBrewSessionActions(handlers: {
   onExportData: (brewSession: BrewSession) => void;
   onArchive: (brewSession: BrewSession) => void;
   onDelete: (brewSession: BrewSession) => void;
-}): BrewSessionAction[] {
+}): BaseAction<BrewSession>[] {
   return [
     {
       id: "view",
