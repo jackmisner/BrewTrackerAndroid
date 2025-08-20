@@ -44,6 +44,8 @@ describe("FermentationData", () => {
     fermentationData: [],
     expectedFG: 1.01,
     actualOG: 1.05,
+    expectedFG: 1.01,
+    actualOG: 1.05,
     temperatureUnit: "C",
     brewSessionId: "session-123",
   };
@@ -54,3 +56,4 @@ describe("FermentationData", () => {
     }).not.toThrow();
   });
 });
+

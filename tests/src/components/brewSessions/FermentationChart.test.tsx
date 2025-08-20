@@ -22,6 +22,7 @@ jest.mock("react-native", () => ({
   },
   StyleSheet: {
     create: jest.fn(styles => styles),
+    create: jest.fn(styles => styles),
   },
   Dimensions: {
     get: jest.fn(() => ({ width: 375, height: 667 })),
@@ -79,6 +80,7 @@ const mockFermentationData = [
   },
   {
     gravity: 1.02,
+    gravity: 1.02,
     temperature: 70,
     ph: 4.0,
     notes: "Day 3",
@@ -106,3 +108,4 @@ describe("FermentationChart", () => {
     }).not.toThrow();
   });
 });
+

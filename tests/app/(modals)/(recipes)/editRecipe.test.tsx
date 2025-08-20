@@ -265,6 +265,7 @@ describe("EditRecipeScreen", () => {
       });
 
       // Should render the screen successfully
+      // Should render the screen successfully
       await waitFor(() => {
         expect(getByText("Edit Recipe")).toBeTruthy();
       });
@@ -392,6 +393,8 @@ describe("EditRecipeScreen", () => {
   describe("Metrics Integration", () => {
     const mockUseRecipeMetrics =
       require("@src/hooks/useRecipeMetrics").useRecipeMetrics;
+    const mockUseRecipeMetrics =
+      require("@src/hooks/useRecipeMetrics").useRecipeMetrics;
 
     it("should handle recipe metrics hook", () => {
       mockUseRecipeMetrics.mockReturnValue({
@@ -478,3 +481,4 @@ describe("EditRecipeScreen", () => {
     });
   });
 });
+
