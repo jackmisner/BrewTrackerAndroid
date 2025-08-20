@@ -61,8 +61,6 @@ jest.mock("react-native", () => ({
   },
 }));
 
-
-
 jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: ({ name, size, color, ...props }: any) => {
     const React = require("react");
@@ -170,7 +168,6 @@ jest.mock("@styles/modals/editBrewSessionStyles", () => ({
   }),
 }));
 
-
 jest.mock("@src/types", () => ({
   BrewSession: {},
   UpdateFermentationEntryRequest: {},
@@ -272,8 +269,11 @@ describe("EditFermentationEntryScreen", () => {
         temperature_unit: "F",
       };
 
-      mockApiService.brewSessions.getById.mockResolvedValue({
+      const mockUseQuery = require("@tanstack/react-query").useQuery;
+      mockUseQuery.mockReturnValue({
         data: mockBrewSession,
+        isLoading: false,
+        error: null,
       });
 
       const { getByText } = render(<EditFermentationEntryScreen />);
@@ -305,8 +305,11 @@ describe("EditFermentationEntryScreen", () => {
         temperature_unit: "C", // Celsius
       };
 
-      mockApiService.brewSessions.getById.mockResolvedValue({
+      const mockUseQuery = require("@tanstack/react-query").useQuery;
+      mockUseQuery.mockReturnValue({
         data: mockBrewSessionCelsius,
+        isLoading: false,
+        error: null,
       });
 
       const { getByText } = render(<EditFermentationEntryScreen />);
