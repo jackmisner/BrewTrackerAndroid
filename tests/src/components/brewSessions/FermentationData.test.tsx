@@ -56,4 +56,3 @@ describe("FermentationData", () => {
     }).not.toThrow();
   });
 });
-

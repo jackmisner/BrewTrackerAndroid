@@ -393,8 +393,6 @@ describe("EditRecipeScreen", () => {
   describe("Metrics Integration", () => {
     const mockUseRecipeMetrics =
       require("@src/hooks/useRecipeMetrics").useRecipeMetrics;
-    const mockUseRecipeMetrics =
-      require("@src/hooks/useRecipeMetrics").useRecipeMetrics;
 
     it("should handle recipe metrics hook", () => {
       mockUseRecipeMetrics.mockReturnValue({
@@ -481,4 +479,3 @@ describe("EditRecipeScreen", () => {
     });
   });
 });
-

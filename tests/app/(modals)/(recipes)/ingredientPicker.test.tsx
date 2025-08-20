@@ -9,12 +9,6 @@ import {
   waitFor,
   within,
 } from "@testing-library/react-native";
-import {
-  render,
-  fireEvent,
-  waitFor,
-  within,
-} from "@testing-library/react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import IngredientPickerScreen from "../../../../app/(modals)/(recipes)/ingredientPicker";
 
@@ -99,7 +93,6 @@ jest.mock("@services/api/apiService", () => ({
 
 jest.mock("@src/hooks/useDebounce", () => ({
   useDebounce: jest.fn(value => value),
-  useDebounce: jest.fn(value => value),
 }));
 
 // Mock styles
@@ -163,7 +156,6 @@ jest.mock(
 // Mock utilities
 jest.mock("@utils/formatUtils", () => ({
   formatIngredientDetails: jest.fn(ingredient => `${ingredient.name} details`),
-  formatIngredientDetails: jest.fn(ingredient => `${ingredient.name} details`),
 }));
 
 jest.mock("@constants/hopConstants", () => ({
@@ -198,7 +190,6 @@ describe("IngredientPickerScreen", () => {
       potential: 1.037,
     },
     {
-      id: "2",
       id: "2",
       name: "Cascade Hops",
       description: "American hop variety",
@@ -267,7 +258,6 @@ describe("IngredientPickerScreen", () => {
           queryByText(/no ingredients found/i);
         expect(anyMessage).toBeTruthy();
       });
-
 
       // Component should not crash
       expect(getByText("Grains & Fermentables")).toBeTruthy();
@@ -588,4 +578,3 @@ describe("IngredientPickerScreen", () => {
     });
   });
 });
-

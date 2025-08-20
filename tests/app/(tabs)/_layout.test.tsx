@@ -10,16 +10,13 @@ import TabLayout from "../../../app/(tabs)/_layout";
 jest.mock("expo-router", () => {
   const React = require("react");
 
-
   const MockTabs = ({ children, ...props }: any) => {
     return React.createElement("Tabs", props, children);
   };
 
-
   MockTabs.Screen = ({ name, ...props }: any) => {
     return React.createElement("Screen", { name, ...props });
   };
-
 
   return {
     Tabs: MockTabs,
@@ -63,4 +60,3 @@ describe("TabLayout", () => {
     }).not.toThrow();
   });
 });
-

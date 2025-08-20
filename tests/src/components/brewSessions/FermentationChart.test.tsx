@@ -108,4 +108,3 @@ describe("FermentationChart", () => {
     }).not.toThrow();
   });
 });
-
