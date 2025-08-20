@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ import { TEST_IDS } from "@src/constants/testIDs";
 
 export default function SettingsScreen() {
   const themeContext = useTheme();
-  const { theme, isDark, setTheme } = themeContext;
+  const { theme, setTheme } = themeContext;
   const { unitSystem, updateUnitSystem, loading: unitsLoading } = useUnits();
   const styles = settingsStyles(themeContext);
 
@@ -34,7 +34,7 @@ export default function SettingsScreen() {
   const handleUnitSystemChange = async (selectedUnitSystem: UnitSystem) => {
     try {
       await updateUnitSystem(selectedUnitSystem);
-    } catch (error) {
+    } catch {
       Alert.alert(
         "Error",
         "Failed to update unit preferences. Please try again.",

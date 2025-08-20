@@ -25,7 +25,7 @@ export interface BeerStyleOption {
 interface BeerStylesResponse {
   categories?: Record<
     string,
-    { styles?: Array<{ name?: string; style_id?: string }> }
+    { styles?: { name?: string; style_id?: string }[] }
   >;
 }
 

@@ -15,11 +15,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import ApiService from "@services/api/apiService";
-import {
-  BrewSession,
-  UpdateBrewSessionRequest,
-  BrewSessionStatus,
-} from "@src/types";
+import { UpdateBrewSessionRequest, BrewSessionStatus } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { editBrewSessionStyles } from "@styles/modals/editBrewSessionStyles";
 

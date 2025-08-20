@@ -106,10 +106,11 @@ jest.mock("@utils/formatUtils", () => ({
 
 // Mock props for the component
 const mockIngredient = {
+  id: "test-ingredient-1",
   name: "Test Ingredient",
   type: "grain" as const,
   amount: 1,
-  unit: "oz",
+  unit: "oz" as const,
   notes: "",
 };
 

@@ -1157,7 +1157,9 @@ describe("ApiService Core Functionality", () => {
       const invalidTokens = ["", "   ", null, undefined];
 
       for (const invalidToken of invalidTokens) {
-        mockSecureStore.getItemAsync.mockResolvedValue(invalidToken);
+        mockSecureStore.getItemAsync.mockResolvedValue(
+          invalidToken as string | null
+        );
         const token = await TestTokenManager.getToken();
         expect(token).toBe(invalidToken);
       }
@@ -1334,7 +1336,7 @@ describe("ApiService Core Functionality", () => {
 
       return mockAxiosInstance
         .get("/recipes?page=1&per_page=10")
-        .then(response => {
+        .then((response: any) => {
           expect(response.data.items).toHaveLength(2);
           expect(response.data.pagination.has_next).toBe(true);
           expect(response.data.pagination.total_items).toBe(50);
@@ -1380,13 +1382,15 @@ describe("ApiService Core Functionality", () => {
 
       mockAxiosInstance.get.mockResolvedValue(nestedResponse);
 
-      return mockAxiosInstance.get("/recipes/recipe-1").then(response => {
-        expect(response.data.recipe.ingredients).toHaveLength(2);
-        expect(response.data.recipe.metrics.estimated_abv).toBe(6.2);
-        expect(response.data.recipe.ingredients[1].properties.alpha_acids).toBe(
-          5.5
-        );
-      });
+      return mockAxiosInstance
+        .get("/recipes/recipe-1")
+        .then((response: any) => {
+          expect(response.data.recipe.ingredients).toHaveLength(2);
+          expect(response.data.recipe.metrics.estimated_abv).toBe(6.2);
+          expect(
+            response.data.recipe.ingredients[1].properties.alpha_acids
+          ).toBe(5.5);
+        });
     });
   });
 });

@@ -115,7 +115,7 @@ export function normalizeEntityIds<T extends Record<string, any>>(
   entities: T[],
   entityType: EntityType,
   preserveOriginalId: boolean = false
-): Array<T & { id: ID }> {
+): (T & { id: ID })[] {
   if (!Array.isArray(entities)) {
     console.error("normalizeEntityIds received non-array:", entities);
     return [];
@@ -160,7 +160,7 @@ export function detectEntityTypeFromUrl(url: string): EntityType | null {
   const normalizedUrl = url.toLowerCase();
 
   // Endpoint patterns to entity type mapping
-  const patterns: Array<{ pattern: RegExp; entityType: EntityType }> = [
+  const patterns: { pattern: RegExp; entityType: EntityType }[] = [
     // Specific sub-resources first
     { pattern: /\/fermentation(\/|\?|$)/i, entityType: "fermentationEntry" },
     // Then general resources - allow query parameters
@@ -260,17 +260,19 @@ export function debugEntityIds(entity: any, label: string = "Entity"): void {
     return;
   }
 
-  const idFields = Object.keys(entity).filter(
-    key => key.includes("id") || key.includes("Id") || key === "_id"
-  );
+  // Note: ID field extraction commented out as it's not currently used
+  // const idFields = Object.keys(entity).filter(
+  //   key => key.includes("id") || key.includes("Id") || key === "_id"
+  // );
 
-  const idValues = idFields.reduce(
-    (acc, field) => {
-      acc[field] = entity[field];
-      return acc;
-    },
-    {} as Record<string, any>
-  );
+  // Note: idValues calculation commented out as it's not currently used
+  // const idValues = idFields.reduce(
+  //   (acc, field) => {
+  //     acc[field] = entity[field];
+  //     return acc;
+  //   },
+  //   {} as Record<string, any>
+  // );
 }
 /**
  * Detect entity type based on object properties instead of unreliable URL field

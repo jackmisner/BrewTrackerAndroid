@@ -27,4 +27,10 @@ module.exports = defineConfig([
       "no-undef": "off",
     },
   },
+  {
+    files: ["src/types/**/*.{ts,tsx}", "**/types/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": "off",
+    },
+  },
 ]);
