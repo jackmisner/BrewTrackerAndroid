@@ -20,12 +20,10 @@ import React from "react";
 import { Recipe } from "@src/types";
 import { BaseContextMenu, BaseAction } from "./BaseContextMenu";
 
-export interface RecipeAction extends BaseAction<Recipe> {}
-
 interface RecipeContextMenuProps {
   visible: boolean;
   recipe: Recipe | null;
-  actions: RecipeAction[];
+  actions: BaseAction<Recipe>[];
   onClose: () => void;
   position?: { x: number; y: number };
 }
@@ -73,7 +71,7 @@ export function createDefaultRecipeActions(handlers: {
   onStartBrewing: (recipe: Recipe) => void;
   onShare: (recipe: Recipe) => void;
   onDelete: (recipe: Recipe) => void;
-}): RecipeAction[] {
+}): BaseAction<Recipe>[] {
   return [
     {
       id: "view",
