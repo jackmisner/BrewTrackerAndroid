@@ -214,19 +214,20 @@ describe("testIDs Constants", () => {
     it("should handle normalize function availability", () => {
       // Mock normalize function being unavailable
       const originalNormalize = String.prototype.normalize;
+      try {
+        // Test with normalize function available (normal case)
+        expect(toSlug("café")).toBe("cafe");
 
-      // Test with normalize function available (normal case)
-      expect(toSlug("café")).toBe("cafe");
+        // Temporarily remove normalize to test fallback path
+        // @ts-ignore - Intentionally testing runtime behavior
+        delete (String.prototype as any).normalize;
 
-      // Temporarily remove normalize to test fallback path
-      // @ts-ignore - Intentionally testing runtime behavior
-      delete String.prototype.normalize;
-
-      // Should still work without normalize
-      expect(toSlug("test-string")).toBe("test-string");
-
-      // Restore normalize function
-      String.prototype.normalize = originalNormalize;
+        // Should still work without normalize
+        expect(toSlug("test-string")).toBe("test-string");
+      } finally {
+        // Always restore normalize function
+        String.prototype.normalize = originalNormalize;
+      }
     });
 
     it("should handle complex Unicode characters", () => {

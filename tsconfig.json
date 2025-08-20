@@ -2,6 +2,7 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    "baseUrl": ".",
     "types": ["jest", "@testing-library/jest-native", "node"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,

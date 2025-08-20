@@ -14,7 +14,6 @@ import ApiService from "@services/api/apiService";
 import { BrewSession, BrewSessionStatus } from "@/src/types";
 import { viewBrewSessionStyles } from "@styles/modals/viewBrewSessionStyles";
 import { useTheme } from "@contexts/ThemeContext";
-import { useUnits } from "@contexts/UnitContext";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { FermentationChart } from "@src/components/brewSessions/FermentationChart";
 import { FermentationData } from "@src/components/brewSessions/FermentationData";
@@ -25,7 +24,6 @@ export default function ViewBrewSession() {
   const [refreshing, setRefreshing] = useState(false);
   const [chartRefreshCounter, setChartRefreshCounter] = useState(0);
   const theme = useTheme();
-  const units = useUnits();
   const styles = viewBrewSessionStyles(theme);
   const {
     data: brewSessionData,

@@ -39,7 +39,7 @@ const ForgotPasswordScreen: React.FC = () => {
     try {
       await forgotPassword(email.trim());
       setEmailSent(true);
-    } catch (error) {
+    } catch {
       // Error is handled by the context and displayed through error state
     }
   };
@@ -108,8 +108,9 @@ const ForgotPasswordScreen: React.FC = () => {
             <MaterialIcons name="lock-outline" size={64} color="#2563eb" />
             <Text style={loginStyles.title}>Forgot Password</Text>
             <Text style={loginStyles.subtitle}>
-              Enter your email address and we'll send you a link to reset your
-              password.
+              {
+                "Enter your email address and we'll send you a link to reset your password."
+              }
             </Text>
           </View>
 

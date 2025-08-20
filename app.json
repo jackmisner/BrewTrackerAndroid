@@ -3,7 +3,7 @@
     "name": "BrewTracker",
     "slug": "brewtracker-android",
     "orientation": "portrait",
-    "version": "0.11.3",
+    "version": "0.12.1",
     "icon": "./assets/images/icon.png",
     "scheme": "brewtracker",
     "userInterfaceStyle": "automatic",
@@ -16,8 +16,11 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.brewtracker.android",
-      "versionCode": 38,
-      "permissions": ["CAMERA", "VIBRATE"]
+      "versionCode": 40,
+      "permissions": [
+        "CAMERA",
+        "VIBRATE"
+      ]
     },
     "plugins": [
       "expo-router",
