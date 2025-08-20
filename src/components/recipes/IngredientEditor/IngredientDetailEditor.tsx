@@ -9,16 +9,16 @@
  * - Dynamic form fields based on ingredient type
  * - Real-time form validation with error display
  * - Unit conversion support (metric/imperial)
- * - Auto-dismiss keyboard on outside tap
+ * - Keyboard-aware scrolling and mobile-friendly inputs
  * - Ingredient-specific fields (hop timing, grain color, yeast attenuation, etc.)
  * - Save/cancel actions with proper state management
  * 
- * @param ingredient - The ingredient being edited (optional for new ingredients)
- * @param onSave - Callback function when ingredient is saved
- * @param onCancel - Callback function when editing is cancelled
- * @param ingredientType - Type of ingredient being edited
+ * @param ingredient - The ingredient being edited
+ * @param onUpdate - Callback with the sanitized ingredient when Save is pressed
+ * @param onCancel - Callback when the editor is dismissed without saving
+ * @param onRemove - Callback when the user confirms deletion
+ * @param isVisible - Controls visibility of the modal
  */
-
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
