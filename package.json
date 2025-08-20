@@ -1,7 +1,7 @@
 {
   "name": "brewtracker",
   "main": "expo-router/entry",
-  "version": "0.11.3",
+  "version": "0.12.1",
   "license": "GPL-3.0-or-later",
   "scripts": {
     "start": "expo start",
@@ -23,7 +23,7 @@
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
-    "@react-native-community/datetimepicker": "^8.4.1",
+    "@react-native-community/datetimepicker": "8.4.1",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",

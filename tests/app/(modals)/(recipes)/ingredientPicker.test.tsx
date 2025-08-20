@@ -142,6 +142,16 @@ jest.mock(
     },
   })
 );
+jest.mock(
+  "@src/components/recipes/IngredientEditor/IngredientDetailEditor",
+  () => ({
+    IngredientDetailEditor: () => {
+      const React = require("react");
+      const { Text } = require("react-native");
+      return React.createElement(Text, {}, "Ingredient Detail Editor");
+    },
+  })
+);
 
 // Mock utilities
 jest.mock("@utils/formatUtils", () => ({
@@ -440,6 +450,9 @@ describe("IngredientPickerScreen", () => {
       mockApiService.ingredients.getAll.mockRejectedValue({
         response: { status: 500 },
       });
+      mockApiService.ingredients.getAll.mockRejectedValue({
+        response: { status: 500 },
+      });
 
       expect(() =>
         render(<IngredientPickerScreen />, {
@@ -449,6 +462,9 @@ describe("IngredientPickerScreen", () => {
     });
 
     it("should handle authentication errors", async () => {
+      mockApiService.ingredients.getAll.mockRejectedValue({
+        response: { status: 401 },
+      });
       mockApiService.ingredients.getAll.mockRejectedValue({
         response: { status: 401 },
       });

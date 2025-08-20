@@ -15,12 +15,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import ApiService from "@services/api/apiService";
-import {
-  RecipeFormData,
-  RecipeIngredient,
-  IngredientType,
-  Recipe,
-} from "@src/types";
+import { RecipeFormData, RecipeIngredient, Recipe } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
 import { ParametersForm } from "@src/components/recipes/RecipeForm/ParametersForm";

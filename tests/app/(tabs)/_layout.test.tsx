@@ -32,6 +32,12 @@ jest.mock("@expo/vector-icons", () => ({
       color,
       ...props,
     });
+    return React.createElement("MaterialIcons", {
+      name,
+      size,
+      color,
+      ...props,
+    });
   },
 }));
 

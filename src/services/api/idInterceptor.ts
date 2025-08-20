@@ -16,8 +16,6 @@ import {
 import {
   detectEntityTypeFromUrl,
   normalizeResponseData,
-  denormalizeEntityId,
-  EntityType,
   debugEntityIds,
   denormalizeEntityIdDeep,
 } from "@utils/idNormalization";

@@ -34,7 +34,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import { Appearance, ColorSchemeName } from "react-native";
+import { Appearance } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { lightColors, darkColors } from "@styles/common/colors";
 
