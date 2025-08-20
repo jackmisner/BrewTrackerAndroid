@@ -22,7 +22,6 @@ jest.mock("react-native", () => ({
   },
   StyleSheet: {
     create: jest.fn(styles => styles),
-    create: jest.fn(styles => styles),
   },
   Dimensions: {
     get: jest.fn(() => ({ width: 375, height: 667 })),
@@ -79,7 +78,6 @@ const mockFermentationData = [
     entry_date: "2023-12-01T10:00:00Z",
   },
   {
-    gravity: 1.02,
     gravity: 1.02,
     temperature: 70,
     ph: 4.0,

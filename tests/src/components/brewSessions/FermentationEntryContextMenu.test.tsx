@@ -53,7 +53,6 @@ describe("FermentationEntryContextMenu", () => {
     brew_session_id: "session-123",
     date: "2024-01-15T10:30:00Z",
     specific_gravity: 1.05,
-    specific_gravity: 1.05,
     temperature_c: 20,
     ph: 4.5,
     notes: "Initial fermentation reading",
