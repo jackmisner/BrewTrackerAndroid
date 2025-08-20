@@ -1,15 +1,12 @@
 /**
- * IngredientDetailEditor Tests
- * 
- * Start simple - test basic rendering first, following our established zero-coverage high-impact strategy
- * This file has 793 uncovered lines - MASSIVE impact potential!
+ * IngredientDetailEditor Component Test Suite
  */
 
 import React from "react";
 import { render } from "@testing-library/react-native";
 import { IngredientDetailEditor } from "../../../../../src/components/recipes/IngredientEditor/IngredientDetailEditor";
 
-// Mock React Native components (reusing successful pattern)
+// Mock React Native components 
 jest.mock("react-native", () => ({
   View: ({ children, ...props }: any) => {
     const React = require("react");
@@ -35,7 +32,7 @@ jest.mock("react-native", () => ({
   Keyboard: { dismiss: jest.fn() },
 }));
 
-// Mock dependencies following our established patterns
+// Mock external dependencies
 jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: ({ name, size, color, ...props }: any) => {
     const React = require("react");

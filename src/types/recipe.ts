@@ -1,3 +1,17 @@
+/**
+ * Recipe Type Definitions
+ * 
+ * TypeScript definitions for all recipe-related data structures including
+ * recipes, ingredients, brewing parameters, and form data.
+ * 
+ * Key Types:
+ * - Recipe: Complete recipe with all ingredients and parameters
+ * - RecipeIngredient: Individual ingredient with type-specific properties
+ * - RecipeFormData: Form data structure for recipe creation/editing
+ * - IngredientType: Grain, hop, yeast, or other ingredient types
+ * - Various unit types for measurements and conversions
+ */
+
 import { ID } from "./common";
 
 // Recipe types

@@ -1,3 +1,19 @@
+/**
+ * Login Screen Styles
+ * 
+ * StyleSheet definitions for the login authentication screen.
+ * Provides a clean, professional login interface with proper spacing,
+ * typography, and interactive elements.
+ * 
+ * Features:
+ * - Responsive layout with keyboard handling
+ * - Consistent form input styling
+ * - Branded color scheme and typography
+ * - Interactive button states
+ * - Error message styling
+ * - Loading state indicators
+ */
+
 import { StyleSheet } from "react-native";
 import { colors } from "@styles/common/colors";
 import { buttonStyles } from "@styles/common/buttons";

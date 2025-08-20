@@ -1,3 +1,24 @@
+/**
+ * Ingredient Detail Editor Component
+ * 
+ * A comprehensive ingredient editor modal that allows users to add or edit
+ * detailed ingredient information for recipes. Handles all ingredient types
+ * (grains, hops, yeast, other) with appropriate fields and validations.
+ * 
+ * Features:
+ * - Dynamic form fields based on ingredient type
+ * - Real-time form validation with error display
+ * - Unit conversion support (metric/imperial)
+ * - Auto-dismiss keyboard on outside tap
+ * - Ingredient-specific fields (hop timing, grain color, yeast attenuation, etc.)
+ * - Save/cancel actions with proper state management
+ * 
+ * @param ingredient - The ingredient being edited (optional for new ingredients)
+ * @param onSave - Callback function when ingredient is saved
+ * @param onCancel - Callback function when editing is cancelled
+ * @param ingredientType - Type of ingredient being edited
+ */
+
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,

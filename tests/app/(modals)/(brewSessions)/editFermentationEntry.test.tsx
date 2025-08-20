@@ -6,7 +6,7 @@ import React from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import EditFermentationEntryScreen from "../../../../app/(modals)/(brewSessions)/editFermentationEntry";
 
-// Mock React Native components following successful pattern from other tests
+// Mock React Native components
 jest.mock("react-native", () => ({
   View: ({ children, ...props }: any) => {
     const React = require("react");
@@ -73,7 +73,7 @@ jest.mock("@expo/vector-icons", () => ({
   },
 }));
 
-// Mock external dependencies following established patterns
+// Mock external dependencies
 jest.mock("@tanstack/react-query", () => ({
   useQuery: jest.fn(() => ({
     data: null,
@@ -139,7 +139,7 @@ jest.mock("@services/api/apiService", () => ({
   },
 }));
 
-// Mock styles following the pattern from other modal tests
+// Mock styles
 jest.mock("@styles/modals/editBrewSessionStyles", () => ({
   editBrewSessionStyles: () => ({
     container: {},

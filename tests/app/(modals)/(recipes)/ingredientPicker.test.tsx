@@ -1,11 +1,5 @@
 /**
  * IngredientPickerScreen Component Test Suite
- *
- * Tests for the ingredient picker modal screen component.
- * Follows patterns from DEVELOPMENT_KNOWLEDGE.md for high-impact 0% coverage files.
- * 
- * Strategy: Start with basic render tests, then add incremental functionality tests.
- * Target: 0% → 40%+ coverage
  */
 
 import React from "react";
@@ -37,7 +31,7 @@ jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: "MaterialIcons",
 }));
 
-// Mock external dependencies following established patterns
+// Mock external dependencies
 jest.mock("expo-router", () => ({
   router: {
     back: jest.fn(),
@@ -96,7 +90,7 @@ jest.mock("@src/hooks/useDebounce", () => ({
   useDebounce: jest.fn((value) => value),
 }));
 
-// Mock styles following the pattern from other modal tests
+// Mock styles
 jest.mock("@styles/modals/ingredientPickerStyles", () => ({
   ingredientPickerStyles: () => ({
     container: {},

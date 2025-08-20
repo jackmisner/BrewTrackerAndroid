@@ -1,7 +1,5 @@
 /**
- * AddFermentationEntry Tests
- * 
- * Start simple - test basic rendering first
+ * AddFermentationEntryScreen Component Test Suite
  */
 
 import React from "react";
@@ -66,7 +64,7 @@ jest.mock("react-native", () => ({
   },
 }));
 
-// Mock dependencies following our established patterns
+// Mock external dependencies
 jest.mock("@react-native-community/datetimepicker", () => {
   const React = require("react");
   return {

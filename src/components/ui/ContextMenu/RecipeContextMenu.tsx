@@ -1,3 +1,19 @@
+/**
+ * Recipe Context Menu Component
+ * 
+ * Specialized context menu for recipe-related actions. Wraps the BaseContextMenu
+ * with recipe-specific functionality and actions.
+ * 
+ * Common Actions:
+ * - View recipe details
+ * - Edit recipe
+ * - Create brew session from recipe
+ * - Delete recipe
+ * - Share recipe
+ * 
+ * @extends BaseContextMenu
+ */
+
 import React from "react";
 import { Recipe } from "@src/types";
 import { BaseContextMenu, BaseAction } from "./BaseContextMenu";

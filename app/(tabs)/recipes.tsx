@@ -1,3 +1,26 @@
+/**
+ * Recipes Tab Screen
+ * 
+ * Main recipes listing screen that displays all user recipes with search, filter,
+ * and sort capabilities. Provides recipe management functionality including creation,
+ * viewing, editing, and deletion of recipes.
+ * 
+ * Features:
+ * - Real-time recipe search with debounced input
+ * - Pull-to-refresh functionality
+ * - Recipe context menu (view, edit, delete, create brew session)
+ * - Sort by name, creation date, or batch size
+ * - Filter by beer style or favorites
+ * - Recipe cards with key metrics (OG, FG, ABV, IBU, SRM)
+ * - Empty state handling with call-to-action
+ * - Error state handling with retry functionality
+ * 
+ * Navigation:
+ * - Tap recipe: View recipe details
+ * - Long press: Show context menu
+ * - FAB: Create new recipe
+ */
+
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,

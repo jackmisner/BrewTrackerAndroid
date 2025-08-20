@@ -1,15 +1,12 @@
 /**
- * FermentationChart Tests
- * 
- * Start simple - test basic rendering first, following our established zero-coverage high-impact strategy
- * This file has 643 uncovered lines - MASSIVE impact potential!
+ * FermentationChart Component Test Suite
  */
 
 import React from "react";
 import { render } from "@testing-library/react-native";
 import { FermentationChart } from "../../../../src/components/brewSessions/FermentationChart";
 
-// Mock React Native components (reusing successful pattern)
+// Mock React Native components 
 jest.mock("react-native", () => ({
   View: ({ children, ...props }: any) => {
     const React = require("react");
@@ -42,7 +39,7 @@ jest.mock("react-native-gifted-charts", () => ({
   },
 }));
 
-// Mock dependencies following our established patterns
+// Mock external dependencies
 jest.mock("@contexts/ThemeContext", () => ({
   useTheme: () => ({
     colors: {

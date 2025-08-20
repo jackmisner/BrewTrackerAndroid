@@ -1,3 +1,26 @@
+/**
+ * Login Screen
+ * 
+ * User authentication screen for existing users to sign into their accounts.
+ * Provides secure login with email/password and includes password recovery
+ * and account registration navigation.
+ * 
+ * Features:
+ * - Email and password authentication
+ * - Form validation with real-time feedback
+ * - Remember me functionality
+ * - Password visibility toggle
+ * - Loading states and error handling
+ * - Navigation to forgot password and registration
+ * - Keyboard-aware layout
+ * - Auto-focus and keyboard return handling
+ * 
+ * Security:
+ * - Secure password input
+ * - JWT token storage
+ * - Form validation and sanitization
+ */
+
 import React, { useState } from "react";
 import {
   View,

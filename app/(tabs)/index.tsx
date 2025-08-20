@@ -1,3 +1,38 @@
+/**
+ * @fileoverview Main dashboard screen - primary home tab of the BrewTracker application
+ * 
+ * @description
+ * The dashboard serves as the central hub for users to view their brewing statistics,
+ * recent activity, and quick actions. It provides an overview of user's recipes, brew sessions,
+ * and community engagement with intelligent fallback handling for offline scenarios.
+ * 
+ * @key_features
+ * - User statistics overview (total recipes, active brews, public recipes)
+ * - Recent recipes and active brew sessions display
+ * - Quick action shortcuts for common tasks (create recipe, start brewing)
+ * - Pull-to-refresh functionality for data synchronization
+ * - Context menus with haptic feedback for item interactions
+ * - Offline-first design with graceful backend disconnection handling
+ * 
+ * @navigation_patterns
+ * - Direct navigation to recipe and brew session creation modals
+ * - Tab-based navigation to specific sections (My Recipes, Public, Active Brews)
+ * - Context menu navigation for detailed item actions (view, edit, clone, etc.)
+ * - Deep linking support for individual recipes and brew sessions
+ * 
+ * @security_considerations
+ * - User authentication required (handled by parent tab navigator)
+ * - Personal data isolation (user recipes vs public recipes)
+ * - Secure API calls with JWT authentication headers
+ * - Context menu actions respect user permissions
+ * 
+ * @data_handling
+ * - React Query for server state management with 5-minute cache
+ * - Combined API calls for efficient data fetching
+ * - Real-time statistics calculation from server responses
+ * - Optimistic UI updates for better user experience
+ * - Error boundaries with meaningful fallback displays
+ */
 import React, { useState } from "react";
 import {
   View,
@@ -28,12 +63,6 @@ import {
 } from "@src/components/ui/ContextMenu/BrewSessionContextMenu";
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
-
-/**
- * Displays the main dashboard screen for the brewing app, showing user stats, recent recipes, and active brew sessions.
- *
- * Fetches and presents personalized brewing data, including recipe and brew session statistics, with support for pull-to-refresh and navigation to related screens. Handles loading and error states with appropriate UI feedback.
- */
 export default function DashboardScreen() {
   const { user } = useAuth();
   const theme = useTheme();

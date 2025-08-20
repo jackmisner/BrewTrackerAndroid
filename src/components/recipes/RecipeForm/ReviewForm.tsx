@@ -1,3 +1,18 @@
+/**
+ * Recipe Review Form Component
+ * 
+ * Displays a comprehensive summary of the recipe being created, including all ingredients,
+ * parameters, and calculated brewing metrics. Used in the final step of recipe creation
+ * to allow users to review their recipe before saving.
+ * 
+ * Features:
+ * - Recipe overview with name, style, and batch size
+ * - Ingredients breakdown (grains, hops, yeast, other)
+ * - Brewing parameters (mash temp, fermentation temp, etc.)
+ * - Real-time calculated metrics (OG, FG, ABV, IBU, SRM)
+ * - Formatted ingredient displays with proper units
+ */
+
 import React from "react";
 import { View, Text } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";

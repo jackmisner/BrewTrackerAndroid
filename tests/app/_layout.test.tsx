@@ -1,7 +1,5 @@
 /**
  * Root Layout Tests
- *
- * Simple root layout component test
  */
 
 import React from "react";
@@ -12,7 +10,7 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-// Mock all dependencies following our established patterns
+// Mock external dependencies
 jest.mock("expo-status-bar", () => ({
   StatusBar: () => {
     const React = require("react");

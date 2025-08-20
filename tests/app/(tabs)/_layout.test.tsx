@@ -1,7 +1,5 @@
 /**
- * Tabs Layout Tests
- * 
- * Simple tabs layout component test - following zero-coverage high-impact strategy
+ * Tabs Layout Component Test Suite
  */
 
 import React from "react";

@@ -1,14 +1,12 @@
 /**
- * FermentationData Tests
- * 
- * Start simple - test basic rendering first
+ * FermentationData Component Test Suite
  */
 
 import React from "react";
 import { render } from "@testing-library/react-native";
 import { FermentationData } from "@src/components/brewSessions/FermentationData";
 
-// Mock dependencies following our established patterns
+// Mock external dependencies
 jest.mock("expo-router", () => ({
   router: {
     push: jest.fn(),

@@ -1,14 +1,12 @@
 /**
- * FermentationEntryContextMenu Tests
- * 
- * Start simple - test basic rendering first
+ * FermentationEntryContextMenu Component Test Suite
  */
 
 import React from "react";
 import { render } from "@testing-library/react-native";
 import { FermentationEntryContextMenu } from "@src/components/brewSessions/FermentationEntryContextMenu";
 
-// Mock dependencies following our established patterns
+// Mock external dependencies
 jest.mock("expo-router", () => ({
   router: {
     push: jest.fn(),

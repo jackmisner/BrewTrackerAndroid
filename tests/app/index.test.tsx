@@ -1,14 +1,12 @@
 /**
  * Index Route Tests
- * 
- * Simple index component test
  */
 
 import React from "react";
 import { render } from "@testing-library/react-native";
 import Index from "../../app/index";
 
-// Mock dependencies following our established patterns
+// Mock external dependencies
 jest.mock("expo-router", () => ({
   useRouter: () => ({
     replace: jest.fn(),

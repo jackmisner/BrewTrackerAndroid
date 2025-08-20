@@ -75,7 +75,7 @@ jest.mock("expo-router", () => ({
 }));
 
 
-// Mock React Query hooks instead of using real QueryClient
+// Mock React Query hooks
 jest.mock("@tanstack/react-query", () => ({
   useQuery: jest.fn(),
   useMutation: jest.fn(),

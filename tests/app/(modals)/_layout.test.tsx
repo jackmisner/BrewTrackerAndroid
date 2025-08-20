@@ -1,7 +1,5 @@
 /**
  * Modals Layout Tests
- * 
- * Simple layout component test
  */
 
 import React from "react";
