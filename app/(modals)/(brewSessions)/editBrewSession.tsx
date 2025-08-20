@@ -272,7 +272,7 @@ export default function EditBrewSessionScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerButton} onPress={handleCancel}>
+        <TouchableOpacity style={styles.headerButton} onPress={handleCancel} testID="close-button">
           <MaterialIcons name="close" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Brew Session</Text>

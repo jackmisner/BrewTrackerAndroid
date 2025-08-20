@@ -127,47 +127,64 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   }, [initialAuthState]);
 
   const initializeAuth = async (): Promise<void> => {
+    let cachedUser = null;
+
     try {
       setIsLoading(true);
 
       // Check if we have a stored token
       const token = await ApiService.token.getToken();
       if (!token) {
-        setIsLoading(false);
         return;
       }
 
-      // Try to get user profile with the stored token
-      const response = await ApiService.auth.getProfile();
-      setUser(response.data);
+      // First attempt to read and safely parse cached user data
+      try {
+        const cachedUserData = await AsyncStorage.getItem(
+          STORAGE_KEYS.USER_DATA
+        );
+        if (cachedUserData) {
+          cachedUser = JSON.parse(cachedUserData);
+          // Hydrate UI immediately with cached data for better UX
+          setUser(cachedUser);
+        }
+      } catch (parseError) {
+        console.warn("Corrupted cached user data, removing:", parseError);
+        await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
+        cachedUser = null;
+      }
 
-      // Also load cached user data if available
-      const cachedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
-      if (cachedUser) {
-        const parsedUser = JSON.parse(cachedUser);
-        // Use the fresh data from API, but fallback to cached if API fails
-        setUser(response.data || parsedUser);
+      // Fetch fresh profile data from API
+      const response = await ApiService.auth.getProfile();
+      const apiUser = response.data;
+
+      // Only update user state if API data differs from cached data or no cached data exists
+      if (
+        !cachedUser ||
+        JSON.stringify(cachedUser) !== JSON.stringify(apiUser)
+      ) {
+        setUser(apiUser);
       }
     } catch (error: any) {
       console.error("Failed to initialize auth:", error);
 
-      // If token is invalid, clear it
+      // Handle 401 by clearing token/storage
       if (error.response?.status === 401) {
         await ApiService.token.removeToken();
         await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
-      }
+        // Ensure in-memory auth state reflects invalid session
+        setUser(null);
 
-      // Try to use cached user data as fallback
-      try {
-        const cachedUser = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
-        if (cachedUser) {
-          setUser(JSON.parse(cachedUser));
+        // Only surface initialization error if no cached user was available
+        if (!cachedUser) {
+          setError("Failed to initialize authentication");
         }
-      } catch (cacheError) {
-        console.error("Failed to load cached user:", cacheError);
+      } else {
+        // For non-401 errors, only set error if no cached user was available
+        if (!cachedUser) {
+          setError("Failed to initialize authentication");
+        }
       }
-
-      setError("Failed to initialize authentication");
     } finally {
       setIsLoading(false);
     }

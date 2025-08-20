@@ -18,6 +18,7 @@ import ApiService from "@services/api/apiService";
 import { CreateFermentationEntryRequest, BrewSession } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { editBrewSessionStyles } from "@styles/modals/editBrewSessionStyles";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 export default function AddFermentationEntryScreen() {
   const theme = useTheme();
@@ -175,6 +176,7 @@ export default function AddFermentationEntryScreen() {
           ]}
           onPress={handleSave}
           disabled={addEntryMutation.isPending}
+          testID={TEST_IDS.buttons.saveButton}
         >
           {addEntryMutation.isPending ? (
             <ActivityIndicator size="small" color={theme.colors.primaryText} />
@@ -232,6 +234,7 @@ export default function AddFermentationEntryScreen() {
             keyboardType="decimal-pad"
             returnKeyType="next"
             placeholderTextColor={theme.colors.textSecondary}
+            testID={TEST_IDS.inputs.gravityInput}
           />
           <Text
             style={[
@@ -258,6 +261,7 @@ export default function AddFermentationEntryScreen() {
             keyboardType="decimal-pad"
             returnKeyType="next"
             placeholderTextColor={theme.colors.textSecondary}
+            testID={TEST_IDS.inputs.temperatureInput}
           />
           <Text
             style={[
@@ -280,6 +284,7 @@ export default function AddFermentationEntryScreen() {
             keyboardType="decimal-pad"
             returnKeyType="next"
             placeholderTextColor={theme.colors.textSecondary}
+            testID={TEST_IDS.inputs.phInput}
           />
           <Text
             style={[
@@ -303,6 +308,7 @@ export default function AddFermentationEntryScreen() {
             numberOfLines={4}
             returnKeyType="done"
             placeholderTextColor={theme.colors.textSecondary}
+            testID={TEST_IDS.inputs.notesInput}
           />
           <Text
             style={[
