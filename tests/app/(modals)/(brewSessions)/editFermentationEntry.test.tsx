@@ -1,11 +1,5 @@
 /**
  * EditFermentationEntryScreen Component Test Suite
- *
- * Tests for the fermentation entry editing screen component.
- * Follows patterns from DEVELOPMENT_KNOWLEDGE.md for high-impact 0% coverage files.
- *
- * Strategy: Start with basic render tests, then add incremental functionality tests.
- * Target: 0% → 40%+ coverage
  */
 
 import React from "react";
@@ -67,13 +61,7 @@ jest.mock("react-native", () => ({
   },
 }));
 
-jest.mock("@react-native-community/datetimepicker", () => {
-  const React = require("react");
-  return {
-    __esModule: true,
-    default: (props: any) => React.createElement("DateTimePicker", props),
-  };
-});
+
 
 jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: ({ name, size, color, ...props }: any) => {
@@ -182,29 +170,6 @@ jest.mock("@styles/modals/editBrewSessionStyles", () => ({
   }),
 }));
 
-jest.mock("@services/api/apiService", () => ({
-  __esModule: true,
-  default: {
-    brewSessions: {
-      getById: jest.fn(),
-      updateFermentationEntry: jest.fn(),
-    },
-  },
-}));
-
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: () => ({
-    colors: {
-      primary: "#007AFF",
-      background: "#FFFFFF",
-      card: "#F2F2F7",
-      text: "#000000",
-      textSecondary: "#8E8E93",
-      error: "#FF3B30",
-      primaryText: "#FFFFFF",
-    },
-  }),
-}));
 
 jest.mock("@src/types", () => ({
   BrewSession: {},
