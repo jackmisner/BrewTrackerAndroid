@@ -75,9 +75,6 @@ jest.mock("expo-haptics", () => ({
   selectionAsync: jest.fn(),
 }));
 
-// Mock Alert
-jest.spyOn(Alert, "alert");
-
 const createMockBrewSession = (
   overrides: Partial<BrewSession> = {}
 ): BrewSession => ({
@@ -476,7 +473,7 @@ describe("BrewSessionContextMenu Integration", () => {
       expect(handlers.onView).toHaveBeenCalledWith(brewSession);
     });
 
-    // Test destructive action shows confirmation
+    // Test destructive action does NOT show a generic confirmation (delegated to handler)
     const deleteAction = getByTestId(
       TEST_IDS.patterns.contextMenuAction("delete")
     );
@@ -485,24 +482,13 @@ describe("BrewSessionContextMenu Integration", () => {
     });
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith(
-        "Delete Session?",
-        "Are you sure you want to delete session?",
-        expect.any(Array),
-        expect.any(Object)
-      );
-    });
-    // Trigger the destructive confirmation and ensure handler runs
-    const lastCall = (Alert.alert as jest.Mock).mock.calls.at(-1);
-    const buttons = lastCall?.[2] as {
-      text: string;
-      style?: string;
-      onPress?: () => void;
-    }[];
-    const confirm = buttons?.find(b => b.style === "destructive");
-    confirm?.onPress?.();
-    await waitFor(() => {
       expect(handlers.onDelete).toHaveBeenCalledWith(brewSession);
     });
+    // Allow any queued microtasks to run before asserting the negative
+    await act(async () => {
+      await Promise.resolve();
+    });
+    // Should NOT show generic confirmation - let action handlers manage their own confirmations
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 });

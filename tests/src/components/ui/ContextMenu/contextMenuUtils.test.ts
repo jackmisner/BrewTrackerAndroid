@@ -90,7 +90,7 @@ describe("contextMenuUtils", () => {
         defaultPadding
       );
 
-      expect(result.y).toBe(347); // 667 - 300 - 20 = 347
+      expect(result.y).toBe(237); // 667 - 300 - 130 = 237 (using new bottomPadding)
     });
 
     it("should handle corner cases - top-left corner", () => {
@@ -114,7 +114,7 @@ describe("contextMenuUtils", () => {
       );
 
       expect(result.x).toBe(155); // 375 - 200 - 20
-      expect(result.y).toBe(347); // 667 - 300 - 20
+      expect(result.y).toBe(237); // 667 - 300 - 130 = 237 (using new bottomPadding)
     });
 
     it("should use custom padding", () => {
@@ -172,7 +172,7 @@ describe("contextMenuUtils", () => {
       // The function should still respect the padding constraint
       // x would be: max(padding, screenWidth - menuWidth - padding) = max(20, 375-400-20) = max(20, -45) = 20
       expect(result.x).toBe(20); // constrained by padding
-      expect(result.y).toBe(-53); // 667 - 700 - 20 = -53 (calculated but may go negative)
+      expect(result.y).toBe(-163); // 667 - 700 - 130 = -163 (using new bottomPadding, may go negative)
     });
   });
 
@@ -461,7 +461,7 @@ describe("contextMenuUtils", () => {
 
       // Should be positioned to fit within screen bounds
       expect(position.x).toBe(55); // 375 - 300 - 20
-      expect(position.y).toBe(119); // 667 - 528 - 20 (where 528 is calculated menu height)
+      expect(position.y).toBe(9); // 667 - 528 - 130 (where 528 is calculated menu height, using new bottomPadding)
     });
   });
 });

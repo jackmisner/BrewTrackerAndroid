@@ -15,7 +15,7 @@ export const createBrewSessionStyles = (theme: ThemeContextValue) =>
       alignItems: "center",
       justifyContent: "space-between",
       paddingHorizontal: 20,
-      paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 16 : 60,
+      paddingTop: (StatusBar.currentHeight ?? 0) + 16,
 
       paddingBottom: 16,
       backgroundColor: theme.colors.background,

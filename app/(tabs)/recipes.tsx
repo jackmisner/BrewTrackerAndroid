@@ -32,7 +32,7 @@ import {
   GestureResponderEvent,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import ApiService from "@services/api/apiService";
@@ -130,6 +130,28 @@ export default function RecipesScreen() {
     staleTime: 1000 * 60 * 2, // Cache for 2 minutes
   });
 
+  // Delete mutation
+  const queryClient = useQueryClient();
+  const deleteMutation = useMutation<void, unknown, string>({
+    mutationKey: ["recipes", "delete"],
+    mutationFn: async (recipeId: string) => {
+      await ApiService.recipes.delete(recipeId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      Alert.alert("Success", "Recipe deleted successfully");
+    },
+    onError: (error: unknown) => {
+      console.error("Failed to delete recipe:", error);
+      Alert.alert(
+        "Delete Failed",
+        "Failed to delete recipe. Please try again.",
+        [{ text: "OK" }]
+      );
+    },
+  });
+
   const currentData = activeTab === "my" ? myRecipesData : publicRecipesData;
   const currentRecipes = currentData?.recipes || [];
   const isLoading =
@@ -152,7 +174,7 @@ export default function RecipesScreen() {
   };
 
   const handleCreateRecipe = () => {
-    router.push("/(modals)/(recipes)/createRecipe");
+    router.push({ pathname: "/(modals)/(recipes)/createRecipe", params: {} });
   };
 
   // Context menu action handlers
@@ -202,18 +224,25 @@ export default function RecipesScreen() {
         params: { recipeId: recipe.id },
       });
     },
-    onShare: (recipe: Recipe) => {
-      // TODO: Implement recipe sharing functionality
-      Alert.alert(
-        "Share Recipe",
-        `Sharing "${recipe.name}" - Feature coming soon!`
-      );
-    },
     onDelete: (recipe: Recipe) => {
-      // TODO: Implement recipe deletion with API call
+      // Ensure the context menu closes before prompting
+      contextMenu.hideMenu();
       Alert.alert(
         "Delete Recipe",
-        `Deleting "${recipe.name}" - Feature coming soon!`
+        `Are you sure you want to delete "${recipe.name}"? This action cannot be undone.`,
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () => {
+              deleteMutation.mutate(recipe.id);
+            },
+          },
+        ]
       );
     },
   });

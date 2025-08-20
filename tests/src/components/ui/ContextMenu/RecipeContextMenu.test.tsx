@@ -237,14 +237,12 @@ describe("createDefaultRecipeActions", () => {
     it("should create all expected actions", () => {
       const actions = createDefaultRecipeActions(handlers);
 
-      expect(actions).toHaveLength(7);
       expect(actions.map(a => a.id)).toEqual([
         "view",
         "edit",
         "clone",
         "beerxml-export",
         "brew",
-        "share",
         "delete",
       ]);
     });
@@ -301,24 +299,6 @@ describe("createDefaultRecipeActions", () => {
         });
 
         expect(editAction?.hidden?.(privateRecipe)).toBe(false);
-      });
-    });
-
-    describe("Share Action", () => {
-      it("should hide share action for public recipes", () => {
-        const actions = createDefaultRecipeActions(handlers);
-        const shareAction = actions.find(a => a.id === "share");
-        const publicRecipe = createMockRecipe({ is_public: true });
-
-        expect(shareAction?.hidden?.(publicRecipe)).toBe(true);
-      });
-
-      it("should show share action for private recipes", () => {
-        const actions = createDefaultRecipeActions(handlers);
-        const shareAction = actions.find(a => a.id === "share");
-        const privateRecipe = createMockRecipe({ is_public: false });
-
-        expect(shareAction?.hidden?.(privateRecipe)).toBe(false);
       });
     });
 
@@ -408,7 +388,6 @@ describe("createDefaultRecipeActions", () => {
           icon: "file-download",
         },
         { id: "brew", title: "Start Brewing", icon: "play-arrow" },
-        { id: "share", title: "Share Recipe", icon: "share" },
         { id: "delete", title: "Delete Recipe", icon: "delete" },
       ];
 
@@ -447,7 +426,7 @@ describe("RecipeContextMenu Integration", () => {
       expect(handlers.onView).toHaveBeenCalledWith(recipe);
     });
 
-    // Test destructive action shows confirmation
+    // Test destructive action calls handler directly (no generic confirmation)
     const deleteAction = getByTestId(
       TEST_IDS.patterns.contextMenuAction("delete")
     );
@@ -456,25 +435,10 @@ describe("RecipeContextMenu Integration", () => {
     });
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith(
-        "Delete Recipe?",
-        "Are you sure you want to delete recipe?",
-        expect.any(Array),
-        expect.any(Object)
-      );
-    });
-    // Trigger the destructive confirmation and ensure handler runs
-    const lastCall = (Alert.alert as jest.Mock).mock.calls.at(-1);
-    const buttons = lastCall?.[2] as {
-      text: string;
-      style?: string;
-      onPress?: () => void;
-    }[];
-    const confirm = buttons?.find(b => b.style === "destructive");
-    confirm?.onPress?.();
-    await waitFor(() => {
       expect(handlers.onDelete).toHaveBeenCalledWith(recipe);
     });
+    // Should NOT show generic confirmation - let action handlers manage their own confirmations
+    expect(Alert.alert).not.toHaveBeenCalled();
   });
 
   it("should handle recipe ownership and visibility properly in integrated context", async () => {
@@ -501,11 +465,6 @@ describe("RecipeContextMenu Integration", () => {
     ).toBeNull();
     expect(
       queryByTestId(TEST_IDS.patterns.contextMenuAction("delete"))
-    ).toBeNull();
-
-    // Share action should be hidden for public recipes
-    expect(
-      queryByTestId(TEST_IDS.patterns.contextMenuAction("share"))
     ).toBeNull();
 
     // View, clone, export, and brew should still be visible

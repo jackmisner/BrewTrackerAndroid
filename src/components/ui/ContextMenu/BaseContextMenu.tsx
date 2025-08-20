@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   Modal,
   TouchableWithoutFeedback,
-  Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -70,28 +69,8 @@ export function BaseContextMenu<T>({
     // Close menu first
     onClose();
 
-    // Handle destructive actions with confirmation
-    if (action.destructive) {
-      Alert.alert(
-        `${action.title}?`,
-        `Are you sure you want to ${action.title.toLowerCase()}?`,
-        [
-          {
-            text: "Cancel",
-            style: "cancel",
-          },
-          {
-            text: action.title,
-            style: "destructive",
-            onPress: () => action.onPress(item),
-          },
-        ],
-        { cancelable: true }
-      );
-    } else {
-      // Execute non-destructive actions immediately
-      action.onPress(item);
-    }
+    // Execute all actions immediately - let the action handlers manage their own confirmations
+    action.onPress(item);
   };
 
   /**
