@@ -100,7 +100,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   ├── brewSessions/                             # Brew session specific components
 │   │   │   ├── FermentationChart.tsx                 # Interactive fermentation tracking charts with dual-axis
 │   │   │   ├── FermentationData.tsx                  # Fermentation data display and management component
-│   │   │   └── FermentationEntryContextMenu.tsx     # Context menu for fermentation entry actions
+│   │   │   └── FermentationEntryContextMenu.tsx      # Context menu for fermentation entry actions
 │   │   ├── recipes/                                  # Recipe management components
 │   │   │   ├── BrewingMetrics/                       # Recipe metrics display components
 │   │   │   │   └── BrewingMetricsDisplay.tsx         # Reusable brewing metrics with SRM color visualization
@@ -167,7 +167,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │       ├── components/                               # Component-specific styles
 │       │   └── brewingMetricsStyles.ts               # Brewing metrics display styling
 │       ├── recipes/                                  # Recipe component styles
-│       │   └── ingredientDetailEditorStyles.ts      # Ingredient editor styling
+│       │   └── ingredientDetailEditorStyles.ts       # Ingredient editor styling
 │       ├── ui/                                       # UI component styles
 │       │   ├── baseContextMenuStyles.ts              # Base context menu styling
 │       │   └── recipeContextMenuStyles.ts            # Recipe context menu styling
