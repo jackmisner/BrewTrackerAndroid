@@ -2,9 +2,6 @@
 /* eslint-disable no-undef */
 import "react-native-gesture-handler/jestSetup";
 
-// Set up environment variables for tests
-process.env.EXPO_PUBLIC_API_URL = "http://localhost:5000/api";
-
 // Mock React Native modules - don't create circular dependency
 jest.mock("react-native", () => {
   const React = require("react");
@@ -408,6 +405,19 @@ const SUPPRESSED_ERROR_PATTERNS = [
   /SecureStore error/,
   /Storage failed/,
   /Delete failed/,
+  // Additional ApiService patterns to catch all variations
+  /Error \w+ token:/,
+  /TokenManager\.error/,
+  /at TokenManager\./,
+  /at Object\.<anonymous>.*apiService\.test\.ts/,
+  /at Generator\./,
+  /asyncGeneratorStep/,
+  /Promise\.then\.completed/,
+  /_callCircusTest/,
+  /_runTest/,
+  /_runTestsForDescribeBlock/,
+  /at runTest/,
+  /at Object\.log.*tests\/setupTests\.js/,
   // AuthContext test-related errors that are intentionally triggered
   /Failed to initialize auth:/,
   /Login failed:/,
@@ -427,6 +437,12 @@ const SUPPRESSED_ERROR_PATTERNS = [
   /Too many requests/,
   /Email not found/,
   /Invalid or expired token/,
+  /Failed to add fermentation entry:/,
+  /Failed to update fermentation entry:/,
+  /Failed to delete fermentation entry:/,
+  /Save failed/,
+  /Update failed/,
+  /Delete failed/,
   // UnitContext test-related errors
   /Failed to load unit preferences, using default:/,
   /Cannot read properties of undefined \(reading 'data'\)/,
@@ -452,6 +468,9 @@ const SUPPRESSED_WARN_PATTERNS = [
   // UnitContext test warnings
   /Failed to load unit preferences, using default:/,
   /Background settings fetch failed:/,
+  // AuthContext test warnings
+  /Corrupted cached user data, removing:/,
+  /Cache read failed/,
 ];
 
 console.error = (...args) => {

@@ -786,5 +786,43 @@ describe("idNormalization", () => {
       );
       expect(denormalizedEntry.entry_id).toBe("entry-123");
     });
+
+    it("should handle non-object inputs for detectEntityTypeFromProperties coverage", () => {
+      // This tests line 281 - the null check in detectEntityTypeFromProperties
+      const result = denormalizeEntityIdDeep("string", "unknown" as any);
+      expect(result).toBe("string");
+    });
+
+    it("should handle objects without ID field for normalizeResponseData coverage", () => {
+      // This tests line 238 - the object check in normalizeResponseData
+      const objectWithoutId = {
+        name: "Test",
+        description: "No ID field",
+        metadata: { created: "2024-01-01" },
+      };
+
+      const result = normalizeResponseData(objectWithoutId, "recipe");
+
+      // Should return unchanged since it doesn't have an ID field
+      expect(result).toBe(objectWithoutId);
+      expect(result).not.toHaveProperty("id");
+    });
+
+    it("should handle null data for line 238 coverage", () => {
+      // In JavaScript, typeof null === "object", so this tests the null case
+      const result = normalizeResponseData(null, "recipe");
+      expect(result).toBeNull();
+    });
+
+    it("should handle primitive data types for line 281 coverage", () => {
+      // This should test the detectEntityTypeFromProperties function with non-objects
+      const stringData = "test string";
+      const numberData = 42;
+      const booleanData = true;
+
+      expect(normalizeResponseData(stringData, "recipe")).toBe(stringData);
+      expect(normalizeResponseData(numberData, "recipe")).toBe(numberData);
+      expect(normalizeResponseData(booleanData, "recipe")).toBe(booleanData);
+    });
   });
 });
