@@ -295,7 +295,7 @@ describe("BaseContextMenu", () => {
       });
     });
 
-    it("should show confirmation alert for destructive actions", async () => {
+    it("should call destructive actions directly without generic confirmation", async () => {
       const actions = createMockActions();
       const mockOnPress = jest.fn();
       actions[2].onPress = mockOnPress; // delete action
@@ -323,32 +323,12 @@ describe("BaseContextMenu", () => {
       await waitFor(() => {
         expect(Haptics.selectionAsync).toHaveBeenCalled();
         expect(mockOnClose).toHaveBeenCalled();
-        expect(Alert.alert).toHaveBeenCalledWith(
-          "Delete?",
-          "Are you sure you want to delete?",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Delete",
-              style: "destructive",
-              onPress: expect.any(Function),
-            },
-          ],
-          { cancelable: true }
-        );
-      });
-      // Trigger the destructive confirmation and ensure handler runs
-      const lastCall = (Alert.alert as jest.Mock).mock.calls.at(-1);
-      const buttons = lastCall?.[2] as {
-        text: string;
-        style?: string;
-        onPress?: () => void;
-      }[];
-      const confirm = buttons?.find(b => b.style === "destructive");
-      confirm?.onPress?.();
-      await waitFor(() => {
         expect(mockOnPress).toHaveBeenCalledWith(mockItem);
+        expect(mockOnPress).toHaveBeenCalledTimes(1);
+        expect(mockOnClose).toHaveBeenCalledTimes(1);
       });
+      // Should NOT show generic confirmation - let action handlers manage their own confirmations
+      expect(Alert.alert).not.toHaveBeenCalled();
     });
 
     it("should not render when item is null", () => {

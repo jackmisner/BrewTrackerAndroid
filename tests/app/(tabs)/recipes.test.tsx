@@ -1,8 +1,7 @@
 import React from "react";
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
-import { Alert } from "react-native";
 import RecipesScreen from "../../../app/(tabs)/recipes";
-import { mockData, scenarios, testUtils } from "../../testUtils";
+import { mockData, testUtils } from "../../testUtils";
 
 // Comprehensive React Native mocking
 jest.mock("react-native", () => ({
@@ -27,9 +26,20 @@ jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: "MaterialIcons",
 }));
 
-jest.mock("@tanstack/react-query", () => ({
-  useQuery: jest.fn(),
-}));
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query");
+  const queryClientMock = {
+    invalidateQueries: jest.fn(),
+    setQueryData: jest.fn(),
+    getQueryData: jest.fn(),
+  };
+  return {
+    ...actual,
+    useQuery: jest.fn(),
+    useMutation: jest.fn(),
+    useQueryClient: jest.fn(() => queryClientMock),
+  };
+});
 
 jest.mock("expo-router", () => ({
   router: {
@@ -146,6 +156,7 @@ const mockTheme = {
 };
 
 const mockUseQuery = require("@tanstack/react-query").useQuery;
+const mockUseMutation = require("@tanstack/react-query").useMutation;
 const mockRouter = require("expo-router").router;
 const mockUseLocalSearchParams = require("expo-router").useLocalSearchParams;
 
@@ -164,6 +175,19 @@ describe("RecipesScreen", () => {
       isLoading: false,
       error: null,
       refetch: jest.fn(),
+    }));
+
+    // Set up default useMutation mock
+    mockUseMutation.mockImplementation(() => ({
+      mutate: jest.fn(),
+      mutateAsync: jest.fn().mockResolvedValue(undefined),
+      isPending: false,
+      isError: false,
+      isSuccess: false,
+      status: "idle",
+      data: undefined,
+      error: null,
+      reset: jest.fn(),
     }));
   });
 
@@ -513,9 +537,10 @@ describe("RecipesScreen", () => {
 
       fireEvent.press(createButton);
 
-      expect(mockRouter.push).toHaveBeenCalledWith(
-        "/(modals)/(recipes)/createRecipe"
-      );
+      expect(mockRouter.push).toHaveBeenCalledWith({
+        pathname: "/(modals)/(recipes)/createRecipe",
+        params: {},
+      });
     });
   });
 
@@ -689,7 +714,6 @@ describe("RecipesScreen", () => {
       onClone: jest.fn(),
       onBeerXMLExport: jest.fn(),
       onStartBrewing: jest.fn(),
-      onShare: jest.fn(),
       onDelete: jest.fn(),
     };
 
@@ -712,7 +736,6 @@ describe("RecipesScreen", () => {
           onClone: expect.any(Function),
           onBeerXMLExport: expect.any(Function),
           onStartBrewing: expect.any(Function),
-          onShare: expect.any(Function),
           onDelete: expect.any(Function),
         })
       );

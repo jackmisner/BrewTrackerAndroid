@@ -2,6 +2,7 @@ import React from "react";
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
 import BrewSessionsScreen from "../../../app/(tabs)/brewSessions";
 import { mockData, scenarios, testUtils } from "../../testUtils";
+import { clear } from "console";
 
 // Mock React Native
 jest.mock("react-native", () => ({
@@ -25,9 +26,25 @@ jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: "MaterialIcons",
 }));
 
-jest.mock("@tanstack/react-query", () => ({
-  useQuery: jest.fn(),
-}));
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query");
+  const queryClientMock = {
+    invalidateQueries: jest.fn(),
+    // Add additional methods here if the component starts using them:
+    getQueryData: jest.fn(),
+    setQueryData: jest.fn(),
+    removeQueries: jest.fn(),
+    clear: jest.fn(),
+    refetchQueries: jest.fn(),
+    cancelQueries: jest.fn(),
+  };
+  return {
+    ...actual,
+    useQuery: jest.fn(),
+    useMutation: jest.fn(),
+    useQueryClient: jest.fn(() => queryClientMock),
+  };
+});
 
 jest.mock("expo-router", () => ({
   router: {
@@ -163,6 +180,7 @@ const mockTheme = {
 };
 
 const mockUseQuery = require("@tanstack/react-query").useQuery;
+const mockUseMutation = require("@tanstack/react-query").useMutation;
 const mockRouter = require("expo-router").router;
 const mockUseLocalSearchParams = require("expo-router").useLocalSearchParams;
 
@@ -182,6 +200,15 @@ describe("BrewSessionsScreen", () => {
       error: null,
       refetch: jest.fn(),
     }));
+
+    // Set up default useMutation mock
+    mockUseMutation.mockReturnValue({
+      mutate: jest.fn(),
+      mutateAsync: jest.fn().mockResolvedValue(undefined),
+      isPending: false,
+      error: null,
+      reset: jest.fn(),
+    });
   });
 
   describe("tab navigation", () => {

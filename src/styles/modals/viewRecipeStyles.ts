@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, StatusBar } from "react-native";
 import { ThemeContextValue } from "@contexts/ThemeContext";
 
 export const viewRecipeStyles = (theme: ThemeContextValue) =>
@@ -22,7 +22,7 @@ export const viewRecipeStyles = (theme: ThemeContextValue) =>
       backgroundColor: theme.colors.background,
       paddingHorizontal: 16,
       paddingVertical: 12,
-      paddingTop: 20, // Account for status bar
+      paddingTop: (StatusBar.currentHeight ?? 0) + 16,
       shadowColor: theme.colors.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,

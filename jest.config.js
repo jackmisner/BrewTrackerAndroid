@@ -1,5 +1,6 @@
 module.exports = {
   preset: "react-native",
+  setupFiles: ["<rootDir>/tests/setupEnv.js"],
   setupFilesAfterEnv: ["<rootDir>/tests/setupTests.js"],
   testMatch: ["**/tests/**/*.test.{ts,tsx,js}"],
   moduleDirectories: ["node_modules", "src", "app"],
@@ -29,8 +30,8 @@ module.exports = {
   coverageReporters: ["text", "lcov", "html"],
   coverageThreshold: {
     global: {
-      branches: 60,
-      functions: 55,
+      branches: 65,
+      functions: 60,
       lines: 70,
       statements: 70,
     },

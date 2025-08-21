@@ -1,1028 +1,669 @@
 /**
- * ApiService Test Suite
- *
- * Tests core API service functionality including token management,
- * error handling, endpoint calling, and service structure.
- *
- * Note: This test file uses manual mocking to avoid environment validation
- * issues that occur during module import. The actual ApiService functionality
- * is tested through focused unit tests.
+ * Comprehensive ApiService Tests - Real Implementation + Essential Logic Tests
  */
 
-import axios, { AxiosError, AxiosResponse } from "axios";
-import * as SecureStore from "expo-secure-store";
+// CRITICAL: Set environment variable BEFORE any imports
+process.env.EXPO_PUBLIC_API_URL =
+  process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
 
-// Mock dependencies
-jest.mock("axios", () => ({
-  create: jest.fn(() => ({
-    interceptors: {
-      request: { use: jest.fn() },
-      response: { use: jest.fn() },
-    },
-    get: jest.fn(),
-    post: jest.fn(),
-    put: jest.fn(),
-    delete: jest.fn(),
-  })),
-  isAxiosError: jest.fn(),
+import { AxiosError, AxiosInstance } from "axios";
+
+// Mock external dependencies BEFORE any imports that might use them
+jest.mock("expo-secure-store");
+jest.mock("@services/api/idInterceptor", () => ({
+  setupIDInterceptors: jest.fn(),
 }));
 
-jest.mock("expo-secure-store", () => ({
-  getItemAsync: jest.fn(),
-  setItemAsync: jest.fn(),
-  deleteItemAsync: jest.fn(),
-}));
-
-const mockAxios = axios as jest.Mocked<typeof axios>;
-const mockSecureStore = SecureStore as jest.Mocked<typeof SecureStore>;
-
-const mockAxiosInstance = {
-  interceptors: {
-    request: { use: jest.fn() },
-    response: { use: jest.fn() },
+// Mock config with real values
+jest.mock("@services/config", () => ({
+  STORAGE_KEYS: {
+    ACCESS_TOKEN: "access_token",
   },
+  ENDPOINTS: {
+    AUTH: {
+      REGISTER: "/auth/register",
+      LOGIN: "/auth/login",
+      GOOGLE_AUTH: "/auth/google",
+      PROFILE: "/auth/profile",
+      VALIDATE_USERNAME: "/auth/validate-username",
+      VERIFY_EMAIL: "/auth/verify-email",
+      RESEND_VERIFICATION: "/auth/resend-verification",
+    },
+    USER: {
+      SETTINGS: "/user/settings",
+      PROFILE: "/user/profile",
+      CHANGE_PASSWORD: "/user/change-password",
+      DELETE_ACCOUNT: "/user/delete-account",
+    },
+    RECIPES: {
+      LIST: "/recipes",
+      CREATE: "/recipes",
+      DETAIL: (id: string) => `/recipes/${id}`,
+      UPDATE: (id: string) => `/recipes/${id}`,
+      DELETE: (id: string) => `/recipes/${id}`,
+      METRICS: (id: string) => `/recipes/${id}/metrics`,
+      CALCULATE_PREVIEW: "/recipes/calculate-preview",
+      CLONE: (id: string) => `/recipes/${id}/clone`,
+      CLONE_PUBLIC: (id: string) => `/recipes/${id}/clone-public`,
+      VERSIONS: (id: string) => `/recipes/${id}/versions`,
+      PUBLIC: "/recipes/public",
+    },
+    BREW_SESSIONS: {
+      LIST: "/brew-sessions",
+      CREATE: "/brew-sessions",
+      DETAIL: (id: string) => `/brew-sessions/${id}`,
+      UPDATE: (id: string) => `/brew-sessions/${id}`,
+      DELETE: (id: string) => `/brew-sessions/${id}`,
+      FERMENTATION: (id: string) => `/brew-sessions/${id}/fermentation`,
+      FERMENTATION_ENTRY: (id: string, index: number) =>
+        `/brew-sessions/${id}/fermentation/${index}`,
+      FERMENTATION_STATS: (id: string) =>
+        `/brew-sessions/${id}/fermentation/stats`,
+      ANALYZE_COMPLETION: (id: string) =>
+        `/brew-sessions/${id}/analyze-completion`,
+    },
+    BEER_STYLES: {
+      LIST: "/beer-styles",
+      DETAIL: (id: string) => `/beer-styles/${id}`,
+      SEARCH: "/beer-styles/search",
+    },
+    INGREDIENTS: {
+      LIST: "/ingredients",
+      CREATE: "/ingredients",
+      DETAIL: (id: string) => `/ingredients/${id}`,
+      UPDATE: (id: string) => `/ingredients/${id}`,
+      DELETE: (id: string) => `/ingredients/${id}`,
+      RECIPES: (id: string) => `/ingredients/${id}/recipes`,
+    },
+    DASHBOARD: {
+      DATA: "/dashboard",
+    },
+  },
+}));
+
+// Create mock axios instance
+const mockAxiosInstance: Partial<AxiosInstance> = {
   get: jest.fn(),
   post: jest.fn(),
   put: jest.fn(),
   delete: jest.fn(),
-};
+  patch: jest.fn(),
+  interceptors: {
+    request: {
+      use: jest.fn((onFulfilled, onRejected) => 0),
+      eject: jest.fn(),
+      clear: jest.fn(),
+    },
+    response: {
+      use: jest.fn((onFulfilled, onRejected) => 0),
+      eject: jest.fn(),
+      clear: jest.fn(),
+    },
+  },
+} as any;
 
-// Mock storage keys
-const STORAGE_KEYS = {
-  ACCESS_TOKEN: "accessToken",
-  USER_DATA: "userData",
-  USER_SETTINGS: "userSettings",
-  OFFLINE_RECIPES: "offlineRecipes",
-  CACHED_INGREDIENTS: "cachedIngredients",
-};
+jest.mock("axios", () => ({
+  create: jest.fn(() => mockAxiosInstance),
+  isAxiosError: jest.fn(error => error?.isAxiosError === true),
+}));
 
-describe("ApiService Core Functionality", () => {
+describe("ApiService", () => {
+  let ApiService: any;
+  let mockSecureStore: any;
+
+  // Test-scoped variables for interceptors to avoid cross-test interference
+  let testRequestInterceptor: any;
+  let testResponseInterceptor: any;
+
+  beforeAll(async () => {
+    // Force set environment variable for testing
+    process.env.EXPO_PUBLIC_API_URL = "http://localhost:5000/api";
+    process.env.EXPO_PUBLIC_DEBUG_MODE = "false";
+
+    // Import expo-secure-store mock
+    const SecureStore = await import("expo-secure-store");
+    mockSecureStore = SecureStore as any;
+
+    // Now dynamically import ApiService after environment is set up
+    const apiServiceModule = await import("@services/api/apiService");
+    ApiService = apiServiceModule.default;
+
+    // Capture the interceptor functions that were registered during module import
+    const requestUse = mockAxiosInstance.interceptors?.request
+      ?.use as jest.Mock;
+    const responseUse = mockAxiosInstance.interceptors?.response
+      ?.use as jest.Mock;
+
+    // Store interceptor functions in test-scoped variables
+    testRequestInterceptor = requestUse.mock.calls[0]?.[0]; // onFulfilled
+    testResponseInterceptor = {
+      onFulfilled: responseUse.mock.calls[0]?.[0],
+      onRejected: responseUse.mock.calls[0]?.[1],
+    };
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAxios.create.mockReturnValue(mockAxiosInstance as any);
+
+    // Reset SecureStore mocks
+    mockSecureStore.getItemAsync.mockResolvedValue(null);
+    mockSecureStore.setItemAsync.mockResolvedValue(undefined);
+    mockSecureStore.deleteItemAsync.mockResolvedValue(undefined);
+
+    // Reset axios instance mocks
+    (mockAxiosInstance.get as jest.Mock).mockReset();
+    (mockAxiosInstance.post as jest.Mock).mockReset();
+    (mockAxiosInstance.put as jest.Mock).mockReset();
+    (mockAxiosInstance.delete as jest.Mock).mockReset();
   });
 
-  describe("Token Management (Unit Tests)", () => {
-    // Test the token management logic independently
-    class TestTokenManager {
-      static async getToken(): Promise<string | null> {
-        try {
-          return await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-        } catch (error) {
-          // Suppress console.error in tests - we're testing error scenarios intentionally
-          return null;
-        }
-      }
+  describe("Token Management", () => {
+    it("should get token from secure storage", async () => {
+      const testToken = "test-jwt-token";
+      mockSecureStore.getItemAsync.mockResolvedValue(testToken);
 
-      static async setToken(token: string): Promise<void> {
-        try {
-          await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, token);
-        } catch (error) {
-          // Suppress console.error in tests - we're testing error scenarios intentionally
-          throw error;
-        }
-      }
+      const token = await ApiService.token.getToken();
 
-      static async removeToken(): Promise<void> {
-        try {
-          await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-        } catch (error) {
-          // Suppress console.error in tests - we're testing error scenarios intentionally
-        }
-      }
-    }
-
-    describe("getToken", () => {
-      it("should retrieve token from SecureStore", async () => {
-        const mockToken = "test-token-123";
-        mockSecureStore.getItemAsync.mockResolvedValue(mockToken);
-
-        const token = await TestTokenManager.getToken();
-
-        expect(mockSecureStore.getItemAsync).toHaveBeenCalledWith(
-          STORAGE_KEYS.ACCESS_TOKEN
-        );
-        expect(token).toBe(mockToken);
-      });
-
-      it("should return null when token retrieval fails", async () => {
-        mockSecureStore.getItemAsync.mockRejectedValue(
-          new Error("SecureStore error")
-        );
-
-        const token = await TestTokenManager.getToken();
-
-        expect(token).toBeNull();
-      });
-
-      it("should return null when no token exists", async () => {
-        mockSecureStore.getItemAsync.mockResolvedValue(null);
-
-        const token = await TestTokenManager.getToken();
-
-        expect(token).toBeNull();
-      });
+      expect(mockSecureStore.getItemAsync).toHaveBeenCalledWith("access_token");
+      expect(token).toBe(testToken);
     });
 
-    describe("setToken", () => {
-      it("should store token in SecureStore", async () => {
-        const mockToken = "new-token-456";
-        mockSecureStore.setItemAsync.mockResolvedValue();
+    it("should handle error when getting token", async () => {
+      mockSecureStore.getItemAsync.mockRejectedValue(
+        new Error("SecureStore error")
+      );
 
-        await TestTokenManager.setToken(mockToken);
+      const token = await ApiService.token.getToken();
 
-        expect(mockSecureStore.setItemAsync).toHaveBeenCalledWith(
-          STORAGE_KEYS.ACCESS_TOKEN,
-          mockToken
-        );
-      });
-
-      it("should throw error when token storage fails", async () => {
-        const mockToken = "failing-token";
-        const error = new Error("Storage failed");
-        mockSecureStore.setItemAsync.mockRejectedValue(error);
-
-        await expect(TestTokenManager.setToken(mockToken)).rejects.toThrow(
-          "Storage failed"
-        );
-      });
+      expect(token).toBeNull();
     });
 
-    describe("removeToken", () => {
-      it("should remove token from SecureStore", async () => {
-        mockSecureStore.deleteItemAsync.mockResolvedValue();
+    it("should set token in secure storage", async () => {
+      const testToken = "new-jwt-token";
 
-        await TestTokenManager.removeToken();
+      await ApiService.token.setToken(testToken);
 
-        expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(
-          STORAGE_KEYS.ACCESS_TOKEN
-        );
-      });
-
-      it("should handle removal errors gracefully", async () => {
-        mockSecureStore.deleteItemAsync.mockRejectedValue(
-          new Error("Delete failed")
-        );
-
-        await expect(TestTokenManager.removeToken()).resolves.toBeUndefined();
-      });
-    });
-  });
-
-  describe("Error Normalization Logic", () => {
-    // Test error normalization logic independently
-    interface NormalizedApiError {
-      message: string;
-      code?: string | number;
-      status?: number;
-      isNetworkError: boolean;
-      isTimeout: boolean;
-      isRetryable: boolean;
-      originalError?: any;
-    }
-
-    function normalizeError(error: any): NormalizedApiError {
-      const normalized: NormalizedApiError = {
-        message: "An unexpected error occurred",
-        isNetworkError: false,
-        isTimeout: false,
-        isRetryable: false,
-        originalError: error,
-      };
-
-      if (axios.isAxiosError(error)) {
-        const axiosError = error as AxiosError;
-
-        if (!axiosError.response) {
-          normalized.isNetworkError = true;
-          normalized.isRetryable = true;
-
-          if (
-            axiosError.code === "ECONNABORTED" ||
-            (axiosError.message && axiosError.message.includes("timeout"))
-          ) {
-            normalized.isTimeout = true;
-            normalized.message =
-              "Request timed out. Please check your connection and try again.";
-          } else if (
-            axiosError.code === "NETWORK_ERROR" ||
-            (axiosError.message && axiosError.message.includes("Network Error"))
-          ) {
-            normalized.message =
-              "Network error. Please check your internet connection.";
-          } else {
-            normalized.message =
-              "Unable to connect to server. Please try again.";
-          }
-
-          normalized.code = axiosError.code;
-          return normalized;
-        }
-
-        const { response } = axiosError;
-        normalized.status = response.status;
-
-        switch (response.status) {
-          case 400:
-            normalized.message =
-              "Invalid request data. Please check your input.";
-            break;
-          case 401:
-            normalized.message = "Authentication failed. Please log in again.";
-            break;
-          case 404:
-            normalized.message = "Resource not found.";
-            break;
-          case 429:
-            normalized.message =
-              "Too many requests. Please wait a moment and try again.";
-            normalized.isRetryable = true;
-            break;
-          case 500:
-            normalized.message = "Server error. Please try again later.";
-            normalized.isRetryable = true;
-            break;
-          default:
-            normalized.message = `Server error (${response.status}). Please try again.`;
-            if (response.status >= 500) {
-              normalized.isRetryable = true;
-            }
-        }
-
-        if (response.data && typeof response.data === "object") {
-          const data = response.data as any;
-          if (data.error && typeof data.error === "string") {
-            normalized.message = data.error;
-          } else if (data.message && typeof data.message === "string") {
-            normalized.message = data.message;
-          }
-        }
-
-        normalized.code = response.status;
-        return normalized;
-      }
-
-      if (error instanceof Error) {
-        normalized.message = error.message;
-      } else if (typeof error === "string") {
-        normalized.message = error;
-      }
-
-      return normalized;
-    }
-
-    it("should normalize network errors", () => {
-      const networkError = {
-        code: "NETWORK_ERROR",
-        message: "Network Error",
-      };
-      mockAxios.isAxiosError.mockReturnValue(true);
-
-      const result = normalizeError(networkError);
-
-      expect(result.isNetworkError).toBe(true);
-      expect(result.isRetryable).toBe(true);
-      expect(result.message).toBe(
-        "Network error. Please check your internet connection."
+      expect(mockSecureStore.setItemAsync).toHaveBeenCalledWith(
+        "access_token",
+        testToken
       );
     });
 
-    it("should normalize timeout errors", () => {
-      const timeoutError = {
-        code: "ECONNABORTED",
-        message: "timeout of 15000ms exceeded",
-      };
-      mockAxios.isAxiosError.mockReturnValue(true);
+    it("should handle error when setting token", async () => {
+      mockSecureStore.setItemAsync.mockRejectedValue(
+        new Error("Storage failed")
+      );
 
-      const result = normalizeError(timeoutError);
-
-      expect(result.isTimeout).toBe(true);
-      expect(result.isRetryable).toBe(true);
-      expect(result.message).toBe(
-        "Request timed out. Please check your connection and try again."
+      await expect(ApiService.token.setToken("token")).rejects.toThrow(
+        "Storage failed"
       );
     });
 
-    it("should normalize HTTP client errors as non-retryable", () => {
-      const clientError = {
-        response: {
-          status: 400,
-          data: { message: "Bad request" },
+    it("should remove token from secure storage", async () => {
+      await ApiService.token.removeToken();
+
+      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(
+        "access_token"
+      );
+    });
+
+    it("should handle error when removing token", async () => {
+      mockSecureStore.deleteItemAsync.mockRejectedValue(
+        new Error("Delete failed")
+      );
+
+      // Should not throw, just log error
+      await expect(ApiService.token.removeToken()).resolves.toBeUndefined();
+    });
+  });
+
+  describe("Authentication Endpoints", () => {
+    it("should call login endpoint with credentials", async () => {
+      const credentials = {
+        email: "test@example.com",
+        password: "password123",
+      };
+      const mockResponse = {
+        data: {
+          user: { id: "1", email: "test@example.com" },
+          token: "jwt-token",
         },
       };
-      mockAxios.isAxiosError.mockReturnValue(true);
+      (mockAxiosInstance.post as jest.Mock).mockResolvedValue(mockResponse);
 
-      const result = normalizeError(clientError);
+      const result = await ApiService.auth.login(credentials);
 
-      expect(result.status).toBe(400);
-      expect(result.isRetryable).toBe(false);
-      expect(result.message).toBe("Bad request");
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+        "/auth/login",
+        credentials
+      );
+      expect(result.data.token).toBe("jwt-token");
     });
 
-    it("should normalize HTTP server errors as retryable", () => {
-      const serverError = {
-        response: {
-          status: 500,
-          data: { error: "Internal server error" },
+    it("should call register endpoint with user data", async () => {
+      const userData = {
+        email: "new@example.com",
+        username: "newuser",
+        password: "password123",
+      };
+      const mockResponse = {
+        data: {
+          user: { id: "1", ...userData },
+          token: "jwt-token",
         },
       };
-      mockAxios.isAxiosError.mockReturnValue(true);
+      (mockAxiosInstance.post as jest.Mock).mockResolvedValue(mockResponse);
 
-      const result = normalizeError(serverError);
+      const result = await ApiService.auth.register(userData);
 
-      expect(result.status).toBe(500);
-      expect(result.isRetryable).toBe(true);
-      expect(result.message).toBe("Internal server error");
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+        "/auth/register",
+        userData
+      );
+      expect(result.data.user.email).toBe(userData.email);
     });
 
-    it("should handle HTTP errors without specific message", () => {
-      const errorWithoutMessage = {
-        response: {
-          status: 503,
-          data: {},
+    it("should get user profile", async () => {
+      const mockResponse = {
+        data: {
+          user: { id: "1", email: "test@example.com" },
         },
       };
-      mockAxios.isAxiosError.mockReturnValue(true);
+      (mockAxiosInstance.get as jest.Mock).mockResolvedValue(mockResponse);
 
-      const result = normalizeError(errorWithoutMessage);
+      const result = await ApiService.auth.getProfile();
 
-      expect(result.status).toBe(503);
-      expect(result.message).toBe("Server error (503). Please try again.");
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith("/auth/profile");
+      expect(result.data.user.email).toBe("test@example.com");
     });
 
-    it("should handle non-axios errors", () => {
-      const plainError = new Error("Something went wrong");
-      mockAxios.isAxiosError.mockReturnValue(false);
-
-      const result = normalizeError(plainError);
-
-      expect(result.message).toBe("Something went wrong");
-      expect(result.isNetworkError).toBe(false);
-      expect(result.isRetryable).toBe(false);
-    });
-
-    it("should handle string errors", () => {
-      mockAxios.isAxiosError.mockReturnValue(false);
-
-      const result = normalizeError("String error message");
-
-      expect(result.message).toBe("String error message");
-    });
-
-    it("should handle unknown error types", () => {
-      mockAxios.isAxiosError.mockReturnValue(false);
-
-      const result = normalizeError({ unknown: "error" });
-
-      expect(result.message).toBe("An unexpected error occurred");
-    });
-  });
-
-  describe("Retry Logic", () => {
-    async function withRetry<T>(
-      operation: () => Promise<T>,
-      isRetryable: (error: any) => boolean = () => true,
-      maxAttempts: number = 3,
-      delay: number = 1000
-    ): Promise<T> {
-      let lastError: any;
-
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        try {
-          return await operation();
-        } catch (error) {
-          lastError = error;
-
-          if (attempt === maxAttempts || !isRetryable(error)) {
-            throw error;
-          }
-
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-
-      throw lastError;
-    }
-
-    it("should succeed on first attempt", async () => {
-      const operation = jest.fn().mockResolvedValue("success");
-
-      const result = await withRetry(operation);
-
-      expect(result).toBe("success");
-      expect(operation).toHaveBeenCalledTimes(1);
-    });
-
-    it("should retry on retryable errors", async () => {
-      const operation = jest
-        .fn()
-        .mockRejectedValueOnce(new Error("Temporary error"))
-        .mockResolvedValue("success");
-
-      const result = await withRetry(operation, () => true, 3, 0);
-
-      expect(result).toBe("success");
-      expect(operation).toHaveBeenCalledTimes(2);
-    });
-
-    it("should not retry on non-retryable errors", async () => {
-      const operation = jest.fn().mockRejectedValue(new Error("Non-retryable"));
-
-      await expect(withRetry(operation, () => false)).rejects.toThrow(
-        "Non-retryable"
-      );
-      expect(operation).toHaveBeenCalledTimes(1);
-    });
-
-    it("should exhaust retry attempts", async () => {
-      const operation = jest.fn().mockRejectedValue(new Error("Always fails"));
-
-      await expect(withRetry(operation, () => true, 3, 0)).rejects.toThrow(
-        "Always fails"
-      );
-      expect(operation).toHaveBeenCalledTimes(3);
-    });
-  });
-
-  describe("API Configuration Logic", () => {
-    function validateAndGetApiConfig(baseURL?: string) {
-      if (!baseURL) {
-        throw new Error(
-          "API_URL environment variable is required. Please set EXPO_PUBLIC_API_URL in your .env file."
-        );
-      }
-
-      try {
-        new URL(baseURL);
-      } catch {
-        throw new Error(
-          `Invalid API_URL format: ${baseURL}. Please provide a valid URL.`
-        );
-      }
-
-      const cleanBaseURL = baseURL.replace(/\/+$/, "");
-
-      return {
-        BASE_URL: cleanBaseURL,
-        TIMEOUT: 15000,
-        MAX_RETRIES: 3,
-        RETRY_DELAY: 1000,
+    it("should validate username", async () => {
+      const data = { username: "testuser" };
+      const mockResponse = {
+        data: { available: true },
       };
-    }
+      (mockAxiosInstance.post as jest.Mock).mockResolvedValue(mockResponse);
 
-    it("should require API URL", () => {
-      expect(() => validateAndGetApiConfig()).toThrow(
-        "API_URL environment variable is required"
+      const result = await ApiService.auth.validateUsername(data);
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+        "/auth/validate-username",
+        data
       );
-    });
-
-    it("should validate URL format", () => {
-      expect(() => validateAndGetApiConfig("invalid-url")).toThrow(
-        "Invalid API_URL format"
-      );
-    });
-
-    it("should clean trailing slashes", () => {
-      const config = validateAndGetApiConfig("http://localhost:5000/api/");
-      expect(config.BASE_URL).toBe("http://localhost:5000/api");
-    });
-
-    it("should accept valid URLs", () => {
-      const config = validateAndGetApiConfig("http://localhost:5000/api");
-      expect(config.BASE_URL).toBe("http://localhost:5000/api");
-      expect(config.TIMEOUT).toBe(15000);
+      expect(result.data.available).toBe(true);
     });
   });
 
-  describe("Axios Instance Configuration", () => {
-    it("should create axios instance with correct configuration", () => {
-      const config = {
-        baseURL: "http://localhost:5000/api",
-        timeout: 15000,
-        headers: {
-          "Content-Type": "application/json",
+  describe("Recipe Endpoints", () => {
+    it("should fetch all recipes with pagination", async () => {
+      const mockResponse = {
+        data: {
+          recipes: [{ id: "1", name: "Test Recipe" }],
+          pagination: { page: 1, total: 1 },
         },
-        validateStatus: expect.any(Function),
       };
+      (mockAxiosInstance.get as jest.Mock).mockResolvedValue(mockResponse);
 
-      mockAxios.create(config);
+      const result = await ApiService.recipes.getAll(1, 10);
 
-      expect(mockAxios.create).toHaveBeenCalledWith(config);
-    });
-
-    it("should setup interceptors", () => {
-      expect(mockAxiosInstance.interceptors.request.use).toBeDefined();
-      expect(mockAxiosInstance.interceptors.response.use).toBeDefined();
-    });
-  });
-
-  describe("API Service Structure", () => {
-    // Test the expected structure of the ApiService
-    const expectedServiceStructure = {
-      token: {
-        getToken: "function",
-        setToken: "function",
-        removeToken: "function",
-      },
-      auth: {
-        register: "function",
-        login: "function",
-        googleAuth: "function",
-        getProfile: "function",
-        verifyEmail: "function",
-        resendVerification: "function",
-        getVerificationStatus: "function",
-        forgotPassword: "function",
-        resetPassword: "function",
-      },
-      recipes: {
-        getAll: "function",
-        getById: "function",
-        create: "function",
-        update: "function",
-        delete: "function",
-        search: "function",
-        getPublic: "function",
-        calculateMetrics: "function",
-      },
-      ingredients: {
-        getAll: "function",
-        getById: "function",
-        create: "function",
-        update: "function",
-        delete: "function",
-      },
-      brewSessions: {
-        getAll: "function",
-        getById: "function",
-        create: "function",
-        update: "function",
-        delete: "function",
-        getFermentationEntries: "function",
-        addFermentationEntry: "function",
-      },
-      checkConnection: "function",
-      handleApiError: "function",
-      cancelAllRequests: "function",
-    };
-
-    it("should have correct service structure definition", () => {
-      expect(expectedServiceStructure.token).toBeDefined();
-      expect(expectedServiceStructure.auth).toBeDefined();
-      expect(expectedServiceStructure.recipes).toBeDefined();
-      expect(expectedServiceStructure.ingredients).toBeDefined();
-      expect(expectedServiceStructure.brewSessions).toBeDefined();
-      expect(expectedServiceStructure.checkConnection).toBe("function");
-      expect(expectedServiceStructure.handleApiError).toBe("function");
-    });
-
-    it("should have all expected token management methods", () => {
-      const tokenMethods = expectedServiceStructure.token;
-      expect(tokenMethods.getToken).toBe("function");
-      expect(tokenMethods.setToken).toBe("function");
-      expect(tokenMethods.removeToken).toBe("function");
-    });
-
-    it("should have all expected auth methods", () => {
-      const authMethods = expectedServiceStructure.auth;
-      expect(authMethods.register).toBe("function");
-      expect(authMethods.login).toBe("function");
-      expect(authMethods.googleAuth).toBe("function");
-      expect(authMethods.getProfile).toBe("function");
-      expect(authMethods.verifyEmail).toBe("function");
-      expect(authMethods.forgotPassword).toBe("function");
-      expect(authMethods.resetPassword).toBe("function");
-    });
-
-    it("should have all expected recipe methods", () => {
-      const recipeMethods = expectedServiceStructure.recipes;
-      expect(recipeMethods.getAll).toBe("function");
-      expect(recipeMethods.getById).toBe("function");
-      expect(recipeMethods.create).toBe("function");
-      expect(recipeMethods.update).toBe("function");
-      expect(recipeMethods.delete).toBe("function");
-      expect(recipeMethods.search).toBe("function");
-      expect(recipeMethods.getPublic).toBe("function");
-    });
-  });
-
-  describe("Endpoint URL Construction", () => {
-    const ENDPOINTS = {
-      AUTH: {
-        REGISTER: "/auth/register",
-        LOGIN: "/auth/login",
-        PROFILE: "/auth/profile",
-      },
-      RECIPES: {
-        LIST: "/recipes",
-        DETAIL: (id: string) => `/recipes/${id}`,
-        PUBLIC: "/recipes/public",
-      },
-      INGREDIENTS: {
-        LIST: "/ingredients",
-        DETAIL: (id: string) => `/ingredients/${id}`,
-      },
-    };
-
-    it("should construct static endpoints correctly", () => {
-      expect(ENDPOINTS.AUTH.REGISTER).toBe("/auth/register");
-      expect(ENDPOINTS.AUTH.LOGIN).toBe("/auth/login");
-      expect(ENDPOINTS.RECIPES.LIST).toBe("/recipes");
-      expect(ENDPOINTS.RECIPES.PUBLIC).toBe("/recipes/public");
-    });
-
-    it("should construct dynamic endpoints correctly", () => {
-      expect(ENDPOINTS.RECIPES.DETAIL("123")).toBe("/recipes/123");
-      expect(ENDPOINTS.INGREDIENTS.DETAIL("abc")).toBe("/ingredients/abc");
-    });
-
-    it("should handle URL encoding in search parameters", () => {
-      const query = "IPA beer with hops";
-      const encodedQuery = encodeURIComponent(query);
-      const searchUrl = `/search/recipes?q=${encodedQuery}&page=1&per_page=10`;
-
-      expect(searchUrl).toContain(encodeURIComponent("IPA beer with hops"));
-    });
-  });
-
-  describe("Request/Response Flow Simulation", () => {
-    it("should simulate successful API request flow", async () => {
-      const mockResponse: AxiosResponse = {
-        data: { success: true, recipes: [] },
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {} as any,
-      };
-
-      mockAxiosInstance.get.mockResolvedValue(mockResponse);
-
-      const response = await mockAxiosInstance.get(
-        "/recipes?page=1&per_page=10"
-      );
-
-      expect(response.status).toBe(200);
-      expect(response.data.success).toBe(true);
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
         "/recipes?page=1&per_page=10"
       );
+      expect(result.data.recipes).toHaveLength(1);
     });
 
-    it("should simulate error response flow", async () => {
-      const mockError = {
-        response: {
-          status: 404,
-          data: { message: "Recipe not found" },
-        },
+    it("should fetch recipe by ID", async () => {
+      const mockResponse = {
+        data: { id: "1", name: "Test Recipe" },
       };
+      (mockAxiosInstance.get as jest.Mock).mockResolvedValue(mockResponse);
 
-      mockAxiosInstance.get.mockRejectedValue(mockError);
+      const result = await ApiService.recipes.getById("1");
 
-      await expect(
-        mockAxiosInstance.get("/recipes/nonexistent")
-      ).rejects.toEqual(mockError);
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith("/recipes/1");
+      expect(result.data.name).toBe("Test Recipe");
     });
 
-    it("should simulate ingredient data processing", () => {
-      const rawIngredientData = {
-        ingredients: [
-          { id: "1", name: "Pilsner Malt", suggested_unit: "lb" },
-          { id: "2", name: "Cascade Hops", suggested_unit: "oz" },
-        ],
-        unit_system: "imperial",
+    it("should create new recipe", async () => {
+      const recipeData = { name: "New Recipe", style: "IPA" };
+      const mockResponse = {
+        data: { id: "1", ...recipeData },
       };
+      (mockAxiosInstance.post as jest.Mock).mockResolvedValue(mockResponse);
 
-      // Simulate the processing that happens in ingredients.getAll
-      const processedIngredients = rawIngredientData.ingredients.map(
-        ingredient => ({
-          ...ingredient,
-          amount: 0,
-          unit: ingredient.suggested_unit || "lb",
-        })
+      const result = await ApiService.recipes.create(recipeData as any);
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+        "/recipes",
+        recipeData
       );
+      expect(result.data.name).toBe("New Recipe");
+    });
 
-      expect(processedIngredients).toEqual([
-        {
-          id: "1",
-          name: "Pilsner Malt",
-          suggested_unit: "lb",
-          amount: 0,
-          unit: "lb",
+    it("should update recipe", async () => {
+      const recipeData = { name: "Updated Recipe" };
+      const mockResponse = {
+        data: { id: "1", ...recipeData },
+      };
+      (mockAxiosInstance.put as jest.Mock).mockResolvedValue(mockResponse);
+
+      const result = await ApiService.recipes.update("1", recipeData as any);
+
+      expect(mockAxiosInstance.put).toHaveBeenCalledWith(
+        "/recipes/1",
+        recipeData
+      );
+      expect(result.data.name).toBe("Updated Recipe");
+    });
+
+    it("should delete recipe", async () => {
+      const mockResponse = {
+        data: { message: "Recipe deleted" },
+      };
+      (mockAxiosInstance.delete as jest.Mock).mockResolvedValue(mockResponse);
+
+      const result = await ApiService.recipes.delete("1");
+
+      expect(mockAxiosInstance.delete).toHaveBeenCalledWith("/recipes/1");
+      expect(result.data.message).toBe("Recipe deleted");
+    });
+
+    it("should search recipes", async () => {
+      const mockResponse = {
+        data: {
+          recipes: [{ id: "1", name: "IPA Recipe" }],
         },
-        {
-          id: "2",
-          name: "Cascade Hops",
-          suggested_unit: "oz",
-          amount: 0,
-          unit: "oz",
+      };
+      (mockAxiosInstance.get as jest.Mock).mockResolvedValue(mockResponse);
+
+      const result = await ApiService.recipes.search("IPA", 1, 10);
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        "/search/recipes?q=IPA&page=1&per_page=10"
+      );
+      expect(result.data.recipes[0].name).toBe("IPA Recipe");
+    });
+
+    it("should fetch public recipes with filters", async () => {
+      const mockResponse = {
+        data: {
+          recipes: [{ id: "1", name: "Public IPA", isPublic: true }],
         },
-      ]);
+      };
+      (mockAxiosInstance.get as jest.Mock).mockResolvedValue(mockResponse);
+
+      const filters = { style: "IPA", search: "cascade" };
+      const result = await ApiService.recipes.getPublic(1, 10, filters);
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        "/recipes/public?page=1&per_page=10&style=IPA&search=cascade"
+      );
+      expect(result.data.recipes[0].name).toBe("Public IPA");
     });
   });
 
-  describe("API Configuration Validation", () => {
-    it("should validate API URL format", () => {
-      // Test the validation logic directly
-      function validateURL(url: string): boolean {
-        try {
-          new URL(url);
-          return true;
-        } catch {
-          return false;
-        }
-      }
+  describe("Brew Session Endpoints", () => {
+    it("should fetch all brew sessions", async () => {
+      const mockResponse = {
+        data: {
+          sessions: [{ id: "1", name: "Test Session" }],
+        },
+      };
+      (mockAxiosInstance.get as jest.Mock).mockResolvedValue(mockResponse);
 
-      expect(validateURL("http://localhost:5000/api")).toBe(true);
-      expect(validateURL("https://api.example.com")).toBe(true);
-      expect(validateURL("not-a-valid-url")).toBe(false);
-      expect(validateURL("")).toBe(false);
+      const result = await ApiService.brewSessions.getAll();
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        "/brew-sessions?page=1&per_page=10"
+      );
+      expect(result.data.sessions).toHaveLength(1);
     });
 
-    it("should clean trailing slashes from URLs", () => {
-      // Test URL cleaning logic directly
-      function cleanURL(url: string): string {
-        return url.replace(/\/$/, "");
-      }
+    it("should create brew session", async () => {
+      const sessionData = { recipe_id: "1", name: "New Session" };
+      const mockResponse = {
+        data: { id: "1", ...sessionData },
+      };
+      (mockAxiosInstance.post as jest.Mock).mockResolvedValue(mockResponse);
 
-      expect(cleanURL("http://localhost:5000/api/")).toBe(
-        "http://localhost:5000/api"
+      const result = await ApiService.brewSessions.create(sessionData as any);
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+        "/brew-sessions",
+        sessionData
       );
-      expect(cleanURL("http://localhost:5000/api")).toBe(
-        "http://localhost:5000/api"
+      expect(result.data.name).toBe("New Session");
+    });
+
+    it("should add fermentation entry", async () => {
+      const entryData = { temperature: 68, gravity: 1.05 };
+      const mockResponse = {
+        data: { ...entryData, timestamp: "2024-01-01T00:00:00Z" },
+      };
+      (mockAxiosInstance.post as jest.Mock).mockResolvedValue(mockResponse);
+
+      const result = await ApiService.brewSessions.addFermentationEntry(
+        "session1",
+        entryData as any
       );
-      expect(cleanURL("https://api.example.com/")).toBe(
-        "https://api.example.com"
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+        "/brew-sessions/session1/fermentation",
+        entryData
       );
+      expect(result.data.temperature).toBe(68);
     });
   });
 
-  // Additional Integration Tests for Enhanced Coverage
-  describe("Enhanced Error Normalization Logic", () => {
-    // Test the error normalization logic directly without importing the module
-    const normalizeError = (error: any) => {
-      const normalized = {
-        message: "An unexpected error occurred",
-        isNetworkError: false,
-        isTimeout: false,
-        isRetryable: false,
-        originalError: error,
-        code: undefined as string | number | undefined,
-        status: undefined as number | undefined,
-      };
-
-      // Handle Axios errors
-      if (mockAxios.isAxiosError(error)) {
-        const axiosError = error as AxiosError;
-
-        // Network or timeout errors
-        if (!axiosError.response) {
-          normalized.isNetworkError = true;
-          normalized.isRetryable = true;
-
-          if (
-            axiosError.code === "ECONNABORTED" ||
-            (axiosError.message && axiosError.message.includes("timeout"))
-          ) {
-            normalized.isTimeout = true;
-            normalized.message =
-              "Request timed out. Please check your connection and try again.";
-          } else if (
-            axiosError.code === "NETWORK_ERROR" ||
-            (axiosError.message && axiosError.message.includes("Network Error"))
-          ) {
-            normalized.message =
-              "Network error. Please check your internet connection.";
-          } else {
-            normalized.message =
-              "Unable to connect to server. Please try again.";
-          }
-
-          normalized.code = axiosError.code;
-          return normalized;
-        }
-
-        // HTTP response errors
-        const { response } = axiosError;
-        normalized.status = response.status;
-
-        // Handle specific HTTP status codes
-        switch (response.status) {
-          case 400:
-            normalized.message =
-              "Invalid request data. Please check your input.";
-            break;
-          case 401:
-            normalized.message = "Authentication failed. Please log in again.";
-            break;
-          case 403:
-            normalized.message =
-              "Access denied. You don't have permission to perform this action.";
-            break;
-          case 404:
-            normalized.message = "Resource not found.";
-            break;
-          case 409:
-            normalized.message =
-              "Conflict. The resource already exists or has been modified.";
-            break;
-          case 422:
-            normalized.message = "Validation error. Please check your input.";
-            break;
-          case 429:
-            normalized.message =
-              "Too many requests. Please wait a moment and try again.";
-            normalized.isRetryable = true;
-            break;
-          case 500:
-            normalized.message = "Server error. Please try again later.";
-            normalized.isRetryable = true;
-            break;
-          case 502:
-          case 503:
-          case 504:
-            normalized.message =
-              "Service temporarily unavailable. Please try again.";
-            normalized.isRetryable = true;
-            break;
-          default:
-            normalized.message = `Server error (${response.status}). Please try again.`;
-            if (response.status >= 500) {
-              normalized.isRetryable = true;
-            }
-        }
-
-        // Try to extract more specific error message from response
-        if (response.data && typeof response.data === "object") {
-          const data = response.data as any;
-          if (data.error && typeof data.error === "string") {
-            normalized.message = data.error;
-          } else if (data.message && typeof data.message === "string") {
-            normalized.message = data.message;
-          } else if (data.detail && typeof data.detail === "string") {
-            normalized.message = data.detail;
-          }
-        }
-
-        normalized.code = response.status;
-        return normalized;
-      }
-
-      // Handle non-Axios errors
-      if (error instanceof Error) {
-        normalized.message = error.message;
-      } else if (typeof error === "string") {
-        normalized.message = error;
-      }
-
-      return normalized;
-    };
-
-    beforeEach(() => {
-      mockAxios.isAxiosError.mockClear();
-    });
-
-    it("should normalize detailed network errors correctly", () => {
+  describe("Error Handling", () => {
+    it("should handle network errors", () => {
       const networkError = {
+        isAxiosError: true,
         code: "NETWORK_ERROR",
         message: "Network Error",
-        isAxiosError: true,
-      } as AxiosError;
+      };
 
-      mockAxios.isAxiosError.mockReturnValue(true);
+      const normalizedError = ApiService.handleApiError(networkError);
 
-      const result = normalizeError(networkError);
-
-      expect(result.isNetworkError).toBe(true);
-      expect(result.isRetryable).toBe(true);
-      expect(result.message).toBe(
-        "Network error. Please check your internet connection."
-      );
-      expect(result.code).toBe("NETWORK_ERROR");
+      expect(normalizedError.isNetworkError).toBe(true);
+      expect(normalizedError.isRetryable).toBe(true);
+      expect(normalizedError.message).toContain("Network error");
     });
 
-    it("should normalize detailed timeout errors correctly", () => {
+    it("should handle timeout errors", () => {
       const timeoutError = {
+        isAxiosError: true,
         code: "ECONNABORTED",
         message: "timeout of 15000ms exceeded",
-        isAxiosError: true,
-      } as AxiosError;
+      };
 
-      mockAxios.isAxiosError.mockReturnValue(true);
+      const normalizedError = ApiService.handleApiError(timeoutError);
 
-      const result = normalizeError(timeoutError);
-
-      expect(result.isTimeout).toBe(true);
-      expect(result.isRetryable).toBe(true);
-      expect(result.message).toBe(
-        "Request timed out. Please check your connection and try again."
-      );
+      expect(normalizedError.isTimeout).toBe(true);
+      expect(normalizedError.isRetryable).toBe(true);
+      expect(normalizedError.message).toContain("timed out");
     });
 
-    it("should normalize HTTP 403 errors correctly", () => {
-      const forbiddenError = {
+    it("should handle 401 authentication errors", () => {
+      const authError: Partial<AxiosError> = {
+        isAxiosError: true,
         response: {
-          status: 403,
-          data: { message: "Access denied" },
-        },
-        isAxiosError: true,
-      } as AxiosError;
+          status: 401,
+          data: { error: "Invalid token" },
+        } as any,
+      };
 
-      mockAxios.isAxiosError.mockReturnValue(true);
+      const normalizedError = ApiService.handleApiError(authError);
 
-      const result = normalizeError(forbiddenError);
-
-      expect(result.status).toBe(403);
-      expect(result.message).toBe("Access denied");
-      expect(result.isRetryable).toBe(false);
+      expect(normalizedError.status).toBe(401);
+      expect(normalizedError.message).toContain("Invalid token");
+      expect(normalizedError.isRetryable).toBe(false);
     });
 
-    it("should normalize HTTP 409 conflict errors correctly", () => {
-      const conflictError = {
+    it("should handle 500 server errors as retryable", () => {
+      const serverError: Partial<AxiosError> = {
+        isAxiosError: true,
         response: {
-          status: 409,
-          data: { error: "Resource already exists" },
-        },
-        isAxiosError: true,
-      } as AxiosError;
+          status: 500,
+          data: { error: "Internal server error" },
+        } as any,
+      };
 
-      mockAxios.isAxiosError.mockReturnValue(true);
+      const normalizedError = ApiService.handleApiError(serverError);
 
-      const result = normalizeError(conflictError);
-
-      expect(result.status).toBe(409);
-      expect(result.message).toBe("Resource already exists");
-      expect(result.isRetryable).toBe(false);
+      expect(normalizedError.status).toBe(500);
+      expect(normalizedError.isRetryable).toBe(true);
+      expect(normalizedError.message).toContain("Internal server error");
     });
 
-    it("should normalize HTTP 422 validation errors correctly", () => {
-      const validationError = {
-        response: {
-          status: 422,
-          data: { detail: "Validation failed for field" },
-        },
-        isAxiosError: true,
-      } as AxiosError;
+    it("should handle generic errors", () => {
+      const genericError = new Error("Something went wrong");
 
-      mockAxios.isAxiosError.mockReturnValue(true);
+      const normalizedError = ApiService.handleApiError(genericError);
 
-      const result = normalizeError(validationError);
-
-      expect(result.status).toBe(422);
-      expect(result.message).toBe("Validation failed for field");
-      expect(result.isRetryable).toBe(false);
-    });
-
-    it("should normalize HTTP 502/503/504 errors as retryable", () => {
-      const serviceErrors = [502, 503, 504];
-
-      serviceErrors.forEach(status => {
-        const serviceError = {
-          response: {
-            status,
-            data: {},
-          },
-          isAxiosError: true,
-        } as AxiosError;
-
-        mockAxios.isAxiosError.mockReturnValue(true);
-
-        const result = normalizeError(serviceError);
-
-        expect(result.status).toBe(status);
-        expect(result.message).toBe(
-          "Service temporarily unavailable. Please try again."
-        );
-        expect(result.isRetryable).toBe(true);
-      });
-    });
-
-    it("should handle generic server errors with retryable flag", () => {
-      const serverError = {
-        response: {
-          status: 507,
-          data: { info: "insufficient storage" },
-        },
-        isAxiosError: true,
-      } as AxiosError;
-
-      mockAxios.isAxiosError.mockReturnValue(true);
-
-      const result = normalizeError(serverError);
-
-      expect(result.status).toBe(507);
-      expect(result.message).toBe("Server error (507). Please try again.");
-      expect(result.isRetryable).toBe(true); // 5xx errors are retryable
+      expect(normalizedError.message).toBe("Something went wrong");
+      expect(normalizedError.isNetworkError).toBe(false);
+      expect(normalizedError.isRetryable).toBe(false);
     });
   });
 
-  describe("Enhanced Retry Logic", () => {
-    // Test retry logic directly
-    const withRetry = async <T>(
-      operation: () => Promise<T>,
+  describe("Ingredients Endpoints", () => {
+    it("should fetch ingredients with filters", async () => {
+      const mockResponse = {
+        data: {
+          ingredients: [{ id: "1", name: "Pale Malt", type: "grain" }],
+          unit_system: "metric",
+        },
+      };
+      (mockAxiosInstance.get as jest.Mock).mockResolvedValue(mockResponse);
+
+      const result = await ApiService.ingredients.getAll("grain", "pale");
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        "/ingredients?type=grain&search=pale"
+      );
+
+      // The service should process the wrapped response
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].name).toBe("Pale Malt");
+      expect(result.data[0].amount).toBe(0); // Default amount added by service
+    });
+
+    it("should handle direct array ingredient response", async () => {
+      const mockResponse = {
+        data: [{ id: "1", name: "Cascade", type: "hop", suggested_unit: "oz" }],
+      };
+      (mockAxiosInstance.get as jest.Mock).mockResolvedValue(mockResponse);
+
+      const result = await ApiService.ingredients.getAll();
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].type).toBe("hop");
+      expect(result.data[0].unit).toBe("oz"); // Should use suggested_unit
+      expect(result.data[0].amount).toBe(0); // Default amount
+    });
+  });
+
+  describe("Connection Check", () => {
+    it("should return true when health check succeeds", async () => {
+      const mockResponse = { status: 200, data: { status: "ok" } };
+      (mockAxiosInstance.get as jest.Mock).mockResolvedValue(mockResponse);
+
+      const isConnected = await ApiService.checkConnection();
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith("/health", {
+        timeout: 5000,
+      });
+      expect(isConnected).toBe(true);
+    });
+
+    it("should return false when health check fails", async () => {
+      (mockAxiosInstance.get as jest.Mock).mockRejectedValue(
+        new Error("Network error")
+      );
+
+      const isConnected = await ApiService.checkConnection();
+
+      expect(isConnected).toBe(false);
+    });
+  });
+
+  describe("Interceptors", () => {
+    let requestInterceptor: any;
+    let responseInterceptor: any;
+
+    beforeEach(() => {
+      // Get the interceptor functions from test-scoped variables (set in beforeAll)
+      requestInterceptor = testRequestInterceptor;
+      responseInterceptor = testResponseInterceptor;
+    });
+
+    it("should add authorization header when token exists", async () => {
+      mockSecureStore.getItemAsync.mockResolvedValue("test-token");
+
+      const config = {
+        headers: {},
+      };
+
+      const modifiedConfig = await requestInterceptor(config);
+
+      expect(modifiedConfig.headers.Authorization).toBe("Bearer test-token");
+    });
+
+    it("should not add authorization header when no token", async () => {
+      mockSecureStore.getItemAsync.mockResolvedValue(null);
+
+      const config = {
+        headers: {},
+      };
+
+      const modifiedConfig = await requestInterceptor(config);
+
+      expect(modifiedConfig.headers.Authorization).toBeUndefined();
+    });
+
+    it("should handle 401 responses by removing token", async () => {
+      const error: Partial<AxiosError> = {
+        response: {
+          status: 401,
+        } as any,
+      };
+
+      await expect(responseInterceptor.onRejected(error)).rejects.toBeDefined();
+
+      expect(mockSecureStore.deleteItemAsync).toHaveBeenCalledWith(
+        "access_token"
+      );
+    });
+  });
+
+  describe("Dashboard Endpoint", () => {
+    it("should fetch dashboard data", async () => {
+      const mockResponse = {
+        data: {
+          recipeCount: 5,
+          brewSessionCount: 10,
+          recentActivity: [],
+        },
+      };
+      (mockAxiosInstance.get as jest.Mock).mockResolvedValue(mockResponse);
+
+      const result = await ApiService.dashboard.getData();
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith("/dashboard");
+      expect(result.data.recipeCount).toBe(5);
+    });
+  });
+
+  // ===== ADDITIONAL LOGIC TESTS FROM MOCKED FILE =====
+
+  describe("Retry Logic", () => {
+    const withRetry = async (
+      operation: () => Promise<any>,
       isRetryable: (error: any) => boolean = () => true,
       maxAttempts: number = 3,
-      delay: number = 100
-    ): Promise<T> => {
+      delay: number = 10 // Reduced for testing
+    ) => {
       let lastError: any;
 
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -1031,180 +672,73 @@ describe("ApiService Core Functionality", () => {
         } catch (error) {
           lastError = error;
 
-          // Don't retry on last attempt or if error is not retryable
-          if (attempt === maxAttempts || !isRetryable(error)) {
+          if (attempt >= maxAttempts || !isRetryable(error)) {
             throw error;
           }
 
-          // Simple delay for tests (no exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise(resolve => setTimeout(resolve, delay * attempt));
         }
       }
 
       throw lastError;
     };
 
-    it("should handle exponential backoff timing", async () => {
-      let attemptCount = 0;
-      const timestamps: number[] = [];
+    it("should succeed on first attempt", async () => {
+      const successfulOperation = jest.fn().mockResolvedValue("success");
 
-      const failingOperation = jest.fn().mockImplementation(async () => {
-        timestamps.push(Date.now());
-        attemptCount++;
-        throw new Error(`Attempt ${attemptCount} failed`);
-      });
-
-      const start = Date.now();
-
-      try {
-        await withRetry(failingOperation, () => true, 3, 50);
-      } catch (error) {
-        // Expected to fail after 3 attempts
-      }
-
-      const duration = Date.now() - start;
-
-      expect(failingOperation).toHaveBeenCalledTimes(3);
-      // Should have some delay between attempts (at least 100ms total for 2 delays)
-      expect(duration).toBeGreaterThanOrEqual(100);
-    });
-
-    it("should handle conditional retry logic", async () => {
-      const networkError = { code: "NETWORK_ERROR", isRetryable: true };
-      const authError = { code: "UNAUTHORIZED", isRetryable: false };
-
-      const operation = jest
-        .fn()
-        .mockRejectedValueOnce(networkError)
-        .mockRejectedValueOnce(authError);
-
-      const isRetryableFn = (error: any) => error.isRetryable;
-
-      await expect(withRetry(operation, isRetryableFn, 3, 0)).rejects.toEqual(
-        authError
-      );
-
-      expect(operation).toHaveBeenCalledTimes(2);
-    });
-
-    it("should handle retry with different error types", async () => {
-      const errors = [
-        new Error("Network timeout"),
-        { message: "Server overloaded", retryable: true },
-        "String error message",
-      ];
-
-      let errorIndex = 0;
-      const operation = jest.fn().mockImplementation(async () => {
-        if (errorIndex < errors.length) {
-          throw errors[errorIndex++];
-        }
-        return "success";
-      });
-
-      const result = await withRetry(operation, () => true, 5, 0);
+      const result = await withRetry(successfulOperation);
 
       expect(result).toBe("success");
-      expect(operation).toHaveBeenCalledTimes(4); // 3 failures + 1 success
+      expect(successfulOperation).toHaveBeenCalledTimes(1);
+    });
+
+    it("should retry on retryable errors", async () => {
+      const failingOperation = jest
+        .fn()
+        .mockRejectedValueOnce(new Error("Temporary failure"))
+        .mockResolvedValue("success");
+
+      const isRetryable = jest.fn().mockReturnValue(true);
+      const result = await withRetry(failingOperation, isRetryable);
+
+      expect(result).toBe("success");
+      expect(failingOperation).toHaveBeenCalledTimes(2);
+      expect(isRetryable).toHaveBeenCalledWith(new Error("Temporary failure"));
+    });
+
+    it("should not retry on non-retryable errors", async () => {
+      const failingOperation = jest
+        .fn()
+        .mockRejectedValue(new Error("Permanent failure"));
+
+      const isRetryable = jest.fn().mockReturnValue(false);
+
+      await expect(withRetry(failingOperation, isRetryable)).rejects.toThrow(
+        "Permanent failure"
+      );
+      expect(failingOperation).toHaveBeenCalledTimes(1);
+      expect(isRetryable).toHaveBeenCalledWith(new Error("Permanent failure"));
+    });
+
+    it("should exhaust retry attempts", async () => {
+      const failingOperation = jest
+        .fn()
+        .mockRejectedValue(new Error("Always fails"));
+
+      const isRetryable = jest.fn().mockReturnValue(true);
+
+      await expect(withRetry(failingOperation, isRetryable, 3)).rejects.toThrow(
+        "Always fails"
+      );
+      expect(failingOperation).toHaveBeenCalledTimes(3);
+      expect(isRetryable).toHaveBeenCalledTimes(2); // Called for first 2 failures, not the final one
     });
   });
 
-  describe("Enhanced Token Manager Logic", () => {
-    // Test TokenManager logic independently with enhanced scenarios
-    class TestTokenManager {
-      static async getToken(): Promise<string | null> {
-        try {
-          return await mockSecureStore.getItemAsync("ACCESS_TOKEN");
-        } catch (error) {
-          return null;
-        }
-      }
-
-      static async setToken(token: string): Promise<void> {
-        try {
-          await mockSecureStore.setItemAsync("ACCESS_TOKEN", token);
-        } catch (error) {
-          throw error;
-        }
-      }
-
-      static async removeToken(): Promise<void> {
-        try {
-          await mockSecureStore.deleteItemAsync("ACCESS_TOKEN");
-        } catch (error) {
-          // Handle gracefully
-        }
-      }
-    }
-
-    it("should handle token retrieval with various error types", async () => {
-      const errorScenarios = [
-        new Error("SecureStore unavailable"),
-        { code: "STORAGE_ERROR", message: "Device storage full" },
-        "Permission denied",
-        null,
-        undefined,
-      ];
-
-      for (const error of errorScenarios) {
-        mockSecureStore.getItemAsync.mockRejectedValue(error);
-        const token = await TestTokenManager.getToken();
-        expect(token).toBeNull();
-      }
-    });
-
-    it("should handle empty or invalid tokens gracefully", async () => {
-      const invalidTokens = ["", "   ", null, undefined];
-
-      for (const invalidToken of invalidTokens) {
-        mockSecureStore.getItemAsync.mockResolvedValue(
-          invalidToken as string | null
-        );
-        const token = await TestTokenManager.getToken();
-        expect(token).toBe(invalidToken);
-      }
-    });
-
-    it("should handle token storage with edge cases", async () => {
-      const edgeCaseTokens = [
-        "very.long.jwt.token.with.many.segments.that.might.exceed.storage.limits",
-        "token with spaces and special chars !@#$%^&*()",
-        "🔐🛡️🚀", // Emoji token
-        "token\nwith\nnewlines",
-      ];
-
-      for (const token of edgeCaseTokens) {
-        mockSecureStore.setItemAsync.mockResolvedValue();
-        await TestTokenManager.setToken(token);
-        expect(mockSecureStore.setItemAsync).toHaveBeenCalledWith(
-          "ACCESS_TOKEN",
-          token
-        );
-      }
-    });
-
-    it("should handle concurrent token operations", async () => {
-      const tokens = ["token1", "token2", "token3"];
-
-      mockSecureStore.setItemAsync.mockImplementation(async (key, value) => {
-        // Simulate async delay
-        await new Promise(resolve => setTimeout(resolve, 10));
-        return;
-      });
-
-      // Attempt to set multiple tokens concurrently
-      const promises = tokens.map(token => TestTokenManager.setToken(token));
-
-      await Promise.all(promises);
-
-      expect(mockSecureStore.setItemAsync).toHaveBeenCalledTimes(3);
-    });
-  });
-
-  describe("Enhanced API Configuration Validation", () => {
-    // Test configuration validation logic with more scenarios
-    const validateAndGetApiConfig = (baseURL?: string) => {
-      if (!baseURL) {
+  describe("URL Validation Logic", () => {
+    // Mock the validation function from ApiService
+    const validateApiUrl = (url: string | undefined) => {
+      if (!url) {
         throw new Error(
           "API_URL environment variable is required. Please set EXPO_PUBLIC_API_URL in your .env file."
         );
@@ -1212,185 +746,65 @@ describe("ApiService Core Functionality", () => {
 
       // Validate URL format
       try {
-        const url = new URL(baseURL);
-        if (!["http:", "https:"].includes(url.protocol)) {
-          throw new Error(`Invalid protocol: ${url.protocol}`);
+        const parsedUrl = new URL(url);
+        if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+          throw new Error(`Invalid protocol: ${parsedUrl.protocol}`);
         }
-      } catch {
-        throw new Error(
-          `Invalid API_URL format: ${baseURL}. Please provide a valid URL.`
-        );
+      } catch (error) {
+        if (error instanceof TypeError) {
+          throw new Error(
+            `Invalid API_URL format: ${url}. Please provide a valid URL.`
+          );
+        }
+        throw error;
       }
 
-      // Ensure URL doesn't end with trailing slash for consistency
-      const cleanBaseURL = baseURL.replace(/\/+$/, "");
-
-      return {
-        BASE_URL: cleanBaseURL,
-        TIMEOUT: 15000,
-        MAX_RETRIES: 3,
-        RETRY_DELAY: 1000,
-      };
+      // Clean trailing slashes
+      return url.replace(/\/+$/, "");
     };
 
-    it("should validate complex URL structures", () => {
-      const validUrls = [
-        "https://api.example.com/v1/graphql",
-        "http://localhost:3000/api/v2",
-        "https://subdomain.domain.com:8080/path",
-        "https://192.168.1.100:5000/api",
-      ];
-
-      validUrls.forEach(url => {
-        const config = validateAndGetApiConfig(url);
-        expect(config.BASE_URL).toBe(url);
-      });
+    it("should require API URL", () => {
+      expect(() => validateApiUrl(undefined)).toThrow(
+        "API_URL environment variable is required"
+      );
+      expect(() => validateApiUrl("")).toThrow(
+        "API_URL environment variable is required"
+      );
     });
 
-    it("should handle URLs with query parameters", () => {
-      const urlWithQuery = "https://api.example.com/v1?param=value";
-      const config = validateAndGetApiConfig(urlWithQuery);
-      expect(config.BASE_URL).toBe(urlWithQuery);
+    it("should validate URL format", () => {
+      expect(() => validateApiUrl("not-a-url")).toThrow("Invalid URL");
+      expect(() => validateApiUrl("just-text")).toThrow("Invalid URL");
     });
 
-    it("should handle URLs with fragments", () => {
-      const urlWithFragment = "https://api.example.com/v1#section";
-      const config = validateAndGetApiConfig(urlWithFragment);
-      expect(config.BASE_URL).toBe(urlWithFragment);
+    it("should reject invalid protocols", () => {
+      expect(() => validateApiUrl("ftp://example.com")).toThrow(
+        "Invalid protocol: ftp:"
+      );
+      expect(() => validateApiUrl("file:///path/to/file")).toThrow(
+        "Invalid protocol: file:"
+      );
     });
 
-    it("should reject URLs with invalid protocols", () => {
-      const invalidUrls = [
-        "ftp://api.example.com",
-        "ws://api.example.com",
-        "file:///path/to/api",
-        "data:text/plain,api",
-      ];
-
-      invalidUrls.forEach(url => {
-        expect(() => validateAndGetApiConfig(url)).toThrow();
-      });
+    it("should clean trailing slashes", () => {
+      expect(validateApiUrl("https://api.example.com/")).toBe(
+        "https://api.example.com"
+      );
+      expect(validateApiUrl("https://api.example.com///")).toBe(
+        "https://api.example.com"
+      );
     });
 
-    it("should handle multiple trailing slashes", () => {
-      const config = validateAndGetApiConfig("https://api.example.com///");
-      // Multiple trailing slashes should be removed
-      expect(config.BASE_URL).toBe("https://api.example.com");
-    });
-  });
-
-  describe("Enhanced Mock Request/Response Patterns", () => {
-    it("should simulate complex error scenarios", async () => {
-      const errorScenarios = [
-        {
-          error: {
-            code: "ECONNREFUSED",
-            isAxiosError: true,
-            message: "Connection refused",
-          },
-          expectedMessage: "Unable to connect to server. Please try again.",
-        },
-        {
-          error: {
-            response: {
-              status: 429,
-              data: { error: "Rate limit exceeded", retryAfter: 60 },
-            },
-            isAxiosError: true,
-          },
-          expectedMessage: "Rate limit exceeded",
-        },
-      ];
-
-      for (const scenario of errorScenarios) {
-        mockAxiosInstance.get.mockRejectedValue(scenario.error);
-
-        try {
-          await mockAxiosInstance.get("/test");
-        } catch (error) {
-          expect(error).toEqual(scenario.error);
-        }
-      }
-    });
-
-    it("should simulate paginated response handling", () => {
-      const paginatedResponse = {
-        data: {
-          items: [
-            { id: "1", name: "Item 1" },
-            { id: "2", name: "Item 2" },
-          ],
-          pagination: {
-            current_page: 1,
-            total_pages: 5,
-            total_items: 50,
-            per_page: 10,
-            has_next: true,
-            has_previous: false,
-          },
-        },
-        status: 200,
-      };
-
-      mockAxiosInstance.get.mockResolvedValue(paginatedResponse);
-
-      return mockAxiosInstance
-        .get("/recipes?page=1&per_page=10")
-        .then((response: any) => {
-          expect(response.data.items).toHaveLength(2);
-          expect(response.data.pagination.has_next).toBe(true);
-          expect(response.data.pagination.total_items).toBe(50);
-        });
-    });
-
-    it("should simulate nested resource responses", () => {
-      const nestedResponse = {
-        data: {
-          recipe: {
-            id: "recipe-1",
-            name: "Complex IPA",
-            ingredients: [
-              {
-                id: "ing-1",
-                name: "Pale Malt",
-                amount: 10,
-                unit: "lb",
-                type: "grain",
-              },
-              {
-                id: "ing-2",
-                name: "Cascade Hops",
-                amount: 1,
-                unit: "oz",
-                type: "hop",
-                properties: {
-                  alpha_acids: 5.5,
-                  beta_acids: 4.8,
-                  cohumulone: 33,
-                },
-              },
-            ],
-            metrics: {
-              estimated_abv: 6.2,
-              estimated_ibu: 45,
-              estimated_srm: 6,
-            },
-          },
-        },
-        status: 200,
-      };
-
-      mockAxiosInstance.get.mockResolvedValue(nestedResponse);
-
-      return mockAxiosInstance
-        .get("/recipes/recipe-1")
-        .then((response: any) => {
-          expect(response.data.recipe.ingredients).toHaveLength(2);
-          expect(response.data.recipe.metrics.estimated_abv).toBe(6.2);
-          expect(
-            response.data.recipe.ingredients[1].properties.alpha_acids
-          ).toBe(5.5);
-        });
+    it("should accept valid URLs", () => {
+      expect(validateApiUrl("http://localhost:3000")).toBe(
+        "http://localhost:3000"
+      );
+      expect(validateApiUrl("https://api.example.com")).toBe(
+        "https://api.example.com"
+      );
+      expect(validateApiUrl("https://api.example.com:8080/v1")).toBe(
+        "https://api.example.com:8080/v1"
+      );
     });
   });
 });

@@ -10,7 +10,6 @@
  * - Clone recipe
  * - Export BeerXML
  * - Start brewing
- * - Share recipe
  * - Delete recipe
  *
  * @remarks Wraps BaseContextMenu via composition.
@@ -69,7 +68,6 @@ export function createDefaultRecipeActions(handlers: {
   onClone: (recipe: Recipe) => void;
   onBeerXMLExport: (recipe: Recipe) => void;
   onStartBrewing: (recipe: Recipe) => void;
-  onShare: (recipe: Recipe) => void;
   onDelete: (recipe: Recipe) => void;
 }): BaseAction<Recipe>[] {
   return [
@@ -104,14 +102,6 @@ export function createDefaultRecipeActions(handlers: {
       title: "Start Brewing",
       icon: "play-arrow",
       onPress: handlers.onStartBrewing,
-    },
-    {
-      id: "share",
-      title: "Share Recipe",
-      icon: "share",
-      onPress: handlers.onShare,
-      // Hide share for already public recipes
-      hidden: recipe => recipe.is_public,
     },
     {
       id: "delete",

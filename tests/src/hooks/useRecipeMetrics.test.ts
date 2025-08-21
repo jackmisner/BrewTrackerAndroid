@@ -204,6 +204,62 @@ describe("useRecipeMetrics - Essential Tests", () => {
     });
   });
 
+  it("should handle ingredients with missing id and name fields in sorting", () => {
+    const mockRecipeData = {
+      ...createMockRecipeData(),
+      ingredients: [
+        // Ingredient with empty fields to test sorting logic
+        {
+          amount: 2,
+          unit: "lb" as const,
+          type: "grain" as const,
+          id: "",
+          name: "",
+        },
+        {
+          amount: 1,
+          unit: "oz" as const,
+          type: "hop" as const,
+          id: "hop-1",
+          name: "Cascade",
+        },
+        {
+          amount: 3,
+          unit: "lb" as const,
+          type: "grain" as const,
+          id: "",
+          name: "",
+        },
+      ],
+    };
+
+    // Mock successful API response
+    const mockResponse = {
+      data: {
+        og: 1.05,
+        fg: 1.012,
+        abv: 5.0,
+        ibu: 30,
+        srm: 6,
+      },
+      status: 200,
+      statusText: "OK",
+      headers: {},
+      config: {} as any,
+    };
+    mockedApiService.recipes.calculateMetricsPreview.mockResolvedValue(
+      mockResponse
+    );
+
+    const wrapper = createWrapper(queryClient);
+    const { result } = renderHook(() => useRecipeMetrics(mockRecipeData), {
+      wrapper,
+    });
+
+    // Test should complete without errors despite null/undefined id/name fields
+    expect(() => result.current).not.toThrow();
+  });
+
   it("should handle API validation errors without retries", async () => {
     const mockRecipeData = createMockRecipeData();
     const validationError = {

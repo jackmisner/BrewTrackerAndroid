@@ -50,7 +50,7 @@ import {
   Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
@@ -74,6 +74,12 @@ export default function DashboardScreen() {
   const theme = useTheme();
   const styles = dashboardStyles(theme);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Pagination defaults
+  const PAGE = 1;
+  const RECENT_RECIPES_LIMIT = 5;
+  const BREW_SESSIONS_LIMIT = 20;
+  const PUBLIC_PAGE_SIZE = 1;
 
   // Context menu state
   const recipeContextMenu = useContextMenu<Recipe>();
@@ -102,9 +108,9 @@ export default function DashboardScreen() {
         // Fetch data from multiple working endpoints - use same pattern as recipes tab
         const [recipesResponse, brewSessionsResponse, publicRecipesResponse] =
           await Promise.all([
-            ApiService.recipes.getAll(1, 5), // Get first 5 recipes like original
-            ApiService.brewSessions.getAll(1, 20), // Get more brew sessions to get accurate count
-            ApiService.recipes.getPublic(1, 1), // Get public recipes count (just need pagination info)
+            ApiService.recipes.getAll(PAGE, RECENT_RECIPES_LIMIT),
+            ApiService.brewSessions.getAll(PAGE, BREW_SESSIONS_LIMIT),
+            ApiService.recipes.getPublic(PAGE, PUBLIC_PAGE_SIZE),
           ]);
 
         // Transform the data to match expected dashboard format - use same pattern as recipes tab
@@ -145,16 +151,12 @@ export default function DashboardScreen() {
   });
 
   const handleCreateRecipe = () => {
-    router.push("/(modals)/(recipes)/createRecipe");
+    router.push({ pathname: "/(modals)/(recipes)/createRecipe", params: {} });
   };
 
   const handleStartBrewSession = () => {
     // TODO: Navigate to create brew session screen when implemented
     console.log("Navigate to create brew session");
-  };
-
-  const handleBrowsePublicRecipes = () => {
-    router.push("/(tabs)/recipes");
   };
 
   const handleViewRecipes = () => {
@@ -205,6 +207,26 @@ export default function DashboardScreen() {
     brewSessionContextMenu.showMenu(brewSession, position);
   };
 
+  // Delete mutation
+  const queryClient = useQueryClient();
+  const deleteMutation = useMutation<void, unknown, string>({
+    mutationKey: ["recipes", "delete"],
+    mutationFn: async (recipeId: string) => {
+      await ApiService.recipes.delete(recipeId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (error: unknown) => {
+      console.error("Failed to delete recipe:", error);
+      Alert.alert(
+        "Delete Failed",
+        "Failed to delete recipe. Please try again.",
+        [{ text: "OK" }]
+      );
+    },
+  });
   // Context menu actions
   const recipeContextMenuActions = createDefaultRecipeActions({
     onView: (recipe: Recipe) => {
@@ -237,16 +259,31 @@ export default function DashboardScreen() {
         params: { recipeId: recipe.id },
       });
     },
-    onShare: (recipe: Recipe) => {
-      Alert.alert(
-        "Share Recipe",
-        `Sharing "${recipe.name}" - Feature coming soon!`
-      );
-    },
     onDelete: (recipe: Recipe) => {
+      // Close the context menu before prompting
+      recipeContextMenu.hideMenu();
       Alert.alert(
         "Delete Recipe",
-        `Deleting "${recipe.name}" - Feature coming soon!`
+        `Are you sure you want to delete "${recipe.name}"? This action cannot be undone.`,
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () => {
+              if (deleteMutation.isPending) return;
+              const id = String(recipe.id);
+              deleteMutation.mutate(id, {
+                onSuccess: () => {
+                  Alert.alert("Success", "Recipe deleted successfully");
+                },
+              });
+            },
+          },
+        ]
       );
     },
   });
@@ -617,7 +654,7 @@ export default function DashboardScreen() {
 
         <TouchableOpacity
           style={styles.actionCard}
-          onPress={handleBrowsePublicRecipes}
+          onPress={handleViewPublicRecipes}
         >
           <MaterialIcons name="public" size={24} color={theme.colors.primary} />
           <View style={styles.actionContent}>

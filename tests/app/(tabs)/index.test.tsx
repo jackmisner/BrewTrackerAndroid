@@ -1,8 +1,7 @@
 import React from "react";
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
-import { Alert } from "react-native";
 import DashboardScreen from "../../../app/(tabs)/index";
-import { mockData, scenarios, testUtils } from "../../testUtils";
+import { mockData, testUtils } from "../../testUtils";
 
 // Comprehensive React Native mocking
 jest.mock("react-native", () => ({
@@ -28,6 +27,20 @@ jest.mock("@expo/vector-icons", () => ({
 
 jest.mock("@tanstack/react-query", () => ({
   useQuery: jest.fn(),
+  useMutation: jest.fn(() => ({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    isLoading: false,
+    isSuccess: false,
+    isError: false,
+    reset: jest.fn(),
+  })),
+  useQueryClient: jest.fn(() => ({
+    invalidateQueries: jest.fn(),
+    refetchQueries: jest.fn(),
+    setQueryData: jest.fn(),
+    getQueryData: jest.fn(),
+  })),
 }));
 
 jest.mock("expo-router", () => ({
@@ -312,9 +325,10 @@ describe("DashboardScreen", () => {
 
       fireEvent.press(createRecipeButton);
 
-      expect(mockRouter.push).toHaveBeenCalledWith(
-        "/(modals)/(recipes)/createRecipe"
-      );
+      expect(mockRouter.push).toHaveBeenCalledWith({
+        pathname: "/(modals)/(recipes)/createRecipe",
+        params: {},
+      });
     });
 
     it("should navigate to recipes tab when recipes stat is pressed", () => {
@@ -359,7 +373,10 @@ describe("DashboardScreen", () => {
 
       fireEvent.press(browsePublicButton);
 
-      expect(mockRouter.push).toHaveBeenCalledWith("/(tabs)/recipes");
+      expect(mockRouter.push).toHaveBeenCalledWith({
+        params: { activeTab: "public" },
+        pathname: "/(tabs)/recipes",
+      });
     });
   });
 

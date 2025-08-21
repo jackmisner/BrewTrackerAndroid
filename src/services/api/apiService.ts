@@ -103,7 +103,11 @@ import {
  * @throws Error if API URL is missing or invalid
  */
 function validateAndGetApiConfig() {
-  const baseURL = process.env.EXPO_PUBLIC_API_URL;
+  // For testing, allow override through global.__TEST_API_URL
+  const baseURL =
+    process.env.EXPO_PUBLIC_API_URL ||
+    (typeof global !== "undefined" && (global as any).__TEST_API_URL) ||
+    (process.env.NODE_ENV === "test" ? "http://localhost:5000/api" : null);
 
   if (!baseURL) {
     throw new Error(

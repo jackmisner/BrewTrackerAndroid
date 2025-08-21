@@ -20,9 +20,11 @@ export interface MenuDimensions {
 export function calculateMenuPosition(
   touchPosition: Position,
   menuDimensions: MenuDimensions,
-  padding: number = 20
+  padding: number = 20,
+  bottomReservedSpace: number = 130 // tab bar + comfort/safe-area
 ): Position {
   const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
+  const bottomPadding = Math.max(padding, bottomReservedSpace);
 
   let x = touchPosition.x - menuDimensions.width / 2;
   let y = touchPosition.y - 100; // Position above the touch point by default
@@ -38,9 +40,9 @@ export function calculateMenuPosition(
   if (y < padding) {
     // Position below the touch point if there's no room above
     y = touchPosition.y + 20;
-  } else if (y + menuDimensions.height > screenHeight - padding) {
-    // Position above with more space if needed
-    y = screenHeight - menuDimensions.height - padding;
+  } else if (y + menuDimensions.height > screenHeight - bottomPadding) {
+    // Position above with extra space for bottom positioning
+    y = screenHeight - menuDimensions.height - bottomPadding;
   }
 
   return { x, y };

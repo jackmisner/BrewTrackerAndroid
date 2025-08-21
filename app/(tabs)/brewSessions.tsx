@@ -46,7 +46,7 @@ import {
   Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import ApiService from "@services/api/apiService";
 import { BrewSession } from "@src/types";
@@ -113,6 +113,33 @@ export default function BrewSessionsScreen() {
     staleTime: 1000 * 60 * 2, // Cache for 2 minutes
   });
 
+  // Delete mutation
+  const queryClient = useQueryClient();
+  const deleteMutation = useMutation<unknown, unknown, string>({
+    mutationKey: ["deleteBrewSession"],
+    mutationFn: async (brewSessionId: string) => {
+      return ApiService.brewSessions.delete(brewSessionId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["brewSessions"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (error, brewSessionId) => {
+      console.error("Failed to delete brew session:", error);
+      Alert.alert(
+        "Delete Failed",
+        "Failed to delete brew session. Please try again.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Retry",
+            onPress: () => deleteMutation.mutate(brewSessionId as string),
+          },
+        ]
+      );
+    },
+  });
+
   const allBrewSessions = brewSessionsData?.brew_sessions || [];
   const activeBrewSessions = allBrewSessions.filter(
     session => session.status !== "completed"
@@ -172,7 +199,26 @@ export default function BrewSessionsScreen() {
     onDelete: (brewSession: BrewSession) => {
       Alert.alert(
         "Delete Session",
-        `Deleting "${brewSession.name}" - Feature coming soon!`
+        `Are you sure you want to delete "${brewSession.name}"? This action cannot be undone.`,
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () => {
+              if (deleteMutation.isPending) return;
+              contextMenu.hideMenu();
+              deleteMutation.mutate(brewSession.id, {
+                onSuccess: () => {
+                  Alert.alert("Success", "Brew session deleted successfully");
+                },
+              });
+            },
+          },
+        ]
       );
     },
   });
