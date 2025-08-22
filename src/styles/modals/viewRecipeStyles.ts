@@ -298,6 +298,71 @@ export const viewRecipeStyles = (theme: ThemeContextValue) =>
       fontWeight: "600",
     },
 
+    // Version History styles
+    versionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 8,
+    },
+    versionInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    versionNumber: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.colors.primary,
+    },
+    currentBadge: {
+      backgroundColor: theme.colors.primary,
+      borderRadius: 4,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+    },
+    currentBadgeText: {
+      color: "#fff",
+      fontSize: 10,
+      fontWeight: "600",
+    },
+    versionDate: {
+      fontSize: 12,
+      color: theme.colors.textMuted,
+    },
+    versionName: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.colors.text,
+      marginBottom: 4,
+    },
+    versionDescription: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      lineHeight: 20,
+      marginBottom: 8,
+    },
+    versionMetrics: {
+      flexDirection: "row",
+      gap: 16,
+      marginBottom: 4,
+    },
+    versionMetric: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+    },
+    versionAuthor: {
+      fontSize: 12,
+      color: theme.colors.textMuted,
+      fontStyle: "italic",
+    },
+    sectionSubtitle: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      marginBottom: 16,
+      lineHeight: 20,
+    },
+
     // Spacing
     bottomSpacing: {
       height: 32,

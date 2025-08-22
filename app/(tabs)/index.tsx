@@ -227,6 +227,62 @@ export default function DashboardScreen() {
       );
     },
   });
+
+  // Clone mutation
+  const cloneMutation = useMutation({
+    mutationKey: ["recipes", "clone"],
+    mutationFn: async (recipe: Recipe) => {
+      console.log("🔍 Dashboard Clone Debug - Simple logic:", {
+        recipe_name: recipe.name,
+        is_public: recipe.is_public,
+      });
+
+      if (recipe.is_public) {
+        // Public recipe cloning
+        const author = recipe.username || recipe.original_author || "Unknown";
+        console.log(
+          "🔍 Dashboard Clone Debug - Using PUBLIC clone with author:",
+          author
+        );
+        return ApiService.recipes.clonePublic(recipe.id, author);
+      } else {
+        // Private recipe versioning
+        console.log(
+          "🔍 Dashboard Clone Debug - Using PRIVATE clone (recipe is not public)"
+        );
+        return ApiService.recipes.clone(recipe.id);
+      }
+    },
+    onSuccess: (response, recipe) => {
+      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      const cloneType = recipe.is_public ? "cloned" : "versioned";
+      Alert.alert(
+        "Recipe Cloned",
+        `Successfully ${cloneType} "${recipe.name}"`,
+        [
+          {
+            text: "View Clone",
+            onPress: () => {
+              router.push({
+                pathname: "/(modals)/(recipes)/viewRecipe",
+                params: { recipe_id: response.data.recipe_id },
+              });
+            },
+          },
+          { text: "OK" },
+        ]
+      );
+    },
+    onError: (error: unknown, recipe) => {
+      console.error("Failed to clone recipe:", error);
+      Alert.alert(
+        "Clone Failed",
+        `Failed to clone "${recipe.name}". Please try again.`,
+        [{ text: "OK" }]
+      );
+    },
+  });
   // Context menu actions
   const recipeContextMenuActions = createDefaultRecipeActions({
     onView: (recipe: Recipe) => {
@@ -242,10 +298,8 @@ export default function DashboardScreen() {
       });
     },
     onClone: (recipe: Recipe) => {
-      Alert.alert(
-        "Clone Recipe",
-        `Cloning "${recipe.name}" - Feature coming soon!`
-      );
+      recipeContextMenu.hideMenu();
+      cloneMutation.mutate(recipe);
     },
     onBeerXMLExport: (recipe: Recipe) => {
       Alert.alert(
@@ -370,6 +424,11 @@ export default function DashboardScreen() {
           <Text style={styles.recentTitle} numberOfLines={1}>
             {recipe.name}
           </Text>
+          {recipe.version && (
+            <View style={styles.versionBadge}>
+              <Text style={styles.versionText}>v{recipe.version}</Text>
+            </View>
+          )}
         </View>
         <Text style={styles.recentSubtitle}>
           {recipe.style || "Unknown Style"}
@@ -559,7 +618,7 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.versionFooter}>
-          <Text style={styles.versionText}>
+          <Text style={styles.versionFooterText}>
             BrewTracker Mobile v{Constants.expoConfig?.version || "0.1.0"}
           </Text>
         </View>
@@ -701,7 +760,7 @@ export default function DashboardScreen() {
       </View>
 
       <View style={styles.versionFooter}>
-        <Text style={styles.versionText}>
+        <Text style={styles.versionFooterText}>
           BrewTracker Mobile v{Constants.expoConfig?.version || "0.1.0"}
         </Text>
       </View>

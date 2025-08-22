@@ -148,6 +148,18 @@ export const dashboardStyles = (theme: ThemeContextValue) =>
       color: theme.colors.text,
       flex: 1,
     },
+    versionBadge: {
+      backgroundColor: theme.colors.primary,
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      marginLeft: 8,
+    },
+    versionText: {
+      color: "#fff",
+      fontSize: 10,
+      fontWeight: "600",
+    },
     recentSubtitle: {
       fontSize: 14,
       color: theme.colors.textSecondary,
@@ -176,7 +188,7 @@ export const dashboardStyles = (theme: ThemeContextValue) =>
       paddingVertical: 16,
       marginTop: 8,
     },
-    versionText: {
+    versionFooterText: {
       fontSize: 12,
       color: theme.colors.textMuted,
       fontWeight: "500",

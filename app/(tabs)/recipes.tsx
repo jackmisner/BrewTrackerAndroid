@@ -152,6 +152,84 @@ export default function RecipesScreen() {
     },
   });
 
+  // Clone mutation
+  const cloneMutation = useMutation({
+    mutationKey: ["recipes", "clone"],
+    mutationFn: async (recipe: Recipe) => {
+      console.log("🔍 Clone Debug - Simple logic:", {
+        recipe_name: recipe.name,
+        is_public: recipe.is_public,
+        tab: activeTab,
+      });
+
+      if (recipe.is_public) {
+        // Public recipe cloning
+        const author = recipe.username || recipe.original_author || "Unknown";
+        console.log("🔍 Clone Debug - Using PUBLIC clone with author:", author);
+        return ApiService.recipes.clonePublic(recipe.id, author);
+      } else {
+        // Private recipe versioning
+        console.log(
+          "🔍 Clone Debug - Using PRIVATE clone (recipe is not public)"
+        );
+        return ApiService.recipes.clone(recipe.id);
+      }
+    },
+    onSuccess: (response, recipe) => {
+      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      const cloneType = recipe.is_public ? "cloned" : "versioned";
+      Alert.alert(
+        "Recipe Cloned",
+        `Successfully ${cloneType} "${recipe.name}"`,
+        [
+          {
+            text: "View Clone",
+            onPress: () => {
+              router.push({
+                pathname: "/(modals)/(recipes)/viewRecipe",
+                params: { recipe_id: response.data.recipe_id },
+              });
+            },
+          },
+          { text: "OK" },
+        ]
+      );
+    },
+    onError: (error: unknown, recipe) => {
+      console.error("❌ Clone Error - Full error object:", error);
+      console.error("❌ Clone Error - Recipe being cloned:", {
+        id: recipe.id,
+        name: recipe.name,
+        is_public: recipe.is_public,
+        is_owner: recipe.is_owner,
+      });
+
+      // Try to extract more error details
+      if (error && typeof error === "object" && "response" in error) {
+        const axiosError = error as any;
+        console.error(
+          "❌ Clone Error - Response data:",
+          axiosError.response?.data
+        );
+        console.error(
+          "❌ Clone Error - Response status:",
+          axiosError.response?.status
+        );
+        console.error(
+          "❌ Clone Error - Response headers:",
+          axiosError.response?.headers
+        );
+      }
+
+      Alert.alert(
+        "Clone Failed",
+        `Failed to clone "${recipe.name}". Please try again.`,
+        [{ text: "OK" }]
+      );
+    },
+  });
+
   const currentData = activeTab === "my" ? myRecipesData : publicRecipesData;
   const currentRecipes = currentData?.recipes || [];
   const isLoading =
@@ -205,11 +283,8 @@ export default function RecipesScreen() {
       });
     },
     onClone: (recipe: Recipe) => {
-      // TODO: Implement recipe cloning functionality
-      Alert.alert(
-        "Clone Recipe",
-        `Cloning "${recipe.name}" - Feature coming soon!`
-      );
+      contextMenu.hideMenu();
+      cloneMutation.mutate(recipe);
     },
     onBeerXMLExport: (recipe: Recipe) => {
       // TODO: Implement BeerXML export functionality
@@ -260,9 +335,16 @@ export default function RecipesScreen() {
         onLongPress={event => handleRecipeLongPress(recipe, event)}
       >
         <View style={styles.recipeHeader}>
-          <Text style={styles.recipeName} numberOfLines={1}>
-            {recipe.name || "Unnamed Recipe"}
-          </Text>
+          <View style={styles.recipeHeaderTop}>
+            <Text style={styles.recipeName} numberOfLines={1}>
+              {recipe.name || "Unnamed Recipe"}
+            </Text>
+            {recipe.version && (
+              <View style={styles.versionBadge}>
+                <Text style={styles.versionText}>v{recipe.version}</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.recipeStyle}>
             {recipe.style || "Unknown Style"}
           </Text>
