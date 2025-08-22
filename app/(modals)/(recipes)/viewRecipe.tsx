@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import ApiService from "@services/api/apiService";
 import { Recipe } from "@src/types";
+import { RecipeVersionHistoryResponse } from "@src/types/api";
 import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
 import { useTheme } from "@contexts/ThemeContext";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
@@ -64,6 +65,19 @@ export default function ViewRecipeScreen() {
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
+  // Query for version history - moved up to avoid conditional hook usage
+  const { data: versionHistoryData } = useQuery<RecipeVersionHistoryResponse>({
+    queryKey: ["versionHistory", recipe_id],
+    queryFn: async () => {
+      if (!recipe_id) throw new Error("No recipe ID provided");
+      const response = await ApiService.recipes.getVersionHistory(recipe_id);
+      return response.data;
+    },
+    enabled: !!recipe_id && !!recipeData, // Only run when we have recipe data
+    retry: 1,
+    staleTime: 1000 * 60 * 5,
+  });
+
   /**
    * Pull-to-refresh handler
    * Manually triggers a refetch of the recipe data
@@ -104,6 +118,18 @@ export default function ViewRecipeScreen() {
     if (recipe_id) {
       router.push({
         pathname: "/(modals)/(recipes)/editRecipe",
+        params: { recipe_id: recipe_id },
+      });
+    }
+  };
+
+  /**
+   * Navigation handler for viewing version history
+   */
+  const handleViewVersionHistory = () => {
+    if (recipe_id) {
+      router.push({
+        pathname: "/(modals)/(recipes)/versionHistory",
         params: { recipe_id: recipe_id },
       });
     }
@@ -320,6 +346,14 @@ export default function ViewRecipeScreen() {
         </Text>
         {/* Action buttons */}
         <View style={styles.headerActions}>
+          {(recipe.version && recipe.version > 1) || recipe.parent_recipe_id ? (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleViewVersionHistory}
+            >
+              <MaterialIcons name="timeline" size={22} color="#f4511e" />
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             style={styles.actionButton}
             onPress={handleEditRecipe}
@@ -376,6 +410,105 @@ export default function ViewRecipeScreen() {
               </View>
             )}
           </View>
+
+          {/* Version Information */}
+          {(recipe.version ||
+            recipe.parent_recipe_id ||
+            recipe.original_author ||
+            recipe.clone_count) && (
+            <View style={styles.metadataContainer}>
+              {recipe.version && (
+                <View style={styles.metadataItem}>
+                  <MaterialIcons name="timeline" size={16} color="#666" />
+                  <Text style={styles.metadataText}>
+                    Version {recipe.version}
+                  </Text>
+                </View>
+              )}
+
+              {/* Show navigation to immediate parent if available */}
+              {versionHistoryData?.immediate_parent && (
+                <TouchableOpacity
+                  style={styles.metadataItem}
+                  onPress={() => {
+                    router.push({
+                      pathname: "/(modals)/(recipes)/viewRecipe",
+                      params: {
+                        recipe_id:
+                          versionHistoryData.immediate_parent!.recipe_id,
+                      },
+                    });
+                  }}
+                >
+                  <MaterialIcons
+                    name="arrow-back"
+                    size={16}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.metadataText,
+                      { color: theme.colors.primary },
+                    ]}
+                  >
+                    View Parent Recipe (v
+                    {versionHistoryData.immediate_parent.version})
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Show navigation to root recipe if this isn't v1 and not the immediate parent */}
+              {versionHistoryData?.root_recipe &&
+                versionHistoryData.root_recipe.recipe_id !== recipe_id &&
+                versionHistoryData.root_recipe.recipe_id !==
+                  versionHistoryData.immediate_parent?.recipe_id && (
+                  <TouchableOpacity
+                    style={styles.metadataItem}
+                    onPress={() => {
+                      router.push({
+                        pathname: "/(modals)/(recipes)/viewRecipe",
+                        params: {
+                          recipe_id: versionHistoryData.root_recipe!.recipe_id,
+                        },
+                      });
+                    }}
+                  >
+                    <MaterialIcons
+                      name="home"
+                      size={16}
+                      color={theme.colors.primary}
+                    />
+                    <Text
+                      style={[
+                        styles.metadataText,
+                        { color: theme.colors.primary },
+                      ]}
+                    >
+                      View v1
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+              {recipe.original_author &&
+                recipe.original_author !== recipe.username && (
+                  <View style={styles.metadataItem}>
+                    <MaterialIcons name="person" size={16} color="#666" />
+                    <Text style={styles.metadataText}>
+                      Originally by {recipe.original_author}
+                    </Text>
+                  </View>
+                )}
+              {recipe.clone_count && recipe.clone_count > 0 && (
+                <View style={styles.metadataItem}>
+                  <MaterialIcons name="content-copy" size={16} color="#666" />
+                  <Text style={styles.metadataText}>
+                    {recipe.clone_count}{" "}
+                    {recipe.clone_count === 1 ? "clone" : "clones"}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Brewing Metrics - Using Reusable Component */}

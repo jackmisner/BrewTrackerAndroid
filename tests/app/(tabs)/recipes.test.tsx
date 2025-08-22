@@ -1,7 +1,7 @@
 import React from "react";
-import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
+import { fireEvent, waitFor, act } from "@testing-library/react-native";
 import RecipesScreen from "../../../app/(tabs)/recipes";
-import { mockData, testUtils } from "../../testUtils";
+import { mockData, testUtils, renderWithProviders } from "../../testUtils";
 
 // Comprehensive React Native mocking
 jest.mock("react-native", () => ({
@@ -66,6 +66,12 @@ jest.mock("@services/api/apiService", () => ({
 
 jest.mock("@contexts/ThemeContext", () => ({
   useTheme: jest.fn(),
+  ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+jest.mock("@src/contexts/AuthContext", () => ({
+  useAuth: jest.fn(),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock("@styles/tabs/recipesStyles", () => ({
@@ -162,12 +168,27 @@ const mockUseLocalSearchParams = require("expo-router").useLocalSearchParams;
 
 // Setup mocks
 require("@contexts/ThemeContext").useTheme.mockReturnValue(mockTheme);
+require("@src/contexts/AuthContext").useAuth.mockReturnValue({
+  user: mockData.user(),
+  isAuthenticated: true,
+  error: null,
+  isLoading: false,
+});
 
 describe("RecipesScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     testUtils.resetCounters();
     mockUseLocalSearchParams.mockReturnValue({});
+
+    // Restore context mocks after clearAllMocks
+    require("@contexts/ThemeContext").useTheme.mockReturnValue(mockTheme);
+    require("@src/contexts/AuthContext").useAuth.mockReturnValue({
+      user: mockData.user(),
+      isAuthenticated: true,
+      error: null,
+      isLoading: false,
+    });
 
     // Reset the useQuery mock to return default values for both queries
     mockUseQuery.mockImplementation(() => ({
@@ -197,7 +218,9 @@ describe("RecipesScreen", () => {
     });
 
     it("should render my recipes tab as active by default", () => {
-      const { getByText } = render(<RecipesScreen />);
+      const { getByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       expect(getByText("My Recipes")).toBeTruthy();
       expect(getByText("Public")).toBeTruthy();
@@ -206,7 +229,9 @@ describe("RecipesScreen", () => {
     it("should switch to public tab when URL parameter is set", () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "public" });
 
-      const { getByText } = render(<RecipesScreen />);
+      const { getByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       expect(getByText("Public")).toBeTruthy();
     });
@@ -214,7 +239,9 @@ describe("RecipesScreen", () => {
     it("should navigate to my recipes tab when pressed from public tab", () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "public" });
 
-      const { getByText } = render(<RecipesScreen />);
+      const { getByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
       const myRecipesTab = getByText("My Recipes");
 
       fireEvent.press(myRecipesTab);
@@ -226,7 +253,9 @@ describe("RecipesScreen", () => {
     });
 
     it("should navigate to public tab when pressed", () => {
-      const { getByText } = render(<RecipesScreen />);
+      const { getByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
       const publicTab = getByText("Public");
 
       fireEvent.press(publicTab);
@@ -245,13 +274,17 @@ describe("RecipesScreen", () => {
     });
 
     it("should show search bar only for public recipes", () => {
-      const { getByPlaceholderText } = render(<RecipesScreen />);
+      const { getByPlaceholderText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       expect(getByPlaceholderText("Search public recipes...")).toBeTruthy();
     });
 
     it("should update search query when typing", () => {
-      const { getByPlaceholderText } = render(<RecipesScreen />);
+      const { getByPlaceholderText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
       const searchInput = getByPlaceholderText("Search public recipes...");
 
       fireEvent.changeText(searchInput, "IPA");
@@ -260,7 +293,9 @@ describe("RecipesScreen", () => {
     });
 
     it("should show clear button when search query exists", () => {
-      const { getByPlaceholderText } = render(<RecipesScreen />);
+      const { getByPlaceholderText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
       const searchInput = getByPlaceholderText("Search public recipes...");
 
       fireEvent.changeText(searchInput, "IPA");
@@ -270,7 +305,12 @@ describe("RecipesScreen", () => {
     });
 
     it("should clear search query when clear button is pressed", () => {
-      const { getByPlaceholderText, getByTestId } = render(<RecipesScreen />);
+      const { getByPlaceholderText, getByTestId } = renderWithProviders(
+        <RecipesScreen />,
+        {
+          initialAuthState: testUtils.createAuthenticatedState(),
+        }
+      );
       const searchInput = getByPlaceholderText("Search public recipes...");
 
       fireEvent.changeText(searchInput, "IPA");
@@ -306,7 +346,9 @@ describe("RecipesScreen", () => {
         }
       });
 
-      const { getByText } = render(<RecipesScreen />);
+      const { getByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       expect(getByText("Loading recipes...")).toBeTruthy();
     });
@@ -335,7 +377,9 @@ describe("RecipesScreen", () => {
         }
       });
 
-      const { getByText } = render(<RecipesScreen />);
+      const { getByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       expect(getByText("Loading recipes...")).toBeTruthy();
     });
@@ -365,7 +409,9 @@ describe("RecipesScreen", () => {
         }
       });
 
-      const { getByText } = render(<RecipesScreen />);
+      const { getByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       expect(getByText("Backend Not Available")).toBeTruthy();
       expect(
@@ -399,7 +445,9 @@ describe("RecipesScreen", () => {
         }
       });
 
-      const { getByText } = render(<RecipesScreen />);
+      const { getByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
       const retryButton = getByText("Retry");
 
       fireEvent.press(retryButton);
@@ -457,7 +505,9 @@ describe("RecipesScreen", () => {
     });
 
     it("should render FlatList with recipe data", () => {
-      const { queryByText } = render(<RecipesScreen />);
+      const { queryByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       // Verify the component renders tabs correctly with recipe data
       expect(queryByText("My Recipes")).toBeTruthy();
@@ -467,7 +517,9 @@ describe("RecipesScreen", () => {
     });
 
     it("should provide correct data to FlatList", () => {
-      const { queryByText } = render(<RecipesScreen />);
+      const { queryByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       // Verify component processes recipe data correctly by checking UI structure
       expect(queryByText("My Recipes")).toBeTruthy();
@@ -477,7 +529,9 @@ describe("RecipesScreen", () => {
 
     it("should handle recipe navigation logic", () => {
       const mockPush = require("expo-router").router.push;
-      const { queryByText } = render(<RecipesScreen />);
+      const { queryByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       // Verify navigation setup by checking router is available
       expect(mockPush).toBeDefined();
@@ -497,7 +551,9 @@ describe("RecipesScreen", () => {
         }
       );
 
-      const { queryByText } = render(<RecipesScreen />);
+      const { queryByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       // Verify context menu hook was called and component renders correctly
       expect(
@@ -513,7 +569,9 @@ describe("RecipesScreen", () => {
     });
 
     it("should show empty state for my recipes", () => {
-      const { getByText } = render(<RecipesScreen />);
+      const { getByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       expect(getByText("No Recipes Yet")).toBeTruthy();
       expect(
@@ -525,14 +583,18 @@ describe("RecipesScreen", () => {
     it("should show empty state for public recipes", () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "public" });
 
-      const { getByText } = render(<RecipesScreen />);
+      const { getByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       expect(getByText("No Public Recipes Found")).toBeTruthy();
       expect(getByText("Try adjusting your search terms")).toBeTruthy();
     });
 
     it("should navigate to create recipe from empty state", () => {
-      const { getByText } = render(<RecipesScreen />);
+      const { getByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
       const createButton = getByText("Create Recipe");
 
       fireEvent.press(createButton);
@@ -550,7 +612,9 @@ describe("RecipesScreen", () => {
     });
 
     it("should show floating action button only for my recipes tab", () => {
-      const { queryByText } = render(<RecipesScreen />);
+      const { queryByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       // Verify component renders my recipes tab correctly (which should show FAB)
       expect(queryByText("My Recipes")).toBeTruthy();
@@ -560,7 +624,9 @@ describe("RecipesScreen", () => {
     it("should not show floating action button for public recipes tab", () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "public" });
 
-      const { queryByText } = render(<RecipesScreen />);
+      const { queryByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       // Verify component handles public tab state correctly
       expect(queryByText("My Recipes")).toBeTruthy();
@@ -593,7 +659,9 @@ describe("RecipesScreen", () => {
         }
       });
 
-      render(<RecipesScreen />);
+      renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       // Since we can't easily test RefreshControl directly due to mocking,
       // we'll test that the refetch function is available
@@ -625,7 +693,9 @@ describe("RecipesScreen", () => {
         }
       });
 
-      render(<RecipesScreen />);
+      renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       // Since we can't easily test RefreshControl directly due to mocking,
       // we'll test that the refetch function is available
@@ -665,7 +735,9 @@ describe("RecipesScreen", () => {
     });
 
     it("should handle author display for public recipes", () => {
-      const { queryByText } = render(<RecipesScreen />);
+      const { queryByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       // Verify component renders correctly with author display logic
       expect(queryByText("My Recipes")).toBeTruthy();
@@ -699,7 +771,9 @@ describe("RecipesScreen", () => {
         }
       });
 
-      const { queryByText } = render(<RecipesScreen />);
+      const { queryByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       // Verify component handles anonymous user logic correctly
       expect(queryByText("My Recipes")).toBeTruthy();
@@ -724,7 +798,9 @@ describe("RecipesScreen", () => {
     });
 
     it("should create context menu actions with correct handlers", () => {
-      render(<RecipesScreen />);
+      renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       expect(
         require("@src/components/ui/ContextMenu/RecipeContextMenu")
@@ -778,7 +854,9 @@ describe("RecipesScreen", () => {
         }
       });
 
-      const { queryByText } = render(<RecipesScreen />);
+      const { queryByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
 
       // Recipe with empty name should not be rendered
       expect(queryByText("Unnamed Recipe")).toBeNull();
