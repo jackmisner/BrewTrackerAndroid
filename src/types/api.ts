@@ -224,21 +224,33 @@ export interface LegacyVersionEntry {
 }
 
 // Union type for version history responses based on actual API properties
+export type EnhancedRecipeVersionHistoryResponse = {
+  // Enhanced API response - has all_versions Array
+  current_version: number;
+  immediate_parent?: ParentInfo;
+  root_recipe?: ParentInfo;
+  all_versions: VersionEntry[];
+  total_versions: number;
+  // Explicitly exclude legacy-only fields in this variant
+  parent_recipe?: never;
+  child_versions?: never;
+};
+
+export type LegacyRecipeVersionHistoryResponse = {
+  // Legacy API response - has parent_recipe and (optionally) child_versions
+  current_version: number;
+  parent_recipe?: ParentInfo;
+  child_versions?: ParentInfo[];
+  // Explicitly exclude enhanced-only fields in this variant
+  all_versions?: never;
+  total_versions?: never;
+  immediate_parent?: never;
+  root_recipe?: never;
+};
+
 export type RecipeVersionHistoryResponse =
-  | {
-      // Enhanced API response - has all_versions array
-      current_version: number;
-      immediate_parent?: ParentInfo;
-      root_recipe?: ParentInfo;
-      all_versions: VersionEntry[];
-      total_versions: number;
-    }
-  | {
-      // Legacy API response - has parent_recipe and child_versions
-      current_version: number;
-      parent_recipe?: ParentInfo;
-      child_versions?: LegacyVersionEntry[];
-    };
+  | EnhancedRecipeVersionHistoryResponse
+  | LegacyRecipeVersionHistoryResponse;
 
 // Type guard functions for version history responses
 export function isEnhancedVersionHistoryResponse(
