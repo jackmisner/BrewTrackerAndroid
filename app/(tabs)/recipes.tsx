@@ -156,22 +156,12 @@ export default function RecipesScreen() {
   const cloneMutation = useMutation({
     mutationKey: ["recipes", "clone"],
     mutationFn: async (recipe: Recipe) => {
-      console.log("🔍 Clone Debug - Simple logic:", {
-        recipe_name: recipe.name,
-        is_public: recipe.is_public,
-        tab: activeTab,
-      });
-
       if (recipe.is_public) {
         // Public recipe cloning
         const author = recipe.username || recipe.original_author || "Unknown";
-        console.log("🔍 Clone Debug - Using PUBLIC clone with author:", author);
         return ApiService.recipes.clonePublic(recipe.id, author);
       } else {
         // Private recipe versioning
-        console.log(
-          "🔍 Clone Debug - Using PRIVATE clone (recipe is not public)"
-        );
         return ApiService.recipes.clone(recipe.id);
       }
     },
@@ -205,21 +195,31 @@ export default function RecipesScreen() {
         is_owner: recipe.is_owner,
       });
 
-      // Try to extract more error details
+      // Try to extract more error details (dev-only, redact in prod)
       if (error && typeof error === "object" && "response" in error) {
         const axiosError = error as any;
-        console.error(
-          "❌ Clone Error - Response data:",
-          axiosError.response?.data
-        );
-        console.error(
-          "❌ Clone Error - Response status:",
-          axiosError.response?.status
-        );
-        console.error(
-          "❌ Clone Error - Response headers:",
-          axiosError.response?.headers
-        );
+        if (__DEV__) {
+          console.error(
+            "❌ Clone Error - Response status:",
+            axiosError.response?.status
+          );
+          console.error(
+            "❌ Clone Error - Response data (sanitized):",
+            axiosError.response?.data
+          );
+          // Avoid logging full headers; explicitly whitelist safe fields if needed
+          const { "content-type": contentType, date } =
+            axiosError.response?.headers ?? {};
+          console.error("❌ Clone Error - Response headers (partial):", {
+            contentType,
+            date,
+          });
+        } else {
+          console.error("❌ Clone Error", {
+            status: axiosError.response?.status,
+            message: axiosError.message,
+          });
+        }
       }
 
       Alert.alert(

@@ -232,24 +232,12 @@ export default function DashboardScreen() {
   const cloneMutation = useMutation({
     mutationKey: ["recipes", "clone"],
     mutationFn: async (recipe: Recipe) => {
-      console.log("🔍 Dashboard Clone Debug - Simple logic:", {
-        recipe_name: recipe.name,
-        is_public: recipe.is_public,
-      });
-
       if (recipe.is_public) {
         // Public recipe cloning
         const author = recipe.username || recipe.original_author || "Unknown";
-        console.log(
-          "🔍 Dashboard Clone Debug - Using PUBLIC clone with author:",
-          author
-        );
         return ApiService.recipes.clonePublic(recipe.id, author);
       } else {
         // Private recipe versioning
-        console.log(
-          "🔍 Dashboard Clone Debug - Using PRIVATE clone (recipe is not public)"
-        );
         return ApiService.recipes.clone(recipe.id);
       }
     },

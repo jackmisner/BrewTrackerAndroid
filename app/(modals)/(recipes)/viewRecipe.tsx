@@ -427,50 +427,62 @@ export default function ViewRecipeScreen() {
               )}
 
               {/* Show navigation to immediate parent if available */}
-              {versionHistoryData?.immediate_parent && (
-                <TouchableOpacity
-                  style={styles.metadataItem}
-                  onPress={() => {
-                    router.push({
-                      pathname: "/(modals)/(recipes)/viewRecipe",
-                      params: {
-                        recipe_id:
-                          versionHistoryData.immediate_parent!.recipe_id,
-                      },
-                    });
-                  }}
-                >
-                  <MaterialIcons
-                    name="arrow-back"
-                    size={16}
-                    color={theme.colors.primary}
-                  />
-                  <Text
-                    style={[
-                      styles.metadataText,
-                      { color: theme.colors.primary },
-                    ]}
+              {versionHistoryData?.shape === "enhanced" &&
+                versionHistoryData.immediate_parent && (
+                  <TouchableOpacity
+                    style={styles.metadataItem}
+                    onPress={() => {
+                      if (
+                        versionHistoryData.shape === "enhanced" &&
+                        versionHistoryData.immediate_parent
+                      ) {
+                        router.push({
+                          pathname: "/(modals)/(recipes)/viewRecipe",
+                          params: {
+                            recipe_id:
+                              versionHistoryData.immediate_parent.recipe_id,
+                          },
+                        });
+                      }
+                    }}
                   >
-                    View Parent Recipe (v
-                    {versionHistoryData.immediate_parent.version})
-                  </Text>
-                </TouchableOpacity>
-              )}
+                    <MaterialIcons
+                      name="arrow-back"
+                      size={16}
+                      color={theme.colors.primary}
+                    />
+                    <Text
+                      style={[
+                        styles.metadataText,
+                        { color: theme.colors.primary },
+                      ]}
+                    >
+                      View Parent Recipe (v
+                      {versionHistoryData.immediate_parent.version})
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
               {/* Show navigation to root recipe if this isn't v1 and not the immediate parent */}
-              {versionHistoryData?.root_recipe &&
+              {versionHistoryData?.shape === "enhanced" &&
+                versionHistoryData.root_recipe &&
                 versionHistoryData.root_recipe.recipe_id !== recipe_id &&
                 versionHistoryData.root_recipe.recipe_id !==
                   versionHistoryData.immediate_parent?.recipe_id && (
                   <TouchableOpacity
                     style={styles.metadataItem}
                     onPress={() => {
-                      router.push({
-                        pathname: "/(modals)/(recipes)/viewRecipe",
-                        params: {
-                          recipe_id: versionHistoryData.root_recipe!.recipe_id,
-                        },
-                      });
+                      if (
+                        versionHistoryData.shape === "enhanced" &&
+                        versionHistoryData.root_recipe
+                      ) {
+                        router.push({
+                          pathname: "/(modals)/(recipes)/viewRecipe",
+                          params: {
+                            recipe_id: versionHistoryData.root_recipe.recipe_id,
+                          },
+                        });
+                      }
                     }}
                   >
                     <MaterialIcons

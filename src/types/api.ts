@@ -198,44 +198,47 @@ export interface CalculateMetricsPreviewRequest {
 
 export type CalculateMetricsPreviewResponse = RecipeMetrics;
 
-export interface RecipeVersionHistoryResponse {
-  current_version: number;
-  immediate_parent?: {
-    recipe_id: string;
-    name: string;
-    version: number;
-    unit_system: string;
-  };
-  root_recipe?: {
-    recipe_id: string;
-    name: string;
-    version: number;
-    unit_system: string;
-  };
-  all_versions: {
-    recipe_id: string;
-    name: string;
-    version: number;
-    unit_system: string;
-    is_current: boolean;
-    is_root: boolean;
-    is_available: boolean;
-  }[];
-  total_versions: number;
-  // Legacy fields for backward compatibility
-  parent_recipe?: {
-    recipe_id: string;
-    name: string;
-    version: number;
-    unit_system: string;
-  };
-  child_versions: {
-    recipe_id: string;
-    name: string;
-    version: number;
-    unit_system: string;
-  }[];
+// Shared types for version history responses
+export interface ParentInfo {
+  recipe_id: string;
+  name: string;
+  version: number;
+  unit_system: string;
 }
+
+export interface VersionEntry {
+  recipe_id: string;
+  name: string;
+  version: number;
+  unit_system: string;
+  is_current: boolean;
+  is_root: boolean;
+  is_available: boolean;
+}
+
+export interface LegacyVersionEntry {
+  recipe_id: string;
+  name: string;
+  version: number;
+  unit_system: string;
+}
+
+// Discriminated union for version history responses
+export type RecipeVersionHistoryResponse =
+  | {
+      shape: "enhanced";
+      current_version: number;
+      immediate_parent?: ParentInfo;
+      root_recipe?: ParentInfo;
+      all_versions: VersionEntry[];
+      total_versions: number;
+    }
+  | {
+      shape: "legacy";
+      current_version: number;
+      parent_recipe?: ParentInfo;
+      child_versions: LegacyVersionEntry[];
+    };
 
 export interface PublicRecipesResponse {
   recipes: Recipe[];

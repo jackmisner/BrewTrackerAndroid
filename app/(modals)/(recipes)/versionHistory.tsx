@@ -55,19 +55,21 @@ export default function VersionHistoryScreen() {
   });
 
   // Query for current recipe details
-  const { data: currentRecipe, isLoading: isLoadingCurrent } = useQuery<Recipe>(
-    {
-      queryKey: ["recipe", recipe_id],
-      queryFn: async () => {
-        if (!recipe_id) throw new Error("No recipe ID provided");
-        const response = await ApiService.recipes.getById(recipe_id);
-        return response.data;
-      },
-      enabled: !!recipe_id,
-      retry: 1,
-      staleTime: 1000 * 60 * 5,
-    }
-  );
+  const {
+    data: currentRecipe,
+    isLoading: isLoadingCurrent,
+    refetch: refetchCurrent,
+  } = useQuery<Recipe>({
+    queryKey: ["recipe", recipe_id],
+    queryFn: async () => {
+      if (!recipe_id) throw new Error("No recipe ID provided");
+      const response = await ApiService.recipes.getById(recipe_id);
+      return response.data;
+    },
+    enabled: !!recipe_id,
+    retry: 1,
+    staleTime: 1000 * 60 * 5,
+  });
 
   const isLoading = isLoadingVersions || isLoadingCurrent;
   const error = versionsError;
@@ -76,7 +78,7 @@ export default function VersionHistoryScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await refetchVersions();
+      await Promise.all([refetchVersions(), refetchCurrent()]);
     } catch (error) {
       console.error("Error refreshing version history:", error);
     } finally {
@@ -84,73 +86,59 @@ export default function VersionHistoryScreen() {
     }
   };
 
-  // Build version list from enhanced API response
+  // Build version list from discriminated union API response
   const buildVersionList = () => {
     if (!versionHistoryData) return [];
 
-    console.log("🔍 Building version list from enhanced API:", {
-      total_versions: versionHistoryData.total_versions,
-      all_versions_count: versionHistoryData.all_versions?.length,
+    console.log("🔍 Building version list from API:", {
+      shape: versionHistoryData.shape,
       current_version: versionHistoryData.current_version,
-      immediate_parent: versionHistoryData.immediate_parent,
-      root_recipe: versionHistoryData.root_recipe,
     });
 
-    // Check if all_versions exists and is an array (enhanced API)
-    if (
-      versionHistoryData.all_versions &&
-      Array.isArray(versionHistoryData.all_versions)
-    ) {
+    // Use discriminated union to handle different response shapes
+    if (versionHistoryData.shape === "enhanced") {
       console.log("🔍 Using enhanced API format with all_versions array");
-      const versions = versionHistoryData.all_versions.map(
-        (version: RecipeVersionHistoryResponse["all_versions"][0]) => ({
-          id: version.recipe_id,
-          name: version.name,
-          version: version.version,
-          isCurrent: version.is_current,
-          unit_system: version.unit_system,
-          isRoot: version.is_root,
-          isAvailable: version.is_available,
-        })
-      );
+      const versions = versionHistoryData.all_versions.map(version => ({
+        id: version.recipe_id,
+        name: version.name,
+        version: version.version,
+        isCurrent: version.is_current,
+        unit_system: version.unit_system,
+        isRoot: version.is_root,
+        isAvailable: version.is_available,
+      }));
       return versions.sort((a: any, b: any) => a.version - b.version);
-    }
+    } else if (versionHistoryData.shape === "legacy") {
+      console.log(
+        "🔍 Using legacy API format with parent_recipe and child_versions"
+      );
+      const versions: any[] = [];
 
-    // Fallback to legacy API format
-    console.log(
-      "🔍 Using legacy API format with parent_recipe and child_versions"
-    );
-    const versions: any[] = [];
-
-    // Add current recipe
-    versions.push({
-      id: recipe_id!,
-      name: currentRecipe?.name || "Current Version",
-      version: versionHistoryData.current_version,
-      isCurrent: true,
-      unit_system: currentRecipe?.unit_system || "imperial",
-      isRoot: !versionHistoryData.parent_recipe,
-      isAvailable: true,
-    });
-
-    // Add parent recipe if exists
-    if (versionHistoryData.parent_recipe) {
+      // Add current recipe
       versions.push({
-        id: versionHistoryData.parent_recipe.recipe_id,
-        name: versionHistoryData.parent_recipe.name,
-        version: versionHistoryData.parent_recipe.version,
-        isCurrent: false,
-        unit_system: versionHistoryData.parent_recipe.unit_system,
-        isRoot: versionHistoryData.parent_recipe.version === 1,
+        id: recipe_id!,
+        name: currentRecipe?.name || "Current Version",
+        version: versionHistoryData.current_version,
+        isCurrent: true,
+        unit_system: currentRecipe?.unit_system || "imperial",
+        isRoot: !versionHistoryData.parent_recipe,
         isAvailable: true,
       });
-    }
 
-    // Add child versions if they exist
-    if (
-      versionHistoryData.child_versions &&
-      Array.isArray(versionHistoryData.child_versions)
-    ) {
+      // Add parent recipe if exists
+      if (versionHistoryData.parent_recipe) {
+        versions.push({
+          id: versionHistoryData.parent_recipe.recipe_id,
+          name: versionHistoryData.parent_recipe.name,
+          version: versionHistoryData.parent_recipe.version,
+          isCurrent: false,
+          unit_system: versionHistoryData.parent_recipe.unit_system,
+          isRoot: versionHistoryData.parent_recipe.version === 1,
+          isAvailable: true,
+        });
+      }
+
+      // Add child versions if they exist
       versionHistoryData.child_versions.forEach(child => {
         versions.push({
           id: child.recipe_id,
@@ -162,9 +150,13 @@ export default function VersionHistoryScreen() {
           isAvailable: true,
         });
       });
+
+      return versions.sort((a: any, b: any) => a.version - b.version);
     }
 
-    return versions.sort((a: any, b: any) => a.version - b.version);
+    // Fallback for unknown shape (should not happen with proper typing)
+    console.warn("🔍 Unknown response shape, returning empty list");
+    return [];
   };
 
   // Navigation handlers
@@ -337,7 +329,10 @@ export default function VersionHistoryScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
             Recipe Versions (
-            {versionHistoryData?.total_versions || versionList.length})
+            {versionHistoryData?.shape === "enhanced"
+              ? versionHistoryData.total_versions
+              : versionList.length}
+            )
           </Text>
           <Text style={styles.sectionSubtitle}>
             Complete version history showing all recipe iterations. Tap any
