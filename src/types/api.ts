@@ -223,10 +223,10 @@ export interface LegacyVersionEntry {
   unit_system: string;
 }
 
-// Discriminated union for version history responses
+// Union type for version history responses based on actual API properties
 export type RecipeVersionHistoryResponse =
   | {
-      shape: "enhanced";
+      // Enhanced API response - has all_versions array
       current_version: number;
       immediate_parent?: ParentInfo;
       root_recipe?: ParentInfo;
@@ -234,11 +234,53 @@ export type RecipeVersionHistoryResponse =
       total_versions: number;
     }
   | {
-      shape: "legacy";
+      // Legacy API response - has parent_recipe and child_versions
       current_version: number;
       parent_recipe?: ParentInfo;
-      child_versions: LegacyVersionEntry[];
+      child_versions?: LegacyVersionEntry[];
     };
+
+// Type guard functions for version history responses
+export function isEnhancedVersionHistoryResponse(
+  response: RecipeVersionHistoryResponse
+): response is {
+  current_version: number;
+  immediate_parent?: ParentInfo;
+  root_recipe?: ParentInfo;
+  all_versions: VersionEntry[];
+  total_versions: number;
+} {
+  return (
+    "all_versions" in response &&
+    Array.isArray(response.all_versions) &&
+    "total_versions" in response &&
+    typeof response.total_versions === "number" &&
+    Number.isFinite(response.total_versions) &&
+    "current_version" in response &&
+    typeof response.current_version === "number" &&
+    Number.isFinite(response.current_version)
+  );
+}
+
+export function isLegacyVersionHistoryResponse(
+  response: RecipeVersionHistoryResponse
+): response is {
+  current_version: number;
+  parent_recipe?: ParentInfo;
+  child_versions?: LegacyVersionEntry[];
+} {
+  const hasParent =
+    "parent_recipe" in response &&
+    typeof (response as any).parent_recipe === "object" &&
+    (response as any).parent_recipe !== null;
+  const hasChildren =
+    "child_versions" in response &&
+    Array.isArray((response as any).child_versions);
+  const lacksEnhanced =
+    !Array.isArray((response as any).all_versions) &&
+    typeof (response as any).total_versions !== "number";
+  return lacksEnhanced && (hasParent || hasChildren);
+}
 
 export interface PublicRecipesResponse {
   recipes: Recipe[];

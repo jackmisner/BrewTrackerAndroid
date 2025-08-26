@@ -12,7 +12,11 @@ import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import ApiService from "@services/api/apiService";
 import { Recipe } from "@src/types";
-import { RecipeVersionHistoryResponse } from "@src/types/api";
+import {
+  RecipeVersionHistoryResponse,
+  isEnhancedVersionHistoryResponse,
+  isLegacyVersionHistoryResponse,
+} from "@src/types/api";
 import { useTheme } from "@contexts/ThemeContext";
 import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
 
@@ -86,17 +90,18 @@ export default function VersionHistoryScreen() {
     }
   };
 
-  // Build version list from discriminated union API response
+  // Build version list using property-based type guards
   const buildVersionList = () => {
     if (!versionHistoryData) return [];
 
     console.log("🔍 Building version list from API:", {
-      shape: versionHistoryData.shape,
+      hasAllVersions: "all_versions" in versionHistoryData,
+      hasChildVersions: "child_versions" in versionHistoryData,
       current_version: versionHistoryData.current_version,
     });
 
-    // Use discriminated union to handle different response shapes
-    if (versionHistoryData.shape === "enhanced") {
+    // Use type guards to handle different response shapes
+    if (isEnhancedVersionHistoryResponse(versionHistoryData)) {
       console.log("🔍 Using enhanced API format with all_versions array");
       const versions = versionHistoryData.all_versions.map(version => ({
         id: version.recipe_id,
@@ -108,7 +113,7 @@ export default function VersionHistoryScreen() {
         isAvailable: version.is_available,
       }));
       return versions.sort((a: any, b: any) => a.version - b.version);
-    } else if (versionHistoryData.shape === "legacy") {
+    } else if (isLegacyVersionHistoryResponse(versionHistoryData)) {
       console.log(
         "🔍 Using legacy API format with parent_recipe and child_versions"
       );
@@ -139,23 +144,25 @@ export default function VersionHistoryScreen() {
       }
 
       // Add child versions if they exist
-      versionHistoryData.child_versions.forEach(child => {
-        versions.push({
-          id: child.recipe_id,
-          name: child.name,
-          version: child.version,
-          isCurrent: false,
-          unit_system: child.unit_system,
-          isRoot: false,
-          isAvailable: true,
+      if (versionHistoryData.child_versions) {
+        versionHistoryData.child_versions.forEach(child => {
+          versions.push({
+            id: child.recipe_id,
+            name: child.name,
+            version: child.version,
+            isCurrent: false,
+            unit_system: child.unit_system,
+            isRoot: false,
+            isAvailable: true,
+          });
         });
-      });
+      }
 
       return versions.sort((a: any, b: any) => a.version - b.version);
     }
 
-    // Fallback for unknown shape (should not happen with proper typing)
-    console.warn("🔍 Unknown response shape, returning empty list");
+    // Fallback for unknown response structure
+    console.warn("🔍 Unknown response structure, returning empty list");
     return [];
   };
 
@@ -329,7 +336,8 @@ export default function VersionHistoryScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
             Recipe Versions (
-            {versionHistoryData?.shape === "enhanced"
+            {versionHistoryData &&
+            isEnhancedVersionHistoryResponse(versionHistoryData)
               ? versionHistoryData.total_versions
               : versionList.length}
             )

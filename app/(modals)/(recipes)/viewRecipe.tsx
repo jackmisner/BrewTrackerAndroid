@@ -12,7 +12,10 @@ import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import ApiService from "@services/api/apiService";
 import { Recipe } from "@src/types";
-import { RecipeVersionHistoryResponse } from "@src/types/api";
+import {
+  RecipeVersionHistoryResponse,
+  isEnhancedVersionHistoryResponse,
+} from "@src/types/api";
 import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
 import { useTheme } from "@contexts/ThemeContext";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
@@ -427,23 +430,27 @@ export default function ViewRecipeScreen() {
               )}
 
               {/* Show navigation to immediate parent if available */}
-              {versionHistoryData?.shape === "enhanced" &&
-                versionHistoryData.immediate_parent && (
+              {(() => {
+                if (
+                  !versionHistoryData ||
+                  !isEnhancedVersionHistoryResponse(versionHistoryData)
+                ) {
+                  return null;
+                }
+                const enhancedData = versionHistoryData;
+                if (!enhancedData.immediate_parent) {
+                  return null;
+                }
+                return (
                   <TouchableOpacity
                     style={styles.metadataItem}
                     onPress={() => {
-                      if (
-                        versionHistoryData.shape === "enhanced" &&
-                        versionHistoryData.immediate_parent
-                      ) {
-                        router.push({
-                          pathname: "/(modals)/(recipes)/viewRecipe",
-                          params: {
-                            recipe_id:
-                              versionHistoryData.immediate_parent.recipe_id,
-                          },
-                        });
-                      }
+                      router.push({
+                        pathname: "/(modals)/(recipes)/viewRecipe",
+                        params: {
+                          recipe_id: enhancedData.immediate_parent!.recipe_id,
+                        },
+                      });
                     }}
                   >
                     <MaterialIcons
@@ -458,31 +465,39 @@ export default function ViewRecipeScreen() {
                       ]}
                     >
                       View Parent Recipe (v
-                      {versionHistoryData.immediate_parent.version})
+                      {enhancedData.immediate_parent.version})
                     </Text>
                   </TouchableOpacity>
-                )}
+                );
+              })()}
 
               {/* Show navigation to root recipe if this isn't v1 and not the immediate parent */}
-              {versionHistoryData?.shape === "enhanced" &&
-                versionHistoryData.root_recipe &&
-                versionHistoryData.root_recipe.recipe_id !== recipe_id &&
-                versionHistoryData.root_recipe.recipe_id !==
-                  versionHistoryData.immediate_parent?.recipe_id && (
+              {(() => {
+                if (
+                  !versionHistoryData ||
+                  !isEnhancedVersionHistoryResponse(versionHistoryData)
+                ) {
+                  return null;
+                }
+                const enhancedData = versionHistoryData;
+                if (
+                  !enhancedData.root_recipe ||
+                  enhancedData.root_recipe.recipe_id === recipe_id ||
+                  enhancedData.root_recipe.recipe_id ===
+                    enhancedData.immediate_parent?.recipe_id
+                ) {
+                  return null;
+                }
+                return (
                   <TouchableOpacity
                     style={styles.metadataItem}
                     onPress={() => {
-                      if (
-                        versionHistoryData.shape === "enhanced" &&
-                        versionHistoryData.root_recipe
-                      ) {
-                        router.push({
-                          pathname: "/(modals)/(recipes)/viewRecipe",
-                          params: {
-                            recipe_id: versionHistoryData.root_recipe.recipe_id,
-                          },
-                        });
-                      }
+                      router.push({
+                        pathname: "/(modals)/(recipes)/viewRecipe",
+                        params: {
+                          recipe_id: enhancedData.root_recipe!.recipe_id,
+                        },
+                      });
                     }}
                   >
                     <MaterialIcons
@@ -499,7 +514,8 @@ export default function ViewRecipeScreen() {
                       View v1
                     </Text>
                   </TouchableOpacity>
-                )}
+                );
+              })()}
 
               {recipe.original_author &&
                 recipe.original_author !== recipe.username && (
