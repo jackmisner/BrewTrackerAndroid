@@ -198,7 +198,101 @@ export interface CalculateMetricsPreviewRequest {
 
 export type CalculateMetricsPreviewResponse = RecipeMetrics;
 
-export type RecipeVersionHistoryResponse = Recipe[];
+// Shared types for version history responses
+export interface ParentInfo {
+  recipe_id: string;
+  name: string;
+  version: number;
+  unit_system: string;
+}
+
+export interface VersionEntry {
+  recipe_id: string;
+  name: string;
+  version: number;
+  unit_system: string;
+  is_current: boolean;
+  is_root: boolean;
+  is_available: boolean;
+}
+
+export interface LegacyVersionEntry {
+  recipe_id: string;
+  name: string;
+  version: number;
+  unit_system: string;
+}
+
+// Union type for version history responses based on actual API properties
+export type EnhancedRecipeVersionHistoryResponse = {
+  // Enhanced API response - has all_versions Array
+  current_version: number;
+  immediate_parent?: ParentInfo;
+  root_recipe?: ParentInfo;
+  all_versions: VersionEntry[];
+  total_versions: number;
+  // Explicitly exclude legacy-only fields in this variant
+  parent_recipe?: never;
+  child_versions?: never;
+};
+
+export type LegacyRecipeVersionHistoryResponse = {
+  // Legacy API response - has parent_recipe and (optionally) child_versions
+  current_version: number;
+  parent_recipe?: ParentInfo;
+  child_versions?: ParentInfo[];
+  // Explicitly exclude enhanced-only fields in this variant
+  all_versions?: never;
+  total_versions?: never;
+  immediate_parent?: never;
+  root_recipe?: never;
+};
+
+export type RecipeVersionHistoryResponse =
+  | EnhancedRecipeVersionHistoryResponse
+  | LegacyRecipeVersionHistoryResponse;
+
+// Type guard functions for version history responses
+export function isEnhancedVersionHistoryResponse(
+  response: RecipeVersionHistoryResponse
+): response is {
+  current_version: number;
+  immediate_parent?: ParentInfo;
+  root_recipe?: ParentInfo;
+  all_versions: VersionEntry[];
+  total_versions: number;
+} {
+  return (
+    "all_versions" in response &&
+    Array.isArray(response.all_versions) &&
+    "total_versions" in response &&
+    typeof response.total_versions === "number" &&
+    Number.isFinite(response.total_versions) &&
+    "current_version" in response &&
+    typeof response.current_version === "number" &&
+    Number.isFinite(response.current_version)
+  );
+}
+
+export function isLegacyVersionHistoryResponse(
+  response: RecipeVersionHistoryResponse
+): response is {
+  current_version: number;
+  parent_recipe?: ParentInfo;
+  child_versions?: LegacyVersionEntry[];
+} {
+  const hasParent =
+    "parent_recipe" in response &&
+    typeof (response as any).parent_recipe === "object" &&
+    (response as any).parent_recipe !== null;
+  const hasChildren =
+    "child_versions" in response &&
+    Array.isArray((response as any).child_versions);
+  const lacksEnhanced =
+    !Array.isArray((response as any).all_versions) &&
+    typeof (response as any).total_versions !== "number";
+  return lacksEnhanced && (hasParent || hasChildren);
+}
 
 export interface PublicRecipesResponse {
   recipes: Recipe[];

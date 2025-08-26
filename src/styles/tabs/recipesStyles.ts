@@ -98,11 +98,29 @@ export const recipesStyles = (theme: ThemeContextValue) =>
     recipeHeader: {
       marginBottom: 8,
     },
+    recipeHeaderTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 4,
+    },
     recipeName: {
       fontSize: 18,
       fontWeight: "bold",
       color: theme.colors.text,
-      marginBottom: 4,
+      flex: 1,
+    },
+    versionBadge: {
+      backgroundColor: theme.colors.primary,
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      marginLeft: 8,
+    },
+    versionText: {
+      color: "#fff",
+      fontSize: 10,
+      fontWeight: "600",
     },
     recipeStyle: {
       fontSize: 14,
