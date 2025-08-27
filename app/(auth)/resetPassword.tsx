@@ -192,12 +192,12 @@ const ResetPasswordScreen: React.FC = () => {
             </Text>
           </View>
 
-          {error && (
+          {error ? (
             <View style={loginStyles.errorContainer}>
               <MaterialIcons name="error-outline" size={20} color="#dc2626" />
               <Text style={loginStyles.errorText}>{error}</Text>
             </View>
-          )}
+          ) : null}
 
           <View style={loginStyles.inputContainer}>
             {/* New Password Field */}
@@ -236,7 +236,7 @@ const ResetPasswordScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            {formData.newPassword && (
+            {formData.newPassword ? (
               <View style={loginStyles.passwordStrengthContainer}>
                 <Text
                   style={[
@@ -249,7 +249,7 @@ const ResetPasswordScreen: React.FC = () => {
                   Password strength: {passwordStrength}
                 </Text>
               </View>
-            )}
+            ) : null}
 
             <Text style={loginStyles.helpText}>
               Password must be at least 8 characters and contain uppercase,
@@ -293,9 +293,9 @@ const ResetPasswordScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            {formData.confirmPassword && !passwordsMatch && (
+            {formData.confirmPassword && !passwordsMatch ? (
               <Text style={loginStyles.errorText}>Passwords do not match</Text>
-            )}
+            ) : null}
           </View>
 
           <View style={loginStyles.buttonContainer}>

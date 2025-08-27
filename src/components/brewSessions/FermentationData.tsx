@@ -207,7 +207,7 @@ export const FermentationData: React.FC<FermentationDataProps> = ({
       )}
 
       {/* Add Entry Button */}
-      {brewSessionId && (
+      {brewSessionId ? (
         <TouchableOpacity
           style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
           onPress={handleAddEntry}
@@ -224,7 +224,7 @@ export const FermentationData: React.FC<FermentationDataProps> = ({
             Log Entry
           </Text>
         </TouchableOpacity>
-      )}
+      ) : null}
 
       {/* Context Menu */}
       <FermentationEntryContextMenu

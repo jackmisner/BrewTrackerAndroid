@@ -163,6 +163,11 @@ export function detectEntityTypeFromUrl(url: string): EntityType | null {
   const patterns: { pattern: RegExp; entityType: EntityType }[] = [
     // Specific sub-resources first
     { pattern: /\/fermentation(\/|\?|$)/i, entityType: "fermentationEntry" },
+    // BeerXML specific endpoints
+    {
+      pattern: /\/beerxml\/(create-ingredients|match-ingredients)/i,
+      entityType: "ingredient",
+    },
     // Then general resources - allow query parameters
     { pattern: /\/recipes(\/|\?|$)/i, entityType: "recipe" },
     { pattern: /\/ingredients(\/|\?|$)/i, entityType: "ingredient" },

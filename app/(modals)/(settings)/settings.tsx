@@ -67,20 +67,20 @@ export default function SettingsScreen() {
         <Text style={styles.optionSubtitle}>{subtitle}</Text>
       </View>
       <View style={styles.radioButton}>
-        {theme === themeMode && (
+        {theme === themeMode ? (
           <MaterialIcons
             name="check-circle"
             size={24}
             color={themeContext.colors.primary}
           />
-        )}
-        {theme !== themeMode && (
+        ) : null}
+        {theme !== themeMode ? (
           <MaterialIcons
             name="radio-button-unchecked"
             size={24}
             color={themeContext.colors.textMuted}
           />
-        )}
+        ) : null}
       </View>
     </TouchableOpacity>
   );

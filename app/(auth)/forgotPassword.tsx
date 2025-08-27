@@ -114,12 +114,12 @@ const ForgotPasswordScreen: React.FC = () => {
             </Text>
           </View>
 
-          {error && (
+          {error ? (
             <View style={loginStyles.errorContainer}>
               <MaterialIcons name="error-outline" size={20} color="#dc2626" />
               <Text style={loginStyles.errorText}>{error}</Text>
             </View>
-          )}
+          ) : null}
 
           <View style={loginStyles.inputContainer}>
             <View style={loginStyles.inputWrapper}>

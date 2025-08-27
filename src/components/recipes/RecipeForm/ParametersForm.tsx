@@ -143,9 +143,9 @@ export function ParametersForm({
           keyboardType="numeric"
           returnKeyType="next"
         />
-        {errors.boil_time && (
+        {errors.boil_time ? (
           <Text style={styles.inputError}>{errors.boil_time}</Text>
-        )}
+        ) : null}
         <Text style={styles.inputHelper}>
           Typical: 60-90 minutes for ales, 90+ for lagers
         </Text>
@@ -168,9 +168,9 @@ export function ParametersForm({
           keyboardType="decimal-pad"
           returnKeyType="next"
         />
-        {errors.efficiency && (
+        {errors.efficiency ? (
           <Text style={styles.inputError}>{errors.efficiency}</Text>
-        )}
+        ) : null}
 
         {/* Efficiency Presets */}
         <View style={styles.presetsContainer}>
@@ -260,9 +260,9 @@ export function ParametersForm({
             </TouchableOpacity>
           </View>
         </View>
-        {errors.mash_temperature && (
+        {errors.mash_temperature ? (
           <Text style={styles.inputError}>{errors.mash_temperature}</Text>
-        )}
+        ) : null}
         <Text style={styles.inputHelper}>
           Single infusion temperature for enzyme activity
         </Text>
@@ -284,9 +284,9 @@ export function ParametersForm({
           keyboardType="numeric"
           returnKeyType="done"
         />
-        {errors.mash_time && (
+        {errors.mash_time ? (
           <Text style={styles.inputError}>{errors.mash_time}</Text>
-        )}
+        ) : null}
         <Text style={styles.inputHelper}>
           Optional - leave blank for default (60 minutes)
         </Text>

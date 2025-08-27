@@ -38,6 +38,7 @@ import * as Haptics from "expo-haptics";
 import ApiService from "@services/api/apiService";
 import { Recipe } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
+import BeerXMLService from "@services/beerxml/BeerXMLService";
 import { recipesStyles } from "@styles/tabs/recipesStyles";
 import { formatABV, formatIBU, formatSRM } from "@utils/formatUtils";
 import {
@@ -230,6 +231,40 @@ export default function RecipesScreen() {
     },
   });
 
+  // BeerXML export mutation
+  const beerXMLExportMutation = useMutation({
+    mutationFn: async (recipe: Recipe) => {
+      return BeerXMLService.exportRecipe(recipe.id);
+    },
+    onSuccess: (result, recipe) => {
+      if (result.success) {
+        const method =
+          result.saveMethod === "directory"
+            ? "saved to your selected directory"
+            : "exported and ready to share";
+        Alert.alert(
+          "Export Successful",
+          `"${recipe.name}" has been ${method} as BeerXML!`,
+          [{ text: "OK" }]
+        );
+      } else {
+        Alert.alert(
+          "Export Failed",
+          result.error || "Failed to export BeerXML. Please try again.",
+          [{ text: "OK" }]
+        );
+      }
+    },
+    onError: (error: unknown, recipe) => {
+      console.error("❌ BeerXML Export Error:", error);
+      Alert.alert(
+        "Export Failed",
+        `Failed to export "${recipe.name}". Please try again.`,
+        [{ text: "OK" }]
+      );
+    },
+  });
+
   const currentData = activeTab === "my" ? myRecipesData : publicRecipesData;
   const currentRecipes = currentData?.recipes || [];
   const isLoading =
@@ -253,6 +288,10 @@ export default function RecipesScreen() {
 
   const handleCreateRecipe = () => {
     router.push({ pathname: "/(modals)/(recipes)/createRecipe", params: {} });
+  };
+
+  const handleImportBeerXML = () => {
+    router.push("/(modals)/(beerxml)/importBeerXML" as any);
   };
 
   // Context menu action handlers
@@ -287,11 +326,8 @@ export default function RecipesScreen() {
       cloneMutation.mutate(recipe);
     },
     onBeerXMLExport: (recipe: Recipe) => {
-      // TODO: Implement BeerXML export functionality
-      Alert.alert(
-        "Export BeerXML",
-        `Exporting "${recipe.name}" - Feature coming soon!`
-      );
+      contextMenu.hideMenu();
+      beerXMLExportMutation.mutate(recipe);
     },
     onStartBrewing: (recipe: Recipe) => {
       router.push({
@@ -339,11 +375,11 @@ export default function RecipesScreen() {
             <Text style={styles.recipeName} numberOfLines={1}>
               {recipe.name || "Unnamed Recipe"}
             </Text>
-            {recipe.version && (
+            {recipe.version ? (
               <View style={styles.versionBadge}>
                 <Text style={styles.versionText}>v{recipe.version}</Text>
               </View>
-            )}
+            ) : null}
           </View>
           <Text style={styles.recipeStyle}>
             {recipe.style || "Unknown Style"}
@@ -385,7 +421,7 @@ export default function RecipesScreen() {
               {formatSRM(recipe.estimated_srm)}
             </Text>
           </View>
-          {activeTab === "public" && (
+          {activeTab === "public" ? (
             <View style={styles.metric}>
               <MaterialIcons
                 name="person"
@@ -398,7 +434,7 @@ export default function RecipesScreen() {
                   : recipe.username}
               </Text>
             </View>
-          )}
+          ) : null}
         </View>
       </TouchableOpacity>
     );
@@ -420,7 +456,7 @@ export default function RecipesScreen() {
           : "Try adjusting your search terms"}
       </Text>
 
-      {activeTab === "my" && (
+      {activeTab === "my" ? (
         <TouchableOpacity
           style={styles.createButton}
           onPress={handleCreateRecipe}
@@ -428,7 +464,7 @@ export default function RecipesScreen() {
           <MaterialIcons name="add" size={24} color="#fff" />
           <Text style={styles.createButtonText}>Create Recipe</Text>
         </TouchableOpacity>
-      )}
+      ) : null}
     </View>
   );
 
@@ -482,7 +518,7 @@ export default function RecipesScreen() {
         </View>
 
         {/* Search bar for public recipes */}
-        {activeTab === "public" && (
+        {activeTab === "public" ? (
           <View style={styles.searchContainer}>
             <MaterialIcons
               name="search"
@@ -496,7 +532,7 @@ export default function RecipesScreen() {
               onChangeText={setSearchQuery}
               returnKeyType="search"
             />
-            {searchQuery.length > 0 && (
+            {searchQuery.length > 0 ? (
               <TouchableOpacity onPress={() => setSearchQuery("")}>
                 <MaterialIcons
                   name="clear"
@@ -504,20 +540,32 @@ export default function RecipesScreen() {
                   color={theme.colors.textSecondary}
                 />
               </TouchableOpacity>
-            )}
+            ) : null}
           </View>
-        )}
+        ) : null}
       </View>
 
-      {/* Create button for my recipes */}
-      {activeTab === "my" && (
-        <TouchableOpacity
-          style={styles.floatingButton}
-          onPress={handleCreateRecipe}
-        >
-          <MaterialIcons name="add" size={24} color="#fff" />
-        </TouchableOpacity>
-      )}
+      {/* Create and Import buttons for my recipes */}
+      {activeTab === "my" ? (
+        <View style={styles.floatingButtonGroup}>
+          <TouchableOpacity
+            style={styles.floatingButtonSecondary}
+            onPress={handleImportBeerXML}
+          >
+            <MaterialIcons
+              name="file-upload"
+              size={20}
+              color={theme.colors.text}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.floatingButton}
+            onPress={handleCreateRecipe}
+          >
+            <MaterialIcons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       {/* Recipe list */}
       {isLoading ? (

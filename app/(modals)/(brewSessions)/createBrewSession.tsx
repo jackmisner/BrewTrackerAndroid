@@ -238,7 +238,7 @@ export default function CreateBrewSessionScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Unit Selection Prompt */}
-        {showUnitPrompt && (
+        {showUnitPrompt ? (
           <View style={styles.promptContainer}>
             <View style={styles.promptHeader}>
               <MaterialIcons
@@ -311,7 +311,7 @@ export default function CreateBrewSessionScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        )}
+        ) : null}
 
         {/* Recipe Preview */}
         <View style={styles.recipePreview}>
@@ -324,15 +324,15 @@ export default function CreateBrewSessionScreen() {
             <Text style={styles.recipeTitle}>{recipe.name}</Text>
           </View>
 
-          {recipe.style && (
+          {recipe.style ? (
             <Text style={styles.recipeStyle}>{recipe.style}</Text>
-          )}
+          ) : null}
 
-          {recipe.description && (
+          {recipe.description ? (
             <Text style={styles.recipeDescription} numberOfLines={2}>
               {recipe.description}
             </Text>
-          )}
+          ) : null}
 
           <View style={styles.recipeMetrics}>
             <View style={styles.metricRow}>
@@ -412,14 +412,14 @@ export default function CreateBrewSessionScreen() {
                 color={theme.colors.textSecondary}
               />
             </TouchableOpacity>
-            {showDatePicker && (
+            {showDatePicker ? (
               <DateTimePicker
                 value={new Date(formData.brew_date)}
                 mode="date"
                 display="default"
                 onChange={handleDateChange}
               />
-            )}
+            ) : null}
           </View>
 
           {/* Status */}
