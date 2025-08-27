@@ -354,11 +354,11 @@ export default function IngredientPickerScreen() {
     >
       <View style={styles.ingredientInfo}>
         <Text style={styles.ingredientName}>{item.name}</Text>
-        {item.description && (
+        {item.description ? (
           <Text style={styles.ingredientDescription} numberOfLines={2}>
             {item.description}
           </Text>
-        )}
+        ) : null}
 
         {/* Type-specific info using shared formatting utilities */}
         <View style={styles.ingredientSpecs}>
@@ -477,7 +477,7 @@ export default function IngredientPickerScreen() {
           placeholderTextColor={theme.colors.textMuted}
           returnKeyType="search"
         />
-        {searchQuery.length > 0 && (
+        {searchQuery.length > 0 ? (
           <TouchableOpacity onPress={() => setSearchQuery("")}>
             <MaterialIcons
               name="clear"
@@ -485,7 +485,7 @@ export default function IngredientPickerScreen() {
               color={theme.colors.textMuted}
             />
           </TouchableOpacity>
-        )}
+        ) : null}
       </View>
 
       {/* Category Filter */}
@@ -544,7 +544,7 @@ export default function IngredientPickerScreen() {
       )}
 
       {/* IngredientDetailEditor for advanced ingredient configuration */}
-      {editingIngredient && (
+      {editingIngredient ? (
         <IngredientDetailEditor
           ingredient={editingIngredient}
           onUpdate={handleSaveIngredient}
@@ -552,7 +552,7 @@ export default function IngredientPickerScreen() {
           onRemove={handleRemoveIngredient}
           isVisible={showEditor}
         />
-      )}
+      ) : null}
     </View>
   );
 }

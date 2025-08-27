@@ -546,7 +546,7 @@ export default function EditRecipeScreen() {
 
       {/* Navigation buttons */}
       <View style={styles.navigation}>
-        {currentStep > RecipeStep.BASIC_INFO && (
+        {currentStep > RecipeStep.BASIC_INFO ? (
           <TouchableOpacity style={styles.backButton} onPress={handlePrevious}>
             <MaterialIcons
               name="arrow-back"
@@ -555,7 +555,7 @@ export default function EditRecipeScreen() {
             />
             <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
-        )}
+        ) : null}
 
         <View style={styles.navigationRight}>
           {currentStep < RecipeStep.REVIEW ? (

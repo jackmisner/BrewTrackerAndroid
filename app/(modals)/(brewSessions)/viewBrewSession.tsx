@@ -327,23 +327,23 @@ export default function ViewBrewSession() {
           <Text style={styles.metadataText}>
             Brew Date: {formatDate(brewSession.brew_date)}
           </Text>
-          {brewSession.fermentation_start_date && (
+          {brewSession.fermentation_start_date ? (
             <Text style={styles.metadataText}>
               Fermentation Started:{" "}
               {formatDate(brewSession.fermentation_start_date)}
             </Text>
-          )}
-          {brewSession.fermentation_end_date && (
+          ) : null}
+          {brewSession.fermentation_end_date ? (
             <Text style={styles.metadataText}>
               Fermentation Ended:{" "}
               {formatDate(brewSession.fermentation_end_date)}
             </Text>
-          )}
-          {brewSession.packaging_date && (
+          ) : null}
+          {brewSession.packaging_date ? (
             <Text style={styles.metadataText}>
               Packaged: {formatDate(brewSession.packaging_date)}
             </Text>
-          )}
+          ) : null}
         </View>
 
         {/* Brew Session Metrics */}
@@ -361,23 +361,23 @@ export default function ViewBrewSession() {
         </View>
 
         {/* Brew Notes */}
-        {brewSession.notes && (
+        {brewSession.notes ? (
           <View style={styles.detailsContainer}>
             <Text style={styles.detailsTitle}>Brew Notes</Text>
             <Text style={styles.detailsText}>{brewSession.notes}</Text>
           </View>
-        )}
+        ) : null}
 
         {/* Tasting Notes */}
-        {brewSession.tasting_notes && (
+        {brewSession.tasting_notes ? (
           <View style={styles.detailsContainer}>
             <Text style={styles.detailsTitle}>Tasting Notes</Text>
             <Text style={styles.detailsText}>{brewSession.tasting_notes}</Text>
           </View>
-        )}
+        ) : null}
 
         {/* Batch Rating */}
-        {brewSession.batch_rating && (
+        {brewSession.batch_rating ? (
           <View style={styles.detailsContainer}>
             <Text style={styles.detailsTitle}>Batch Rating</Text>
             <View style={styles.ratingContainer}>
@@ -399,7 +399,7 @@ export default function ViewBrewSession() {
               </Text>
             </View>
           </View>
-        )}
+        ) : null}
 
         {/* Fermentation Chart */}
         <FermentationChart

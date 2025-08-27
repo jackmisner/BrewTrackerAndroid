@@ -300,12 +300,37 @@ export class BeerXMLService {
   }
 
   /**
-   * Export BeerXML file
+   * Export BeerXML file with directory selection or sharing (fallback)
    */
   static async exportBeerXML(
     xmlContent: string,
     recipeName: string
-  ): Promise<FileOperationResult> {
+  ): Promise<
+    FileOperationResult & {
+      method?: "directory" | "share";
+      userCancelled?: boolean;
+    }
+  > {
+    // Try Storage Access Framework first for directory selection
+    const safResult = await BeerXMLService.exportBeerXMLWithDirectoryChoice(
+      xmlContent,
+      recipeName
+    );
+
+    if (safResult.success) {
+      return { ...safResult, method: "directory" };
+    }
+
+    // If user cancelled directory selection, fall back to sharing
+    if (safResult.userCancelled) {
+    } else {
+      console.warn(
+        "🍺 BeerXML Export - SAF failed, falling back to sharing:",
+        safResult.error
+      );
+    }
+
+    // Fallback to current sharing method
     const sanitizedName = recipeName
       .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_") // Sanitize invalid filename characters
       .replace(/\s+/g, "_") // Replace multiple spaces with underscores
@@ -315,11 +340,70 @@ export class BeerXMLService {
     const baseName = sanitizedName || "recipe";
     const truncatedName = baseName.slice(0, 200);
     const filename = `${truncatedName}_recipe.xml`;
-    return StorageService.saveAndShareFile(
+
+    const shareResult = await StorageService.saveAndShareFile(
       xmlContent,
       filename,
       "application/xml"
     );
+
+    return { ...shareResult, method: "share" };
+  }
+
+  /**
+   * Export BeerXML with user directory selection
+   */
+  static async exportBeerXMLWithDirectoryChoice(
+    xmlContent: string,
+    recipeName: string
+  ): Promise<FileOperationResult & { userCancelled?: boolean }> {
+    try {
+      // Request directory permissions - opens system directory picker
+      const permissions =
+        await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+
+      if (!permissions.granted) {
+        return {
+          success: false,
+          error: "Directory permission denied",
+          userCancelled: true,
+        };
+      }
+
+      // Sanitize filename for filesystem
+      const sanitizedName = recipeName
+        .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_")
+        .replace(/\s+/g, "_")
+        .trim()
+        .replace(/\.+$/, "");
+
+      const baseName = sanitizedName || "recipe";
+      const truncatedName = baseName.slice(0, 200);
+      const filename = `${truncatedName}_recipe.xml`;
+
+      // Create file in user-selected directory
+      const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+        permissions.directoryUri,
+        filename,
+        "application/xml"
+      );
+
+      // Write XML content to the file
+      await FileSystem.writeAsStringAsync(fileUri, xmlContent, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      return {
+        success: true,
+        uri: fileUri,
+      };
+    } catch (error) {
+      console.error("🍺 BeerXML Export - Directory choice error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "File save failed",
+      };
+    }
   }
 }
 

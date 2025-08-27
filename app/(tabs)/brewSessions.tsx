@@ -374,51 +374,55 @@ export default function BrewSessionsScreen() {
             </Text>
           </View>
 
-          {progress !== null && (
+          {progress !== null ? (
             <View style={styles.progressBar}>
               <View
-                style={[styles.progressFill, { width: `${progress * 100}%` }]}
+                style={[
+                  styles.progressFill,
+                  { width: `${Math.max(0, Math.min(progress, 1)) * 100}%` },
+                ]}
               />
             </View>
-          )}
+          ) : null}
         </View>
 
         <View style={styles.brewSessionMetrics}>
-          {brewSession.brew_date && (
+          {brewSession.brew_date ? (
             <View style={styles.metric}>
               <Text style={styles.metricLabel}>Started</Text>
               <Text style={styles.metricValue}>
                 {formatDate(brewSession.brew_date)}
               </Text>
             </View>
-          )}
+          ) : null}
 
-          {brewSession.original_gravity && (
+          {brewSession.original_gravity ? (
             <View style={styles.metric}>
               <Text style={styles.metricLabel}>OG</Text>
               <Text style={styles.metricValue}>
                 {formatGravity(brewSession.original_gravity)}
               </Text>
             </View>
-          )}
+          ) : null}
 
-          {brewSession.final_gravity && (
+          {brewSession.final_gravity ? (
             <View style={styles.metric}>
               <Text style={styles.metricLabel}>FG</Text>
               <Text style={styles.metricValue}>
                 {formatGravity(brewSession.final_gravity)}
               </Text>
             </View>
-          )}
+          ) : null}
 
-          {brewSession.actual_abv && (
+          {brewSession.actual_abv != null &&
+          brewSession.actual_abv !== undefined ? (
             <View style={styles.metric}>
               <Text style={styles.metricLabel}>ABV</Text>
               <Text style={styles.metricValue}>
                 {formatABV(brewSession.actual_abv)}
               </Text>
             </View>
-          )}
+          ) : null}
         </View>
       </TouchableOpacity>
     );
@@ -436,7 +440,7 @@ export default function BrewSessionsScreen() {
           : "Completed brew sessions will appear here"}
       </Text>
 
-      {activeTab === "active" && (
+      {activeTab === "active" ? (
         <TouchableOpacity
           style={styles.createButton}
           onPress={handleStartBrewing}
@@ -444,7 +448,7 @@ export default function BrewSessionsScreen() {
           <MaterialIcons name="play-arrow" size={24} color="#fff" />
           <Text style={styles.createButtonText}>Start Brewing</Text>
         </TouchableOpacity>
-      )}
+      ) : null}
     </View>
   );
 
@@ -499,14 +503,14 @@ export default function BrewSessionsScreen() {
       </View>
 
       {/* Create button for active brews */}
-      {activeTab === "active" && (
+      {activeTab === "active" ? (
         <TouchableOpacity
           style={styles.floatingButton}
           onPress={handleStartBrewing}
         >
           <MaterialIcons name="add" size={24} color="#fff" />
         </TouchableOpacity>
-      )}
+      ) : null}
 
       {/* Brew sessions list */}
       {isLoading ? (

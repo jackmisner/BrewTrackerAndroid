@@ -106,12 +106,12 @@ export function ReviewForm({
             recipeData.batch_size_unit.slice(1)}
         </Text>
       </View>
-      {recipeData.description && (
+      {recipeData.description ? (
         <View style={styles.reviewRow}>
           <Text style={styles.reviewLabel}>Description:</Text>
           <Text style={styles.reviewValue}>{recipeData.description}</Text>
         </View>
-      )}
+      ) : null}
       <View style={styles.reviewRow}>
         <Text style={styles.reviewLabel}>Public:</Text>
         <Text style={styles.reviewValue}>
@@ -138,12 +138,12 @@ export function ReviewForm({
           {recipeData.mash_temperature}°{recipeData.mash_temp_unit}
         </Text>
       </View>
-      {recipeData.mash_time && (
+      {recipeData.mash_time ? (
         <View style={styles.reviewRow}>
           <Text style={styles.reviewLabel}>Mash Time:</Text>
           <Text style={styles.reviewValue}>{recipeData.mash_time} minutes</Text>
         </View>
-      )}
+      ) : null}
     </View>
   );
 
@@ -182,34 +182,31 @@ export function ReviewForm({
                   </Text>
                   {/* Show hop-specific details */}
                   {ingredient.type === "hop" &&
-                    (ingredient.use != null ||
-                      ingredient.time != null ||
-                      ingredient.alpha_acid != null) && (
-                      <Text style={styles.ingredientReviewDetails}>
-                        {[
-                          ingredient.use &&
-                            (HOP_USAGE_DISPLAY_MAPPING[ingredient.use] ||
-                              ingredient.use),
-                          ingredient.time != null &&
-                            ingredient.time > 0 &&
-                            formatHopTime(
-                              ingredient.time,
-                              ingredient.use || ""
-                            ),
-                          ingredient.alpha_acid != null &&
-                            `${ingredient.alpha_acid}% AA`,
-                        ]
-                          .filter(Boolean)
-                          .join(" • ")}
-                      </Text>
-                    )}
+                  (ingredient.use != null ||
+                    ingredient.time != null ||
+                    ingredient.alpha_acid != null) ? (
+                    <Text style={styles.ingredientReviewDetails}>
+                      {[
+                        ingredient.use &&
+                          (HOP_USAGE_DISPLAY_MAPPING[ingredient.use] ||
+                            ingredient.use),
+                        ingredient.time != null &&
+                          ingredient.time > 0 &&
+                          formatHopTime(ingredient.time, ingredient.use || ""),
+                        ingredient.alpha_acid != null &&
+                          `${ingredient.alpha_acid}% AA`,
+                      ]
+                        .filter(Boolean)
+                        .join(" • ")}
+                    </Text>
+                  ) : null}
                   {/* Show grain-specific details */}
-                  {ingredient.type === "grain" && ingredient.grain_type && (
+                  {ingredient.type === "grain" && ingredient.grain_type ? (
                     <Text style={styles.ingredientReviewDetails}>
                       {ingredient.grain_type &&
                         `${GRAIN_TYPE_DISPLAY_MAPPING[ingredient.grain_type] || ingredient.grain_type}`}
                     </Text>
-                  )}
+                  ) : null}
                   {/* Show yeast-specific details */}
                   {ingredient.type === "yeast" &&
                     (() => {
@@ -236,13 +233,13 @@ export function ReviewForm({
         );
       })}
 
-      {recipeData.ingredients.length === 0 && (
+      {recipeData.ingredients.length === 0 ? (
         <View style={styles.emptyIngredientContainer}>
           <Text style={styles.emptyIngredientText}>
             No ingredients added yet
           </Text>
         </View>
-      )}
+      ) : null}
     </View>
   );
 

@@ -489,9 +489,9 @@ export function IngredientDetailEditor({
                   placeholder="0"
                   selectTextOnFocus
                 />
-                {errors.amount && (
+                {errors.amount ? (
                   <Text style={styles.errorText}>{errors.amount}</Text>
-                )}
+                ) : null}
               </View>
 
               {/* Quick adjustment buttons - unit-aware with grouped row layout */}
@@ -510,7 +510,7 @@ export function IngredientDetailEditor({
                     return (
                       <>
                         {/* Small adjustments row */}
-                        {groups.small.length > 0 && (
+                        {groups.small.length > 0 ? (
                           <View style={styles.adjustmentRow}>
                             {[...groups.small].reverse().map(delta => (
                               <TouchableOpacity
@@ -532,10 +532,10 @@ export function IngredientDetailEditor({
                               </TouchableOpacity>
                             ))}
                           </View>
-                        )}
+                        ) : null}
 
                         {/* Medium adjustments row */}
-                        {groups.medium.length > 0 && (
+                        {groups.medium.length > 0 ? (
                           <View style={styles.adjustmentRow}>
                             {[...groups.medium].reverse().map(delta => (
                               <TouchableOpacity
@@ -557,10 +557,10 @@ export function IngredientDetailEditor({
                               </TouchableOpacity>
                             ))}
                           </View>
-                        )}
+                        ) : null}
 
                         {/* Large adjustments row */}
-                        {groups.large.length > 0 && (
+                        {groups.large.length > 0 ? (
                           <View style={styles.adjustmentRow}>
                             {[...groups.large].reverse().map(delta => (
                               <TouchableOpacity
@@ -582,7 +582,7 @@ export function IngredientDetailEditor({
                               </TouchableOpacity>
                             ))}
                           </View>
-                        )}
+                        ) : null}
                       </>
                     );
                   })()}
@@ -605,7 +605,7 @@ export function IngredientDetailEditor({
                     return (
                       <>
                         {/* Small adjustments row */}
-                        {groups.small.length > 0 && (
+                        {groups.small.length > 0 ? (
                           <View style={styles.adjustmentRow}>
                             {groups.small.map(delta => (
                               <TouchableOpacity
@@ -627,10 +627,10 @@ export function IngredientDetailEditor({
                               </TouchableOpacity>
                             ))}
                           </View>
-                        )}
+                        ) : null}
 
                         {/* Medium adjustments row */}
-                        {groups.medium.length > 0 && (
+                        {groups.medium.length > 0 ? (
                           <View style={styles.adjustmentRow}>
                             {groups.medium.map(delta => (
                               <TouchableOpacity
@@ -652,10 +652,10 @@ export function IngredientDetailEditor({
                               </TouchableOpacity>
                             ))}
                           </View>
-                        )}
+                        ) : null}
 
                         {/* Large adjustments row */}
-                        {groups.large.length > 0 && (
+                        {groups.large.length > 0 ? (
                           <View style={styles.adjustmentRow}>
                             {groups.large.map(delta => (
                               <TouchableOpacity
@@ -677,7 +677,7 @@ export function IngredientDetailEditor({
                               </TouchableOpacity>
                             ))}
                           </View>
-                        )}
+                        ) : null}
                       </>
                     );
                   })()}
@@ -714,7 +714,7 @@ export function IngredientDetailEditor({
           </View>
 
           {/* Hop-specific sections */}
-          {isHop && (
+          {isHop ? (
             <>
               {/* Usage Section */}
               <View style={styles.section}>
@@ -742,9 +742,9 @@ export function IngredientDetailEditor({
                     </TouchableOpacity>
                   ))}
                 </View>
-                {errors.use && (
+                {errors.use ? (
                   <Text style={styles.errorText}>{errors.use}</Text>
-                )}
+                ) : null}
               </View>
 
               {/* Time Section */}
@@ -767,15 +767,15 @@ export function IngredientDetailEditor({
                       keyboardType="decimal-pad"
                       selectTextOnFocus
                     />
-                    {errors.time && (
+                    {errors.time ? (
                       <Text style={styles.errorText}>{errors.time}</Text>
-                    )}
+                    ) : null}
                   </View>
 
                   {/* Time Unit Selector - conditional based on hop usage */}
                   <View style={styles.unitButtons}>
                     {/* Only show minutes for boil/whirlpool */}
-                    {currentUsage !== "dry-hop" && (
+                    {currentUsage !== "dry-hop" ? (
                       <TouchableOpacity
                         style={[
                           styles.unitButton,
@@ -793,9 +793,9 @@ export function IngredientDetailEditor({
                           min
                         </Text>
                       </TouchableOpacity>
-                    )}
+                    ) : null}
                     {/* Only show days for dry-hop */}
-                    {currentUsage === "dry-hop" && (
+                    {currentUsage === "dry-hop" ? (
                       <TouchableOpacity
                         style={[
                           styles.unitButton,
@@ -812,7 +812,7 @@ export function IngredientDetailEditor({
                           days
                         </Text>
                       </TouchableOpacity>
-                    )}
+                    ) : null}
                   </View>
                 </View>
                 <View style={styles.timePresets}>
@@ -845,12 +845,12 @@ export function IngredientDetailEditor({
                     ));
                   })()}
                 </View>
-                {errors.time && (
+                {errors.time ? (
                   <Text style={styles.errorText}>{errors.time}</Text>
-                )}
+                ) : null}
               </View>
             </>
-          )}
+          ) : null}
         </ScrollView>
 
         {/* Action Buttons */}

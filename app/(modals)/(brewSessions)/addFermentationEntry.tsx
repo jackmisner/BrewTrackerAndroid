@@ -187,7 +187,7 @@ export default function AddFermentationEntryScreen() {
       </View>
 
       {/* Validation Errors */}
-      {validationErrors.length > 0 && (
+      {validationErrors.length > 0 ? (
         <View style={styles.errorContainer}>
           {validationErrors.map((error, index) => (
             <Text key={index} style={styles.errorText}>
@@ -195,7 +195,7 @@ export default function AddFermentationEntryScreen() {
             </Text>
           ))}
         </View>
-      )}
+      ) : null}
 
       {/* Form */}
       <ScrollView contentContainerStyle={styles.content}>
@@ -213,14 +213,14 @@ export default function AddFermentationEntryScreen() {
               color={theme.colors.textSecondary}
             />
           </TouchableOpacity>
-          {showDatePicker && (
+          {showDatePicker ? (
             <DateTimePicker
               value={entryDate}
               mode="date"
               display="default"
               onChange={handleDateChange}
             />
-          )}
+          ) : null}
         </View>
 
         {/* Gravity */}

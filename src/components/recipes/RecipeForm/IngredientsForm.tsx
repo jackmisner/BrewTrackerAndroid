@@ -215,35 +215,35 @@ export function IngredientsForm({
                   </Text>
                   {/* Show hop-specific details */}
                   {ingredient.type === "hop" &&
-                    (ingredient.use || ingredient.time != null) && (
-                      <Text style={styles.ingredientDetails}>
-                        {ingredient.use &&
-                          `${HOP_USAGE_DISPLAY_MAPPING[ingredient.use] || ingredient.use}`}
-                        {ingredient.time != null &&
-                          ` • ${formatHopTime(ingredient.time, ingredient.use || "")}`}
-                        {ingredient.alpha_acid &&
-                          ` • ${ingredient.alpha_acid}% AA`}
-                      </Text>
-                    )}
+                  (ingredient.use || ingredient.time != null) ? (
+                    <Text style={styles.ingredientDetails}>
+                      {ingredient.use &&
+                        `${HOP_USAGE_DISPLAY_MAPPING[ingredient.use] || ingredient.use}`}
+                      {ingredient.time != null &&
+                        ` • ${formatHopTime(ingredient.time, ingredient.use || "")}`}
+                      {ingredient.alpha_acid &&
+                        ` • ${ingredient.alpha_acid}% AA`}
+                    </Text>
+                  ) : null}
                   {/* Show grain-specific details */}
-                  {ingredient.type === "grain" && ingredient.grain_type && (
+                  {ingredient.type === "grain" && ingredient.grain_type ? (
                     <Text style={styles.ingredientDetails}>
                       {ingredient.grain_type &&
                         `${GRAIN_TYPE_DISPLAY_MAPPING[ingredient.grain_type] || ingredient.grain_type}`}
                     </Text>
-                  )}
+                  ) : null}
                   {/* Show yeast-specific details */}
                   {ingredient.type === "yeast" &&
-                    (ingredient.yeast_type ||
-                      ingredient.manufacturer ||
-                      ingredient.attenuation) && (
-                      <Text style={styles.ingredientDetails}>
-                        {ingredient.manufacturer &&
-                          `Brand: ${ingredient.manufacturer}`}
-                        {ingredient.attenuation &&
-                          ` • ${ingredient.attenuation}% Attenuation`}
-                      </Text>
-                    )}
+                  (ingredient.yeast_type ||
+                    ingredient.manufacturer ||
+                    ingredient.attenuation) ? (
+                    <Text style={styles.ingredientDetails}>
+                      {ingredient.manufacturer &&
+                        `Brand: ${ingredient.manufacturer}`}
+                      {ingredient.attenuation &&
+                        ` • ${ingredient.attenuation}% Attenuation`}
+                    </Text>
+                  ) : null}
                 </View>
 
                 {/* Action buttons */}
@@ -310,7 +310,7 @@ export function IngredientsForm({
       {renderIngredientSection("yeast", "Yeast")}
       {renderIngredientSection("other", "Other Ingredients")}
 
-      {safeIngredients.length === 0 && (
+      {safeIngredients.length === 0 ? (
         <View style={styles.infoSection}>
           <View style={styles.infoHeader}>
             <MaterialIcons
@@ -326,10 +326,10 @@ export function IngredientsForm({
             strain, and any other ingredients like spices or clarifying agents.
           </Text>
         </View>
-      )}
+      ) : null}
 
       {/* Ingredient Detail Editor */}
-      {editingIngredient && (
+      {editingIngredient ? (
         <IngredientDetailEditor
           ingredient={editingIngredient}
           onUpdate={handleUpdateIngredient}
@@ -337,7 +337,7 @@ export function IngredientsForm({
           onRemove={() => handleRemoveIngredient(editingIngredient)}
           isVisible={showEditor}
         />
-      )}
+      ) : null}
     </View>
   );
 }

@@ -157,7 +157,7 @@ export function BasicInfoForm({
             placeholderTextColor={theme.colors.textMuted}
             returnKeyType="search"
           />
-          {styleSearchQuery.length > 0 && (
+          {styleSearchQuery.length > 0 ? (
             <TouchableOpacity onPress={() => setStyleSearchQuery("")}>
               <MaterialIcons
                 name="clear"
@@ -165,7 +165,7 @@ export function BasicInfoForm({
                 color={theme.colors.textMuted}
               />
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
 
         <ScrollView
@@ -173,13 +173,13 @@ export function BasicInfoForm({
           showsVerticalScrollIndicator={true}
           keyboardShouldPersistTaps="handled"
         >
-          {!!stylesError && (
+          {!!stylesError ? (
             <View style={styles.infoSection}>
               <Text style={styles.infoText}>
                 Unable to load beer styles from server.
               </Text>
             </View>
-          )}
+          ) : null}
           {filteredStyles.map(style => (
             <TouchableOpacity
               key={`${style.styleId}-${style.name}`}
@@ -196,7 +196,7 @@ export function BasicInfoForm({
               </View>
             </TouchableOpacity>
           ))}
-          {filteredStyles.length === 0 && !stylesLoading && (
+          {filteredStyles.length === 0 && !stylesLoading ? (
             <View style={styles.infoSection}>
               <Text style={styles.infoText}>
                 {styleSearchQuery
@@ -204,7 +204,7 @@ export function BasicInfoForm({
                   : "No beer styles available. Try again later."}
               </Text>
             </View>
-          )}
+          ) : null}
         </ScrollView>
       </View>
     );
@@ -226,7 +226,9 @@ export function BasicInfoForm({
           maxLength={100}
           returnKeyType="next"
         />
-        {errors.name && <Text style={styles.inputError}>{errors.name}</Text>}
+        {errors.name ? (
+          <Text style={styles.inputError}>{errors.name}</Text>
+        ) : null}
       </View>
 
       {/* Beer Style */}
@@ -257,7 +259,9 @@ export function BasicInfoForm({
             />
           </View>
         </TouchableOpacity>
-        {errors.style && <Text style={styles.inputError}>{errors.style}</Text>}
+        {errors.style ? (
+          <Text style={styles.inputError}>{errors.style}</Text>
+        ) : null}
       </View>
 
       {/* Batch Size */}
@@ -319,9 +323,9 @@ export function BasicInfoForm({
             </TouchableOpacity>
           </View>
         </View>
-        {errors.batch_size && (
+        {errors.batch_size ? (
           <Text style={styles.inputError}>{errors.batch_size}</Text>
-        )}
+        ) : null}
       </View>
 
       {/* Description */}
@@ -345,9 +349,9 @@ export function BasicInfoForm({
         <Text style={styles.characterCount}>
           {recipeData.description.length}/500
         </Text>
-        {errors.description && (
+        {errors.description ? (
           <Text style={styles.inputError}>{errors.description}</Text>
-        )}
+        ) : null}
       </View>
 
       {/* Public Recipe Toggle */}
