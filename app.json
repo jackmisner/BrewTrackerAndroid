@@ -8,9 +8,7 @@
     "scheme": "brewtracker",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "platforms": [
-      "android"
-    ],
+    "platforms": ["android"],
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
@@ -19,10 +17,7 @@
       "edgeToEdgeEnabled": true,
       "package": "com.brewtracker.android",
       "versionCode": 51,
-      "permissions": [
-        "CAMERA",
-        "VIBRATE"
-      ]
+      "permissions": ["CAMERA", "VIBRATE"]
     },
     "plugins": [
       "expo-router",
