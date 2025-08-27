@@ -467,7 +467,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
       {/* Chart Stats */}
       <View style={styles.statsRow}>
-        {gravityChartData.length > 0 && (
+        {gravityChartData.length > 0 ? (
           <View style={styles.stat}>
             <Text
               style={[styles.statLabel, { color: theme.colors.textSecondary }]}
@@ -478,8 +478,8 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
               {gravityChartData[gravityChartData.length - 1].value.toFixed(3)}
             </Text>
           </View>
-        )}
-        {temperatureChartData.length > 0 && (
+        ) : null}
+        {temperatureChartData.length > 0 ? (
           <View style={styles.stat}>
             <Text
               style={[styles.statLabel, { color: theme.colors.textSecondary }]}
@@ -492,8 +492,8 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
               )}
             </Text>
           </View>
-        )}
-        {expectedFG && (
+        ) : null}
+        {expectedFG ? (
           <View style={styles.stat}>
             <Text
               style={[styles.statLabel, { color: theme.colors.textSecondary }]}
@@ -504,7 +504,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
               {expectedFG.toFixed(3)}
             </Text>
           </View>
-        )}
+        ) : null}
         <View style={styles.stat}>
           <Text
             style={[styles.statLabel, { color: theme.colors.textSecondary }]}
@@ -547,7 +547,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
           ) : (
             // Show individual charts if only one type of data exists
             <>
-              {gravityChartData.length > 0 && (
+              {gravityChartData.length > 0 ? (
                 <View style={styles.chartSection}>
                   <Text
                     style={[styles.chartTitle, { color: theme.colors.text }]}
@@ -563,8 +563,8 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
                     </ChartWrapper>
                   </View>
                 </View>
-              )}
-              {temperatureChartData.length > 0 && (
+              ) : null}
+              {temperatureChartData.length > 0 ? (
                 <View style={styles.chartSection}>
                   <Text
                     style={[styles.chartTitle, { color: theme.colors.text }]}
@@ -580,13 +580,13 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
                     </ChartWrapper>
                   </View>
                 </View>
-              )}
+              ) : null}
             </>
           )
         ) : (
           // Separate charts view
           <>
-            {gravityChartData.length > 0 && (
+            {gravityChartData.length > 0 ? (
               <View style={styles.chartSection}>
                 <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
                   Specific Gravity
@@ -600,9 +600,9 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
                   </ChartWrapper>
                 </View>
               </View>
-            )}
+            ) : null}
 
-            {temperatureChartData.length > 0 && (
+            {temperatureChartData.length > 0 ? (
               <View style={styles.chartSection}>
                 <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
                   Temperature
@@ -616,14 +616,14 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
                   </ChartWrapper>
                 </View>
               </View>
-            )}
+            ) : null}
           </>
         )}
       </View>
 
       {/* Legend */}
       <View style={styles.legend}>
-        {gravityChartData.length > 0 && (
+        {gravityChartData.length > 0 ? (
           <View style={styles.legendItem}>
             <View
               style={[
@@ -637,8 +637,8 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
               Specific Gravity
             </Text>
           </View>
-        )}
-        {temperatureChartData.length > 0 && (
+        ) : null}
+        {temperatureChartData.length > 0 ? (
           <View style={styles.legendItem}>
             <View
               style={[
@@ -652,7 +652,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
               Temperature
             </Text>
           </View>
-        )}
+        ) : null}
       </View>
     </View>
   );

@@ -106,14 +106,14 @@ export const BrewingMetricsDisplay: React.FC<BrewingMetricsProps> = ({
           <Text style={styles.metricValue}>
             {formatMetricValue(label, value, unit)}
           </Text>
-          {showColorIndicator && value !== undefined && label === "SRM" && (
+          {showColorIndicator && value !== undefined && label === "SRM" ? (
             <View
               style={[
                 styles.srmColorIndicator,
                 { backgroundColor: getSrmColor(value) },
               ]}
             />
-          )}
+          ) : null}
         </>
       )}
     </View>
@@ -125,7 +125,9 @@ export const BrewingMetricsDisplay: React.FC<BrewingMetricsProps> = ({
   if (error) {
     return (
       <View style={styles.container}>
-        {showTitle && <Text style={styles.sectionTitle}>Brewing Metrics</Text>}
+        {showTitle ? (
+          <Text style={styles.sectionTitle}>Brewing Metrics</Text>
+        ) : null}
         <View style={styles.errorContainer}>
           <MaterialIcons
             name="error-outline"
@@ -135,11 +137,11 @@ export const BrewingMetricsDisplay: React.FC<BrewingMetricsProps> = ({
             accessible={false}
           />
           <Text style={styles.errorText}>{error}</Text>
-          {onRetry && (
+          {onRetry ? (
             <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
               <Text style={styles.retryButtonText}>Retry</Text>
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
       </View>
     );
@@ -156,7 +158,9 @@ export const BrewingMetricsDisplay: React.FC<BrewingMetricsProps> = ({
   if (!loading && !hasAnyMetric) {
     return (
       <View style={styles.container}>
-        {showTitle && <Text style={styles.sectionTitle}>Brewing Metrics</Text>}
+        {showTitle ? (
+          <Text style={styles.sectionTitle}>Brewing Metrics</Text>
+        ) : null}
         <View style={styles.emptyState}>
           <MaterialIcons
             name="analytics"
@@ -175,7 +179,9 @@ export const BrewingMetricsDisplay: React.FC<BrewingMetricsProps> = ({
 
   return (
     <View style={styles.container}>
-      {showTitle && <Text style={styles.sectionTitle}>Brewing Metrics</Text>}
+      {showTitle ? (
+        <Text style={styles.sectionTitle}>Brewing Metrics</Text>
+      ) : null}
       <View style={styles.metricsGrid}>
         {renderMetric("OG", metrics?.og)}
         {renderMetric("FG", metrics?.fg)}

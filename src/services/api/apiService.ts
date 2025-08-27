@@ -797,6 +797,30 @@ const ApiService = {
       withRetry(() => api.get(ENDPOINTS.DASHBOARD.DATA)),
   },
 
+  // BeerXML endpoints
+  beerxml: {
+    export: (
+      recipeId: ID
+    ): Promise<
+      AxiosResponse<{ xml: string; xml_content: string; filename: string }>
+    > => withRetry(() => api.get(ENDPOINTS.BEERXML.EXPORT(recipeId))),
+
+    parse: (data: {
+      xml_content: string;
+    }): Promise<AxiosResponse<{ recipes: any[] }>> =>
+      api.post(ENDPOINTS.BEERXML.PARSE, data),
+
+    matchIngredients: (data: {
+      ingredients: any[];
+    }): Promise<AxiosResponse<{ matching_results: any[] }>> =>
+      api.post(ENDPOINTS.BEERXML.MATCH_INGREDIENTS, data),
+
+    createIngredients: (data: {
+      ingredients: any[];
+    }): Promise<AxiosResponse<{ created_ingredients: any[] }>> =>
+      api.post(ENDPOINTS.BEERXML.CREATE_INGREDIENTS, data),
+  },
+
   // Network status check
   checkConnection: async (): Promise<boolean> => {
     try {

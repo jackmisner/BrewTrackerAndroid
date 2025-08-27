@@ -779,4 +779,284 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       flex: 1,
       paddingHorizontal: 20,
     },
+
+    // BeerXML Import specific styles
+    beerxmlLoadingContainer: {
+      flexDirection: "column" as const,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      padding: 32,
+      gap: 16,
+    },
+    beerxmlLoadingText: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      textAlign: "center" as const,
+    },
+    beerxmlProgressContainer: {
+      marginBottom: 24,
+    },
+    progressText: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      textAlign: "center",
+      marginBottom: 8,
+    },
+    beerxmlProgressBar: {
+      height: 4,
+      backgroundColor: theme.colors.backgroundSecondary,
+      borderRadius: 2,
+      overflow: "hidden" as const,
+    },
+    progressFill: {
+      height: "100%",
+      backgroundColor: theme.colors.primary,
+      borderRadius: 2,
+    },
+    recipeOptionsContainer: {
+      gap: 8,
+    },
+    recipeOption: {
+      backgroundColor: theme.colors.backgroundSecondary,
+      padding: 16,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    selectedRecipeOption: {
+      borderColor: theme.colors.primary,
+      backgroundColor: theme.colors.backgroundSecondary,
+    },
+    recipeOptionName: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.colors.text,
+      marginBottom: 4,
+    },
+    recipeOptionDetails: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+    },
+    recipePreview: {
+      backgroundColor: theme.colors.backgroundSecondary,
+      padding: 16,
+      borderRadius: 8,
+      marginTop: 16,
+    },
+    previewTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: theme.colors.text,
+      marginBottom: 12,
+    },
+    previewRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 8,
+      gap: 16,
+    },
+    previewLabel: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      fontWeight: "500",
+      flex: 0,
+      minWidth: 80,
+    },
+    previewValue: {
+      fontSize: 14,
+      color: theme.colors.text,
+      flex: 1,
+      textAlign: "right",
+    },
+    ingredientSummary: {
+      marginTop: 8,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    ingredientTypeCount: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      backgroundColor: theme.colors.backgroundSecondary,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+    },
+    ingredientCard: {
+      backgroundColor: theme.colors.backgroundSecondary,
+      padding: 16,
+      borderRadius: 8,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    matchingOptions: {
+      gap: 12,
+    },
+    optionsTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.colors.text,
+      marginBottom: 8,
+    },
+    matchOption: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      backgroundColor: theme.colors.backgroundSecondary,
+      padding: 16,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      gap: 12,
+    },
+    selectedMatchOption: {
+      borderColor: theme.colors.primary,
+      backgroundColor: theme.colors.backgroundSecondary,
+    },
+    matchOptionContent: {
+      flex: 1,
+    },
+    matchOptionName: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.colors.text,
+      marginBottom: 2,
+    },
+    matchOptionConfidence: {
+      fontSize: 14,
+      color: theme.colors.primary,
+      fontWeight: "500",
+    },
+    matchOptionReasons: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      marginTop: 2,
+    },
+    matchOptionDetails: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+    },
+    noMatchContainer: {
+      backgroundColor: theme.colors.backgroundSecondary,
+      padding: 16,
+      borderRadius: 8,
+      marginTop: 16,
+      alignItems: "center",
+    },
+    noMatchText: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      textAlign: "center",
+      marginBottom: 8,
+    },
+    newIngredientName: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.colors.text,
+      textAlign: "center",
+    },
+    navigationButtons: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: 24,
+      gap: 16,
+    },
+    summaryContainer: {
+      gap: 16,
+    },
+    summaryItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    summaryText: {
+      flex: 1,
+    },
+    summaryLabel: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      marginBottom: 2,
+    },
+    summaryValue: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.colors.text,
+    },
+    recipeDetails: {
+      gap: 12,
+    },
+    detailRow: {
+      flexDirection: "row" as const,
+      justifyContent: "space-between" as const,
+      alignItems: "flex-start" as const,
+      gap: 16,
+    },
+    detailLabel: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      fontWeight: "500" as const,
+      minWidth: 100,
+    },
+    detailValue: {
+      fontSize: 14,
+      color: theme.colors.text,
+      flex: 1,
+      textAlign: "right" as const,
+    },
+    resetButton: {
+      padding: 8,
+    },
+
+    // Basic BeerXML styles
+    section: {
+      marginBottom: 24,
+    },
+    button: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 8,
+      gap: 8,
+    },
+    primaryButton: {
+      backgroundColor: theme.colors.primary,
+    },
+    secondaryButton: {
+      backgroundColor: theme.colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    buttonText: {
+      fontSize: 16,
+      fontWeight: "600" as const,
+    },
+    primaryButtonText: {
+      color: theme.colors.primaryText,
+    },
+    secondaryButtonText: {
+      color: theme.colors.text,
+    },
+    inputGroup: {
+      marginBottom: 16,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: "500" as const,
+      color: theme.colors.text,
+      marginBottom: 8,
+    },
+    buttonGroup: {
+      flexDirection: "row" as const,
+      gap: 16,
+      marginTop: 24,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: 32,
+    },
   });

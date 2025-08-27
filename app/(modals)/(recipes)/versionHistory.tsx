@@ -43,10 +43,10 @@ export default function VersionHistoryScreen() {
     queryKey: ["versionHistory", recipe_id],
     queryFn: async () => {
       if (!recipe_id) throw new Error("No recipe ID provided");
-      console.log("🔍 Version History - Fetching for recipe:", recipe_id);
+
       try {
         const response = await ApiService.recipes.getVersionHistory(recipe_id);
-        console.log("🔍 Version History - API response:", response.data);
+
         return response.data;
       } catch (error) {
         console.error("🔍 Version History - API error:", error);
@@ -94,15 +94,8 @@ export default function VersionHistoryScreen() {
   const buildVersionList = () => {
     if (!versionHistoryData) return [];
 
-    console.log("🔍 Building version list from API:", {
-      hasAllVersions: "all_versions" in versionHistoryData,
-      hasChildVersions: "child_versions" in versionHistoryData,
-      current_version: versionHistoryData.current_version,
-    });
-
     // Use type guards to handle different response shapes
     if (isEnhancedVersionHistoryResponse(versionHistoryData)) {
-      console.log("🔍 Using enhanced API format with all_versions array");
       const versions = versionHistoryData.all_versions.map(version => ({
         id: version.recipe_id,
         name: version.name,
@@ -114,9 +107,6 @@ export default function VersionHistoryScreen() {
       }));
       return versions.sort((a: any, b: any) => a.version - b.version);
     } else if (isLegacyVersionHistoryResponse(versionHistoryData)) {
-      console.log(
-        "🔍 Using legacy API format with parent_recipe and child_versions"
-      );
       const versions: any[] = [];
 
       // Add current recipe
@@ -211,18 +201,18 @@ export default function VersionHistoryScreen() {
             <Text style={styles.versionNumber}>
               Version {versionItem.version}
             </Text>
-            {versionItem.isCurrent && (
+            {versionItem.isCurrent ? (
               <View style={styles.currentBadge}>
                 <Text style={styles.currentBadgeText}>Current</Text>
               </View>
-            )}
-            {versionItem.isRoot && (
+            ) : null}
+            {versionItem.isRoot ? (
               <View
                 style={[styles.currentBadge, { backgroundColor: "#4CAF50" }]}
               >
                 <Text style={styles.currentBadgeText}>Root</Text>
               </View>
-            )}
+            ) : null}
           </View>
           <Text style={styles.versionDate}>
             {versionItem.unit_system || "imperial"}

@@ -57,6 +57,7 @@ import * as Haptics from "expo-haptics";
 import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
 import ApiService from "@services/api/apiService";
+import BeerXMLService from "@services/beerxml/BeerXMLService";
 import { Recipe, BrewSession } from "@src/types";
 import { dashboardStyles } from "@styles/tabs/dashboardStyles";
 import {
@@ -271,6 +272,41 @@ export default function DashboardScreen() {
       );
     },
   });
+
+  // BeerXML export mutation
+  const beerXMLExportMutation = useMutation({
+    mutationFn: async (recipe: Recipe) => {
+      return BeerXMLService.exportRecipe(recipe.id);
+    },
+    onSuccess: (result, recipe) => {
+      if (result.success) {
+        const method =
+          result.saveMethod === "directory"
+            ? "saved to your selected directory"
+            : "exported and ready to share";
+        Alert.alert(
+          "Export Successful",
+          `"${recipe.name}" has been ${method} as BeerXML!`,
+          [{ text: "OK" }]
+        );
+      } else {
+        Alert.alert(
+          "Export Failed",
+          result.error || "Failed to export BeerXML. Please try again.",
+          [{ text: "OK" }]
+        );
+      }
+    },
+    onError: (error: unknown, recipe) => {
+      console.error("❌ BeerXML Export Error:", error);
+      Alert.alert(
+        "Export Failed",
+        `Failed to export "${recipe.name}". Please try again.`,
+        [{ text: "OK" }]
+      );
+    },
+  });
+
   // Context menu actions
   const recipeContextMenuActions = createDefaultRecipeActions({
     onView: (recipe: Recipe) => {
@@ -290,10 +326,8 @@ export default function DashboardScreen() {
       cloneMutation.mutate(recipe);
     },
     onBeerXMLExport: (recipe: Recipe) => {
-      Alert.alert(
-        "Export BeerXML",
-        `Exporting "${recipe.name}" - Feature coming soon!`
-      );
+      recipeContextMenu.hideMenu();
+      beerXMLExportMutation.mutate(recipe);
     },
     onStartBrewing: (recipe: Recipe) => {
       router.push({
@@ -412,11 +446,11 @@ export default function DashboardScreen() {
           <Text style={styles.recentTitle} numberOfLines={1}>
             {recipe.name}
           </Text>
-          {recipe.version && (
+          {recipe.version ? (
             <View style={styles.versionBadge}>
               <Text style={styles.versionText}>v{recipe.version}</Text>
             </View>
-          )}
+          ) : null}
         </View>
         <Text style={styles.recentSubtitle}>
           {recipe.style || "Unknown Style"}
@@ -716,7 +750,7 @@ export default function DashboardScreen() {
 
       {/* Recent Recipes */}
 
-      {recentRecipes.length > 0 && (
+      {recentRecipes.length > 0 ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Recipes</Text>
           <View style={styles.verticalList}>
@@ -725,7 +759,7 @@ export default function DashboardScreen() {
               .map(renderRecentRecipe)}
           </View>
         </View>
-      )}
+      ) : null}
 
       {/* Recent Brew Sessions */}
       <View style={styles.section}>

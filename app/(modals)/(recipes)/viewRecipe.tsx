@@ -390,44 +390,44 @@ export default function ViewRecipeScreen() {
             {recipe.style || "Unknown Style"}
           </Text>
 
-          {recipe.description && (
+          {recipe.description ? (
             <Text style={styles.recipeDescription}>{recipe.description}</Text>
-          )}
+          ) : null}
 
           {/* Recipe Metadata */}
           <View style={styles.metadataContainer}>
-            {recipe.created_at && (
+            {recipe.created_at ? (
               <View style={styles.metadataItem}>
                 <MaterialIcons name="schedule" size={16} color="#666" />
                 <Text style={styles.metadataText}>
                   Created {formatDate(recipe.created_at)}
                 </Text>
               </View>
-            )}
-            {recipe.updated_at && (
+            ) : null}
+            {recipe.updated_at ? (
               <View style={styles.metadataItem}>
                 <MaterialIcons name="update" size={16} color="#666" />
                 <Text style={styles.metadataText}>
                   Updated {formatDate(recipe.updated_at)}
                 </Text>
               </View>
-            )}
+            ) : null}
           </View>
 
           {/* Version Information */}
-          {(recipe.version ||
-            recipe.parent_recipe_id ||
-            recipe.original_author ||
-            recipe.clone_count) && (
+          {recipe.version ||
+          recipe.parent_recipe_id ||
+          recipe.original_author ||
+          recipe.clone_count ? (
             <View style={styles.metadataContainer}>
-              {recipe.version && (
+              {recipe.version ? (
                 <View style={styles.metadataItem}>
                   <MaterialIcons name="timeline" size={16} color="#666" />
                   <Text style={styles.metadataText}>
                     Version {recipe.version}
                   </Text>
                 </View>
-              )}
+              ) : null}
 
               {/* Show navigation to immediate parent if available */}
               {(() => {
@@ -518,15 +518,15 @@ export default function ViewRecipeScreen() {
               })()}
 
               {recipe.original_author &&
-                recipe.original_author !== recipe.username && (
-                  <View style={styles.metadataItem}>
-                    <MaterialIcons name="person" size={16} color="#666" />
-                    <Text style={styles.metadataText}>
-                      Originally by {recipe.original_author}
-                    </Text>
-                  </View>
-                )}
-              {recipe.clone_count && recipe.clone_count > 0 && (
+              recipe.original_author !== recipe.username ? (
+                <View style={styles.metadataItem}>
+                  <MaterialIcons name="person" size={16} color="#666" />
+                  <Text style={styles.metadataText}>
+                    Originally by {recipe.original_author}
+                  </Text>
+                </View>
+              ) : null}
+              {recipe.clone_count && recipe.clone_count > 0 ? (
                 <View style={styles.metadataItem}>
                   <MaterialIcons name="content-copy" size={16} color="#666" />
                   <Text style={styles.metadataText}>
@@ -534,9 +534,9 @@ export default function ViewRecipeScreen() {
                     {recipe.clone_count === 1 ? "clone" : "clones"}
                   </Text>
                 </View>
-              )}
+              ) : null}
             </View>
-          )}
+          ) : null}
         </View>
 
         {/* Brewing Metrics - Using Reusable Component */}
@@ -558,48 +558,48 @@ export default function ViewRecipeScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recipe Details</Text>
           <View style={styles.detailsContainer}>
-            {recipe.batch_size && (
+            {recipe.batch_size != null ? (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Batch Size:</Text>
                 <Text style={styles.detailValue}>
                   {recipe.batch_size} {recipe.batch_size_unit || "gal"}
                 </Text>
               </View>
-            )}
+            ) : null}
 
-            {recipe.boil_time && (
+            {recipe.boil_time != null ? (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Boil Time:</Text>
                 <Text style={styles.detailValue}>
                   {recipe.boil_time} minutes
                 </Text>
               </View>
-            )}
+            ) : null}
 
-            {recipe.efficiency && (
+            {recipe.efficiency != null ? (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Efficiency:</Text>
                 <Text style={styles.detailValue}>{recipe.efficiency}%</Text>
               </View>
-            )}
+            ) : null}
 
-            {recipe.mash_temperature && (
+            {recipe.mash_temperature != null ? (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Mash Temperature:</Text>
                 <Text style={styles.detailValue}>
                   {recipe.mash_temperature}°{recipe.mash_temp_unit || "C"}
                 </Text>
               </View>
-            )}
+            ) : null}
 
-            {recipe.mash_time && (
+            {recipe.mash_time != null ? (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Mash Time:</Text>
                 <Text style={styles.detailValue}>
                   {recipe.mash_time} minutes
                 </Text>
               </View>
-            )}
+            ) : null}
 
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Visibility:</Text>
@@ -617,14 +617,14 @@ export default function ViewRecipeScreen() {
         {renderInstructions()}
 
         {/* Notes Section */}
-        {recipe.notes && (
+        {recipe.notes ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Notes</Text>
             <View style={styles.notesContainer}>
               <Text style={styles.notesText}>{recipe.notes}</Text>
             </View>
           </View>
-        )}
+        ) : null}
 
         {/* Bottom spacing for better UX */}
         <View style={styles.bottomSpacing} />

@@ -207,3 +207,14 @@ export interface CreateRecipeIngredientData {
   description?: string;
   notes?: string;
 }
+
+// Strict ingredient input for BeerXML import with required fields for validation
+export interface IngredientInput {
+  ingredient_id: string;
+  name: string;
+  type: IngredientType;
+  amount: number;
+  unit: IngredientUnit;
+  use?: string;
+  time?: number;
+}

@@ -76,7 +76,7 @@ export default function ProfileScreen() {
         </View>
         <Text style={styles.username}>{user?.username}</Text>
         <Text style={styles.email}>{user?.email}</Text>
-        {!user?.email_verified && (
+        {!user?.email_verified ? (
           <View style={styles.verificationBadge}>
             <MaterialIcons
               name="warning"
@@ -85,7 +85,7 @@ export default function ProfileScreen() {
             />
             <Text style={styles.verificationText}>Email not verified</Text>
           </View>
-        )}
+        ) : null}
       </View>
 
       <View style={styles.section}>

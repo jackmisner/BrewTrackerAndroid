@@ -552,7 +552,7 @@ export default function EditBrewSessionScreen() {
       </ScrollView>
 
       {/* Date Picker Modal */}
-      {showDatePicker.visible && (
+      {showDatePicker.visible ? (
         <DateTimePicker
           value={
             formData[showDatePicker.field as keyof typeof formData]
@@ -565,7 +565,7 @@ export default function EditBrewSessionScreen() {
           display="default"
           onChange={handleDateChange}
         />
-      )}
+      ) : null}
     </KeyboardAvoidingView>
   );
 }

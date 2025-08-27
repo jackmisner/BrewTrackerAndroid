@@ -276,6 +276,18 @@ describe("idNormalization", () => {
       );
     });
 
+    it("should detect BeerXML ingredient endpoints", () => {
+      expect(detectEntityTypeFromUrl("/api/beerxml/create-ingredients")).toBe(
+        "ingredient"
+      );
+      expect(detectEntityTypeFromUrl("/api/beerxml/match-ingredients")).toBe(
+        "ingredient"
+      );
+      expect(detectEntityTypeFromUrl("/API/BEERXML/CREATE-INGREDIENTS")).toBe(
+        "ingredient"
+      );
+    });
+
     it("should detect brew session endpoints", () => {
       expect(detectEntityTypeFromUrl("/api/brew-sessions")).toBe("brewSession");
       expect(detectEntityTypeFromUrl("/api/brew-sessions/789")).toBe(
