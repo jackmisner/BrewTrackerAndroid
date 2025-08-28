@@ -48,6 +48,7 @@ describe("BeerXMLService", () => {
 
       mockStorageService.exportBeerXML = jest.fn().mockResolvedValue({
         success: true,
+        method: "share",
       });
 
       // Test export
@@ -55,6 +56,7 @@ describe("BeerXMLService", () => {
 
       expect(result.success).toBe(true);
       expect(result.filename).toBe("test"); // Processed filename: "test_recipe.xml" -> "test"
+      expect(result.saveMethod).toBe("share");
       expect(mockApiService.beerxml.export).toHaveBeenCalledWith("recipe-123");
       expect(mockStorageService.exportBeerXML).toHaveBeenCalledWith(
         mockXmlContent,
@@ -71,6 +73,33 @@ describe("BeerXMLService", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("API Error");
+    });
+
+    it("should handle user cancellation during export", async () => {
+      const mockXmlContent =
+        '<?xml version="1.0"?><RECIPES><RECIPE><NAME>Test Recipe</NAME></RECIPE></RECIPES>';
+      const mockFilename = "test_recipe.xml";
+
+      mockApiService.beerxml.export = jest.fn().mockResolvedValue({
+        data: {
+          xml: mockXmlContent,
+          filename: mockFilename,
+        },
+      });
+
+      mockStorageService.exportBeerXML = jest.fn().mockResolvedValue({
+        success: false,
+        userCancelled: true,
+      });
+
+      const result = await BeerXMLService.exportRecipe("recipe-123");
+
+      expect(result.success).toBe(false);
+      expect(result.userCancelled).toBe(true);
+      expect(mockStorageService.exportBeerXML).toHaveBeenCalledWith(
+        mockXmlContent,
+        "test"
+      );
     });
   });
 

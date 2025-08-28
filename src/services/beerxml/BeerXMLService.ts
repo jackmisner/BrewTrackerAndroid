@@ -78,6 +78,7 @@ class BeerXMLService {
     filename?: string;
     error?: string;
     saveMethod?: "directory" | "share";
+    userCancelled?: boolean;
   }> {
     try {
       // Get BeerXML content from backend
@@ -106,6 +107,13 @@ class BeerXMLService {
         xmlContent,
         recipeName
       );
+
+      if (saveResult.userCancelled === true) {
+        return {
+          success: false,
+          userCancelled: true,
+        };
+      }
 
       if (!saveResult.success) {
         throw new Error(saveResult.error || "Failed to save BeerXML file");

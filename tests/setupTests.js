@@ -71,6 +71,11 @@ jest.mock("expo-file-system", () => ({
   writeAsStringAsync: jest.fn(),
   readAsStringAsync: jest.fn(),
   cacheDirectory: "file://cache/",
+  StorageAccessFramework: {
+    requestDirectoryPermissionsAsync: jest.fn(),
+    createFileAsync: jest.fn(),
+    writeAsStringAsync: jest.fn(),
+  },
 }));
 
 jest.mock("expo-router", () => ({

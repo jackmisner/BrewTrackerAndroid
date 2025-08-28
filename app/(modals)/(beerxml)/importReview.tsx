@@ -29,6 +29,13 @@ import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import ApiService from "@services/api/apiService";
 import { IngredientInput } from "@src/types";
 
+function coerceIngredientTime(input: unknown): number | undefined {
+  if (input == null) return undefined;         // keep missing as missing
+  if (input === '' || input === 0 || input === '0') return 0; // preserve explicit zero
+  const n = Number(input);
+  return Number.isFinite(n) && n >= 0 ? n : undefined; // reject NaN/±Inf/negatives
+}
+
 export default function ImportReviewScreen() {
   const theme = useTheme();
   const styles = createRecipeStyles(theme);
@@ -164,7 +171,7 @@ export default function ImportReviewScreen() {
               amount: Number(ing.amount) || 0,
               unit: ing.unit,
               use: ing.use,
-              time: ing.time ? Number(ing.time) || 0 : undefined,
+              time: coerceIngredientTime(ing.time),
             })
           ),
       };
