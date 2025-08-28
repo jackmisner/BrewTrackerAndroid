@@ -42,9 +42,7 @@ jest.mock("@tanstack/react-query", () => ({
 jest.mock("@services/beerxml/BeerXMLService", () => ({
   __esModule: true,
   default: {
-    matchIngredients: jest.fn(() =>
-      Promise.reject(new Error("Service error for testing"))
-    ),
+    matchIngredients: jest.fn(),
     createIngredients: jest.fn(() =>
       Promise.resolve([{ id: "1", name: "Test Grain", type: "grain" }])
     ),
@@ -56,6 +54,11 @@ import IngredientMatchingScreen from "../../../../app/(modals)/(beerxml)/ingredi
 describe("IngredientMatchingScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Default: error; tests can override to success as needed
+    const service = require("@services/beerxml/BeerXMLService").default;
+    service.matchIngredients.mockRejectedValue(
+      new Error("Service error for testing")
+    );
   });
 
   it("should render without crashing", () => {
@@ -125,6 +128,8 @@ describe("IngredientMatchingScreen", () => {
     const backBtn = getByTestId(
       TEST_IDS.patterns.touchableOpacityAction("ingredient-matching-back")
     );
+    fireEvent.press(backBtn);
+    expect(router.back).toHaveBeenCalledTimes(1);
   });
 
   describe("IngredientMatchingScreen - Component Structure", () => {
