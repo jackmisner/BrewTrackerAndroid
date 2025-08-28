@@ -42,6 +42,7 @@ interface MatchingState {
     confidence: number;
   }[];
   createdIngredients: any[];
+  retryable?: boolean;
 }
 
 export default function IngredientMatchingScreen() {

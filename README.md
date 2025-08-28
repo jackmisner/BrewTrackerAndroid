@@ -380,7 +380,7 @@ EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
 - ✅ 4-step recipe builder optimized for mobile screens
 - ✅ Touch-friendly context menus and navigation
 - ✅ Gesture-based navigation with Expo Router and modals
-- 🔶 Mobile-friendly file import/export (BeerXML - planned)
+- ✅ Mobile-friendly BeerXML import/export (initial mobile support)
 
 ### **Backend Capabilities:**
 
