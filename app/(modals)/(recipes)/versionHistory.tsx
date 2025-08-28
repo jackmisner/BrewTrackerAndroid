@@ -197,7 +197,7 @@ export default function VersionHistoryScreen() {
         onPress={() => isClickable && handleViewVersion(versionItem)}
         disabled={!isClickable}
         testID={TEST_IDS.patterns.touchableOpacityAction(
-          `version-item-${versionItem.id}`
+          `version-item-${encodeURIComponent(versionItem.id)}`
         )}
       >
         <View style={styles.versionHeader}>

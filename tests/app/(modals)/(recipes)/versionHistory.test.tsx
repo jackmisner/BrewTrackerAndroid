@@ -489,7 +489,7 @@ describe("VersionHistoryScreen", () => {
       const refreshControl = scrollView.props.refreshControl;
 
       // Should not throw when refresh fails
-      expect(() => fireEvent(refreshControl, "refresh")).not.toThrow();
+      await expect(refreshControl.props.onRefresh()).resolves.toBeUndefined();
     });
   });
 

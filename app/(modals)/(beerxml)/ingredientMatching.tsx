@@ -79,6 +79,7 @@ export default function IngredientMatchingScreen() {
    * Initialize ingredient matching
    */
   useEffect(() => {
+    let isActive = true;
     /**
      * Perform ingredient matching
      */
@@ -87,6 +88,7 @@ export default function IngredientMatchingScreen() {
         const matchingResults = await BeerXMLService.matchIngredients(
           recipeData.ingredients
         );
+        if (!isActive) return;
 
         // Initialize decisions
         const decisions = matchingResults.map(result => ({
@@ -129,6 +131,7 @@ export default function IngredientMatchingScreen() {
         }));
       } catch (error) {
         console.error("🍺 Ingredient Matching - Error:", error);
+        if (!isActive) return;
         setMatchingState(prev => ({
           ...prev,
           isLoading: false,
@@ -149,8 +152,10 @@ export default function IngredientMatchingScreen() {
       }));
       return;
     }
-
     matchIngredients();
+    return () => {
+      isActive = false;
+    };
   }, [recipeData, retryCount]);
 
   /**

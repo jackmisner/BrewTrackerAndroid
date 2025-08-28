@@ -32,8 +32,9 @@ import { TEST_IDS } from "@constants/testIDs";
 
 function coerceIngredientTime(input: unknown): number | undefined {
   if (input == null) return undefined; // keep missing as missing
+  if (typeof input === "boolean") return undefined; // ignore booleans
   if (input === "" || input === 0 || input === "0") return 0; // preserve explicit zero
-  const n = Number(input);
+  const n = typeof input === "number" ? input : Number(input);
   return Number.isFinite(n) && n >= 0 ? n : undefined; // reject NaN/±Inf/negatives
 }
 
@@ -412,7 +413,7 @@ export default function ImportReviewScreen() {
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Boil Time:</Text>
               <Text style={styles.detailValue}>
-                {recipeData.boil_time || 60} minutes
+                {coerceIngredientTime(recipeData.boil_time) || 60} minutes
               </Text>
             </View>
 
@@ -545,7 +546,8 @@ export default function ImportReviewScreen() {
                       <Text style={styles.ingredientDetails}>
                         {ingredient.amount || 0} {ingredient.unit || ""}
                         {ingredient.use && ` • ${ingredient.use}`}
-                        {ingredient.time > 0 && ` • ${ingredient.time} min`}
+                        {ingredient.time > 0 &&
+                          ` • ${coerceIngredientTime(ingredient.time)} min`}
                       </Text>
                     </View>
                   ))}

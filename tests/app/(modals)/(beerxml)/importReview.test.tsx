@@ -244,10 +244,13 @@ describe("ImportReviewScreen - Advanced UI Tests", () => {
     expect(
       getByTestId(TEST_IDS.patterns.scrollAction("import-review"))
     ).toBeTruthy();
-    // expect(getAllByRole("button").length).toBeGreaterThanOrEqual(2);
     // Verify key sections are present
-    expect(getByTestId("recipe-details-section")).toBeTruthy();
-    expect(getByTestId("import-summary-section")).toBeTruthy();
+    expect(
+      getByTestId(TEST_IDS.patterns.sectionContainer("recipe-details"))
+    ).toBeTruthy();
+    expect(
+      getByTestId(TEST_IDS.patterns.sectionContainer("import-summary"))
+    ).toBeTruthy();
   });
 });
 
