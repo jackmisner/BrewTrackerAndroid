@@ -5,7 +5,7 @@
 import React from "react";
 import { render } from "@testing-library/react-native";
 import ImportReviewScreen from "../../../../app/(modals)/(beerxml)/importReview";
-import { TEST_IDS } from "@constants/testIDs";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 // Mock dependencies
 jest.mock("@contexts/ThemeContext", () => ({

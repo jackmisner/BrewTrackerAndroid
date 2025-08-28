@@ -2,7 +2,7 @@
  * Tests for testIDs constants and patterns
  */
 
-import { TEST_IDS } from "@constants/testIDs";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 describe("TEST_IDS patterns", () => {
   describe("existing patterns", () => {

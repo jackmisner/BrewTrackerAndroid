@@ -4,7 +4,7 @@
 
 import React from "react";
 import { render, fireEvent } from "@testing-library/react-native";
-import { TEST_IDS } from "@constants/testIDs";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 // Mock dependencies first
 jest.mock("@contexts/ThemeContext", () => ({
@@ -119,104 +119,109 @@ describe("IngredientMatchingScreen", () => {
     ).toBeTruthy();
   });
 
-  it("should render title text", () => {
-    const { getByText } = render(<IngredientMatchingScreen />);
-    expect(getByText("Ingredient Matching")).toBeTruthy();
-  });
-});
-
-describe("IngredientMatchingScreen - Component Structure", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it("should have scrollable content container", () => {
+  it("should navigate back when header back is pressed", () => {
     const { getByTestId } = render(<IngredientMatchingScreen />);
-    expect(
-      getByTestId(TEST_IDS.patterns.scrollAction("ingredient-matching"))
-    ).toBeTruthy();
-  });
-
-  it("should use theme colors and styles", () => {
-    const { getByText } = render(<IngredientMatchingScreen />);
-    expect(getByText("Ingredient Matching")).toBeTruthy();
-  });
-
-  it("should display proper touchable buttons with testIDs", () => {
-    const { getByTestId } = render(<IngredientMatchingScreen />);
-
-    // Check all the TouchableOpacity components have proper testIDs
-    expect(
-      getByTestId(
-        TEST_IDS.patterns.touchableOpacityAction("ingredient-matching-back")
-      )
-    ).toBeTruthy();
-  });
-});
-
-describe("IngredientMatchingScreen - Error Recovery", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it("should display error state components", async () => {
-    const { findByText, getByTestId } = render(<IngredientMatchingScreen />);
-
-    // Error state should appear
-    expect(await findByText("Matching Error")).toBeTruthy();
-
-    // Should have go back button with testID
-    expect(
-      getByTestId(TEST_IDS.patterns.touchableOpacityAction("go-back"))
-    ).toBeTruthy();
-  });
-
-  it("should provide user feedback on errors", async () => {
-    const { findByText } = render(<IngredientMatchingScreen />);
-
-    expect(await findByText("Matching Error")).toBeTruthy();
-    expect(await findByText("Go Back")).toBeTruthy();
-  });
-});
-
-describe("IngredientMatchingScreen - testID Integration", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it("should use the correct testID patterns for all TouchableOpacity components", () => {
-    const { getByTestId } = render(<IngredientMatchingScreen />);
-
-    // Test the new touchableOpacityAction pattern
-    expect(
-      getByTestId(
-        TEST_IDS.patterns.touchableOpacityAction("ingredient-matching-back")
-      )
-    ).toBeTruthy();
-  });
-
-  it("should use the correct testID patterns for ScrollView components", () => {
-    const { getByTestId } = render(<IngredientMatchingScreen />);
-
-    // Test the scrollAction pattern
-    expect(
-      getByTestId(TEST_IDS.patterns.scrollAction("ingredient-matching"))
-    ).toBeTruthy();
-  });
-
-  it("should have consistent testID naming patterns", () => {
-    const { getByTestId } = render(<IngredientMatchingScreen />);
-
-    // All the testIDs should follow the patterns we defined
-    const scrollTestId = TEST_IDS.patterns.scrollAction("ingredient-matching");
-    const backButtonTestId = TEST_IDS.patterns.touchableOpacityAction(
-      "ingredient-matching-back"
+    const { router } = require("expo-router");
+    const backBtn = getByTestId(
+      TEST_IDS.patterns.touchableOpacityAction("ingredient-matching-back")
     );
+  });
 
-    expect(scrollTestId).toBe("ingredient-matching-scroll-view");
-    expect(backButtonTestId).toBe("ingredient-matching-back-button");
+  describe("IngredientMatchingScreen - Component Structure", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
 
-    expect(getByTestId(scrollTestId)).toBeTruthy();
-    expect(getByTestId(backButtonTestId)).toBeTruthy();
+    it("should have scrollable content container", () => {
+      const { getByTestId } = render(<IngredientMatchingScreen />);
+      expect(
+        getByTestId(TEST_IDS.patterns.scrollAction("ingredient-matching"))
+      ).toBeTruthy();
+    });
+
+    it("should use theme colors and styles", () => {
+      const { getByText } = render(<IngredientMatchingScreen />);
+      expect(getByText("Ingredient Matching")).toBeTruthy();
+    });
+
+    it("should display proper touchable buttons with testIDs", () => {
+      const { getByTestId } = render(<IngredientMatchingScreen />);
+
+      // Check all the TouchableOpacity components have proper testIDs
+      expect(
+        getByTestId(
+          TEST_IDS.patterns.touchableOpacityAction("ingredient-matching-back")
+        )
+      ).toBeTruthy();
+    });
+  });
+
+  describe("IngredientMatchingScreen - Error Recovery", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("should display error state components", async () => {
+      const { findByText, getByTestId } = render(<IngredientMatchingScreen />);
+
+      // Error state should appear
+      expect(await findByText("Matching Error")).toBeTruthy();
+
+      // Should have go back button with testID
+      expect(
+        getByTestId(TEST_IDS.patterns.touchableOpacityAction("go-back"))
+      ).toBeTruthy();
+    });
+
+    it("should provide user feedback on errors", async () => {
+      const { findByText } = render(<IngredientMatchingScreen />);
+
+      expect(await findByText("Matching Error")).toBeTruthy();
+      expect(await findByText("Go Back")).toBeTruthy();
+    });
+  });
+
+  describe("IngredientMatchingScreen - testID Integration", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("should use the correct testID patterns for all TouchableOpacity components", () => {
+      const { getByTestId } = render(<IngredientMatchingScreen />);
+
+      // Test the new touchableOpacityAction pattern
+      expect(
+        getByTestId(
+          TEST_IDS.patterns.touchableOpacityAction("ingredient-matching-back")
+        )
+      ).toBeTruthy();
+    });
+
+    it("should use the correct testID patterns for ScrollView components", () => {
+      const { getByTestId } = render(<IngredientMatchingScreen />);
+
+      // Test the scrollAction pattern
+      expect(
+        getByTestId(TEST_IDS.patterns.scrollAction("ingredient-matching"))
+      ).toBeTruthy();
+    });
+
+    it("should have consistent testID naming patterns", () => {
+      const { getByTestId } = render(<IngredientMatchingScreen />);
+
+      // All the testIDs should follow the patterns we defined
+      const scrollTestId = TEST_IDS.patterns.scrollAction(
+        "ingredient-matching"
+      );
+      const backButtonTestId = TEST_IDS.patterns.touchableOpacityAction(
+        "ingredient-matching-back"
+      );
+
+      expect(scrollTestId).toBe("ingredient-matching-scroll-view");
+      expect(backButtonTestId).toBe("ingredient-matching-back-button");
+
+      expect(getByTestId(scrollTestId)).toBeTruthy();
+      expect(getByTestId(backButtonTestId)).toBeTruthy();
+    });
   });
 });

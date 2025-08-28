@@ -5,7 +5,7 @@
 import React from "react";
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
 import ImportBeerXMLScreen from "../../../../app/(modals)/(beerxml)/importBeerXML";
-import { TEST_IDS } from "@constants/testIDs";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 // Mock dependencies
 jest.mock("@contexts/ThemeContext", () => ({

@@ -19,7 +19,7 @@ import {
 } from "@src/types/api";
 import { useTheme } from "@contexts/ThemeContext";
 import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
-import { TEST_IDS } from "@constants/testIDs";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 /**
  * Version History Screen

@@ -18,7 +18,7 @@ import {
 } from "@src/types/api";
 import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
 import { useTheme } from "@contexts/ThemeContext";
-import { TEST_IDS } from "@constants/testIDs";
+import { TEST_IDS } from "@src/constants/testIDs";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
 import { formatHopTime, formatHopUsage } from "@src/utils/formatUtils";
 

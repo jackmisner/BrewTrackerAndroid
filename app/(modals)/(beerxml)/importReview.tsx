@@ -28,7 +28,7 @@ import { useTheme } from "@contexts/ThemeContext";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import ApiService from "@services/api/apiService";
 import { IngredientInput } from "@src/types";
-import { TEST_IDS } from "@constants/testIDs";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 function coerceIngredientTime(input: unknown): number | undefined {
   if (input == null) return undefined; // keep missing as missing

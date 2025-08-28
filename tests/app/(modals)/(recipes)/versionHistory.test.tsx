@@ -9,7 +9,8 @@ import React from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import VersionHistoryScreen from "../../../../app/(modals)/(recipes)/versionHistory";
-import { TEST_IDS } from "@constants/testIDs";
+import { TEST_IDS } from "@src/constants/testIDs";
+import type { UseQueryResult } from "@tanstack/react-query";
 
 // Mock dependencies
 jest.mock("@contexts/ThemeContext", () => ({
@@ -33,29 +34,19 @@ jest.mock("expo-router", () => ({
 }));
 
 // Mock React Query
-const mockVersionHistoryQuery: {
-  data: any;
-  isLoading: boolean;
-  error: any;
-  refetch: jest.Mock;
-} = {
+const mockVersionHistoryQuery = {
   data: null,
   isLoading: false,
   error: null,
-  refetch: jest.fn(),
-};
+  refetch: jest.fn().mockResolvedValue(undefined),
+} as unknown as jest.Mocked<UseQueryResult<any, Error>>;
 
-const mockCurrentRecipeQuery: {
-  data: any;
-  isLoading: boolean;
-  error: any;
-  refetch: jest.Mock;
-} = {
+const mockCurrentRecipeQuery = {
   data: null,
   isLoading: false,
   error: null,
-  refetch: jest.fn(),
-};
+  refetch: jest.fn().mockResolvedValue(undefined),
+} as unknown as jest.Mocked<UseQueryResult<any, Error>>;
 
 jest.mock("@tanstack/react-query", () => ({
   useQuery: jest.fn().mockImplementation(config => {
@@ -105,6 +96,10 @@ describe("VersionHistoryScreen", () => {
       error: null,
       refetch: jest.fn(),
     });
+  });
+
+  afterAll(() => {
+    jest.restoreAllMocks();
   });
 
   describe("Basic Rendering", () => {
@@ -507,16 +502,11 @@ describe("VersionHistoryScreen", () => {
           {
             recipe_id: "v1",
             name: "Missing fields",
-            version: 1,
-            unit_system: "imperial",
-            is_current: false,
-            is_root: true,
-            is_available: true,
-          },
+            // Intentionally omit: version, unit_system, is_current, is_root, is_available
+          } as any,
         ],
         total_versions: 1,
       };
-
       expect(() => render(<VersionHistoryScreen />)).not.toThrow();
     });
 

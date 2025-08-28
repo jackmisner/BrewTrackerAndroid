@@ -2,7 +2,7 @@ import React from "react";
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
 import ViewRecipeScreen from "../../../../app/(modals)/(recipes)/viewRecipe";
 import { mockData, testUtils } from "../../../testUtils";
-import { TEST_IDS } from "@constants/testIDs";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 // Mock React Native
 jest.mock("react-native", () => ({
