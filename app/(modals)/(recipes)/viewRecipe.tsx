@@ -18,6 +18,7 @@ import {
 } from "@src/types/api";
 import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
 import { useTheme } from "@contexts/ThemeContext";
+import { TEST_IDS } from "@constants/testIDs";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
 import { formatHopTime, formatHopUsage } from "@src/utils/formatUtils";
 
@@ -253,7 +254,13 @@ export default function ViewRecipeScreen() {
       <View style={styles.container}>
         {/* Header with back button - always visible */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleGoBack}
+            testID={TEST_IDS.patterns.touchableOpacityAction(
+              "view-recipe-back"
+            )}
+          >
             <MaterialIcons name="arrow-back" size={24} color="#333" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Recipe Details</Text>
@@ -275,7 +282,13 @@ export default function ViewRecipeScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleGoBack}
+            testID={TEST_IDS.patterns.touchableOpacityAction(
+              "view-recipe-back"
+            )}
+          >
             <MaterialIcons name="arrow-back" size={24} color="#333" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Recipe Details</Text>
@@ -306,7 +319,13 @@ export default function ViewRecipeScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleGoBack}
+            testID={TEST_IDS.patterns.touchableOpacityAction(
+              "view-recipe-back"
+            )}
+          >
             <MaterialIcons name="arrow-back" size={24} color="#333" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Recipe Details</Text>
@@ -341,7 +360,11 @@ export default function ViewRecipeScreen() {
     <View style={styles.container}>
       {/* Fixed Header with Navigation */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={handleGoBack}
+          testID={TEST_IDS.patterns.touchableOpacityAction("view-recipe-back")}
+        >
           <MaterialIcons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
@@ -376,6 +399,7 @@ export default function ViewRecipeScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        testID={TEST_IDS.patterns.scrollAction("view-recipe")}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }

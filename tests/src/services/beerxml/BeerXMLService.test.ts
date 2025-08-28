@@ -48,6 +48,7 @@ describe("BeerXMLService", () => {
 
       mockStorageService.exportBeerXML = jest.fn().mockResolvedValue({
         success: true,
+        method: "share",
       });
 
       // Test export
@@ -55,6 +56,7 @@ describe("BeerXMLService", () => {
 
       expect(result.success).toBe(true);
       expect(result.filename).toBe("test"); // Processed filename: "test_recipe.xml" -> "test"
+      expect(result.saveMethod).toBe("share");
       expect(mockApiService.beerxml.export).toHaveBeenCalledWith("recipe-123");
       expect(mockStorageService.exportBeerXML).toHaveBeenCalledWith(
         mockXmlContent,
@@ -71,6 +73,88 @@ describe("BeerXMLService", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("API Error");
+    });
+
+    it("should handle user cancellation during export", async () => {
+      const mockXmlContent =
+        '<?xml version="1.0"?><RECIPES><RECIPE><NAME>Test Recipe</NAME></RECIPE></RECIPES>';
+      const mockFilename = "test_recipe.xml";
+
+      mockApiService.beerxml.export = jest.fn().mockResolvedValue({
+        data: {
+          xml: mockXmlContent,
+          filename: mockFilename,
+        },
+      });
+
+      mockStorageService.exportBeerXML = jest.fn().mockResolvedValue({
+        success: false,
+        userCancelled: true,
+      });
+
+      const result = await BeerXMLService.exportRecipe("recipe-123");
+
+      expect(result.success).toBe(false);
+      expect(result.userCancelled).toBe(true);
+      expect(mockStorageService.exportBeerXML).toHaveBeenCalledWith(
+        mockXmlContent,
+        "test"
+      );
+    });
+
+    it("should handle empty XML content from server", async () => {
+      mockApiService.beerxml.export = jest.fn().mockResolvedValue({
+        data: {
+          xml: "", // Empty XML content
+          filename: "test_recipe.xml",
+        },
+      });
+
+      const result = await BeerXMLService.exportRecipe("recipe-123");
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("No XML content received from server");
+    });
+
+    it("should handle storage service failure", async () => {
+      const mockXmlContent =
+        '<?xml version="1.0"?><RECIPES><RECIPE><NAME>Test Recipe</NAME></RECIPE></RECIPES>';
+      const mockFilename = "test_recipe.xml";
+
+      mockApiService.beerxml.export = jest.fn().mockResolvedValue({
+        data: {
+          xml: mockXmlContent,
+          filename: mockFilename,
+        },
+      });
+
+      mockStorageService.exportBeerXML = jest.fn().mockResolvedValue({
+        success: false,
+        error: "Storage write failed",
+      });
+
+      const result = await BeerXMLService.exportRecipe("recipe-123");
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Storage write failed");
+    });
+
+    it("should handle empty recipes array from server", async () => {
+      mockApiService.beerxml.export = jest.fn().mockResolvedValue({
+        data: {
+          xml: '<?xml version="1.0"?><RECIPES></RECIPES>',
+          filename: "empty_recipe.xml",
+        },
+      });
+
+      mockStorageService.exportBeerXML = jest.fn().mockResolvedValue({
+        success: true,
+        method: "share",
+      });
+
+      const result = await BeerXMLService.exportRecipe("recipe-123");
+
+      expect(result.success).toBe(true);
     });
   });
 
@@ -158,6 +242,20 @@ describe("BeerXMLService", () => {
         "Failed to parse BeerXML: XML content is empty"
       );
     });
+
+    it("should handle empty recipes array from backend", async () => {
+      mockApiService.beerxml.parse = jest.fn().mockResolvedValue({
+        data: {
+          recipes: [], // Empty array
+        },
+      });
+
+      const result = await BeerXMLService.parseBeerXML(
+        '<?xml version="1.0"?><RECIPES></RECIPES>'
+      );
+
+      expect(result).toEqual([]);
+    });
   });
 
   describe("matchIngredients", () => {
@@ -233,6 +331,27 @@ describe("BeerXMLService", () => {
           },
         ],
       });
+    });
+
+    it("should handle invalid matchIngredients response shape", async () => {
+      const mockIngredients = [
+        {
+          name: "Test Grain",
+          type: "grain" as const,
+          amount: 10,
+          unit: "lb",
+        },
+      ] as any[];
+
+      mockApiService.beerxml.matchIngredients = jest.fn().mockResolvedValue({
+        data: {
+          matched_ingredients: "not an array", // Invalid shape
+        },
+      });
+
+      await expect(
+        BeerXMLService.matchIngredients(mockIngredients)
+      ).rejects.toThrow("Unexpected matchIngredients response shape");
     });
   });
 

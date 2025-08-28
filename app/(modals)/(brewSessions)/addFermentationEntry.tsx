@@ -234,7 +234,7 @@ export default function AddFermentationEntryScreen() {
             keyboardType="decimal-pad"
             returnKeyType="next"
             placeholderTextColor={theme.colors.textSecondary}
-            testID={TEST_IDS.inputs.gravityInput}
+            testID={TEST_IDS.patterns.inputField("gravity")}
           />
           <Text
             style={[
@@ -261,7 +261,7 @@ export default function AddFermentationEntryScreen() {
             keyboardType="decimal-pad"
             returnKeyType="next"
             placeholderTextColor={theme.colors.textSecondary}
-            testID={TEST_IDS.inputs.temperatureInput}
+            testID={TEST_IDS.patterns.inputField("temperature")}
           />
           <Text
             style={[
@@ -284,7 +284,7 @@ export default function AddFermentationEntryScreen() {
             keyboardType="decimal-pad"
             returnKeyType="next"
             placeholderTextColor={theme.colors.textSecondary}
-            testID={TEST_IDS.inputs.phInput}
+            testID={TEST_IDS.patterns.inputField("ph")}
           />
           <Text
             style={[
@@ -308,7 +308,7 @@ export default function AddFermentationEntryScreen() {
             numberOfLines={4}
             returnKeyType="done"
             placeholderTextColor={theme.colors.textSecondary}
-            testID={TEST_IDS.inputs.notesInput}
+            testID={TEST_IDS.patterns.inputField("notes")}
           />
           <Text
             style={[

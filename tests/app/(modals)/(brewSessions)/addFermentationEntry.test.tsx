@@ -358,7 +358,10 @@ describe("AddFermentationEntryScreen", () => {
 
       const { getByTestId } = render(<AddFermentationEntryScreen />);
       // Provide required input and save
-      fireEvent.changeText(getByTestId(TEST_IDS.inputs.gravityInput), "1.040");
+      fireEvent.changeText(
+        getByTestId(TEST_IDS.patterns.inputField("gravity")),
+        "1.040"
+      );
       fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
 
       expect(invalidateQueries).toHaveBeenCalled();
@@ -380,7 +383,10 @@ describe("AddFermentationEntryScreen", () => {
         );
 
       const { getByTestId } = render(<AddFermentationEntryScreen />);
-      fireEvent.changeText(getByTestId(TEST_IDS.inputs.gravityInput), "1.040");
+      fireEvent.changeText(
+        getByTestId(TEST_IDS.patterns.inputField("gravity")),
+        "1.040"
+      );
       fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
 
       expect(Alert.alert).toHaveBeenCalled();
@@ -504,21 +510,26 @@ describe("AddFermentationEntryScreen", () => {
       // Test that form fields accept input and save button is pressable
       expect(() => {
         fireEvent.changeText(
-          getByTestId(TEST_IDS.inputs.gravityInput),
+          getByTestId(TEST_IDS.patterns.inputField("gravity")),
           "1.050"
         );
         fireEvent.changeText(
-          getByTestId(TEST_IDS.inputs.temperatureInput),
+          getByTestId(TEST_IDS.patterns.inputField("temperature")),
           "68"
         );
-        fireEvent.changeText(getByTestId(TEST_IDS.inputs.phInput), "4.2");
+        fireEvent.changeText(
+          getByTestId(TEST_IDS.patterns.inputField("ph")),
+          "4.2"
+        );
         fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
       }).not.toThrow();
 
       // Verify the form elements exist and are interactive
-      expect(getByTestId(TEST_IDS.inputs.gravityInput)).toBeTruthy();
-      expect(getByTestId(TEST_IDS.inputs.temperatureInput)).toBeTruthy();
-      expect(getByTestId(TEST_IDS.inputs.phInput)).toBeTruthy();
+      expect(getByTestId(TEST_IDS.patterns.inputField("gravity"))).toBeTruthy();
+      expect(
+        getByTestId(TEST_IDS.patterns.inputField("temperature"))
+      ).toBeTruthy();
+      expect(getByTestId(TEST_IDS.patterns.inputField("ph"))).toBeTruthy();
       expect(getByTestId(TEST_IDS.buttons.saveButton)).toBeTruthy();
     });
 
@@ -534,7 +545,10 @@ describe("AddFermentationEntryScreen", () => {
       const { getByTestId } = render(<AddFermentationEntryScreen />);
 
       // Only fill required gravity field
-      fireEvent.changeText(getByTestId(TEST_IDS.inputs.gravityInput), "1.040");
+      fireEvent.changeText(
+        getByTestId(TEST_IDS.patterns.inputField("gravity")),
+        "1.040"
+      );
 
       // Submit form
       fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
@@ -559,26 +573,31 @@ describe("AddFermentationEntryScreen", () => {
       // Test that all form fields including optional ones accept input
       expect(() => {
         fireEvent.changeText(
-          getByTestId(TEST_IDS.inputs.gravityInput),
+          getByTestId(TEST_IDS.patterns.inputField("gravity")),
           "1.035"
         );
         fireEvent.changeText(
-          getByTestId(TEST_IDS.inputs.temperatureInput),
+          getByTestId(TEST_IDS.patterns.inputField("temperature")),
           "72"
         );
-        fireEvent.changeText(getByTestId(TEST_IDS.inputs.phInput), "3.8");
         fireEvent.changeText(
-          getByTestId(TEST_IDS.inputs.notesInput),
+          getByTestId(TEST_IDS.patterns.inputField("ph")),
+          "3.8"
+        );
+        fireEvent.changeText(
+          getByTestId(TEST_IDS.patterns.inputField("notes")),
           "Active fermentation"
         );
         fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
       }).not.toThrow();
 
       // Verify all form elements exist and are interactive
-      expect(getByTestId(TEST_IDS.inputs.gravityInput)).toBeTruthy();
-      expect(getByTestId(TEST_IDS.inputs.temperatureInput)).toBeTruthy();
-      expect(getByTestId(TEST_IDS.inputs.phInput)).toBeTruthy();
-      expect(getByTestId(TEST_IDS.inputs.notesInput)).toBeTruthy();
+      expect(getByTestId(TEST_IDS.patterns.inputField("gravity"))).toBeTruthy();
+      expect(
+        getByTestId(TEST_IDS.patterns.inputField("temperature"))
+      ).toBeTruthy();
+      expect(getByTestId(TEST_IDS.patterns.inputField("ph"))).toBeTruthy();
+      expect(getByTestId(TEST_IDS.patterns.inputField("notes"))).toBeTruthy();
       expect(getByTestId(TEST_IDS.buttons.saveButton)).toBeTruthy();
     });
 
@@ -596,7 +615,10 @@ describe("AddFermentationEntryScreen", () => {
       const { getByTestId } = render(<AddFermentationEntryScreen />);
 
       // Fill required field
-      fireEvent.changeText(getByTestId(TEST_IDS.inputs.gravityInput), "1.045");
+      fireEvent.changeText(
+        getByTestId(TEST_IDS.patterns.inputField("gravity")),
+        "1.045"
+      );
 
       // Submit form
       fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));

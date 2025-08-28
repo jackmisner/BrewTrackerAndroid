@@ -413,6 +413,7 @@ describe("BeerXMLService", () => {
       );
 
       expect(result.success).toBe(true);
+      expect(result.method).toBe("share");
       expect(mockFileSystem.writeAsStringAsync).toHaveBeenCalledWith(
         "file://cache/My_Recipe_recipe.xml",
         '<?xml version="1.0"?>...'
@@ -424,6 +425,31 @@ describe("BeerXMLService", () => {
           dialogTitle: "Save My_Recipe_recipe.xml",
         }
       );
+    });
+
+    it("should handle user cancellation during export", async () => {
+      // Mock directory picker to be cancelled, but sharing succeeds as fallback
+      mockFileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync.mockResolvedValue(
+        {
+          granted: false,
+        }
+      );
+      mockFileSystem.writeAsStringAsync.mockResolvedValue();
+      mockSharing.isAvailableAsync.mockResolvedValue(true);
+      mockSharing.shareAsync.mockResolvedValue(undefined);
+
+      const result = await BeerXMLService.exportBeerXML(
+        '<?xml version="1.0"?>...',
+        "My Recipe"
+      );
+
+      // Should succeed via sharing fallback when directory picker is cancelled
+      expect(result.success).toBe(true);
+      expect(result.method).toBe("share");
+      expect(
+        mockFileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync
+      ).toHaveBeenCalled();
+      expect(mockSharing.shareAsync).toHaveBeenCalled();
     });
   });
 

@@ -166,7 +166,9 @@ describe("BrewingMetricsDisplay", () => {
       );
 
       expect(getByText(errorMessage)).toBeTruthy();
-      expect(getByTestId(TEST_IDS.icons.errorOutline)).toBeTruthy();
+      expect(
+        getByTestId(TEST_IDS.patterns.iconElement("error-outline"))
+      ).toBeTruthy();
     });
 
     it("should show retry button when onRetry is provided", () => {
@@ -205,7 +207,9 @@ describe("BrewingMetricsDisplay", () => {
       expect(
         getByText("Metrics will appear as you add ingredients")
       ).toBeTruthy();
-      expect(getByTestId(TEST_IDS.icons.analytics)).toBeTruthy();
+      expect(
+        getByTestId(TEST_IDS.patterns.iconElement("analytics"))
+      ).toBeTruthy();
     });
 
     it("should show empty state when all metrics are undefined", () => {
@@ -428,7 +432,9 @@ describe("BrewingMetricsDisplay", () => {
       // In compact mode, empty state shows different text
       expect(getByText("Add ingredients to see metrics")).toBeTruthy();
       // Icon size should be smaller (24 vs 32)
-      expect(getByTestId(TEST_IDS.icons.analytics)).toBeTruthy();
+      expect(
+        getByTestId(TEST_IDS.patterns.iconElement("analytics"))
+      ).toBeTruthy();
     });
 
     it("should not show mash temperature in compact mode even if provided", () => {

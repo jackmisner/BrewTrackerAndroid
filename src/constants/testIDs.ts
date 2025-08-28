@@ -3,6 +3,35 @@
  *
  * This module contains all test identifiers used throughout the application
  * to ensure consistency and avoid duplication across components.
+ *
+ * ## Pattern-Based TestIDs
+ *
+ * Use the dynamic pattern generators for consistent, reusable testIDs:
+ * - `TEST_IDS.patterns.inputField(name)` - Form inputs (name-input)
+ * - `TEST_IDS.patterns.touchableOpacityAction(name)` - Touchable buttons (name-button)
+ * - `TEST_IDS.patterns.scrollAction(name)` - Scrollable components (name-scroll-view)
+ * - `TEST_IDS.patterns.iconElement(name)` - Icons (icon-name)
+ * - `TEST_IDS.patterns.sectionContainer(name)` - Sections (name-section)
+ * - `TEST_IDS.patterns.modalComponent(name)` - Modals (name-modal)
+ * - `TEST_IDS.patterns.contextMenuAction(name)` - Context menu actions (context-menu-action-name)
+ * - `TEST_IDS.patterns.themeOption(name)` - Theme options (theme-name-option)
+ * - `TEST_IDS.patterns.unitOption(name)` - Unit options (unit-name-option)
+ * - `TEST_IDS.patterns.metricValue(name)` - Metrics (metric-name-value)
+ *
+ * ## Examples
+ * ```typescript
+ * // Instead of hardcoded strings:
+ * testID="recipe-name-input"
+ *
+ * // Use patterns:
+ * testID={TEST_IDS.patterns.inputField("recipe-name")}
+ *
+ * // For buttons:
+ * testID={TEST_IDS.patterns.touchableOpacityAction("save")}
+ *
+ * // For scrollable content:
+ * testID={TEST_IDS.patterns.scrollAction("recipe-list")}
+ * ```
  */
 
 // Keep test IDs reasonably short and predictable
@@ -62,6 +91,12 @@ type PatternFns = {
   unitOption: (val: string) => UnitOptionTestId;
   metricValue: (val: string) => MetricValueTestId;
   contextMenuAction: (val: string) => ContextMenuActionTestId;
+  scrollAction: (val: string) => ScrollActionTestId;
+  touchableOpacityAction: (val: string) => TouchableOpacityActionTestId;
+  inputField: (val: string) => InputFieldTestId;
+  modalComponent: (val: string) => ModalComponentTestId;
+  sectionContainer: (val: string) => SectionContainerTestId;
+  iconElement: (val: string) => IconElementTestId;
 };
 
 const PATTERN_GENERATORS = {
@@ -69,6 +104,12 @@ const PATTERN_GENERATORS = {
   unitOption: makeId("unit-", "-option"),
   metricValue: makeId("metric-", "-value"),
   contextMenuAction: makeId("context-menu-action-", ""),
+  scrollAction: makeId("", "-scroll-view"),
+  touchableOpacityAction: makeId("", "-button"),
+  inputField: makeId("", "-input"),
+  modalComponent: makeId("", "-modal"),
+  sectionContainer: makeId("", "-section"),
+  iconElement: makeId("icon-", ""),
 } satisfies PatternFns;
 
 // Template literal types for dynamic test IDs
@@ -76,6 +117,12 @@ export type ThemeOptionTestId = `theme-${string}-option`;
 export type UnitOptionTestId = `unit-${string}-option`;
 export type MetricValueTestId = `metric-${string}-value`;
 export type ContextMenuActionTestId = `context-menu-action-${string}`;
+export type ScrollActionTestId = `${string}-scroll-view`;
+export type TouchableOpacityActionTestId = `${string}-button`;
+export type InputFieldTestId = `${string}-input`;
+export type ModalComponentTestId = `${string}-modal`;
+export type SectionContainerTestId = `${string}-section`;
+export type IconElementTestId = `icon-${string}`;
 
 export const TEST_IDS = {
   // Navigation & Headers
@@ -99,15 +146,7 @@ export const TEST_IDS = {
     reviewForm: "review-form",
   },
 
-  // Form Inputs
-  inputs: {
-    mashTimeInput: "mash-time-input",
-    confirmPasswordInput: "confirm-password-input",
-    gravityInput: "gravity-input",
-    temperatureInput: "temperature-input",
-    phInput: "ph-input",
-    notesInput: "notes-input",
-  },
+  // Form inputs - Use patterns.inputField(name) for dynamic input testIDs
 
   // Buttons
   buttons: {
@@ -139,16 +178,24 @@ export const TEST_IDS = {
     cancelButton: "context-menu-cancel-button",
   },
 
-  // Icons
-  icons: {
-    errorOutline: "icon-error-outline",
-    analytics: "icon-analytics",
-  },
+  // Icons - Use patterns.iconElement(name) for dynamic icon testIDs
 
   // Charts
   charts: {
     fermentationChart: "fermentation-chart",
     fermentationData: "fermentation-data",
+  },
+
+  // BeerXML Import
+  beerxml: {
+    selectFileButton: "beerxml-select-file-button",
+    loadingIndicator: "beerxml-loading-indicator",
+    errorMessage: "beerxml-error-message",
+    tryAgainButton: "beerxml-try-again-button",
+    proceedButton: "beerxml-proceed-button",
+    recipeOption: "beerxml-recipe-option",
+    importButton: "beerxml-import-button",
+    reviewContainer: "beerxml-review-container",
   },
 
   // Dynamic Pattern Generators
