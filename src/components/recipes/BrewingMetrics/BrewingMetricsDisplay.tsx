@@ -133,7 +133,7 @@ export const BrewingMetricsDisplay: React.FC<BrewingMetricsProps> = ({
             name="error-outline"
             size={24}
             color={theme.colors.error}
-            testID={TEST_IDS.icons.errorOutline}
+            testID={TEST_IDS.patterns.iconElement("error-outline")}
             accessible={false}
           />
           <Text style={styles.errorText}>{error}</Text>

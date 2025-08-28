@@ -28,6 +28,7 @@ import { useTheme } from "@contexts/ThemeContext";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import ApiService from "@services/api/apiService";
 import { IngredientInput } from "@src/types";
+import { TEST_IDS } from "@constants/testIDs";
 
 function coerceIngredientTime(input: unknown): number | undefined {
   if (input == null) return undefined; // keep missing as missing
@@ -309,9 +310,13 @@ export default function ImportReviewScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        testID={TEST_IDS.patterns.scrollAction("import-review")}
       >
         {/* Import Summary */}
-        <View style={styles.section}>
+        <View
+          style={styles.section}
+          testID={TEST_IDS.patterns.sectionContainer("import-summary")}
+        >
           <Text style={styles.sectionTitle}>Import Summary</Text>
 
           <View style={styles.summaryContainer}>
@@ -375,7 +380,10 @@ export default function ImportReviewScreen() {
         </View>
 
         {/* Recipe Details */}
-        <View style={styles.section}>
+        <View
+          style={styles.section}
+          testID={TEST_IDS.patterns.sectionContainer("recipe-details")}
+        >
           <Text style={styles.sectionTitle}>Recipe Details</Text>
 
           <View style={styles.recipeDetails}>

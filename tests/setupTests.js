@@ -13,6 +13,7 @@ jest.mock("react-native", () => {
     TouchableOpacity: "TouchableOpacity",
     Switch: "Switch",
     ActivityIndicator: "ActivityIndicator",
+    RefreshControl: "RefreshControl",
     Alert: {
       alert: jest.fn(),
     },
@@ -23,6 +24,9 @@ jest.mock("react-native", () => {
     Platform: {
       OS: "ios",
       select: jest.fn(obj => obj.ios || obj.default),
+    },
+    StatusBar: {
+      currentHeight: 24,
     },
   };
 });

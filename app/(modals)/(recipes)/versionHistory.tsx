@@ -19,6 +19,7 @@ import {
 } from "@src/types/api";
 import { useTheme } from "@contexts/ThemeContext";
 import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
+import { TEST_IDS } from "@constants/testIDs";
 
 /**
  * Version History Screen
@@ -195,6 +196,7 @@ export default function VersionHistoryScreen() {
         ]}
         onPress={() => isClickable && handleViewVersion(versionItem)}
         disabled={!isClickable}
+        testID={TEST_IDS.patterns.touchableOpacityAction(`version-item-${versionItem.id}`)}
       >
         <View style={styles.versionHeader}>
           <View style={styles.versionInfo}>
@@ -237,7 +239,11 @@ export default function VersionHistoryScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={handleGoBack}
+            testID={TEST_IDS.patterns.touchableOpacityAction("version-history-back")}
+          >
             <MaterialIcons name="arrow-back" size={24} color="#333" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Version History</Text>
@@ -256,7 +262,11 @@ export default function VersionHistoryScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={handleGoBack}
+            testID={TEST_IDS.patterns.touchableOpacityAction("version-history-back")}
+          >
             <MaterialIcons name="arrow-back" size={24} color="#333" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Version History</Text>
@@ -269,7 +279,11 @@ export default function VersionHistoryScreen() {
             Version history is not yet available for this recipe. This feature
             may not be implemented on the backend yet.
           </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={handleGoBack}>
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={handleGoBack}
+            testID={TEST_IDS.patterns.touchableOpacityAction("version-history-go-back")}
+          >
             <Text style={styles.retryButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -285,7 +299,11 @@ export default function VersionHistoryScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={handleGoBack}
+            testID={TEST_IDS.patterns.touchableOpacityAction("version-history-back")}
+          >
             <MaterialIcons name="arrow-back" size={24} color="#333" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Version History</Text>
@@ -297,7 +315,11 @@ export default function VersionHistoryScreen() {
           <Text style={styles.errorText}>
             This recipe doesn&apos;t have any version history available.
           </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={handleGoBack}>
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={handleGoBack}
+            testID={TEST_IDS.patterns.touchableOpacityAction("version-history-go-back")}
+          >
             <Text style={styles.retryButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -309,7 +331,11 @@ export default function VersionHistoryScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={handleGoBack}
+          testID={TEST_IDS.patterns.touchableOpacityAction("version-history-back")}
+        >
           <MaterialIcons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Version History</Text>
@@ -318,6 +344,7 @@ export default function VersionHistoryScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        testID={TEST_IDS.patterns.scrollAction("version-history")}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }

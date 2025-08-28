@@ -279,7 +279,7 @@ const ResetPasswordScreen: React.FC = () => {
                 editable={!isLoading}
                 returnKeyType="send"
                 onSubmitEditing={handleResetPassword}
-                testID={TEST_IDS.inputs.confirmPasswordInput}
+                testID={TEST_IDS.patterns.inputField("confirm-password")}
               />
               <TouchableOpacity
                 style={loginStyles.passwordToggle}

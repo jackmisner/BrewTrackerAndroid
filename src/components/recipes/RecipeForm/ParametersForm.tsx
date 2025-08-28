@@ -273,7 +273,7 @@ export function ParametersForm({
         <Text style={styles.inputLabel}>Mash Time (minutes)</Text>
         <TextInput
           style={[styles.textInput, errors.mash_time && styles.textInputError]}
-          testID={TEST_IDS.inputs.mashTimeInput}
+          testID={TEST_IDS.patterns.inputField("mash-time")}
           value={recipeData.mash_time?.toString() || ""}
           onChangeText={text => {
             const numValue = text ? parseFloat(text) || undefined : undefined;

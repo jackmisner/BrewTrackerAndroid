@@ -27,6 +27,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@contexts/ThemeContext";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import BeerXMLService from "@services/beerxml/BeerXMLService";
+import { TEST_IDS } from "@constants/testIDs";
 
 interface MatchingState {
   step: "matching" | "reviewing" | "creating" | "finalizing";
@@ -72,6 +73,7 @@ export default function IngredientMatchingScreen() {
     decisions: [],
     createdIngredients: [],
   });
+  const [retryCount, setRetryCount] = useState(0);
 
   /**
    * Initialize ingredient matching
@@ -149,7 +151,7 @@ export default function IngredientMatchingScreen() {
     }
 
     matchIngredients();
-  }, [recipeData]);
+  }, [recipeData, retryCount]);
 
   /**
    * Update decision for current ingredient
@@ -336,6 +338,8 @@ export default function IngredientMatchingScreen() {
   const renderProgress = () => {
     const current = matchingState.currentIndex + 1;
     const total = matchingState.decisions.length;
+    const percent =
+      total > 0 ? Math.min(100, Math.max(0, (current / total) * 100)) : 0;
 
     return (
       <View style={styles.progressContainer}>
@@ -343,12 +347,7 @@ export default function IngredientMatchingScreen() {
           Ingredient {current} of {total}
         </Text>
         <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${(current / total) * 100}%` },
-            ]}
-          />
+          <View style={[styles.progressFill, { width: `${percent}%` }]} />
         </View>
       </View>
     );
@@ -405,6 +404,9 @@ export default function IngredientMatchingScreen() {
                   matchingResult.best_match.ingredient
                 )
               }
+              testID={TEST_IDS.patterns.touchableOpacityAction(
+                "use-existing-ingredient"
+              )}
             >
               <View style={styles.matchOptionContent}>
                 <Text style={styles.matchOptionName}>
@@ -437,6 +439,9 @@ export default function IngredientMatchingScreen() {
                   styles.selectedMatchOption,
               ]}
               onPress={() => updateDecision("create_new")}
+              testID={TEST_IDS.patterns.touchableOpacityAction(
+                "create-new-ingredient"
+              )}
             >
               <View style={styles.matchOptionContent}>
                 <Text style={styles.matchOptionName}>
@@ -474,6 +479,9 @@ export default function IngredientMatchingScreen() {
             style={[styles.button, styles.secondaryButton]}
             onPress={previousIngredient}
             disabled={matchingState.currentIndex === 0}
+            testID={TEST_IDS.patterns.touchableOpacityAction(
+              "previous-ingredient"
+            )}
           >
             <MaterialIcons
               name="arrow-back"
@@ -489,6 +497,9 @@ export default function IngredientMatchingScreen() {
             <TouchableOpacity
               style={[styles.button, styles.primaryButton]}
               onPress={completeMatching}
+              testID={TEST_IDS.patterns.touchableOpacityAction(
+                "complete-import"
+              )}
             >
               <Text style={[styles.buttonText, styles.primaryButtonText]}>
                 Complete Import
@@ -503,6 +514,9 @@ export default function IngredientMatchingScreen() {
             <TouchableOpacity
               style={[styles.button, styles.primaryButton]}
               onPress={nextIngredient}
+              testID={TEST_IDS.patterns.touchableOpacityAction(
+                "next-ingredient"
+              )}
             >
               <Text style={[styles.buttonText, styles.primaryButtonText]}>
                 Next
@@ -540,10 +554,34 @@ export default function IngredientMatchingScreen() {
     <View style={styles.section}>
       <Text style={styles.errorTitle}>Matching Error</Text>
       <Text style={styles.errorText}>{matchingState.error}</Text>
-
+      {matchingState.retryable ? (
+        <TouchableOpacity
+          style={[styles.button, styles.primaryButton]}
+          onPress={() => {
+            setMatchingState(p => ({
+              ...p,
+              isLoading: true,
+              error: null,
+              step: "matching",
+            }));
+            setRetryCount(c => c + 1);
+          }}
+          testID={TEST_IDS.patterns.touchableOpacityAction("try-again")}
+        >
+          <MaterialIcons
+            name="refresh"
+            size={24}
+            color={theme.colors.background}
+          />
+          <Text style={[styles.buttonText, styles.primaryButtonText]}>
+            Try Again
+          </Text>
+        </TouchableOpacity>
+      ) : null}
       <TouchableOpacity
         style={[styles.button, styles.primaryButton]}
         onPress={() => router.back()}
+        testID={TEST_IDS.patterns.touchableOpacityAction("go-back")}
       >
         <MaterialIcons
           name="arrow-back"
@@ -568,6 +606,9 @@ export default function IngredientMatchingScreen() {
           <TouchableOpacity
             style={[styles.button, styles.primaryButton]}
             onPress={() => router.back()}
+            testID={TEST_IDS.patterns.touchableOpacityAction(
+              "invalid-recipe-go-back"
+            )}
           >
             <MaterialIcons
               name="arrow-back"
@@ -587,7 +628,13 @@ export default function IngredientMatchingScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={handleGoBack}
+          testID={TEST_IDS.patterns.touchableOpacityAction(
+            "ingredient-matching-back"
+          )}
+        >
           <MaterialIcons
             name="arrow-back"
             size={24}
@@ -600,6 +647,7 @@ export default function IngredientMatchingScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        testID={TEST_IDS.patterns.scrollAction("ingredient-matching")}
       >
         {matchingState.step === "reviewing" && renderProgress()}
 
