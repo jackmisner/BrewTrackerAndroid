@@ -27,6 +27,7 @@ import { router } from "expo-router";
 import { useTheme } from "@contexts/ThemeContext";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import BeerXMLService from "@services/beerxml/BeerXMLService";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 interface Recipe {
   name?: string;
@@ -189,6 +190,9 @@ export default function ImportBeerXMLScreen() {
         style={[styles.button, styles.primaryButton]}
         onPress={handleFileSelection}
         disabled={importState.isLoading}
+        testID={TEST_IDS.beerxml.selectFileButton}
+        accessibilityRole="button"
+        accessibilityLabel="Select BeerXML file to import"
       >
         <MaterialIcons
           name="file-upload"
@@ -212,7 +216,10 @@ export default function ImportBeerXMLScreen() {
         Analyzing your BeerXML file: {importState.selectedFile?.filename}
       </Text>
 
-      <View style={styles.beerxmlLoadingContainer}>
+      <View
+        style={styles.beerxmlLoadingContainer}
+        testID={TEST_IDS.beerxml.loadingIndicator}
+      >
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.beerxmlLoadingText}>Parsing recipes...</Text>
       </View>
@@ -244,6 +251,9 @@ export default function ImportBeerXMLScreen() {
                 onPress={() =>
                   setImportState(prev => ({ ...prev, selectedRecipe: recipe }))
                 }
+                testID={TEST_IDS.patterns.touchableOpacityAction(
+                  `recipe-option-${index}`
+                )}
               >
                 <Text style={styles.recipeOptionName}>
                   {recipe.name || "Unnamed Recipe"}
@@ -314,6 +324,9 @@ export default function ImportBeerXMLScreen() {
           <TouchableOpacity
             style={[styles.button, styles.primaryButton]}
             onPress={proceedToIngredientMatching}
+            testID={TEST_IDS.patterns.touchableOpacityAction(
+              "proceed-to-matching"
+            )}
           >
             <MaterialIcons
               name="arrow-forward"
@@ -341,6 +354,7 @@ export default function ImportBeerXMLScreen() {
         <TouchableOpacity
           style={[styles.button, styles.primaryButton]}
           onPress={resetImport}
+          testID={TEST_IDS.patterns.touchableOpacityAction("try-again")}
         >
           <MaterialIcons
             name="refresh"
@@ -359,7 +373,13 @@ export default function ImportBeerXMLScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={handleGoBack}
+          testID={TEST_IDS.patterns.touchableOpacityAction(
+            "beerxml-import-back"
+          )}
+        >
           <MaterialIcons
             name="arrow-back"
             size={24}
@@ -368,7 +388,11 @@ export default function ImportBeerXMLScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Import BeerXML</Text>
         {importState.step !== "file_selection" && !importState.error ? (
-          <TouchableOpacity style={styles.resetButton} onPress={resetImport}>
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={resetImport}
+            testID={TEST_IDS.patterns.touchableOpacityAction("reset-import")}
+          >
             <MaterialIcons name="refresh" size={24} color={theme.colors.text} />
           </TouchableOpacity>
         ) : null}
@@ -377,6 +401,7 @@ export default function ImportBeerXMLScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        testID={TEST_IDS.patterns.scrollAction("import-beerxml")}
       >
         {importState.error && renderError()}
         {!importState.error &&

@@ -238,10 +238,16 @@ export function IngredientsForm({
                     ingredient.manufacturer ||
                     ingredient.attenuation) ? (
                     <Text style={styles.ingredientDetails}>
-                      {ingredient.manufacturer &&
-                        `Brand: ${ingredient.manufacturer}`}
-                      {ingredient.attenuation &&
-                        ` • ${ingredient.attenuation}% Attenuation`}
+                      {[
+                        ingredient.yeast_type &&
+                          `Type: ${ingredient.yeast_type}`,
+                        ingredient.manufacturer &&
+                          `Brand: ${ingredient.manufacturer}`,
+                        (ingredient.attenuation ?? null) !== null &&
+                          `${ingredient.attenuation}% Attenuation`,
+                      ]
+                        .filter(Boolean)
+                        .join(" • ")}
                     </Text>
                   ) : null}
                 </View>

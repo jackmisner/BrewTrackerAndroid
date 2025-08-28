@@ -3,7 +3,7 @@
     "name": "BrewTracker",
     "slug": "brewtracker-android",
     "orientation": "portrait",
-    "version": "0.14.3",
+    "version": "0.14.6",
     "icon": "./assets/images/icon.png",
     "scheme": "brewtracker",
     "userInterfaceStyle": "automatic",
@@ -16,7 +16,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.brewtracker.android",
-      "versionCode": 51,
+      "versionCode": 54,
       "permissions": ["CAMERA", "VIBRATE"]
     },
     "plugins": [

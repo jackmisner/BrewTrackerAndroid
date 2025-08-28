@@ -242,7 +242,9 @@ describe("ParametersForm", () => {
         />
       );
 
-      const mashTimeInput = getByTestId(TEST_IDS.inputs.mashTimeInput);
+      const mashTimeInput = getByTestId(
+        TEST_IDS.patterns.inputField("mash-time")
+      );
       fireEvent.changeText(mashTimeInput, "90");
 
       expect(mockOnUpdateField).toHaveBeenCalledWith("mash_time", 90);

@@ -2,6 +2,7 @@ import React from "react";
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
 import ViewRecipeScreen from "../../../../app/(modals)/(recipes)/viewRecipe";
 import { mockData, testUtils } from "../../../testUtils";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 // Mock React Native
 jest.mock("react-native", () => ({
@@ -350,11 +351,12 @@ describe("ViewRecipeScreen", () => {
     });
 
     it("should navigate back when back button is pressed", () => {
-      const { UNSAFE_getAllByType } = render(<ViewRecipeScreen />);
+      const { getByTestId } = render(<ViewRecipeScreen />);
 
-      // Find the first TouchableOpacity which should be the back button in the header
-      const touchableOpacities = UNSAFE_getAllByType("TouchableOpacity" as any);
-      const backButton = touchableOpacities[0]; // First TouchableOpacity should be the back button
+      // Find the back button using testID
+      const backButton = getByTestId(
+        TEST_IDS.patterns.touchableOpacityAction("view-recipe-back")
+      );
 
       // Simulate pressing the back button
       fireEvent.press(backButton);
@@ -393,10 +395,12 @@ describe("ViewRecipeScreen", () => {
         refetch: mockRefetch,
       });
 
-      const { UNSAFE_getByType } = render(<ViewRecipeScreen />);
+      const { getByTestId } = render(<ViewRecipeScreen />);
 
       // Find the ScrollView and trigger its RefreshControl onRefresh
-      const scrollView = UNSAFE_getByType("ScrollView" as any);
+      const scrollView = getByTestId(
+        TEST_IDS.patterns.scrollAction("view-recipe")
+      );
       const refreshControl = scrollView.props.refreshControl;
 
       // Simulate pull-to-refresh by calling onRefresh

@@ -4,7 +4,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { brewingMetricsStyles } from "@styles/components/brewingMetricsStyles";
-import { TEST_IDS } from "@constants/testIDs";
+import { TEST_IDS } from "@src/constants/testIDs";
 import {
   formatGravity,
   formatABV,
@@ -133,7 +133,7 @@ export const BrewingMetricsDisplay: React.FC<BrewingMetricsProps> = ({
             name="error-outline"
             size={24}
             color={theme.colors.error}
-            testID={TEST_IDS.icons.errorOutline}
+            testID={TEST_IDS.patterns.iconElement("error-outline")}
             accessible={false}
           />
           <Text style={styles.errorText}>{error}</Text>
@@ -166,6 +166,7 @@ export const BrewingMetricsDisplay: React.FC<BrewingMetricsProps> = ({
             name="analytics"
             size={compact ? 24 : 32}
             color={theme.colors.textSecondary}
+            testID={TEST_IDS.patterns.iconElement("analytics")}
           />
           <Text style={styles.emptyStateText}>
             {compact

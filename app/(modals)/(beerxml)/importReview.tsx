@@ -28,6 +28,15 @@ import { useTheme } from "@contexts/ThemeContext";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import ApiService from "@services/api/apiService";
 import { IngredientInput } from "@src/types";
+import { TEST_IDS } from "@src/constants/testIDs";
+
+function coerceIngredientTime(input: unknown): number | undefined {
+  if (input == null) return undefined; // keep missing as missing
+  if (typeof input === "boolean") return undefined; // ignore booleans
+  if (input === "" || input === 0 || input === "0") return 0; // preserve explicit zero
+  const n = typeof input === "number" ? input : Number(input);
+  return Number.isFinite(n) && n >= 0 ? n : undefined; // reject NaN/±Inf/negatives
+}
 
 export default function ImportReviewScreen() {
   const theme = useTheme();
@@ -164,7 +173,7 @@ export default function ImportReviewScreen() {
               amount: Number(ing.amount) || 0,
               unit: ing.unit,
               use: ing.use,
-              time: ing.time ? Number(ing.time) || 0 : undefined,
+              time: coerceIngredientTime(ing.time),
             })
           ),
       };
@@ -302,9 +311,13 @@ export default function ImportReviewScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        testID={TEST_IDS.patterns.scrollAction("import-review")}
       >
         {/* Import Summary */}
-        <View style={styles.section}>
+        <View
+          style={styles.section}
+          testID={TEST_IDS.patterns.sectionContainer("import-summary")}
+        >
           <Text style={styles.sectionTitle}>Import Summary</Text>
 
           <View style={styles.summaryContainer}>
@@ -368,7 +381,10 @@ export default function ImportReviewScreen() {
         </View>
 
         {/* Recipe Details */}
-        <View style={styles.section}>
+        <View
+          style={styles.section}
+          testID={TEST_IDS.patterns.sectionContainer("recipe-details")}
+        >
           <Text style={styles.sectionTitle}>Recipe Details</Text>
 
           <View style={styles.recipeDetails}>
@@ -397,7 +413,7 @@ export default function ImportReviewScreen() {
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Boil Time:</Text>
               <Text style={styles.detailValue}>
-                {recipeData.boil_time || 60} minutes
+                {coerceIngredientTime(recipeData.boil_time) || 60} minutes
               </Text>
             </View>
 
@@ -530,7 +546,8 @@ export default function ImportReviewScreen() {
                       <Text style={styles.ingredientDetails}>
                         {ingredient.amount || 0} {ingredient.unit || ""}
                         {ingredient.use && ` • ${ingredient.use}`}
-                        {ingredient.time > 0 && ` • ${ingredient.time} min`}
+                        {ingredient.time > 0 &&
+                          ` • ${coerceIngredientTime(ingredient.time)} min`}
                       </Text>
                     </View>
                   ))}

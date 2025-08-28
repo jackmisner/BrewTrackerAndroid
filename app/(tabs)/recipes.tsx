@@ -247,6 +247,9 @@ export default function RecipesScreen() {
           `"${recipe.name}" has been ${method} as BeerXML!`,
           [{ text: "OK" }]
         );
+      } else if (result.userCancelled) {
+        // User cancelled the export - don't show error
+        return;
       } else {
         Alert.alert(
           "Export Failed",
