@@ -1,6 +1,6 @@
 /**
  * Tests for VersionHistoryScreen
- * 
+ *
  * Tests the version history modal including API integration, UI states,
  * navigation, and user interactions using testID patterns.
  */
@@ -14,9 +14,9 @@ import { TEST_IDS } from "@constants/testIDs";
 // Mock dependencies
 jest.mock("@contexts/ThemeContext", () => ({
   useTheme: () => ({
-    colors: { 
-      primary: "#007AFF", 
-      text: "#000", 
+    colors: {
+      primary: "#007AFF",
+      text: "#000",
       background: "#FFF",
       error: "#FF3B30",
       textSecondary: "#666",
@@ -32,15 +32,25 @@ jest.mock("expo-router", () => ({
   })),
 }));
 
-// Mock React Query  
-const mockVersionHistoryQuery = {
+// Mock React Query
+const mockVersionHistoryQuery: {
+  data: any;
+  isLoading: boolean;
+  error: any;
+  refetch: jest.Mock;
+} = {
   data: null,
   isLoading: false,
   error: null,
   refetch: jest.fn(),
 };
 
-const mockCurrentRecipeQuery = {
+const mockCurrentRecipeQuery: {
+  data: any;
+  isLoading: boolean;
+  error: any;
+  refetch: jest.Mock;
+} = {
   data: null,
   isLoading: false,
   error: null,
@@ -48,7 +58,7 @@ const mockCurrentRecipeQuery = {
 };
 
 jest.mock("@tanstack/react-query", () => ({
-  useQuery: jest.fn().mockImplementation((config) => {
+  useQuery: jest.fn().mockImplementation(config => {
     // Return version history query for version history requests
     if (config.queryKey[0] === "versionHistory") {
       return mockVersionHistoryQuery;
@@ -75,12 +85,12 @@ jest.mock("@services/api/apiService", () => ({
 }));
 
 // Mock Alert
-jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+jest.spyOn(Alert, "alert").mockImplementation(() => {});
 
 describe("VersionHistoryScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Reset query mocks to default state
     Object.assign(mockVersionHistoryQuery, {
       data: null,
@@ -88,7 +98,7 @@ describe("VersionHistoryScreen", () => {
       error: null,
       refetch: jest.fn(),
     });
-    
+
     Object.assign(mockCurrentRecipeQuery, {
       data: null,
       isLoading: false,
@@ -107,7 +117,9 @@ describe("VersionHistoryScreen", () => {
 
       expect(getByText("Version History")).toBeTruthy();
       expect(
-        getByTestId(TEST_IDS.patterns.touchableOpacityAction("version-history-back"))
+        getByTestId(
+          TEST_IDS.patterns.touchableOpacityAction("version-history-back")
+        )
       ).toBeTruthy();
     });
 
@@ -116,15 +128,17 @@ describe("VersionHistoryScreen", () => {
       Object.assign(mockVersionHistoryQuery, {
         data: {
           current_version: 1,
-          all_versions: [{
-            recipe_id: "v1",
-            name: "Version 1",
-            version: 1,
-            unit_system: "imperial",
-            is_current: true,
-            is_root: true,
-            is_available: true,
-          }],
+          all_versions: [
+            {
+              recipe_id: "v1",
+              name: "Version 1",
+              version: 1,
+              unit_system: "imperial",
+              is_current: true,
+              is_root: true,
+              is_available: true,
+            },
+          ],
           total_versions: 1,
         },
         isLoading: false,
@@ -132,7 +146,7 @@ describe("VersionHistoryScreen", () => {
       });
 
       const { getByTestId } = render(<VersionHistoryScreen />);
-      
+
       expect(
         getByTestId(TEST_IDS.patterns.scrollAction("version-history"))
       ).toBeTruthy();
@@ -142,17 +156,17 @@ describe("VersionHistoryScreen", () => {
   describe("Loading States", () => {
     it("should show loading indicator when fetching data", () => {
       mockVersionHistoryQuery.isLoading = true;
-      
+
       const { getByText } = render(<VersionHistoryScreen />);
-      
+
       expect(getByText("Loading version history...")).toBeTruthy();
     });
 
     it("should show loading for current recipe query", () => {
       mockCurrentRecipeQuery.isLoading = true;
-      
+
       const { getByText } = render(<VersionHistoryScreen />);
-      
+
       expect(getByText("Loading version history...")).toBeTruthy();
     });
   });
@@ -160,39 +174,49 @@ describe("VersionHistoryScreen", () => {
   describe("Error States", () => {
     it("should display error state when version history fails to load", () => {
       mockVersionHistoryQuery.error = new Error("Failed to load versions");
-      
+
       const { getByText, getByTestId } = render(<VersionHistoryScreen />);
-      
+
       expect(getByText("Version History")).toBeTruthy();
       expect(
-        getByText("Version history is not yet available for this recipe. This feature may not be implemented on the backend yet.")
+        getByText(
+          "Version history is not yet available for this recipe. This feature may not be implemented on the backend yet."
+        )
       ).toBeTruthy();
       expect(
-        getByTestId(TEST_IDS.patterns.touchableOpacityAction("version-history-go-back"))
+        getByTestId(
+          TEST_IDS.patterns.touchableOpacityAction("version-history-go-back")
+        )
       ).toBeTruthy();
     });
 
     it("should show empty state when no versions exist", () => {
       mockVersionHistoryQuery.data = { versions: [], recipe_id: "recipe-123" };
-      
+
       const { getByText, getByTestId } = render(<VersionHistoryScreen />);
-      
-      expect(getByText("This recipe doesn't have any version history available.")).toBeTruthy();
+
       expect(
-        getByTestId(TEST_IDS.patterns.touchableOpacityAction("version-history-go-back"))
+        getByText("This recipe doesn't have any version history available.")
+      ).toBeTruthy();
+      expect(
+        getByTestId(
+          TEST_IDS.patterns.touchableOpacityAction("version-history-go-back")
+        )
       ).toBeTruthy();
     });
 
     it("should handle back navigation from error state", () => {
       const mockRouter = require("expo-router").router;
       mockVersionHistoryQuery.error = new Error("API Error");
-      
+
       const { getByTestId } = render(<VersionHistoryScreen />);
-      
+
       fireEvent.press(
-        getByTestId(TEST_IDS.patterns.touchableOpacityAction("version-history-go-back"))
+        getByTestId(
+          TEST_IDS.patterns.touchableOpacityAction("version-history-go-back")
+        )
       );
-      
+
       expect(mockRouter.back).toHaveBeenCalledTimes(1);
     });
   });
@@ -206,7 +230,7 @@ describe("VersionHistoryScreen", () => {
           all_versions: [
             {
               recipe_id: "v1",
-              name: "Original Recipe", 
+              name: "Original Recipe",
               version: 1,
               unit_system: "imperial",
               is_current: false,
@@ -214,14 +238,14 @@ describe("VersionHistoryScreen", () => {
               is_available: true,
             },
             {
-              recipe_id: "v2", 
+              recipe_id: "v2",
               name: "Updated Recipe",
               version: 2,
               unit_system: "imperial",
               is_current: true,
               is_root: false,
               is_available: true,
-            }
+            },
           ],
           total_versions: 2,
         },
@@ -230,7 +254,7 @@ describe("VersionHistoryScreen", () => {
       });
 
       const { getByTestId, getByText } = render(<VersionHistoryScreen />);
-      
+
       // Check for version items with dynamic testIDs
       expect(
         getByTestId(TEST_IDS.patterns.touchableOpacityAction("version-item-v1"))
@@ -238,7 +262,7 @@ describe("VersionHistoryScreen", () => {
       expect(
         getByTestId(TEST_IDS.patterns.touchableOpacityAction("version-item-v2"))
       ).toBeTruthy();
-      
+
       // Check version content
       expect(getByText("Original Recipe")).toBeTruthy();
       expect(getByText("Updated Recipe")).toBeTruthy();
@@ -247,19 +271,61 @@ describe("VersionHistoryScreen", () => {
     it("should handle enhanced version history response format", () => {
       mockVersionHistoryQuery.data = {
         current_version: 3,
-        root_recipe: { recipe_id: "root", name: "Root", version: 1, unit_system: "imperial" },
-        immediate_parent: { recipe_id: "v1", name: "Parent", version: 2, unit_system: "imperial" },
+        root_recipe: {
+          recipe_id: "root",
+          name: "Root",
+          version: 1,
+          unit_system: "imperial",
+        },
+        immediate_parent: {
+          recipe_id: "v1",
+          name: "Parent",
+          version: 2,
+          unit_system: "imperial",
+        },
         all_versions: [
-          { recipe_id: "root", name: "Root", is_current: false, version: 1, unit_system: "imperial", is_root: true, is_available: true },
-          { recipe_id: "v1", name: "Parent", is_current: false, version: 2, unit_system: "imperial", is_root: false, is_available: true },
-          { recipe_id: "v2", name: "Current", is_current: true, version: 3, unit_system: "imperial", is_root: false, is_available: true },
-          { recipe_id: "v3", name: "Child", is_current: false, version: 4, unit_system: "imperial", is_root: false, is_available: true },
+          {
+            recipe_id: "root",
+            name: "Root",
+            is_current: false,
+            version: 1,
+            unit_system: "imperial",
+            is_root: true,
+            is_available: true,
+          },
+          {
+            recipe_id: "v1",
+            name: "Parent",
+            is_current: false,
+            version: 2,
+            unit_system: "imperial",
+            is_root: false,
+            is_available: true,
+          },
+          {
+            recipe_id: "v2",
+            name: "Current",
+            is_current: true,
+            version: 3,
+            unit_system: "imperial",
+            is_root: false,
+            is_available: true,
+          },
+          {
+            recipe_id: "v3",
+            name: "Child",
+            is_current: false,
+            version: 4,
+            unit_system: "imperial",
+            is_root: false,
+            is_available: true,
+          },
         ],
         total_versions: 4,
       };
 
       const { getAllByText } = render(<VersionHistoryScreen />);
-      
+
       // Check that all versions render without error
       expect(getAllByText("Root").length).toBeGreaterThan(0);
       expect(getAllByText("Parent").length).toBeGreaterThan(0);
@@ -270,12 +336,17 @@ describe("VersionHistoryScreen", () => {
     it("should handle legacy version history response format", () => {
       mockVersionHistoryQuery.data = {
         current_version: 2,
-        parent_recipe: { recipe_id: "v1", name: "Version 1", version: 1, unit_system: "imperial" },
+        parent_recipe: {
+          recipe_id: "v1",
+          name: "Version 1",
+          version: 1,
+          unit_system: "imperial",
+        },
         child_versions: [],
       };
 
       const { getAllByText } = render(<VersionHistoryScreen />);
-      
+
       expect(getAllByText("Version 1").length).toBeGreaterThan(0);
       expect(getAllByText("Current Version").length).toBeGreaterThan(0);
     });
@@ -284,13 +355,15 @@ describe("VersionHistoryScreen", () => {
   describe("User Interactions", () => {
     it("should handle back button navigation", () => {
       const mockRouter = require("expo-router").router;
-      
+
       const { getByTestId } = render(<VersionHistoryScreen />);
-      
+
       fireEvent.press(
-        getByTestId(TEST_IDS.patterns.touchableOpacityAction("version-history-back"))
+        getByTestId(
+          TEST_IDS.patterns.touchableOpacityAction("version-history-back")
+        )
       );
-      
+
       expect(mockRouter.back).toHaveBeenCalledTimes(1);
     });
 
@@ -298,24 +371,26 @@ describe("VersionHistoryScreen", () => {
       const mockRouter = require("expo-router").router;
       mockVersionHistoryQuery.data = {
         current_version: 1,
-        all_versions: [{
-          recipe_id: "v1",
-          name: "Version 1",
-          is_current: false,
-          is_available: true,
-          version: 1,
-          unit_system: "imperial",
-          is_root: true,
-        }],
+        all_versions: [
+          {
+            recipe_id: "v1",
+            name: "Version 1",
+            is_current: false,
+            is_available: true,
+            version: 1,
+            unit_system: "imperial",
+            is_root: true,
+          },
+        ],
         total_versions: 1,
       };
 
       const { getByTestId } = render(<VersionHistoryScreen />);
-      
+
       fireEvent.press(
         getByTestId(TEST_IDS.patterns.touchableOpacityAction("version-item-v1"))
       );
-      
+
       expect(mockRouter.push).toHaveBeenCalledWith({
         pathname: "/(modals)/(recipes)/viewRecipe",
         params: { recipe_id: "v1" },
@@ -326,24 +401,26 @@ describe("VersionHistoryScreen", () => {
       const mockRouter = require("expo-router").router;
       mockVersionHistoryQuery.data = {
         current_version: 2,
-        all_versions: [{
-          recipe_id: "v2",
-          name: "Current Version",
-          is_current: true,
-          is_available: true,
-          version: 2,
-          unit_system: "imperial",
-          is_root: false,
-        }],
+        all_versions: [
+          {
+            recipe_id: "v2",
+            name: "Current Version",
+            is_current: true,
+            is_available: true,
+            version: 2,
+            unit_system: "imperial",
+            is_root: false,
+          },
+        ],
         total_versions: 1,
       };
 
       const { getByTestId } = render(<VersionHistoryScreen />);
-      
+
       fireEvent.press(
         getByTestId(TEST_IDS.patterns.touchableOpacityAction("version-item-v2"))
       );
-      
+
       // Should not navigate when tapping current version
       expect(mockRouter.push).not.toHaveBeenCalled();
     });
@@ -353,21 +430,33 @@ describe("VersionHistoryScreen", () => {
     it("should support pull-to-refresh functionality", async () => {
       mockVersionHistoryQuery.data = {
         current_version: 1,
-        all_versions: [{ recipe_id: "v1", name: "Version 1", version: 1, unit_system: "imperial", is_current: true, is_root: true, is_available: true }],
+        all_versions: [
+          {
+            recipe_id: "v1",
+            name: "Version 1",
+            version: 1,
+            unit_system: "imperial",
+            is_current: true,
+            is_root: true,
+            is_available: true,
+          },
+        ],
         total_versions: 1,
       };
 
       const { getByTestId } = render(<VersionHistoryScreen />);
-      
-      const scrollView = getByTestId(TEST_IDS.patterns.scrollAction("version-history"));
+
+      const scrollView = getByTestId(
+        TEST_IDS.patterns.scrollAction("version-history")
+      );
       const refreshControl = scrollView.props.refreshControl;
-      
+
       expect(refreshControl).toBeTruthy();
       expect(refreshControl.props.refreshing).toBe(false);
-      
+
       // Simulate pull-to-refresh by calling onRefresh directly
       await refreshControl.props.onRefresh();
-      
+
       expect(mockVersionHistoryQuery.refetch).toHaveBeenCalled();
       expect(mockCurrentRecipeQuery.refetch).toHaveBeenCalled();
     });
@@ -375,25 +464,39 @@ describe("VersionHistoryScreen", () => {
     it("should handle refresh errors gracefully", async () => {
       mockVersionHistoryQuery.data = {
         current_version: 1,
-        all_versions: [{ recipe_id: "v1", name: "Version 1", version: 1, unit_system: "imperial", is_current: true, is_root: true, is_available: true }],
+        all_versions: [
+          {
+            recipe_id: "v1",
+            name: "Version 1",
+            version: 1,
+            unit_system: "imperial",
+            is_current: true,
+            is_root: true,
+            is_available: true,
+          },
+        ],
         total_versions: 1,
       };
-      mockVersionHistoryQuery.refetch.mockRejectedValueOnce(new Error("Refresh failed"));
+      mockVersionHistoryQuery.refetch.mockRejectedValueOnce(
+        new Error("Refresh failed")
+      );
 
       const { getByTestId } = render(<VersionHistoryScreen />);
-      
-      const scrollView = getByTestId(TEST_IDS.patterns.scrollAction("version-history"));
+
+      const scrollView = getByTestId(
+        TEST_IDS.patterns.scrollAction("version-history")
+      );
       const refreshControl = scrollView.props.refreshControl;
-      
+
       // Should not throw when refresh fails
-      expect(() => fireEvent(refreshControl, 'refresh')).not.toThrow();
+      expect(() => fireEvent(refreshControl, "refresh")).not.toThrow();
     });
   });
 
   describe("Edge Cases", () => {
     it("should handle missing recipe_id parameter", () => {
       require("expo-router").useLocalSearchParams.mockReturnValueOnce({});
-      
+
       expect(() => render(<VersionHistoryScreen />)).not.toThrow();
     });
 
@@ -401,7 +504,15 @@ describe("VersionHistoryScreen", () => {
       mockVersionHistoryQuery.data = {
         current_version: 1,
         all_versions: [
-          { recipe_id: "v1", name: "Missing fields", version: 1, unit_system: "imperial", is_current: false, is_root: true, is_available: true },
+          {
+            recipe_id: "v1",
+            name: "Missing fields",
+            version: 1,
+            unit_system: "imperial",
+            is_current: false,
+            is_root: true,
+            is_available: true,
+          },
         ],
         total_versions: 1,
       };
@@ -411,17 +522,19 @@ describe("VersionHistoryScreen", () => {
 
     it("should handle undefined version history data", () => {
       mockVersionHistoryQuery.data = undefined;
-      
+
       const { getByText } = render(<VersionHistoryScreen />);
-      
-      expect(getByText("This recipe doesn't have any version history available.")).toBeTruthy();
+
+      expect(
+        getByText("This recipe doesn't have any version history available.")
+      ).toBeTruthy();
     });
   });
 
   describe("Theme Integration", () => {
     it("should use theme colors for styling", () => {
       const { getByText } = render(<VersionHistoryScreen />);
-      
+
       // Component should render with theme-styled elements
       expect(getByText("Version History")).toBeTruthy();
     });
@@ -431,23 +544,27 @@ describe("VersionHistoryScreen", () => {
     it("should provide proper accessibility labels", () => {
       mockVersionHistoryQuery.data = {
         current_version: 1,
-        all_versions: [{
-          recipe_id: "v1",
-          name: "Test Version",
-          is_current: false,
-          is_available: true,
-          version: 1,
-          unit_system: "imperial",
-          is_root: true,
-        }],
+        all_versions: [
+          {
+            recipe_id: "v1",
+            name: "Test Version",
+            is_current: false,
+            is_available: true,
+            version: 1,
+            unit_system: "imperial",
+            is_root: true,
+          },
+        ],
         total_versions: 1,
       };
 
       const { getByTestId } = render(<VersionHistoryScreen />);
-      
+
       // Check that buttons are accessible
       expect(
-        getByTestId(TEST_IDS.patterns.touchableOpacityAction("version-history-back"))
+        getByTestId(
+          TEST_IDS.patterns.touchableOpacityAction("version-history-back")
+        )
       ).toBeTruthy();
       expect(
         getByTestId(TEST_IDS.patterns.touchableOpacityAction("version-item-v1"))
