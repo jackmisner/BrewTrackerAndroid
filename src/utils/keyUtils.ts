@@ -8,6 +8,16 @@
 
 import { RecipeIngredient } from "@src/types";
 
+const slugify = (s: string): string =>
+  s
+    .normalize?.("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-_]/g, "")
+    .replace(/-+/g, "-");
+
 /**
  * Generates a unique React key for recipe ingredients
  *
@@ -25,16 +35,16 @@ export function generateIngredientKey(
   context?: string
 ): string {
   const type = ingredient.type || "unknown";
-  const contextPrefix = context ? `${context}-` : "";
+  const contextPrefix = context ? `${slugify(context)}-` : "";
 
   if (ingredient.id) {
     // Stable key: context + type + id (no index needed)
-    return `${contextPrefix}${type}-${ingredient.id}`;
+    return `${contextPrefix}${type}-${String(ingredient.id)}`;
   }
 
   // Fallback for items without stable ID
-  const tempKey =
-    ingredient.name?.replace(/\s+/g, "-").toLowerCase() || "unknown";
+  const tempKey = ingredient.name ? slugify(ingredient.name) : "unknown";
+
   return `${contextPrefix}${type}-temp-${tempKey}-${index}`;
 }
 
@@ -51,14 +61,14 @@ export function generateListItemKey(
   index: number,
   context?: string
 ): string {
-  const contextPrefix = context ? `${context}-` : "";
+  const contextPrefix = context ? `${slugify(context)}-` : "";
 
   if (item.id) {
     // Stable key: context + id (no index needed)
-    return `${contextPrefix}${item.id}`;
+    return `${contextPrefix}${String(item.id)}`;
   }
 
   // Fallback for items without stable ID
-  const tempKey = item.name?.replace(/\s+/g, "-").toLowerCase() || "unknown";
+  const tempKey = item.name ? slugify(item.name) : "unknown";
   return `${contextPrefix}temp-${tempKey}-${index}`;
 }

@@ -47,7 +47,6 @@ describe("UnitContext", () => {
                 is_active: true,
               }
             : null,
-          isAuthenticated,
         },
         children: React.createElement(UnitProvider, {
           initialUnitSystem,
@@ -1035,7 +1034,8 @@ describe("UnitContext", () => {
         .spyOn(console, "error")
         .mockImplementation(() => {});
 
-      ApiService.user.updateSettings.mockRejectedValue(new Error("API Error"));
+      // Mock AsyncStorage.setItem to fail, which will trigger error for unauthenticated users
+      mockAsyncStorage.setItem.mockRejectedValue(new Error("Storage Error"));
 
       const wrapper = createWrapper("imperial");
       const { result } = renderHook(() => useUnits(), { wrapper });

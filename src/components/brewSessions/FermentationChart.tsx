@@ -305,13 +305,19 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       return getSessionTemperatureAxisConfig([]);
     }
 
-    const temperatures = temperatureChartData.map(d => d.value);
-    console.log("Temperatures for axis config:", temperatures);
-    console.log(
-      "Temperature Axis Config:",
-      getSessionTemperatureAxisConfig(temperatures, 8)
-    );
-    return getSessionTemperatureAxisConfig(temperatures, 8);
+    // Filter out hidden zero-value placeholder points
+    const filteredTemperatures = temperatureChartData
+      .filter(
+        item =>
+          !(
+            item.value === 0 &&
+            "hideDataPoint" in item &&
+            item.hideDataPoint === true
+          )
+      )
+      .map(d => d.value);
+
+    return getSessionTemperatureAxisConfig(filteredTemperatures, 8);
   }, [temperatureChartData, getSessionTemperatureAxisConfig]);
 
   const gravityReferenceLines = React.useMemo(() => {
@@ -351,7 +357,6 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     animateOnDataChange: false, // Disable animations to prevent state corruption
     animationDuration: 0, // No animation duration
     isAnimated: false, // Explicitly disable animations
-    spacing: chartWidth / Math.max(gravityChartData.length, 1), // Dynamic spacing for full width
     xAxisLabelTextStyle: { color: theme.colors.textSecondary, fontSize: 9 },
     showXAxisIndices: true,
     xAxisIndicesHeight: 4,
@@ -364,6 +369,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     height: 200,
     color: theme.colors.gravityLine,
     thickness: 3,
+    spacing: chartWidth / Math.max(gravityChartData.length, 1),
     dataPointsColor: theme.colors.gravityLine,
     dataPointsRadius: 4,
     maxValue: gravityAxisConfig.maxValue,
@@ -380,6 +386,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     height: 200,
     color: theme.colors.temperatureLine,
     thickness: 2,
+    spacing: chartWidth / Math.max(temperatureChartData.length, 1),
     dataPointsColor: theme.colors.temperatureLine,
     dataPointsRadius: 4,
     maxValue: temperatureAxisConfig.maxValue - temperatureAxisConfig.minValue,
@@ -393,6 +400,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     height: 250,
     color: theme.colors.gravityLine,
     thickness: 3,
+    spacing: chartWidth / Math.max(gravityChartData.length, 1), // aligned arrays
     dataPointsColor: theme.colors.gravityLine,
     dataPointsRadius: 4,
     maxValue: gravityAxisConfig.maxValue,

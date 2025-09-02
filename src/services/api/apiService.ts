@@ -284,23 +284,44 @@ function logApiError(normalizedError: NormalizedApiError, err: unknown) {
     isNetworkError: normalizedError.isNetworkError,
     isTimeout: normalizedError.isTimeout,
   };
-
   if (isAxiosError(err)) {
     const ax = err as AxiosError;
     const headers = (ax.config?.headers ?? {}) as Record<string, any>;
+    // Redact and whitelist headers
+    const safeHeaders: Record<string, any> = {};
+    Object.entries(headers).forEach(([k, v]) => {
+      const key = k.toLowerCase();
+      const redact =
+        key === "authorization" ||
+        key === "cookie" ||
+        key.startsWith("x-api-key") ||
+        key.startsWith("x-amz-") ||
+        key.includes("token");
+      if (redact) {
+        safeHeaders[k] = "[REDACTED]";
+      } else if (key === "content-type" || key === "accept") {
+        safeHeaders[k] = v;
+      }
+    });
+    // Sanitize URL (remove query string)
+    const rawUrl = ax.config?.url ?? "";
+    let safeUrl = rawUrl;
+    try {
+      const u = new URL(rawUrl, API_CONFIG.BASE_URL);
+      u.search = "";
+      safeUrl = u.toString();
+    } catch {
+      safeUrl = rawUrl.split("?")[0];
+    }
     base.request = {
       method: ax.config?.method,
-      url: ax.config?.url,
-      headers: {
-        ...headers,
-        Authorization: headers.Authorization ? "[REDACTED]" : undefined,
-      },
+      url: safeUrl,
+      headers: safeHeaders,
     };
     base.response = {
       status: ax.response?.status,
     };
   }
-
   // Single consolidated log
   console.error("API Error:", base);
 }

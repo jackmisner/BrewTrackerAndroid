@@ -75,9 +75,7 @@ interface AuthContextValue {
  */
 interface AuthProviderProps {
   children: ReactNode;
-  initialAuthState?: Partial<
-    Pick<AuthContextValue, "user" | "isAuthenticated" | "error">
-  >;
+  initialAuthState?: Partial<Pick<AuthContextValue, "user" | "error">>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);

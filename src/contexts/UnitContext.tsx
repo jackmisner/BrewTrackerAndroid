@@ -138,7 +138,10 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
   // Load user's unit preference when authenticated
   useEffect(() => {
     let isMounted = true;
-    if (initialUnitSystem || authLoading) {
+    if (authLoading) {
+      return;
+    }
+    if (initialUnitSystem) {
       setLoading(false);
       return;
     }
@@ -222,8 +225,11 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
       setLoading(true);
       setError(null);
       setUnitSystem(newSystem);
-      // Persist to backend first
-      await ApiService.user.updateSettings({ preferred_units: newSystem });
+
+      // Persist to backend only if authenticated
+      if (isAuthenticated) {
+        await ApiService.user.updateSettings({ preferred_units: newSystem });
+      }
       // Update cache only after success
       const cachedSettings = await AsyncStorage.getItem(
         STORAGE_KEYS.USER_SETTINGS
@@ -234,6 +240,12 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
         await AsyncStorage.setItem(
           STORAGE_KEYS.USER_SETTINGS,
           JSON.stringify(updatedSettings)
+        );
+      } else {
+        // Initialize cache for unauthenticated users
+        await AsyncStorage.setItem(
+          STORAGE_KEYS.USER_SETTINGS,
+          JSON.stringify({ preferred_units: newSystem })
         );
       }
     } catch (err) {
