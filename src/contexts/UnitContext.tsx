@@ -154,7 +154,15 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
           STORAGE_KEYS.USER_SETTINGS
         );
         if (cachedSettings) {
-          const settings: UserSettings = JSON.parse(cachedSettings);
+          let settings: UserSettings | null = null;
+          try {
+            settings = JSON.parse(cachedSettings) as UserSettings;
+          } catch (parseErr) {
+            console.warn("Corrupted cached user settings, removing:", parseErr);
+            await AsyncStorage.removeItem(STORAGE_KEYS.USER_SETTINGS);
+            if (isMounted) setLoading(false);
+            return;
+          }
           const preferredUnits: UnitSystem =
             settings.preferred_units || "imperial";
           if (isMounted) setUnitSystem(preferredUnits);
