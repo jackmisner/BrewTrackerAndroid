@@ -51,8 +51,8 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <ThemedStatusBar />
-        <UnitProvider>
-          <AuthProvider>
+        <AuthProvider>
+          <UnitProvider>
             <Stack
               screenOptions={{
                 headerStyle: {
@@ -91,8 +91,8 @@ export default function RootLayout() {
                 }}
               />
             </Stack>
-          </AuthProvider>
-        </UnitProvider>
+          </UnitProvider>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

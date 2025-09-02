@@ -36,6 +36,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import ApiService from "@services/api/apiService";
 import { STORAGE_KEYS } from "@services/config";
 import { UnitSystem, MeasurementType, UserSettings } from "@src/types";
+import { useAuth } from "@contexts/AuthContext";
 
 // Unit option interface for common units
 interface UnitOption {
@@ -127,19 +128,24 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
   children,
   initialUnitSystem,
 }) => {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(
     initialUnitSystem || "imperial"
   );
   const [loading, setLoading] = useState<boolean>(!initialUnitSystem);
   const [error, setError] = useState<string | null>(null);
 
-  // Load user's unit preference on mount
+  // Load user's unit preference when authenticated
   useEffect(() => {
     let isMounted = true;
+    if (authLoading) {
+      return;
+    }
     if (initialUnitSystem) {
       setLoading(false);
       return;
     }
+
     const loadUnitPreference = async (): Promise<void> => {
       try {
         setLoading(true);
@@ -148,50 +154,75 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
           STORAGE_KEYS.USER_SETTINGS
         );
         if (cachedSettings) {
-          const settings: UserSettings = JSON.parse(cachedSettings);
+          let settings: UserSettings | null = null;
+          try {
+            settings = JSON.parse(cachedSettings) as UserSettings;
+          } catch (parseErr) {
+            console.warn("Corrupted cached user settings, removing:", parseErr);
+            await AsyncStorage.removeItem(STORAGE_KEYS.USER_SETTINGS);
+            if (isMounted) setLoading(false);
+            return;
+          }
           const preferredUnits: UnitSystem =
             settings.preferred_units || "imperial";
           if (isMounted) setUnitSystem(preferredUnits);
           if (isMounted) setLoading(false);
-          // Still fetch fresh data in background
-          try {
-            const freshSettings = await ApiService.user.getSettings();
-            const freshUnits: UnitSystem =
-              freshSettings.data.settings.preferred_units || "imperial";
-            if (freshUnits !== preferredUnits) {
-              setUnitSystem(freshUnits);
+
+          // Only fetch fresh data in background if authenticated
+          if (isAuthenticated) {
+            try {
+              const freshSettings = await ApiService.user.getSettings();
+              const freshUnits: UnitSystem =
+                freshSettings.data.settings.preferred_units || "imperial";
+              if (isMounted && freshUnits !== preferredUnits) {
+                setUnitSystem(freshUnits);
+              }
+              // Always refresh cache so other settings stay current
               await AsyncStorage.setItem(
                 STORAGE_KEYS.USER_SETTINGS,
                 JSON.stringify(freshSettings.data.settings)
               );
+            } catch (bgError: any) {
+              // Silently handle background fetch errors for unauthenticated users
+              if (bgError.response?.status !== 401) {
+                console.warn("Background settings fetch failed:", bgError);
+              }
             }
-          } catch (bgError) {
-            console.warn("Background settings fetch failed:", bgError);
           }
           return;
         }
-        // If no cache, fetch from API
-        const settings = await ApiService.user.getSettings();
-        const preferredUnits: UnitSystem =
-          settings.data.settings.preferred_units || "imperial";
-        setUnitSystem(preferredUnits);
-        // Cache for offline use
-        await AsyncStorage.setItem(
-          STORAGE_KEYS.USER_SETTINGS,
-          JSON.stringify(settings.data.settings)
-        );
-      } catch (err) {
-        console.warn("Failed to load unit preferences, using default:", err);
-        setUnitSystem("imperial"); // Fallback to imperial
+
+        // If no cache and user is authenticated, fetch from API
+        if (isAuthenticated) {
+          const settings = await ApiService.user.getSettings();
+          const preferredUnits: UnitSystem =
+            settings.data.settings.preferred_units || "imperial";
+          if (isMounted) setUnitSystem(preferredUnits);
+          // Cache for offline use
+          await AsyncStorage.setItem(
+            STORAGE_KEYS.USER_SETTINGS,
+            JSON.stringify(settings.data.settings)
+          );
+        } else {
+          // Use default for unauthenticated users
+          if (isMounted) setUnitSystem("imperial");
+        }
+      } catch (err: any) {
+        // Only log non-auth errors
+        if (err.response?.status !== 401) {
+          console.warn("Failed to load unit preferences, using default:", err);
+        }
+        if (isMounted) setUnitSystem("imperial"); // Fallback to imperial
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
+
     loadUnitPreference();
     return () => {
       isMounted = false;
     };
-  }, [initialUnitSystem]);
+  }, [initialUnitSystem, isAuthenticated, authLoading]);
 
   // Update unit system and persist to backend
   const updateUnitSystem = async (newSystem: UnitSystem): Promise<void> => {
@@ -203,18 +234,34 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
       setLoading(true);
       setError(null);
       setUnitSystem(newSystem);
-      // Persist to backend first
-      await ApiService.user.updateSettings({ preferred_units: newSystem });
+
+      // Persist to backend only if authenticated
+      if (isAuthenticated) {
+        await ApiService.user.updateSettings({ preferred_units: newSystem });
+      }
       // Update cache only after success
       const cachedSettings = await AsyncStorage.getItem(
         STORAGE_KEYS.USER_SETTINGS
       );
       if (cachedSettings) {
-        const settings: UserSettings = JSON.parse(cachedSettings);
+        let settings: Partial<UserSettings> = {};
+        try {
+          settings = JSON.parse(cachedSettings);
+        } catch {
+          console.warn(
+            "Corrupted cached user settings during update; re-initializing."
+          );
+        }
         const updatedSettings = { ...settings, preferred_units: newSystem };
         await AsyncStorage.setItem(
           STORAGE_KEYS.USER_SETTINGS,
           JSON.stringify(updatedSettings)
+        );
+      } else {
+        // Initialize cache for unauthenticated users
+        await AsyncStorage.setItem(
+          STORAGE_KEYS.USER_SETTINGS,
+          JSON.stringify({ preferred_units: newSystem })
         );
       }
     } catch (err) {
@@ -290,6 +337,18 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
       convertedValue = numValue * 3.78541;
     } else if (fromUnit === "l" && toUnit === "gal") {
       convertedValue = numValue / 3.78541;
+    } else if (fromUnit === "gal" && toUnit === "qt") {
+      convertedValue = numValue * 4;
+    } else if (fromUnit === "qt" && toUnit === "gal") {
+      convertedValue = numValue / 4;
+    } else if (fromUnit === "qt" && toUnit === "l") {
+      convertedValue = numValue * 0.946353;
+    } else if (fromUnit === "l" && toUnit === "qt") {
+      convertedValue = numValue / 0.946353;
+    } else if (fromUnit === "qt" && toUnit === "ml") {
+      convertedValue = numValue * 946.353;
+    } else if (fromUnit === "ml" && toUnit === "qt") {
+      convertedValue = numValue / 946.353;
     } else if (fromUnit === "ml" && toUnit === "l") {
       convertedValue = numValue / 1000;
     } else if (fromUnit === "l" && toUnit === "ml") {

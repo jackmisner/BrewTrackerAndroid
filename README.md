@@ -6,6 +6,7 @@ A React Native mobile app for the BrewTracker homebrewing platform, built with E
 
 - **Authentication**: Complete login/register flow with email verification and JWT tokens
 - **Recipe Management**: Full CRUD operations, recipe cloning with versioning, complete version history
+- **BeerXML Import/Export**: Complete mobile workflow with file picker, ingredient matching, and sharing
 - **Brew Session Tracking**: Full CRUD operations with fermentation data entry and tracking
 - **Advanced Features**: Recipe cloning system, version history with timeline navigation
 - **User Profile**: Settings management with theme support
@@ -83,7 +84,12 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── viewRecipe.tsx                        # Individual recipe detail view with ingredients and metrics
 │   │   │   ├── createRecipe.tsx                      # Multi-step recipe creation wizard
 │   │   │   ├── editRecipe.tsx                        # Recipe editing interface
+│   │   │   ├── versionHistory.tsx                    # Recipe version history timeline navigation
 │   │   │   └── ingredientPicker.tsx                  # Full-screen ingredient selection with search and filtering
+│   │   ├── (beerxml)/                                # BeerXML import/export workflow screens
+│   │   │   ├── importBeerXML.tsx                     # BeerXML file selection and parsing
+│   │   │   ├── ingredientMatching.tsx                # Ingredient matching and approval workflow
+│   │   │   └── importReview.tsx                      # Final import review and recipe creation
 │   │   ├── (brewSessions)/                           # Brew session detail screens
 │   │   │   ├── _layout.tsx                           # Brew session modals layout
 │   │   │   ├── viewBrewSession.tsx                   # Individual brew session detail view with metrics and status
@@ -132,6 +138,8 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── apiService.ts                         # Hardened API service with validated base URL, timeout, error normalization, and retry logic
 │   │   │   ├── queryClient.ts                        # React Query client configuration
 │   │   │   └── idInterceptor.ts                      # MongoDB ObjectId to string normalization
+│   │   ├── beerxml/                                  # BeerXML processing services
+│   │   │   └── BeerXMLService.ts                     # BeerXML import/export with mobile file integration
 │   │   ├── config.ts                                 # Service configuration and constants
 │   │   └── storageService.ts                         # Storage service for file operations and permissions
 │   ├── constants/                                    # Shared constants and configuration
@@ -380,7 +388,7 @@ EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
 - ✅ 4-step recipe builder optimized for mobile screens
 - ✅ Touch-friendly context menus and navigation
 - ✅ Gesture-based navigation with Expo Router and modals
-- ✅ Mobile-friendly BeerXML import/export (initial mobile support)
+- ✅ Complete BeerXML import/export with 3-screen mobile workflow and ingredient matching
 
 ### **Backend Capabilities:**
 
@@ -399,7 +407,7 @@ EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
 - ✅ Type definitions exist for all data models
 - ✅ Theme system can handle complex UIs
 - ✅ Navigation structure supports modal workflows
-  **Current Status:** Phase 5 Nearly Complete (~75% Feature Parity), focusing on AI integration and BeerXML import/export to achieve full feature parity with web application.
+  **Current Status:** Phase 5 Nearly Complete (~85% Feature Parity), focusing on AI integration and advanced analytics to achieve full feature parity with web application.
 
 ## Contributing
 

@@ -30,6 +30,7 @@ import { RecipeFormData } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
 import { formatHopTime } from "@src/utils/timeUtils";
+import { generateIngredientKey } from "@utils/keyUtils";
 
 // Hop usage display mapping (database value -> display value)
 const HOP_USAGE_DISPLAY_MAPPING: Record<string, string> = {
@@ -171,64 +172,80 @@ export function ReviewForm({
               {TYPE_LABELS[type as keyof typeof TYPE_LABELS]} (
               {ingredients.length})
             </Text>
-            {ingredients.map((ingredient, index) => (
-              <View
-                key={ingredient.id ?? `${ingredient.name}-${type}-${index}`}
-                style={styles.ingredientReviewItem}
-              >
-                <View style={styles.ingredientReviewInfo}>
-                  <Text style={styles.ingredientReviewName}>
-                    {ingredient.name}
-                  </Text>
-                  {/* Show hop-specific details */}
-                  {ingredient.type === "hop" &&
-                  (ingredient.use != null ||
-                    ingredient.time != null ||
-                    ingredient.alpha_acid != null) ? (
-                    <Text style={styles.ingredientReviewDetails}>
-                      {[
-                        ingredient.use &&
-                          (HOP_USAGE_DISPLAY_MAPPING[ingredient.use] ||
-                            ingredient.use),
-                        ingredient.time != null &&
-                          ingredient.time > 0 &&
-                          formatHopTime(ingredient.time, ingredient.use || ""),
-                        ingredient.alpha_acid != null &&
-                          `${ingredient.alpha_acid}% AA`,
-                      ]
-                        .filter(Boolean)
-                        .join(" • ")}
+            {ingredients.map((ingredient, index) => {
+              const additionalContext =
+                ingredient.type === "hop"
+                  ? `${ingredient.use || "unknown"}-${ingredient.time || 0}min`
+                  : ingredient.type === "grain"
+                    ? ingredient.grain_type || "unknown"
+                    : undefined;
+
+              return (
+                <View
+                  key={generateIngredientKey(
+                    ingredient,
+                    index,
+                    additionalContext
+                  )}
+                  style={styles.ingredientReviewItem}
+                >
+                  <View style={styles.ingredientReviewInfo}>
+                    <Text style={styles.ingredientReviewName}>
+                      {ingredient.name}
                     </Text>
-                  ) : null}
-                  {/* Show grain-specific details */}
-                  {ingredient.type === "grain" && ingredient.grain_type ? (
-                    <Text style={styles.ingredientReviewDetails}>
-                      {ingredient.grain_type &&
-                        `${GRAIN_TYPE_DISPLAY_MAPPING[ingredient.grain_type] || ingredient.grain_type}`}
+                    {/* Show hop-specific details */}
+                    {ingredient.type === "hop" &&
+                    (ingredient.use != null ||
+                      ingredient.time != null ||
+                      ingredient.alpha_acid != null) ? (
+                      <Text style={styles.ingredientReviewDetails}>
+                        {[
+                          ingredient.use &&
+                            (HOP_USAGE_DISPLAY_MAPPING[ingredient.use] ||
+                              ingredient.use),
+                          ingredient.time != null &&
+                            ingredient.time > 0 &&
+                            formatHopTime(
+                              ingredient.time,
+                              ingredient.use || ""
+                            ),
+                          ingredient.alpha_acid != null &&
+                            `${ingredient.alpha_acid}% AA`,
+                        ]
+                          .filter(Boolean)
+                          .join(" • ")}
+                      </Text>
+                    ) : null}
+                    {/* Show grain-specific details */}
+                    {ingredient.type === "grain" && ingredient.grain_type ? (
+                      <Text style={styles.ingredientReviewDetails}>
+                        {ingredient.grain_type &&
+                          `${GRAIN_TYPE_DISPLAY_MAPPING[ingredient.grain_type] || ingredient.grain_type}`}
+                      </Text>
+                    ) : null}
+                    {/* Show yeast-specific details */}
+                    {ingredient.type === "yeast" &&
+                      (() => {
+                        const parts = [
+                          ingredient.yeast_type,
+                          ingredient.manufacturer,
+                          ingredient.attenuation != null
+                            ? `${ingredient.attenuation}% Attenuation`
+                            : null,
+                        ].filter(Boolean) as string[];
+                        return parts.length ? (
+                          <Text style={styles.ingredientReviewDetails}>
+                            {parts.join(" • ")}
+                          </Text>
+                        ) : null;
+                      })()}
+                    <Text style={styles.ingredientReviewAmount}>
+                      {ingredient.amount} {ingredient.unit}
                     </Text>
-                  ) : null}
-                  {/* Show yeast-specific details */}
-                  {ingredient.type === "yeast" &&
-                    (() => {
-                      const parts = [
-                        ingredient.yeast_type,
-                        ingredient.manufacturer,
-                        ingredient.attenuation != null
-                          ? `${ingredient.attenuation}% Attenuation`
-                          : null,
-                      ].filter(Boolean) as string[];
-                      return parts.length ? (
-                        <Text style={styles.ingredientReviewDetails}>
-                          {parts.join(" • ")}
-                        </Text>
-                      ) : null;
-                    })()}
-                  <Text style={styles.ingredientReviewAmount}>
-                    {ingredient.amount} {ingredient.unit}
-                  </Text>
+                  </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         );
       })}

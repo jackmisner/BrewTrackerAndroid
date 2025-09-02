@@ -7,7 +7,6 @@ import { ThemeProvider } from "@src/contexts/ThemeContext";
 interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
   queryClient?: QueryClient;
   initialAuthState?: {
-    isAuthenticated?: boolean;
     user?: any | null;
     error?: string | null;
   };
@@ -139,7 +138,6 @@ export const mockData = {
   }),
 
   authUser: (overrides: Record<string, any> = {}) => ({
-    isAuthenticated: true,
     user: mockData.user(overrides.user || {}),
     token: "mock-jwt-token",
     ...overrides,
@@ -232,14 +230,12 @@ export const testUtils = {
 
   // Helper to create authenticated test state
   createAuthenticatedState: (userOverrides = {}) => ({
-    isAuthenticated: true,
     user: mockData.user(userOverrides),
     token: "mock-jwt-token",
   }),
 
   // Helper to create unauthenticated test state
   createUnauthenticatedState: () => ({
-    isAuthenticated: false,
     user: null,
     token: null,
   }),
