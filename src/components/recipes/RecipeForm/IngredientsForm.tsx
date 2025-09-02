@@ -10,6 +10,7 @@ import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/Br
 import { IngredientDetailEditor } from "@src/components/recipes/IngredientEditor/IngredientDetailEditor";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 import { formatHopTime } from "@src/utils/timeUtils";
+import { generateIngredientKey } from "@utils/keyUtils";
 
 // Hop usage display mapping (database value -> display value)
 const HOP_USAGE_DISPLAY_MAPPING: Record<string, string> = {
@@ -201,86 +202,99 @@ export function IngredientsForm({
           </View>
         ) : (
           <View style={styles.ingredientsList}>
-            {ingredients.map((ingredient, index) => (
-              <TouchableOpacity
-                key={ingredient.id ?? `${ingredient.name}-${type}-${index}`}
-                style={styles.ingredientItem}
-                onPress={() => handleEditIngredient(ingredient)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.ingredientInfo}>
-                  <Text style={styles.ingredientName}>{ingredient.name}</Text>
-                  <Text style={styles.ingredientAmount}>
-                    {ingredient.amount} {ingredient.unit}
-                  </Text>
-                  {/* Show hop-specific details */}
-                  {ingredient.type === "hop" &&
-                  (ingredient.use || ingredient.time != null) ? (
-                    <Text style={styles.ingredientDetails}>
-                      {ingredient.use &&
-                        `${HOP_USAGE_DISPLAY_MAPPING[ingredient.use] || ingredient.use}`}
-                      {ingredient.time != null &&
-                        ` • ${formatHopTime(ingredient.time, ingredient.use || "")}`}
-                      {ingredient.alpha_acid &&
-                        ` • ${ingredient.alpha_acid}% AA`}
-                    </Text>
-                  ) : null}
-                  {/* Show grain-specific details */}
-                  {ingredient.type === "grain" && ingredient.grain_type ? (
-                    <Text style={styles.ingredientDetails}>
-                      {ingredient.grain_type &&
-                        `${GRAIN_TYPE_DISPLAY_MAPPING[ingredient.grain_type] || ingredient.grain_type}`}
-                    </Text>
-                  ) : null}
-                  {/* Show yeast-specific details */}
-                  {ingredient.type === "yeast" &&
-                  (ingredient.yeast_type ||
-                    ingredient.manufacturer ||
-                    ingredient.attenuation) ? (
-                    <Text style={styles.ingredientDetails}>
-                      {[
-                        ingredient.yeast_type &&
-                          `Type: ${ingredient.yeast_type}`,
-                        ingredient.manufacturer &&
-                          `Brand: ${ingredient.manufacturer}`,
-                        (ingredient.attenuation ?? null) !== null &&
-                          `${ingredient.attenuation}% Attenuation`,
-                      ]
-                        .filter(Boolean)
-                        .join(" • ")}
-                    </Text>
-                  ) : null}
-                </View>
+            {ingredients.map((ingredient, index) => {
+              const additionalContext =
+                ingredient.type === "hop"
+                  ? `${ingredient.use || "unknown"}-${ingredient.time || 0}min`
+                  : ingredient.type === "grain"
+                    ? ingredient.grain_type || "unknown"
+                    : undefined;
 
-                {/* Action buttons */}
-                <View style={styles.ingredientActions}>
-                  <TouchableOpacity
-                    style={styles.ingredientEditButton}
-                    onPress={() => {
-                      handleEditIngredient(ingredient);
-                    }}
-                  >
-                    <MaterialIcons
-                      name="edit"
-                      size={16}
-                      color={theme.colors.primary}
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.ingredientRemoveButton}
-                    onPress={() => {
-                      handleRemoveIngredient(ingredient);
-                    }}
-                  >
-                    <MaterialIcons
-                      name="close"
-                      size={16}
-                      color={theme.colors.error}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            ))}
+              return (
+                <TouchableOpacity
+                  key={generateIngredientKey(
+                    ingredient,
+                    index,
+                    additionalContext
+                  )}
+                  style={styles.ingredientItem}
+                  onPress={() => handleEditIngredient(ingredient)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.ingredientInfo}>
+                    <Text style={styles.ingredientName}>{ingredient.name}</Text>
+                    <Text style={styles.ingredientAmount}>
+                      {ingredient.amount} {ingredient.unit}
+                    </Text>
+                    {/* Show hop-specific details */}
+                    {ingredient.type === "hop" &&
+                    (ingredient.use || ingredient.time != null) ? (
+                      <Text style={styles.ingredientDetails}>
+                        {ingredient.use &&
+                          `${HOP_USAGE_DISPLAY_MAPPING[ingredient.use] || ingredient.use}`}
+                        {ingredient.time != null &&
+                          ` • ${formatHopTime(ingredient.time, ingredient.use || "")}`}
+                        {ingredient.alpha_acid &&
+                          ` • ${ingredient.alpha_acid}% AA`}
+                      </Text>
+                    ) : null}
+                    {/* Show grain-specific details */}
+                    {ingredient.type === "grain" && ingredient.grain_type ? (
+                      <Text style={styles.ingredientDetails}>
+                        {ingredient.grain_type &&
+                          `${GRAIN_TYPE_DISPLAY_MAPPING[ingredient.grain_type] || ingredient.grain_type}`}
+                      </Text>
+                    ) : null}
+                    {/* Show yeast-specific details */}
+                    {ingredient.type === "yeast" &&
+                    (ingredient.yeast_type ||
+                      ingredient.manufacturer ||
+                      ingredient.attenuation) ? (
+                      <Text style={styles.ingredientDetails}>
+                        {[
+                          ingredient.yeast_type &&
+                            `Type: ${ingredient.yeast_type}`,
+                          ingredient.manufacturer &&
+                            `Brand: ${ingredient.manufacturer}`,
+                          (ingredient.attenuation ?? null) !== null &&
+                            `${ingredient.attenuation}% Attenuation`,
+                        ]
+                          .filter(Boolean)
+                          .join(" • ")}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  {/* Action buttons */}
+                  <View style={styles.ingredientActions}>
+                    <TouchableOpacity
+                      style={styles.ingredientEditButton}
+                      onPress={() => {
+                        handleEditIngredient(ingredient);
+                      }}
+                    >
+                      <MaterialIcons
+                        name="edit"
+                        size={16}
+                        color={theme.colors.primary}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.ingredientRemoveButton}
+                      onPress={() => {
+                        handleRemoveIngredient(ingredient);
+                      }}
+                    >
+                      <MaterialIcons
+                        name="close"
+                        size={16}
+                        color={theme.colors.error}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
       </View>

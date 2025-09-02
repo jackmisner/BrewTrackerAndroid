@@ -273,7 +273,7 @@ describe("AuthContext", () => {
 
       expect(mockApiService.token.removeToken).toHaveBeenCalled();
       expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith("userData");
-      expect(result.current.error).toBe("Failed to initialize authentication");
+      expect(result.current.error).toBe(null); // 401 errors don't set error message
     });
 
     it("should use cached user data when API fails", async () => {

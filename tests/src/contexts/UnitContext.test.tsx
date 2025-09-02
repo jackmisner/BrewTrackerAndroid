@@ -2,6 +2,7 @@ import React from "react";
 import { renderHook, act } from "@testing-library/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { UnitProvider, useUnits } from "@src/contexts/UnitContext";
+import { AuthProvider } from "@src/contexts/AuthContext";
 import { UnitSystem } from "@src/types";
 
 // Mock AsyncStorage
@@ -31,9 +32,27 @@ describe("UnitContext", () => {
   });
 
   const createWrapper =
-    (initialUnitSystem?: UnitSystem) =>
+    (initialUnitSystem?: UnitSystem, isAuthenticated = false) =>
     ({ children }: { children: React.ReactNode }) =>
-      React.createElement(UnitProvider, { initialUnitSystem, children });
+      React.createElement(AuthProvider, {
+        initialAuthState: {
+          user: isAuthenticated
+            ? {
+                id: "test",
+                username: "test",
+                email: "test@example.com",
+                email_verified: true,
+                created_at: "2023-01-01T00:00:00Z",
+                updated_at: "2023-01-01T00:00:00Z",
+                is_active: true,
+              }
+            : null,
+        },
+        children: React.createElement(UnitProvider, {
+          initialUnitSystem,
+          children,
+        }),
+      });
 
   describe("useUnits hook", () => {
     it("should throw error when used outside provider", () => {
@@ -885,7 +904,7 @@ describe("UnitContext", () => {
         },
       });
 
-      const wrapper = createWrapper(); // No initial system
+      const wrapper = createWrapper(undefined, true); // No initial system, but authenticated
       const { result } = renderHook(() => useUnits(), { wrapper });
 
       await act(async () => {
@@ -917,7 +936,7 @@ describe("UnitContext", () => {
         },
       });
 
-      const wrapper = createWrapper();
+      const wrapper = createWrapper(undefined, true); // Authenticated user
       const { result } = renderHook(() => useUnits(), { wrapper });
 
       await act(async () => {
@@ -944,10 +963,12 @@ describe("UnitContext", () => {
         JSON.stringify(cachedSettings)
       );
 
-      // Mock API error for background fetch
-      ApiService.user.getSettings.mockRejectedValue(new Error("Network error"));
+      // Mock API error for background fetch (non-401 error to trigger logging)
+      const networkError = new Error("Network error");
+      (networkError as any).response = { status: 500 }; // Non-401 error
+      ApiService.user.getSettings.mockRejectedValue(networkError);
 
-      const wrapper = createWrapper();
+      const wrapper = createWrapper(undefined, true); // Authenticated user
       const { result } = renderHook(() => useUnits(), { wrapper });
 
       await act(async () => {
@@ -1013,7 +1034,8 @@ describe("UnitContext", () => {
         .spyOn(console, "error")
         .mockImplementation(() => {});
 
-      ApiService.user.updateSettings.mockRejectedValue(new Error("API Error"));
+      // Mock AsyncStorage.setItem to fail, which will trigger error for unauthenticated users
+      mockAsyncStorage.setItem.mockRejectedValue(new Error("Storage Error"));
 
       const wrapper = createWrapper("imperial");
       const { result } = renderHook(() => useUnits(), { wrapper });

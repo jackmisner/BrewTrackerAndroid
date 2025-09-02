@@ -18,6 +18,7 @@ import {
 } from "@src/types/api";
 import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
 import { useTheme } from "@contexts/ThemeContext";
+import { generateIngredientKey } from "@utils/keyUtils";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
 import { formatHopTime, formatHopUsage } from "@src/utils/formatUtils";
@@ -188,28 +189,41 @@ export default function ViewRecipeScreen() {
             <MaterialIcons name={icon as any} size={20} color="#f4511e" />
             <Text style={styles.ingredientGroupTitle}>{title}</Text>
           </View>
-          {ingredients.map((ingredient, index) => (
-            <View
-              key={`${ingredient.id || "no-id"}-${ingredient.type}-${index}`}
-              style={styles.ingredientItem}
-            >
-              <Text style={styles.ingredientName}>{ingredient.name}</Text>
-              <Text style={styles.ingredientAmount}>
-                {ingredient.amount} {ingredient.unit}
-                {/* Only show time if hops */}
-                {ingredient.type === "hop" &&
-                  ingredient.time &&
-                  ingredient.time > 0 &&
-                  ` • ${formatHopTime(ingredient.time, ingredient.use || "")}`}
-                {ingredient.type === "hop" &&
-                  ingredient.use &&
-                  ` • ${formatHopUsage(ingredient.use)}`}
-                {ingredient.alpha_acid && ` • ${ingredient.alpha_acid}% AA`}
-                {ingredient.attenuation &&
-                  ` • ${ingredient.attenuation}% Attenuation`}
-              </Text>
-            </View>
-          ))}
+          {ingredients.map((ingredient, index) => {
+            const additionalContext =
+              ingredient.type === "hop"
+                ? `${ingredient.use || "unknown"}-${ingredient.time || 0}min`
+                : ingredient.type === "grain"
+                  ? ingredient.grain_type || "unknown"
+                  : undefined;
+
+            return (
+              <View
+                key={generateIngredientKey(
+                  ingredient,
+                  index,
+                  additionalContext
+                )}
+                style={styles.ingredientItem}
+              >
+                <Text style={styles.ingredientName}>{ingredient.name}</Text>
+                <Text style={styles.ingredientAmount}>
+                  {ingredient.amount} {ingredient.unit}
+                  {/* Only show time if hops */}
+                  {ingredient.type === "hop" &&
+                    ingredient.time &&
+                    ingredient.time > 0 &&
+                    ` • ${formatHopTime(ingredient.time, ingredient.use || "")}`}
+                  {ingredient.type === "hop" &&
+                    ingredient.use &&
+                    ` • ${formatHopUsage(ingredient.use)}`}
+                  {ingredient.alpha_acid && ` • ${ingredient.alpha_acid}% AA`}
+                  {ingredient.attenuation &&
+                    ` • ${ingredient.attenuation}% Attenuation`}
+                </Text>
+              </View>
+            );
+          })}
         </View>
       );
     };

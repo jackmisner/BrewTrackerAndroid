@@ -276,6 +276,56 @@ function normalizeError(error: any): NormalizedApiError {
   return normalized;
 }
 
+function logApiError(normalizedError: NormalizedApiError, err: unknown) {
+  const base: any = {
+    message: normalizedError.message,
+    status: normalizedError.status,
+    code: normalizedError.code,
+    isNetworkError: normalizedError.isNetworkError,
+    isTimeout: normalizedError.isTimeout,
+  };
+  if (isAxiosError(err)) {
+    const ax = err as AxiosError;
+    const headers = (ax.config?.headers ?? {}) as Record<string, any>;
+    // Redact and whitelist headers
+    const safeHeaders: Record<string, any> = {};
+    Object.entries(headers).forEach(([k, v]) => {
+      const key = k.toLowerCase();
+      const redact =
+        key === "authorization" ||
+        key === "cookie" ||
+        key.startsWith("x-api-key") ||
+        key.startsWith("x-amz-") ||
+        key.includes("token");
+      if (redact) {
+        safeHeaders[k] = "[REDACTED]";
+      } else if (key === "content-type" || key === "accept") {
+        safeHeaders[k] = v;
+      }
+    });
+    // Sanitize URL (remove query string)
+    const rawUrl = ax.config?.url ?? "";
+    let safeUrl = rawUrl;
+    try {
+      const u = new URL(rawUrl, API_CONFIG.BASE_URL);
+      u.search = "";
+      safeUrl = u.toString();
+    } catch {
+      safeUrl = rawUrl.split("?")[0];
+    }
+    base.request = {
+      method: ax.config?.method,
+      url: safeUrl,
+      headers: safeHeaders,
+    };
+    base.response = {
+      status: ax.response?.status,
+    };
+  }
+  // Single consolidated log
+  console.error("API Error:", base);
+}
+
 /**
  * Retry wrapper for idempotent requests with exponential backoff
  * Automatically retries failed requests for transient errors (network, timeout, 5xx)
@@ -404,23 +454,17 @@ api.interceptors.response.use(
     // Handle token expiration
     if (error.response?.status === 401) {
       await TokenManager.removeToken();
-      // You might want to trigger a navigation to login screen here
-      // This would require passing a navigation callback or using a global event emitter
     }
 
     // Normalize the error before rejecting
     const normalizedError = normalizeError(error);
 
-    // Log error details for debugging (only in development)
-    if (process.env.EXPO_PUBLIC_DEBUG_MODE === "true") {
-      console.error("API Error:", {
-        message: normalizedError.message,
-        status: normalizedError.status,
-        code: normalizedError.code,
-        isNetworkError: normalizedError.isNetworkError,
-        isTimeout: normalizedError.isTimeout,
-        originalError: normalizedError.originalError,
-      });
+    // Log error details for debugging (only in development, skip 401 as they're expected)
+    if (
+      (__DEV__ || process.env.EXPO_PUBLIC_DEBUG_MODE === "true") &&
+      normalizedError.status !== 401
+    ) {
+      logApiError(normalizedError, error);
     }
 
     // Create enhanced error object that maintains compatibility while adding normalized data
