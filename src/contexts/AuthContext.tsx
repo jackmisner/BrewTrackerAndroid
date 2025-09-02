@@ -166,20 +166,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         setUser(apiUser);
       }
     } catch (error: any) {
-      console.error("Failed to initialize auth:", error);
-
-      // Handle 401 by clearing token/storage
+      // Handle 401 by clearing token/storage (but don't log error - this is expected for fresh installs)
       if (error.response?.status === 401) {
         await ApiService.token.removeToken();
         await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
         // Ensure in-memory auth state reflects invalid session
         setUser(null);
-
-        // Only surface initialization error if no cached user was available
-        if (!cachedUser) {
-          setError("Failed to initialize authentication");
-        }
+        // Don't set error for 401 - this is expected behavior for unauthenticated users
       } else {
+        // Log non-auth errors for debugging
+        console.error("Failed to initialize auth:", error);
         // For non-401 errors, only set error if no cached user was available
         if (!cachedUser) {
           setError("Failed to initialize authentication");

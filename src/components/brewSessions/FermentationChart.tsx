@@ -174,7 +174,6 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
   }, [screenDimensions.width]);
 
   // Generate chart keys for force re-rendering when data changes
-  // Generate chart keys for force re-rendering when data changes
   const chartKeys = React.useMemo(() => {
     // Use chartRefreshKey as the primary key since it's incremented on all relevant changes
     const baseKey = `${chartRefreshKey}-${screenDimensions.width}x${screenDimensions.height}`;
@@ -307,6 +306,11 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     }
 
     const temperatures = temperatureChartData.map(d => d.value);
+    console.log("Temperatures for axis config:", temperatures);
+    console.log(
+      "Temperature Axis Config:",
+      getSessionTemperatureAxisConfig(temperatures, 8)
+    );
     return getSessionTemperatureAxisConfig(temperatures, 8);
   }, [temperatureChartData, getSessionTemperatureAxisConfig]);
 
@@ -378,7 +382,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     thickness: 2,
     dataPointsColor: theme.colors.temperatureLine,
     dataPointsRadius: 4,
-    maxValue: temperatureAxisConfig.maxValue,
+    maxValue: temperatureAxisConfig.maxValue - temperatureAxisConfig.minValue,
     yAxisOffset: temperatureAxisConfig.minValue,
     yAxisLabelSuffix: getSessionTemperatureSymbol(),
     formatYLabel: (label: string) => Math.round(parseFloat(label)).toString(),
@@ -401,7 +405,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     showSecondaryYAxis: true,
     secondaryYAxis: {
       yAxisOffset: temperatureAxisConfig.minValue,
-      maxValue: temperatureAxisConfig.maxValue,
+      maxValue: temperatureAxisConfig.maxValue - temperatureAxisConfig.minValue,
       noOfSections: 6,
       yAxisLabelSuffix: getSessionTemperatureSymbol(),
       formatYLabel: (label: string) => Math.round(parseFloat(label)).toString(),
