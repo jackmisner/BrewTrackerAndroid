@@ -160,6 +160,29 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
           } catch (parseErr) {
             console.warn("Corrupted cached user settings, removing:", parseErr);
             await AsyncStorage.removeItem(STORAGE_KEYS.USER_SETTINGS);
+            // Treat as no-cache: fetch if authed, else default.
+            try {
+              if (isAuthenticated) {
+                const fresh = await ApiService.user.getSettings();
+                const freshUnits: UnitSystem =
+                  fresh.data.settings.preferred_units || "imperial";
+                if (isMounted) setUnitSystem(freshUnits);
+                await AsyncStorage.setItem(
+                  STORAGE_KEYS.USER_SETTINGS,
+                  JSON.stringify(fresh.data.settings)
+                );
+              } else {
+                if (isMounted) setUnitSystem("imperial");
+              }
+            } catch (bgError: any) {
+              if (bgError?.response?.status !== 401) {
+                console.warn(
+                  "Settings fetch after cache corruption failed:",
+                  bgError
+                );
+              }
+              if (isMounted) setUnitSystem("imperial");
+            }
             if (isMounted) setLoading(false);
             return;
           }
