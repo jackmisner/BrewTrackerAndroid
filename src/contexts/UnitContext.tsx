@@ -174,13 +174,14 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
               const freshSettings = await ApiService.user.getSettings();
               const freshUnits: UnitSystem =
                 freshSettings.data.settings.preferred_units || "imperial";
-              if (freshUnits !== preferredUnits && isMounted) {
+              if (isMounted && freshUnits !== preferredUnits) {
                 setUnitSystem(freshUnits);
-                await AsyncStorage.setItem(
-                  STORAGE_KEYS.USER_SETTINGS,
-                  JSON.stringify(freshSettings.data.settings)
-                );
               }
+              // Always refresh cache so other settings stay current
+              await AsyncStorage.setItem(
+                STORAGE_KEYS.USER_SETTINGS,
+                JSON.stringify(freshSettings.data.settings)
+              );
             } catch (bgError: any) {
               // Silently handle background fetch errors for unauthenticated users
               if (bgError.response?.status !== 401) {
@@ -243,7 +244,14 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
         STORAGE_KEYS.USER_SETTINGS
       );
       if (cachedSettings) {
-        const settings: UserSettings = JSON.parse(cachedSettings);
+        let settings: Partial<UserSettings> = {};
+        try {
+          settings = JSON.parse(cachedSettings);
+        } catch {
+          console.warn(
+            "Corrupted cached user settings during update; re-initializing."
+          );
+        }
         const updatedSettings = { ...settings, preferred_units: newSystem };
         await AsyncStorage.setItem(
           STORAGE_KEYS.USER_SETTINGS,
@@ -329,6 +337,18 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
       convertedValue = numValue * 3.78541;
     } else if (fromUnit === "l" && toUnit === "gal") {
       convertedValue = numValue / 3.78541;
+    } else if (fromUnit === "gal" && toUnit === "qt") {
+      convertedValue = numValue * 4;
+    } else if (fromUnit === "qt" && toUnit === "gal") {
+      convertedValue = numValue / 4;
+    } else if (fromUnit === "qt" && toUnit === "l") {
+      convertedValue = numValue * 0.946353;
+    } else if (fromUnit === "l" && toUnit === "qt") {
+      convertedValue = numValue / 0.946353;
+    } else if (fromUnit === "qt" && toUnit === "ml") {
+      convertedValue = numValue * 946.353;
+    } else if (fromUnit === "ml" && toUnit === "qt") {
+      convertedValue = numValue / 946.353;
     } else if (fromUnit === "ml" && toUnit === "l") {
       convertedValue = numValue / 1000;
     } else if (fromUnit === "l" && toUnit === "ml") {
