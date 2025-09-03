@@ -297,9 +297,9 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
       const processedEntry = {
         x: dayNumber,
-        gravity: entry.gravity || undefined,
-        temperature: entry.temperature || undefined,
-        ph: entry.ph || undefined,
+        gravity: entry.gravity ?? undefined,
+        temperature: entry.temperature ?? undefined,
+        ph: entry.ph ?? undefined,
         date: entryDate.toLocaleDateString(),
         rawDate: entryDate, // Keep the actual Date object for chart formatting
       };
@@ -475,7 +475,12 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       return { minValue: 1.0, maxValue: 1.1 };
     }
 
-    const gravityValues = baseGravityData.map(d => d.value);
+    const gravityValues = baseGravityData
+      .filter(
+        d =>
+          !(d.value === 0 && "hideDataPoint" in d && d.hideDataPoint === true)
+      )
+      .map(d => d.value);
     const maxGravity = actualOG || Math.max(...gravityValues);
     const allValues = [...gravityValues, maxGravity];
 
