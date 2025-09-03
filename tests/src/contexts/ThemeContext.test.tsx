@@ -2,12 +2,13 @@ import React from "react";
 import { renderHook, act } from "@testing-library/react-native";
 import { Appearance } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { testUtils } from "../../testUtils";
 import {
   ThemeProvider,
   useTheme,
   ThemeMode,
   ThemeContextValue,
-} from "@src/contexts/ThemeContext";
+} from "@contexts/ThemeContext";
 
 // Mock React Native modules
 jest.mock("react-native", () => ({

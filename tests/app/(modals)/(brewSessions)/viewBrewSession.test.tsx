@@ -28,6 +28,7 @@ jest.mock("@expo/vector-icons", () => ({
 
 jest.mock("@tanstack/react-query", () => ({
   useQuery: jest.fn(),
+  useQueryClient: jest.fn(() => ({ invalidateQueries: jest.fn() })),
 }));
 
 jest.mock("expo-router", () => ({

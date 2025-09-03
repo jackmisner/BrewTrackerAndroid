@@ -8,10 +8,10 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import ApiService from "@services/api/apiService";
-import { BrewSession, BrewSessionStatus } from "@/src/types";
+import { BrewSession, BrewSessionStatus, Recipe } from "@/src/types";
 import { viewBrewSessionStyles } from "@styles/modals/viewBrewSessionStyles";
 import { useTheme } from "@contexts/ThemeContext";
 import { TEST_IDS } from "@src/constants/testIDs";
@@ -25,6 +25,7 @@ export default function ViewBrewSession() {
   const [chartRefreshCounter, setChartRefreshCounter] = useState(0);
   const theme = useTheme();
   const styles = viewBrewSessionStyles(theme);
+  const queryClient = useQueryClient();
   const {
     data: brewSessionData,
     isLoading,
@@ -45,6 +46,21 @@ export default function ViewBrewSession() {
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
+  // Fetch recipe data for expected FG reference line
+  const { data: recipeData } = useQuery<Recipe | undefined>({
+    queryKey: ["recipe", brewSessionData?.recipe_id],
+    queryFn: async () => {
+      if (!brewSessionData?.recipe_id) return undefined;
+      const response = await ApiService.recipes.getById(
+        brewSessionData.recipe_id
+      );
+      return response.data;
+    },
+    enabled: !!brewSessionData?.recipe_id, // Only run when we have recipe_id
+    retry: 1,
+    staleTime: 1000 * 60 * 10, // Cache recipe data longer (10 minutes)
+  });
+
   // Force chart refresh when brew session data is updated
   React.useEffect(() => {
     if (dataUpdatedAt) {
@@ -60,12 +76,22 @@ export default function ViewBrewSession() {
   );
   /**
    * Pull-to-refresh handler
-   * Manually triggers a refetch of the brew session data
+   * Manually triggers a refetch of the brew session data and chart refresh
+   * Also handles dimension recalculation for foldable devices
    */
   const onRefresh = async () => {
     setRefreshing(true);
+    const currentRecipeId = brewSessionData?.recipe_id;
     try {
       await refetch();
+      // Also refresh recipe (FG) if present
+      if (currentRecipeId) {
+        await queryClient.invalidateQueries({
+          queryKey: ["recipe", currentRecipeId],
+        });
+      }
+      // Force chart refresh for foldable devices
+      setChartRefreshCounter(prev => prev + 1);
     } catch (error) {
       console.error("Error refreshing brew session:", error);
     } finally {
@@ -98,7 +124,9 @@ export default function ViewBrewSession() {
     value: number | undefined,
     decimals: number = 2
   ): string => {
-    return value ? value.toFixed(decimals) : "—";
+    return value !== undefined && value !== null
+      ? value.toFixed(decimals)
+      : "—";
   };
 
   /**
@@ -408,6 +436,7 @@ export default function ViewBrewSession() {
           actualOG={brewSession.actual_og}
           temperatureUnit={brewSession.temperature_unit}
           forceRefresh={chartRefreshCounter}
+          recipeData={recipeData}
         />
 
         {/* Fermentation Entries */}
@@ -415,7 +444,7 @@ export default function ViewBrewSession() {
           <Text style={styles.detailsTitle}>Fermentation Entries</Text>
           <FermentationData
             fermentationData={brewSession.fermentation_data || []}
-            expectedFG={brewSession.target_fg}
+            expectedFG={recipeData?.estimated_fg || brewSession.target_fg}
             actualOG={brewSession.actual_og}
             temperatureUnit={brewSession.temperature_unit}
             brewSessionId={brewSessionId}

@@ -1,5 +1,5 @@
 import { settingsStyles } from "@src/styles/modals/settingsStyles";
-import { ThemeContextValue } from "@src/contexts/ThemeContext";
+import { ThemeContextValue } from "@contexts/ThemeContext";
 // Mock React Native StyleSheet
 jest.mock("react-native", () => ({
   StyleSheet: {

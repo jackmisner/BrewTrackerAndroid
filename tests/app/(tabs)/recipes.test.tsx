@@ -69,7 +69,7 @@ jest.mock("@contexts/ThemeContext", () => ({
   ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-jest.mock("@src/contexts/AuthContext", () => ({
+jest.mock("@contexts/AuthContext", () => ({
   useAuth: jest.fn(),
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -168,7 +168,7 @@ const mockUseLocalSearchParams = require("expo-router").useLocalSearchParams;
 
 // Setup mocks
 require("@contexts/ThemeContext").useTheme.mockReturnValue(mockTheme);
-require("@src/contexts/AuthContext").useAuth.mockReturnValue({
+require("@contexts/AuthContext").useAuth.mockReturnValue({
   user: mockData.user(),
   isAuthenticated: true,
   error: null,
@@ -183,7 +183,7 @@ describe("RecipesScreen", () => {
 
     // Restore context mocks after clearAllMocks
     require("@contexts/ThemeContext").useTheme.mockReturnValue(mockTheme);
-    require("@src/contexts/AuthContext").useAuth.mockReturnValue({
+    require("@contexts/AuthContext").useAuth.mockReturnValue({
       user: mockData.user(),
       isAuthenticated: true,
       error: null,
