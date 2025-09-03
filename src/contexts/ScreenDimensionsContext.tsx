@@ -73,10 +73,9 @@ export const ScreenDimensionsProvider: React.FC<
     };
   }, [rawDimensions]);
 
-  // Manual refresh function (mainly for debugging - safeAreaFrame handles automatic updates)
+  const [, setTick] = React.useState(0);
   const refreshDimensions = React.useCallback(() => {
-    // Force re-render by triggering useMemo recalculation
-    // safeAreaFrame should handle dimension changes automatically
+    setTick(t => t + 1);
   }, []);
 
   const contextValue: ScreenDimensionsContextType = React.useMemo(

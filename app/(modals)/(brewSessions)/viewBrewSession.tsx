@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import ApiService from "@services/api/apiService";
 import { BrewSession, BrewSessionStatus, Recipe } from "@/src/types";
@@ -25,6 +25,7 @@ export default function ViewBrewSession() {
   const [chartRefreshCounter, setChartRefreshCounter] = useState(0);
   const theme = useTheme();
   const styles = viewBrewSessionStyles(theme);
+  const queryClient = useQueryClient();
   const {
     data: brewSessionData,
     isLoading,
@@ -46,12 +47,10 @@ export default function ViewBrewSession() {
   });
 
   // Fetch recipe data for expected FG reference line
-  const { data: recipeData } = useQuery<Recipe>({
+  const { data: recipeData } = useQuery<Recipe | undefined>({
     queryKey: ["recipe", brewSessionData?.recipe_id],
     queryFn: async () => {
-      if (!brewSessionData?.recipe_id) {
-        throw new Error("Recipe ID is required");
-      }
+      if (!brewSessionData?.recipe_id) return undefined;
       const response = await ApiService.recipes.getById(
         brewSessionData.recipe_id
       );
@@ -82,8 +81,15 @@ export default function ViewBrewSession() {
    */
   const onRefresh = async () => {
     setRefreshing(true);
+    const currentRecipeId = brewSessionData?.recipe_id;
     try {
       await refetch();
+      // Also refresh recipe (FG) if present
+      if (currentRecipeId) {
+        await queryClient.invalidateQueries({
+          queryKey: ["recipe", currentRecipeId],
+        });
+      }
       // Force chart refresh for foldable devices
       setChartRefreshCounter(prev => prev + 1);
     } catch (error) {
@@ -118,7 +124,7 @@ export default function ViewBrewSession() {
     value: number | undefined,
     decimals: number = 2
   ): string => {
-    return value ? value.toFixed(decimals) : "—";
+    return value !== undefined && value !== null ? value.toFixed(decimals) : "—";
   };
 
   /**

@@ -49,7 +49,7 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 // Import after mocks
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ApiService from "@services/api/apiService";
-import { AuthProvider, useAuth } from "@src/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@contexts/AuthContext";
 import { User, LoginRequest, RegisterRequest } from "@src/types";
 
 const mockAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;

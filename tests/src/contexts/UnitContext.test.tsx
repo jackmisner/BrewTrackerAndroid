@@ -1,8 +1,8 @@
 import React from "react";
 import { renderHook, act } from "@testing-library/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { UnitProvider, useUnits } from "@src/contexts/UnitContext";
-import { AuthProvider } from "@src/contexts/AuthContext";
+import { UnitProvider, useUnits } from "@contexts/UnitContext";
+import { AuthProvider } from "@contexts/AuthContext";
 import { UnitSystem } from "@src/types";
 
 // Mock AsyncStorage

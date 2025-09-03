@@ -120,18 +120,34 @@ const chartUtils = {
       noOfSections: 6,
       spacing: 50,
       backgroundColor: "transparent",
-      yAxisColor: theme.colors.border,
+      textColor: theme.colors.textSecondary,
+      yAxisTextStyle: { color: theme.colors.textSecondary },
+      hideAxesAndRules: false,
       xAxisColor: theme.colors.border,
-      yAxisTextStyle: { color: theme.colors.textSecondary, fontSize: 10 },
-      xAxisTextStyle: { color: theme.colors.textSecondary, fontSize: 10 },
+      yAxisColor: theme.colors.border,
+      rulesColor: theme.colors.border,
+      curved: true,
+      animateOnDataChange: false,
+      animationDuration: 0,
+      isAnimated: false,
+      xAxisLabelTextStyle: {
+        color: theme.colors.textSecondary,
+        fontSize: 10,
+        textAlign: "center" as const,
+      },
+      showXAxisIndices: true,
+      xAxisIndicesHeight: 4,
+      xAxisIndicesWidth: 1,
+      xAxisIndicesColor: theme.colors.border,
+      xAxisLabelsHeight: 45,
+      xAxisLabelsVerticalShift: 15,
+      xAxisTextNumberOfLines: 2,
       showVerticalLines: true,
       verticalLinesColor: theme.colors.border,
       verticalLinesThickness: 0.5,
       hideRules: false,
-      rulesColor: theme.colors.border,
       rulesThickness: 0.5,
       hideYAxisText: false,
-      hideAxesAndRules: false,
       showYAxisIndices: false,
       pointerConfig: {
         pointerStripHeight: 200,
@@ -544,11 +560,8 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       (gravityPoint, index) => {
         const temperaturePoint = baseChartData.temperature[index];
 
-        // Skip positioning if this is a hidden placeholder point
-        if (
-          "hideDataPoint" in gravityPoint ||
-          "hideDataPoint" in temperaturePoint
-        ) {
+        // Skip only if the current gravity point is hidden
+        if ("hideDataPoint" in gravityPoint) {
           return gravityPoint;
         }
 
@@ -597,11 +610,8 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       (temperaturePoint, index) => {
         const gravityPoint = baseChartData.gravity[index];
 
-        // Skip positioning if this is a hidden placeholder point
-        if (
-          "hideDataPoint" in temperaturePoint ||
-          "hideDataPoint" in gravityPoint
-        ) {
+        // Skip only if the current temperature point is hidden
+        if ("hideDataPoint" in temperaturePoint) {
           return temperaturePoint;
         }
 
@@ -683,91 +693,65 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
   }, [expectedFG, recipeData?.estimated_fg, theme.colors.textSecondary]);
 
   // Chart configuration objects
-  const baseChartConfig = {
-    width: chartWidth,
-    textColor: theme.colors.textSecondary,
-    yAxisTextStyle: { color: theme.colors.textSecondary },
-    hideAxesAndRules: false,
-    xAxisColor: theme.colors.border,
-    yAxisColor: theme.colors.border,
-    rulesColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-    curved: true,
-    animateOnDataChange: false, // Disable animations to prevent state corruption
-    animationDuration: 0, // No animation duration
-    isAnimated: false, // Explicitly disable animations
-    xAxisLabelTextStyle: {
-      color: theme.colors.textSecondary,
-      fontSize: 10,
-      textAlign: "center" as const,
-    },
-    showXAxisIndices: true,
-    xAxisIndicesHeight: 4,
-    xAxisIndicesWidth: 1,
-    xAxisIndicesColor: theme.colors.border,
-    xAxisLabelsHeight: 45, // Extra height for day numbers
-    xAxisLabelsVerticalShift: 15, // Push labels down to create space
-    xAxisTextNumberOfLines: 2, // Allow multi-line labels
-  };
 
   const gravityChartConfig = {
-    ...baseChartConfig,
-    height: 200,
+    ...chartUtils.buildChartConfig(chartWidth, gravityAxisConfig, theme, {
+      height: 200,
+      noOfSections: 6,
+      spacing: chartWidth / Math.max(gravityChartData.length, 1),
+      focusProximity: 8,
+      showTextOnFocus: false,
+    }),
     color: theme.colors.gravityLine,
     thickness: 3,
-    spacing: chartWidth / Math.max(gravityChartData.length, 1),
     dataPointsColor: theme.colors.gravityLine,
-    dataPointsRadius: 4, // Smaller to restrict touch area to data points only
-    maxValue: gravityAxisConfig.maxValue - gravityAxisConfig.minValue, // Chart range, not absolute max
-    yAxisOffset: gravityAxisConfig.minValue,
-    noOfSections: 6,
+    dataPointsRadius: 4,
     yAxisLabelSuffix: "",
     formatYLabel: (label: string) => formatGravity(parseFloat(label)),
     referenceLine1Config:
       gravityReferenceLines.length > 0 ? gravityReferenceLines[0] : undefined,
     pressEnabled: true,
     onPress: handleDataPointInteraction,
-    focusEnabled: true, // Alternative focus approach
+    focusEnabled: true,
     onFocus: handleDataPointInteraction,
-    focusProximity: 8, // Restrict click area to 8 pixels around data points
-    showTextOnFocus: false, // Disable built-in focus text
   };
 
   const temperatureChartConfig = {
-    ...baseChartConfig,
-    height: 200,
+    ...chartUtils.buildChartConfig(chartWidth, temperatureAxisConfig, theme, {
+      height: 200,
+      noOfSections: 4,
+      spacing: chartWidth / Math.max(temperatureChartData.length, 1),
+      focusProximity: 8,
+      showTextOnFocus: false,
+      stepValue: Math.ceil(
+        (temperatureAxisConfig.maxValue - temperatureAxisConfig.minValue) / 4
+      ),
+    }),
     color: theme.colors.temperatureLine,
     thickness: 2,
-    spacing: chartWidth / Math.max(temperatureChartData.length, 1),
     dataPointsColor: theme.colors.temperatureLine,
-    dataPointsRadius: 4, // Smaller to restrict touch area to data points only
-    maxValue: temperatureAxisConfig.maxValue - temperatureAxisConfig.minValue,
-    yAxisOffset: temperatureAxisConfig.minValue,
+    dataPointsRadius: 4,
     yAxisLabelSuffix: getSessionTemperatureSymbol(),
     formatYLabel: (label: string) => Math.round(parseFloat(label)).toString(),
-    noOfSections: 4, // Different from gravity charts to avoid overlap
-    stepValue: Math.ceil(
-      (temperatureAxisConfig.maxValue - temperatureAxisConfig.minValue) / 4
-    ),
     pressEnabled: true,
     onPress: handleDataPointInteraction,
     focusEnabled: true,
     onFocus: handleDataPointInteraction,
-    focusProximity: 8, // Restrict click area to 8 pixels around data points
-    showTextOnFocus: false,
   };
 
   const combinedChartConfig = {
-    ...baseChartConfig,
-    height: 250,
+    ...chartUtils.buildChartConfig(chartWidth, gravityAxisConfig, theme, {
+      height: 250,
+      noOfSections: 6,
+      spacing: chartWidth / Math.max(gravityChartData.length, 1),
+      focusProximity: 8,
+      showTextOnFocus: false,
+      disableScroll: false,
+    }),
     color: theme.colors.gravityLine,
     thickness: 3,
-    spacing: chartWidth / Math.max(gravityChartData.length, 1), // aligned arrays
     dataPointsColor: theme.colors.gravityLine,
-    dataPointsRadius: 4, // Smaller to restrict touch area to data points only
-    maxValue: gravityAxisConfig.maxValue - gravityAxisConfig.minValue, // Chart range, not absolute max
-    yAxisOffset: gravityAxisConfig.minValue,
-    noOfSections: 6,
+    dataPointsRadius: 4,
     yAxisLabelSuffix: "",
     formatYLabel: (label: string) => formatGravity(parseFloat(label)),
     referenceLine1Config:
@@ -777,9 +761,6 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     onPress: handleDataPointInteraction,
     focusEnabled: true,
     onFocus: handleDataPointInteraction,
-    focusProximity: 8, // Restrict click area to 8 pixels around data points
-    showTextOnFocus: false,
-    disableScroll: false, // Allow scrolling but maintain click functionality
     secondaryYAxis: {
       yAxisOffset: temperatureAxisConfig.minValue,
       maxValue: temperatureAxisConfig.maxValue - temperatureAxisConfig.minValue,
@@ -921,7 +902,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
             </Text>
           </View>
         ) : null}
-        {expectedFG ? (
+        {recipeData?.estimated_fg != null || expectedFG != null ? (
           <View style={styles.stat}>
             <Text
               style={[styles.statLabel, { color: theme.colors.textSecondary }]}
@@ -929,7 +910,10 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
               Expected FG
             </Text>
             <Text style={[styles.statValue, { color: theme.colors.primary }]}>
-              {formatGravity(expectedFG)}
+              {(() => {
+                const finalFG = recipeData?.estimated_fg ?? expectedFG;
+                return finalFG != null ? formatGravity(finalFG) : "—";
+              })()}
             </Text>
           </View>
         ) : null}
