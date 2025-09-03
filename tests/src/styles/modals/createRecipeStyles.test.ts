@@ -6,7 +6,7 @@ jest.mock("react-native", () => ({
 }));
 
 import { createRecipeStyles } from "@src/styles/modals/createRecipeStyles";
-import { ThemeContextValue } from "@src/contexts/ThemeContext";
+import { ThemeContextValue } from "@contexts/ThemeContext";
 
 describe("Create Recipe Styles", () => {
   const mockTheme: ThemeContextValue = {

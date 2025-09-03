@@ -1,8 +1,8 @@
 import React, { ReactElement } from "react";
 import { render, RenderOptions } from "@testing-library/react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AuthProvider } from "@src/contexts/AuthContext";
-import { ThemeProvider } from "@src/contexts/ThemeContext";
+import { AuthProvider } from "@contexts/AuthContext";
+import { ThemeProvider } from "@contexts/ThemeContext";
 
 interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
   queryClient?: QueryClient;
