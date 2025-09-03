@@ -20,6 +20,14 @@ jest.mock("react-native", () => ({
     const React = require("react");
     return React.createElement("TouchableOpacity", props, children);
   },
+  Modal: ({ children, ...props }: any) => {
+    const React = require("react");
+    return React.createElement("Modal", props, children);
+  },
+  Pressable: ({ children, ...props }: any) => {
+    const React = require("react");
+    return React.createElement("Pressable", props, children);
+  },
   StyleSheet: {
     create: jest.fn(styles => styles),
   },
@@ -66,6 +74,22 @@ jest.mock("@contexts/UnitContext", () => ({
     temperatureUnit: "F",
     getTemperatureSymbol: jest.fn(() => "°F"),
   }),
+}));
+
+jest.mock("@contexts/ScreenDimensionsContext", () => ({
+  useScreenDimensions: () => ({
+    dimensions: {
+      width: 375,
+      height: 667,
+      isSmallScreen: true,
+      isLandscape: false,
+    },
+    refreshDimensions: jest.fn(),
+  }),
+}));
+
+jest.mock("@utils/formatUtils", () => ({
+  formatGravity: jest.fn((value: number) => value.toFixed(3)),
 }));
 
 // Mock props for the component

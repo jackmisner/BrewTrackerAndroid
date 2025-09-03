@@ -3,13 +3,16 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
   TouchableOpacity,
+  Modal,
+  Pressable,
 } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
-import { FermentationEntry } from "@src/types";
+import { FermentationEntry, Recipe } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
+import { useScreenDimensions } from "@contexts/ScreenDimensionsContext";
+import { formatGravity } from "@utils/formatUtils";
 
 // Chart wrapper component that forces complete remount
 const ChartWrapper: React.FC<{
@@ -23,12 +26,136 @@ const ChartWrapper: React.FC<{
   );
 };
 
+// Reusable chart section component to eliminate duplication
+const ChartSection: React.FC<{
+  title: string;
+  children: React.ReactNode;
+  theme: any;
+  styles: any;
+}> = ({ title, children, theme, styles }) => {
+  return (
+    <View style={styles.chartSection}>
+      <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
+        {title}
+      </Text>
+      <View style={styles.chart}>{children}</View>
+    </View>
+  );
+};
+
+// Reusable modal data row component to eliminate duplication
+const ModalDataRow: React.FC<{
+  label: string;
+  value: string;
+  valueColor?: string;
+  theme: any;
+  styles: any;
+}> = ({ label, value, valueColor, theme, styles }) => {
+  return (
+    <View style={styles.modalRow}>
+      <Text style={[styles.modalLabel, { color: theme.colors.textSecondary }]}>
+        {label}:
+      </Text>
+      <Text
+        style={[styles.modalValue, { color: valueColor || theme.colors.text }]}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+};
+
+// Chart utility functions
+const chartUtils = {
+  /**
+   * Calculate visual height position for data point positioning
+   */
+  calculateVisualHeight: (
+    value: number,
+    axisConfig: { minValue: number; maxValue: number }
+  ): number => {
+    const range = axisConfig.maxValue - axisConfig.minValue;
+    const normalizedPosition = (value - axisConfig.minValue) / range;
+    return Math.min(1, Math.max(0, normalizedPosition));
+  },
+
+  /**
+   * Create axis configuration with smart bounds
+   */
+  createAxisConfig: (
+    values: number[],
+    padding: number = 0.01
+  ): { minValue: number; maxValue: number } => {
+    if (values.length === 0) return { minValue: 0, maxValue: 1 };
+
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+
+    // Smart bounds for gravity values close to 1.000
+    let adjustedMinValue = minValue - padding;
+    if (minValue < 1.01) {
+      adjustedMinValue = 0.995; // Provide space below for labels when readings are low
+    }
+
+    return {
+      minValue: adjustedMinValue,
+      maxValue: maxValue + padding,
+    };
+  },
+
+  /**
+   * Build chart configuration with common settings
+   */
+  buildChartConfig: (
+    width: number,
+    axisConfig: { minValue: number; maxValue: number },
+    theme: any,
+    additionalConfig: any = {}
+  ) => {
+    const baseConfig = {
+      width,
+      height: 200,
+      yAxisOffset: axisConfig.minValue,
+      maxValue: axisConfig.maxValue - axisConfig.minValue,
+      noOfSections: 6,
+      spacing: 50,
+      backgroundColor: "transparent",
+      yAxisColor: theme.colors.border,
+      xAxisColor: theme.colors.border,
+      yAxisTextStyle: { color: theme.colors.textSecondary, fontSize: 10 },
+      xAxisTextStyle: { color: theme.colors.textSecondary, fontSize: 10 },
+      showVerticalLines: true,
+      verticalLinesColor: theme.colors.border,
+      verticalLinesThickness: 0.5,
+      hideRules: false,
+      rulesColor: theme.colors.border,
+      rulesThickness: 0.5,
+      hideYAxisText: false,
+      hideAxesAndRules: false,
+      showYAxisIndices: false,
+      pointerConfig: {
+        pointerStripHeight: 200,
+        pointerStripColor: theme.colors.textMuted,
+        pointerStripWidth: 1,
+        strokeDashArray: [3, 3],
+        shiftPointerLabelX: 2,
+        pointerLabelWidth: 100,
+        pointerLabelHeight: 90,
+        pointerLabelComponent: () => null,
+      },
+    };
+
+    return { ...baseConfig, ...additionalConfig };
+  },
+};
+
 interface FermentationChartProps {
   fermentationData: FermentationEntry[];
   expectedFG?: number;
   actualOG?: number;
   temperatureUnit?: "C" | "F"; // Session-specific temperature unit
   forceRefresh?: number; // External refresh trigger
+  recipeData?: Recipe; // Recipe data for accessing estimated_fg
 }
 
 interface ProcessedDataPoint {
@@ -46,16 +173,32 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
   actualOG,
   temperatureUnit,
   forceRefresh = 0,
+  recipeData,
 }) => {
   const theme = useTheme();
   const units = useUnits();
+  const { dimensions: screenDimensions, refreshDimensions } =
+    useScreenDimensions();
   const [combinedView, setCombinedView] = React.useState(true);
   const [chartRefreshKey, setChartRefreshKey] = React.useState(0);
+  const [modalVisible, setModalVisible] = React.useState(false);
+  const [modalData, setModalData] = React.useState<{
+    title: string;
+    date: string;
+    gravity?: string;
+    temperature?: string;
+    ph?: string;
+  } | null>(null);
 
-  // Force chart refresh when fermentation data changes or external refresh is triggered
+  // Force chart refresh when fermentation data, screen dimensions, or external refresh changes
   React.useEffect(() => {
     setChartRefreshKey(prev => prev + 1);
-  }, [fermentationData, forceRefresh]);
+  }, [
+    fermentationData,
+    forceRefresh,
+    screenDimensions.width,
+    screenDimensions.height,
+  ]);
 
   // Force refresh when switching between combined/separate views
   const handleViewToggle = React.useCallback(() => {
@@ -65,28 +208,35 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
   }, []);
 
   // Get temperature symbol based on session-specific unit, fallback to user preference
-  const getSessionTemperatureSymbol = (): string => {
+  const getSessionTemperatureSymbol = React.useCallback((): string => {
     if (temperatureUnit) {
       return temperatureUnit === "C" ? "°C" : "°F";
     }
     return units.getTemperatureSymbol(); // Fallback to user preference
-  };
+  }, [temperatureUnit, units]);
 
   // Format temperature using session-specific unit
-  const formatSessionTemperature = (
-    value: number,
-    precision: number = 1
-  ): string => {
-    const symbol = getSessionTemperatureSymbol();
+  const formatSessionTemperature = React.useCallback(
+    (value: number, precision: number = 1): string => {
+      const symbol = getSessionTemperatureSymbol();
 
-    return `${value.toFixed(precision)}${symbol}`;
-  };
+      return `${value.toFixed(precision)}${symbol}`;
+    },
+    [getSessionTemperatureSymbol]
+  );
 
   // Transform fermentation data to chart format
   const processedData: ProcessedDataPoint[] = React.useMemo(() => {
     if (!fermentationData || fermentationData.length === 0) {
       return [];
     }
+
+    // Helper function to normalize date to remove time components
+    const normalizeDate = (date: Date): Date => {
+      const normalized = new Date(date);
+      normalized.setHours(0, 0, 0, 0);
+      return normalized;
+    };
 
     // Helper function to extract date from entry
     const getEntryDate = (entry: any) => {
@@ -103,20 +253,18 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
         if (dateStr && typeof dateStr === "string") {
           const parsedDate = new Date(dateStr);
           if (!isNaN(parsedDate.getTime())) {
-            return parsedDate;
+            return normalizeDate(parsedDate);
           }
         }
       }
 
-      return new Date(); // Fallback to current date
+      return normalizeDate(new Date()); // Fallback to current date, normalized
     };
 
     const sortedData = [...fermentationData].sort((a, b) => {
       // Sorting entries by date
-
       const dateA = getEntryDate(a);
       const dateB = getEntryDate(b);
-
       return dateA.getTime() - dateB.getTime();
     });
 
@@ -124,6 +272,8 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
     return sortedData.map((entry, index) => {
       const entryDate = getEntryDate(entry);
+      // Since dates are normalized to midnight, this calculation will work correctly
+      // for consecutive calendar days, ensuring Day 1, Day 2, etc.
       const dayNumber =
         Math.floor(
           (entryDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)
@@ -144,61 +294,112 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     });
   }, [fermentationData]);
 
-  // Responsive screen dimensions that update on device rotation/unfolding
-  const [screenDimensions, setScreenDimensions] = React.useState(() =>
-    Dimensions.get("window")
+  // Data point click/focus handler with themed modal
+  const handleDataPointInteraction = React.useCallback(
+    (item: any, index?: number) => {
+      // For focus events, we need to find the matching data point
+      let dataPointIndex = index;
+      if (dataPointIndex === undefined && item?.label) {
+        // Find matching data point by label for focus events
+        const dayMatch = item.label.match(/Day (\d+)/);
+        if (dayMatch) {
+          const dayNumber = parseInt(dayMatch[1]);
+          dataPointIndex = processedData.findIndex(p => p.x === dayNumber);
+        }
+      }
+
+      if (dataPointIndex === undefined || !processedData[dataPointIndex]) {
+        return;
+      }
+
+      const dataPoint = processedData[dataPointIndex];
+
+      // Prepare modal data
+      const modalInfo = {
+        title: `Day ${dataPoint.x} Details`,
+        date: dataPoint.date,
+        gravity:
+          dataPoint.gravity !== undefined
+            ? formatGravity(dataPoint.gravity)
+            : undefined,
+        temperature:
+          dataPoint.temperature !== undefined
+            ? formatSessionTemperature(dataPoint.temperature)
+            : undefined,
+        ph: dataPoint.ph !== undefined ? dataPoint.ph.toFixed(1) : undefined,
+      };
+
+      setModalData(modalInfo);
+      setModalVisible(true);
+    },
+    [processedData, formatSessionTemperature]
   );
 
-  // Listen for dimension changes (device rotation, folding/unfolding)
-  React.useEffect(() => {
-    const subscription = Dimensions.addEventListener("change", ({ window }) => {
-      setScreenDimensions(window);
-      // Force chart refresh when dimensions change
-      setChartRefreshKey(prev => prev + 1);
-    });
-
-    return () => subscription?.remove();
-  }, []);
+  // Screen dimensions handled by ScreenDimensionsContext for reliable foldable device support
 
   // Calculate optimal chart width based on current screen dimensions
   const chartWidth = React.useMemo(() => {
-    const containerPadding = 60; // Account for container padding
-    const secondaryAxisPadding = 80; // Increased padding for secondary Y-axis labels
-    const maxChartWidth = 600; // Reduced max width to ensure secondary axis fits
+    // Context guarantees valid dimensions - no safety check needed
+    const { width } = screenDimensions;
 
-    const calculatedWidth =
-      screenDimensions.width - containerPadding - secondaryAxisPadding;
+    // Account for all padding layers:
+    // - container: 16px * 2 = 32px
+    // - chartContainer: 12px + 20px (right) = 32px
+    // - chartSection: 8px * 2 = 16px
+    const totalPadding = 32 + 32 + 16; // 80px total
 
-    // Constrain width to prevent over-stretching on large screens
-    return Math.min(calculatedWidth, maxChartWidth);
-  }, [screenDimensions.width]);
+    // Use context's computed isSmallScreen property
+    const { isSmallScreen } = screenDimensions;
+
+    // Scale secondary axis padding more aggressively for small screens
+    const secondaryAxisPadding = isSmallScreen
+      ? Math.max(30, width * 0.12) // 12% for small screens, min 30px
+      : Math.max(
+          50, // Standard minimum for larger screens
+          Math.min(
+            width * 0.18, // 18% of screen width
+            90 // Maximum padding
+          )
+        );
+
+    // Reduce max width for small screens
+    const maxChartWidth = isSmallScreen ? 300 : 500;
+
+    const calculatedWidth = width - totalPadding - secondaryAxisPadding;
+
+    // Ensure minimum viable width but be more aggressive on small screens
+    const minChartWidth = isSmallScreen ? 150 : 200;
+
+    return Math.max(minChartWidth, Math.min(calculatedWidth, maxChartWidth));
+  }, [screenDimensions]);
 
   // Generate chart keys for force re-rendering when data changes
   const chartKeys = React.useMemo(() => {
-    // Use chartRefreshKey as the primary key since it's incremented on all relevant changes
-    const baseKey = `${chartRefreshKey}-${screenDimensions.width}x${screenDimensions.height}`;
+    // Include width calculation details for more granular cache busting
+    const calculatedWidth = Math.floor(chartWidth); // Include actual calculated width
+    const timestamp = Date.now(); // Add timestamp for guaranteed uniqueness on dimension changes
+
+    const baseKey = `${chartRefreshKey}-${screenDimensions.width}x${screenDimensions.height}-w${calculatedWidth}-${screenDimensions.isSmallScreen ? "small" : "large"}-${timestamp}`;
 
     return {
       combined: `combined-${baseKey}`,
       gravity: `gravity-${baseKey}`,
       temperature: `temperature-${baseKey}`,
     };
-  }, [chartRefreshKey, screenDimensions]);
+  }, [chartRefreshKey, screenDimensions, chartWidth]);
 
-  // Convert to chart format for Gifted Charts with proper spacing and alignment
-  const combinedChartData = React.useMemo(() => {
+  // Convert to chart format without positioning first - positioning will be calculated later
+  const baseChartData = React.useMemo(() => {
     if (processedData.length === 0) return { gravity: [], temperature: [] };
 
-    // Create aligned data arrays where each index corresponds to the same date
-    // This ensures proper spacing and secondary axis alignment
+    // Create base data arrays without positioning
     const alignedData = processedData.map((point, index) => {
       const baseDataPoint = {
-        label: point.rawDate.toLocaleDateString(undefined, {
+        label: `${point.rawDate.toLocaleDateString(undefined, {
           month: "numeric",
           day: "numeric",
-        }),
+        })}\nDay ${point.x}`, // Show date with day number underneath
         labelTextStyle: { color: theme.colors.textSecondary, fontSize: 9 },
-        dataPointText: `Day ${point.x}`, // Add day indicator
       };
 
       return {
@@ -207,6 +408,10 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
             ? {
                 ...baseDataPoint,
                 value: point.gravity,
+                dataPointText: formatGravity(point.gravity), // Show actual gravity value
+                textShiftX: -8, // No horizontal offset - directly above/below data point
+                onPress: () =>
+                  handleDataPointInteraction({ value: point.gravity }, index), // Add individual click handler
               }
             : {
                 ...baseDataPoint,
@@ -218,6 +423,13 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
             ? {
                 ...baseDataPoint,
                 value: point.temperature,
+                dataPointText: formatSessionTemperature(point.temperature, 0), // Show actual temperature value
+                textShiftX: -5, // No horizontal offset - directly above/below data point
+                onPress: () =>
+                  handleDataPointInteraction(
+                    { value: point.temperature },
+                    index
+                  ), // Add individual click handler
               }
             : {
                 ...baseDataPoint,
@@ -231,27 +443,28 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       gravity: alignedData.map(d => d.gravity),
       temperature: alignedData.map(d => d.temperature),
     };
-  }, [processedData, theme.colors.textSecondary]);
+  }, [
+    processedData,
+    theme.colors.textSecondary,
+    formatSessionTemperature,
+    handleDataPointInteraction,
+  ]);
 
-  const gravityChartData = combinedChartData.gravity;
-  const temperatureChartData = combinedChartData.temperature;
+  // Get base chart data without positioning first (for axis calculations)
+  const baseGravityData = baseChartData.gravity;
+  const baseTemperatureData = baseChartData.temperature;
   // Calculate Y-axis scaling for charts
   const gravityAxisConfig = React.useMemo(() => {
-    if (gravityChartData.length === 0) {
+    if (baseGravityData.length === 0) {
       return { minValue: 1.0, maxValue: 1.1 };
     }
 
-    const gravityValues = gravityChartData.map(d => d.value);
+    const gravityValues = baseGravityData.map(d => d.value);
     const maxGravity = actualOG || Math.max(...gravityValues);
+    const allValues = [...gravityValues, maxGravity];
 
-    const config = {
-      minValue: 1.0,
-      // minValue: Math.max(1.000, minGravity - 0.005), // Never go below 1.000
-      maxValue: maxGravity + 0.01 - 1, // Add buffer above actual OG
-    };
-
-    return config;
-  }, [gravityChartData, actualOG]);
+    return chartUtils.createAxisConfig(allValues, 0.01);
+  }, [baseGravityData, actualOG]);
 
   // Create session-specific temperature axis configuration
   const getSessionTemperatureAxisConfig = React.useCallback(
@@ -301,12 +514,12 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
   );
 
   const temperatureAxisConfig = React.useMemo(() => {
-    if (temperatureChartData.length === 0) {
+    if (baseTemperatureData.length === 0) {
       return getSessionTemperatureAxisConfig([]);
     }
 
     // Filter out hidden zero-value placeholder points
-    const filteredTemperatures = temperatureChartData
+    const filteredTemperatures = baseTemperatureData
       .filter(
         item =>
           !(
@@ -318,21 +531,147 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       .map(d => d.value);
 
     return getSessionTemperatureAxisConfig(filteredTemperatures, 8);
-  }, [temperatureChartData, getSessionTemperatureAxisConfig]);
+  }, [baseTemperatureData, getSessionTemperatureAxisConfig]);
+
+  // Add positioning to chart data using actual axis configurations
+  const combinedChartData = React.useMemo(() => {
+    if (baseChartData.gravity.length === 0) return baseChartData;
+
+    // Use chart utilities for visual height calculations
+
+    // Apply positioning to each data point using actual axis configs
+    const positionedGravityData = baseChartData.gravity.map(
+      (gravityPoint, index) => {
+        const temperaturePoint = baseChartData.temperature[index];
+
+        // Skip positioning if this is a hidden placeholder point
+        if (
+          "hideDataPoint" in gravityPoint ||
+          "hideDataPoint" in temperaturePoint
+        ) {
+          return gravityPoint;
+        }
+
+        const hasGravity =
+          gravityPoint.value > 0 && !("hideDataPoint" in gravityPoint);
+        const hasTemperature =
+          temperaturePoint.value > 0 && !("hideDataPoint" in temperaturePoint);
+
+        let gravityLabelShift = 0;
+
+        if (hasGravity && hasTemperature) {
+          // Calculate actual visual heights using real axis configurations
+          const gravityVisualHeight = chartUtils.calculateVisualHeight(
+            gravityPoint.value,
+            gravityAxisConfig
+          );
+          const tempVisualHeight = chartUtils.calculateVisualHeight(
+            temperaturePoint.value,
+            temperatureAxisConfig
+          );
+
+          // Position based on actual visual height comparison
+          // The HIGHER point gets label ABOVE (-15), the LOWER point gets label BELOW (+25)
+          if (gravityVisualHeight > tempVisualHeight) {
+            gravityLabelShift = -15; // Gravity is higher visually - label above the data point
+          } else {
+            gravityLabelShift = 25; // Gravity is lower visually - label below the data point
+          }
+        } else if (hasGravity) {
+          // Only gravity - position based on chart position
+          const gravityVisualHeight = chartUtils.calculateVisualHeight(
+            gravityPoint.value,
+            gravityAxisConfig
+          );
+          gravityLabelShift = gravityVisualHeight > 0.5 ? -25 : 25;
+        }
+
+        return {
+          ...gravityPoint,
+          textShiftY: gravityLabelShift,
+        };
+      }
+    );
+
+    const positionedTemperatureData = baseChartData.temperature.map(
+      (temperaturePoint, index) => {
+        const gravityPoint = baseChartData.gravity[index];
+
+        // Skip positioning if this is a hidden placeholder point
+        if (
+          "hideDataPoint" in temperaturePoint ||
+          "hideDataPoint" in gravityPoint
+        ) {
+          return temperaturePoint;
+        }
+
+        const hasGravity =
+          gravityPoint.value > 0 && !("hideDataPoint" in gravityPoint);
+        const hasTemperature =
+          temperaturePoint.value > 0 && !("hideDataPoint" in temperaturePoint);
+
+        let temperatureLabelShift = 0;
+
+        if (hasGravity && hasTemperature) {
+          // Calculate actual visual heights using real axis configurations
+          const gravityVisualHeight = chartUtils.calculateVisualHeight(
+            gravityPoint.value,
+            gravityAxisConfig
+          );
+          const tempVisualHeight = chartUtils.calculateVisualHeight(
+            temperaturePoint.value,
+            temperatureAxisConfig
+          );
+
+          // Position based on actual visual height comparison
+          // The HIGHER point gets label ABOVE (-15), the LOWER point gets label BELOW (+15)
+          if (tempVisualHeight > gravityVisualHeight) {
+            temperatureLabelShift = -15; // Temperature is higher visually - label above the data point
+          } else {
+            temperatureLabelShift = 25; // Temperature is lower visually - label below the data point
+          }
+        } else if (hasTemperature) {
+          // Only temperature - position based on chart position
+          const tempVisualHeight = chartUtils.calculateVisualHeight(
+            temperaturePoint.value,
+            temperatureAxisConfig
+          );
+          temperatureLabelShift = tempVisualHeight > 0.5 ? -25 : 25;
+        }
+
+        return {
+          ...temperaturePoint,
+          textShiftY: temperatureLabelShift,
+        };
+      }
+    );
+
+    return {
+      gravity: positionedGravityData,
+      temperature: positionedTemperatureData,
+    };
+  }, [baseChartData, gravityAxisConfig, temperatureAxisConfig]);
+
+  // Final chart data with proper positioning
+  const gravityChartData = combinedChartData.gravity;
+  const temperatureChartData = combinedChartData.temperature;
 
   const gravityReferenceLines = React.useMemo(() => {
-    if (!expectedFG) {
+    // Use estimated_fg from recipe data first, then fall back to target_fg from session
+    const finalExpectedFG = recipeData?.estimated_fg || expectedFG;
+
+    if (!finalExpectedFG) {
       return [];
     }
 
     const referenceConfig = {
-      value: expectedFG,
+      value: finalExpectedFG,
       color: "#FF7300",
       thickness: 2,
       type: "dashed",
       dashWidth: 4,
       dashGap: 4,
-      labelText: `Expected FG: ${expectedFG.toFixed(3)}`,
+      labelText: `Expected FG: ${formatGravity(finalExpectedFG)}`,
       labelTextStyle: {
         color: theme.colors.textSecondary,
         fontSize: 10,
@@ -341,7 +680,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     };
 
     return [referenceConfig];
-  }, [expectedFG, theme.colors.textSecondary]);
+  }, [expectedFG, recipeData?.estimated_fg, theme.colors.textSecondary]);
 
   // Chart configuration objects
   const baseChartConfig = {
@@ -357,11 +696,18 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     animateOnDataChange: false, // Disable animations to prevent state corruption
     animationDuration: 0, // No animation duration
     isAnimated: false, // Explicitly disable animations
-    xAxisLabelTextStyle: { color: theme.colors.textSecondary, fontSize: 9 },
+    xAxisLabelTextStyle: {
+      color: theme.colors.textSecondary,
+      fontSize: 10,
+      textAlign: "center" as const,
+    },
     showXAxisIndices: true,
     xAxisIndicesHeight: 4,
     xAxisIndicesWidth: 1,
     xAxisIndicesColor: theme.colors.border,
+    xAxisLabelsHeight: 45, // Extra height for day numbers
+    xAxisLabelsVerticalShift: 15, // Push labels down to create space
+    xAxisTextNumberOfLines: 2, // Allow multi-line labels
   };
 
   const gravityChartConfig = {
@@ -371,14 +717,20 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     thickness: 3,
     spacing: chartWidth / Math.max(gravityChartData.length, 1),
     dataPointsColor: theme.colors.gravityLine,
-    dataPointsRadius: 4,
-    maxValue: gravityAxisConfig.maxValue,
+    dataPointsRadius: 4, // Smaller to restrict touch area to data points only
+    maxValue: gravityAxisConfig.maxValue - gravityAxisConfig.minValue, // Chart range, not absolute max
     yAxisOffset: gravityAxisConfig.minValue,
     noOfSections: 6,
     yAxisLabelSuffix: "",
-    formatYLabel: (label: string) => parseFloat(label).toFixed(3),
+    formatYLabel: (label: string) => formatGravity(parseFloat(label)),
     referenceLine1Config:
       gravityReferenceLines.length > 0 ? gravityReferenceLines[0] : undefined,
+    pressEnabled: true,
+    onPress: handleDataPointInteraction,
+    focusEnabled: true, // Alternative focus approach
+    onFocus: handleDataPointInteraction,
+    focusProximity: 8, // Restrict click area to 8 pixels around data points
+    showTextOnFocus: false, // Disable built-in focus text
   };
 
   const temperatureChartConfig = {
@@ -388,11 +740,21 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     thickness: 2,
     spacing: chartWidth / Math.max(temperatureChartData.length, 1),
     dataPointsColor: theme.colors.temperatureLine,
-    dataPointsRadius: 4,
+    dataPointsRadius: 4, // Smaller to restrict touch area to data points only
     maxValue: temperatureAxisConfig.maxValue - temperatureAxisConfig.minValue,
     yAxisOffset: temperatureAxisConfig.minValue,
     yAxisLabelSuffix: getSessionTemperatureSymbol(),
     formatYLabel: (label: string) => Math.round(parseFloat(label)).toString(),
+    noOfSections: 4, // Different from gravity charts to avoid overlap
+    stepValue: Math.ceil(
+      (temperatureAxisConfig.maxValue - temperatureAxisConfig.minValue) / 4
+    ),
+    pressEnabled: true,
+    onPress: handleDataPointInteraction,
+    focusEnabled: true,
+    onFocus: handleDataPointInteraction,
+    focusProximity: 8, // Restrict click area to 8 pixels around data points
+    showTextOnFocus: false,
   };
 
   const combinedChartConfig = {
@@ -402,24 +764,35 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     thickness: 3,
     spacing: chartWidth / Math.max(gravityChartData.length, 1), // aligned arrays
     dataPointsColor: theme.colors.gravityLine,
-    dataPointsRadius: 4,
-    maxValue: gravityAxisConfig.maxValue,
+    dataPointsRadius: 4, // Smaller to restrict touch area to data points only
+    maxValue: gravityAxisConfig.maxValue - gravityAxisConfig.minValue, // Chart range, not absolute max
     yAxisOffset: gravityAxisConfig.minValue,
     noOfSections: 6,
     yAxisLabelSuffix: "",
-    formatYLabel: (label: string) => parseFloat(label).toFixed(3),
+    formatYLabel: (label: string) => formatGravity(parseFloat(label)),
     referenceLine1Config:
       gravityReferenceLines.length > 0 ? gravityReferenceLines[0] : undefined,
     showSecondaryYAxis: true,
+    pressEnabled: true,
+    onPress: handleDataPointInteraction,
+    focusEnabled: true,
+    onFocus: handleDataPointInteraction,
+    focusProximity: 8, // Restrict click area to 8 pixels around data points
+    showTextOnFocus: false,
+    disableScroll: false, // Allow scrolling but maintain click functionality
     secondaryYAxis: {
       yAxisOffset: temperatureAxisConfig.minValue,
       maxValue: temperatureAxisConfig.maxValue - temperatureAxisConfig.minValue,
-      noOfSections: 6,
+      noOfSections: 4, // Different from primary axis (6) to prevent duplicate grid lines
+      stepValue: Math.ceil(
+        (temperatureAxisConfig.maxValue - temperatureAxisConfig.minValue) / 4
+      ),
       yAxisLabelSuffix: getSessionTemperatureSymbol(),
       formatYLabel: (label: string) => Math.round(parseFloat(label)).toString(),
       yAxisTextStyle: { color: theme.colors.textSecondary, fontSize: 10 },
       yAxisColor: theme.colors.border,
-      showYAxisIndices: true,
+      showYAxisIndices: false, // Disable secondary axis grid lines to prevent duplicates
+      hideRules: true, // Completely hide horizontal rules for secondary axis
       yAxisLabelWidth: 45, // Increased width for temperature labels
       hideYAxisText: false, // Explicitly show Y-axis text
       yAxisLabelContainerStyle: { width: 100 }, // Container width for labels
@@ -428,7 +801,12 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       color: theme.colors.temperatureLine,
       thickness: 3,
       dataPointsColor: theme.colors.temperatureLine,
-      dataPointsRadius: 4,
+      dataPointsRadius: 4, // Smaller to restrict touch area to data points only
+      pressEnabled: true, // Enable press for secondary line
+      onPress: handleDataPointInteraction, // Same handler for secondary data
+      focusEnabled: true,
+      onFocus: handleDataPointInteraction,
+      focusProximity: 8, // Restrict click area to 8 pixels around data points
     },
   };
 
@@ -464,17 +842,33 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
         <Text style={[styles.title, { color: theme.colors.text }]}>
           Fermentation Progress
         </Text>
-        <TouchableOpacity
-          style={[
-            styles.toggleButton,
-            { backgroundColor: theme.colors.border },
-          ]}
-          onPress={handleViewToggle}
-        >
-          <Text style={[styles.toggleText, { color: theme.colors.text }]}>
-            {combinedView ? "Separate" : "Combined"}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[
+              styles.refreshButton,
+              { backgroundColor: theme.colors.border },
+            ]}
+            onPress={() => {
+              refreshDimensions();
+              setChartRefreshKey(prev => prev + 1);
+            }}
+          >
+            <Text style={[styles.buttonText, { color: theme.colors.text }]}>
+              ↻
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              { backgroundColor: theme.colors.border },
+            ]}
+            onPress={handleViewToggle}
+          >
+            <Text style={[styles.toggleText, { color: theme.colors.text }]}>
+              {combinedView ? "Separate" : "Combined"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Chart Stats */}
@@ -487,7 +881,19 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
               Latest Gravity
             </Text>
             <Text style={[styles.statValue, { color: theme.colors.primary }]}>
-              {gravityChartData[gravityChartData.length - 1].value.toFixed(3)}
+              {(() => {
+                const last = [...gravityChartData]
+                  .reverse()
+                  .find(
+                    d =>
+                      !(
+                        d.value === 0 &&
+                        "hideDataPoint" in d &&
+                        d.hideDataPoint
+                      )
+                  );
+                return last ? formatGravity(last.value) : "—";
+              })()}
             </Text>
           </View>
         ) : null}
@@ -499,9 +905,19 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
               Latest Temp
             </Text>
             <Text style={[styles.statValue, { color: theme.colors.primary }]}>
-              {formatSessionTemperature(
-                temperatureChartData[temperatureChartData.length - 1].value
-              )}
+              {(() => {
+                const last = [...temperatureChartData]
+                  .reverse()
+                  .find(
+                    d =>
+                      !(
+                        d.value === 0 &&
+                        "hideDataPoint" in d &&
+                        d.hideDataPoint
+                      )
+                  );
+                return last ? formatSessionTemperature(last.value) : "—";
+              })()}
             </Text>
           </View>
         ) : null}
@@ -513,7 +929,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
               Expected FG
             </Text>
             <Text style={[styles.statValue, { color: theme.colors.primary }]}>
-              {expectedFG.toFixed(3)}
+              {formatGravity(expectedFG)}
             </Text>
           </View>
         ) : null}
@@ -542,56 +958,41 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
         {combinedView ? (
           // Combined dual-axis chart
           gravityChartData.length > 0 && temperatureChartData.length > 0 ? (
-            <View style={styles.chartSection}>
-              <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
-                Combined View
-              </Text>
-              <View style={styles.chart}>
-                <ChartWrapper refreshKey={chartKeys.combined}>
-                  <LineChart
-                    {...combinedChartConfig}
-                    data={gravityChartData}
-                    secondaryData={temperatureChartData}
-                  />
-                </ChartWrapper>
-              </View>
-            </View>
+            <ChartSection title="Combined View" theme={theme} styles={styles}>
+              <ChartWrapper refreshKey={chartKeys.combined}>
+                <LineChart
+                  {...combinedChartConfig}
+                  data={gravityChartData}
+                  secondaryData={temperatureChartData}
+                />
+              </ChartWrapper>
+            </ChartSection>
           ) : (
             // Show individual charts if only one type of data exists
             <>
               {gravityChartData.length > 0 ? (
-                <View style={styles.chartSection}>
-                  <Text
-                    style={[styles.chartTitle, { color: theme.colors.text }]}
-                  >
-                    Specific Gravity
-                  </Text>
-                  <View style={styles.chart}>
-                    <ChartWrapper refreshKey={chartKeys.gravity}>
-                      <LineChart
-                        {...gravityChartConfig}
-                        data={gravityChartData}
-                      />
-                    </ChartWrapper>
-                  </View>
-                </View>
+                <ChartSection
+                  title="Specific Gravity"
+                  theme={theme}
+                  styles={styles}
+                >
+                  <ChartWrapper refreshKey={chartKeys.gravity}>
+                    <LineChart
+                      {...gravityChartConfig}
+                      data={gravityChartData}
+                    />
+                  </ChartWrapper>
+                </ChartSection>
               ) : null}
               {temperatureChartData.length > 0 ? (
-                <View style={styles.chartSection}>
-                  <Text
-                    style={[styles.chartTitle, { color: theme.colors.text }]}
-                  >
-                    Temperature
-                  </Text>
-                  <View style={styles.chart}>
-                    <ChartWrapper refreshKey={chartKeys.temperature}>
-                      <LineChart
-                        {...temperatureChartConfig}
-                        data={temperatureChartData}
-                      />
-                    </ChartWrapper>
-                  </View>
-                </View>
+                <ChartSection title="Temperature" theme={theme} styles={styles}>
+                  <ChartWrapper refreshKey={chartKeys.temperature}>
+                    <LineChart
+                      {...temperatureChartConfig}
+                      data={temperatureChartData}
+                    />
+                  </ChartWrapper>
+                </ChartSection>
               ) : null}
             </>
           )
@@ -599,35 +1000,26 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
           // Separate charts view
           <>
             {gravityChartData.length > 0 ? (
-              <View style={styles.chartSection}>
-                <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
-                  Specific Gravity
-                </Text>
-                <View style={styles.chart}>
-                  <ChartWrapper refreshKey={chartKeys.gravity}>
-                    <LineChart
-                      {...gravityChartConfig}
-                      data={gravityChartData}
-                    />
-                  </ChartWrapper>
-                </View>
-              </View>
+              <ChartSection
+                title="Specific Gravity"
+                theme={theme}
+                styles={styles}
+              >
+                <ChartWrapper refreshKey={chartKeys.gravity}>
+                  <LineChart {...gravityChartConfig} data={gravityChartData} />
+                </ChartWrapper>
+              </ChartSection>
             ) : null}
 
             {temperatureChartData.length > 0 ? (
-              <View style={styles.chartSection}>
-                <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
-                  Temperature
-                </Text>
-                <View style={styles.chart}>
-                  <ChartWrapper refreshKey={chartKeys.temperature}>
-                    <LineChart
-                      {...temperatureChartConfig}
-                      data={temperatureChartData}
-                    />
-                  </ChartWrapper>
-                </View>
-              </View>
+              <ChartSection title="Temperature" theme={theme} styles={styles}>
+                <ChartWrapper refreshKey={chartKeys.temperature}>
+                  <LineChart
+                    {...temperatureChartConfig}
+                    data={temperatureChartData}
+                  />
+                </ChartWrapper>
+              </ChartSection>
             ) : null}
           </>
         )}
@@ -666,6 +1058,93 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
           </View>
         ) : null}
       </View>
+
+      {/* Themed Data Point Details Modal */}
+      <Modal
+        visible={modalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setModalVisible(false)}
+        >
+          <Pressable
+            style={[
+              styles.modalContent,
+              {
+                backgroundColor: theme.colors.background,
+                borderColor: theme.colors.border,
+              },
+            ]}
+            onPress={e => e.stopPropagation()}
+          >
+            {modalData && (
+              <>
+                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                  {modalData.title}
+                </Text>
+
+                <View style={styles.modalBody}>
+                  <ModalDataRow
+                    label="Date"
+                    value={modalData.date}
+                    theme={theme}
+                    styles={styles}
+                  />
+
+                  {modalData.gravity && (
+                    <ModalDataRow
+                      label="Gravity"
+                      value={modalData.gravity}
+                      valueColor={theme.colors.gravityLine}
+                      theme={theme}
+                      styles={styles}
+                    />
+                  )}
+
+                  {modalData.temperature && (
+                    <ModalDataRow
+                      label="Temperature"
+                      value={modalData.temperature}
+                      valueColor={theme.colors.temperatureLine}
+                      theme={theme}
+                      styles={styles}
+                    />
+                  )}
+
+                  {modalData.ph && (
+                    <ModalDataRow
+                      label="pH"
+                      value={modalData.ph}
+                      theme={theme}
+                      styles={styles}
+                    />
+                  )}
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.modalCloseButton,
+                    { backgroundColor: theme.colors.primary },
+                  ]}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Text
+                    style={[
+                      styles.modalCloseText,
+                      { color: theme.colors.primaryText },
+                    ]}
+                  >
+                    Close
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -687,11 +1166,26 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     flex: 1,
   },
+  buttonContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  refreshButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    minWidth: 32,
+    alignItems: "center",
+  },
+  buttonText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
   toggleButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    marginLeft: 12,
   },
   toggleText: {
     fontSize: 12,
@@ -779,5 +1273,61 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     lineHeight: 20,
+  },
+  // Modal styles for data point details
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    borderRadius: 12,
+    padding: 24,
+    minWidth: 280,
+    maxWidth: "90%",
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  modalBody: {
+    marginBottom: 20,
+  },
+  modalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  modalValue: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  modalCloseButton: {
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignItems: "center",
+  },
+  modalCloseText: {
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

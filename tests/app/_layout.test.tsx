@@ -77,6 +77,22 @@ jest.mock("@contexts/UnitContext", () => ({
   },
 }));
 
+jest.mock("@contexts/ScreenDimensionsContext", () => ({
+  ScreenDimensionsProvider: ({ children }: any) => {
+    const React = require("react");
+    return React.createElement(React.Fragment, null, children);
+  },
+  useScreenDimensions: () => ({
+    dimensions: {
+      width: 400,
+      height: 800,
+      isSmallScreen: false,
+      isLandscape: false,
+    },
+    refreshDimensions: jest.fn(),
+  }),
+}));
+
 jest.mock("@services/api/queryClient", () => {
   // Minimal no-op stub to satisfy typical QueryClient uses if accessed
   const stub = {
