@@ -124,7 +124,9 @@ export default function ViewBrewSession() {
     value: number | undefined,
     decimals: number = 2
   ): string => {
-    return value !== undefined && value !== null ? value.toFixed(decimals) : "—";
+    return value !== undefined && value !== null
+      ? value.toFixed(decimals)
+      : "—";
   };
 
   /**
