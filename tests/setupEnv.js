@@ -6,7 +6,7 @@
 import dotenv from "dotenv";
 
 // Load environment variables from .env.test file
-dotenv.config({ path: ".env.test" });
+dotenv.config({ path: ".env.test", quiet: true });
 
 // Force set environment variables for testing
 process.env.EXPO_PUBLIC_API_URL =
