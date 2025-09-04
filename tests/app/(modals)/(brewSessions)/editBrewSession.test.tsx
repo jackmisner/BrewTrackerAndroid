@@ -4,7 +4,7 @@
 
 import React from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+// QueryClient and QueryClientProvider imported but not used in this test file
 import EditBrewSessionScreen from "../../../../app/(modals)/(brewSessions)/editBrewSession";
 
 // Mock React Native components
@@ -146,9 +146,9 @@ const renderWithClient = (ui: React.ReactElement) => {
   return render(ui);
 };
 
-const mockApiService = require("@services/api/apiService").default;
+// const mockApiService = require("@services/api/apiService").default; // Unused
 const mockRouter = require("expo-router").router;
-const mockAlert = require("react-native").Alert.alert;
+// const mockAlert = require("react-native").Alert.alert; // Unused
 const mockUseQuery = require("@tanstack/react-query").useQuery;
 const mockUseMutation = require("@tanstack/react-query").useMutation;
 

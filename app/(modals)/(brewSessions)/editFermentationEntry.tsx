@@ -80,7 +80,7 @@ export default function EditFermentationEntryScreen() {
         entryData
       );
     },
-    onSuccess: response => {
+    onSuccess: _response => {
       // Invalidate and refetch brew session data
       queryClient.invalidateQueries({
         queryKey: ["brewSession", brewSessionId],

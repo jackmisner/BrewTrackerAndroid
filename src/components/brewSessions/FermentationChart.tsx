@@ -91,8 +91,11 @@ const chartUtils = {
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
 
-    // Smart bounds for gravity values close to 1.000
-    let adjustedMinValue = minValue - padding;
+    // Smart bounds for gravity values - anchor at 1.000 for data separation, but allow lower bounds for label space
+    // This ensures gravity readings appear higher than temperature readings even with single data points
+    let adjustedMinValue = 1.0;
+
+    // If we have very low gravity readings, provide extra space below for label rendering
     if (minValue < 1.01) {
       adjustedMinValue = 0.995; // Provide space below for labels when readings are low
     }
@@ -112,11 +115,14 @@ const chartUtils = {
     theme: any,
     additionalConfig: any = {}
   ) => {
+    const stepValue = (axisConfig.maxValue - axisConfig.minValue) / 6;
+
     const baseConfig = {
       width,
       height: 200,
       yAxisOffset: axisConfig.minValue,
       maxValue: axisConfig.maxValue - axisConfig.minValue,
+      stepValue: stepValue,
       noOfSections: 6,
       spacing: 50,
       backgroundColor: "transparent",
@@ -142,7 +148,7 @@ const chartUtils = {
       xAxisLabelsHeight: 45,
       xAxisLabelsVerticalShift: 15,
       xAxisTextNumberOfLines: 2,
-      showVerticalLines: true,
+      showVerticalLines: false,
       verticalLinesColor: theme.colors.border,
       verticalLinesThickness: 0.5,
       hideRules: false,
@@ -235,6 +241,11 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
   const formatSessionTemperature = React.useCallback(
     (value: number, precision: number = 1): string => {
       const symbol = getSessionTemperatureSymbol();
+
+      // Safety check for undefined/null/NaN values
+      if (value === null || value === undefined || isNaN(value)) {
+        return `0${symbol}`;
+      }
 
       return `${value.toFixed(precision)}${symbol}`;
     },
@@ -449,7 +460,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
               }
             : {
                 ...baseDataPoint,
-                value: 0, // Use 0 for missing temperature data (will be hidden)
+                // Omit value property entirely for missing temperature data - chart library will skip these points
                 hideDataPoint: true,
               },
       };
@@ -539,17 +550,17 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       return getSessionTemperatureAxisConfig([]);
     }
 
-    // Filter out hidden zero-value placeholder points
+    // Filter out hidden placeholder points (those without value property or with null/0 values)
     const filteredTemperatures = baseTemperatureData
       .filter(
         item =>
-          !(
-            item.value === 0 &&
-            "hideDataPoint" in item &&
-            item.hideDataPoint === true
-          )
+          "value" in item &&
+          item.value !== undefined &&
+          item.value !== null &&
+          item.value !== 0 &&
+          !("hideDataPoint" in item && item.hideDataPoint === true)
       )
-      .map(d => d.value);
+      .map(d => (d as any).value);
 
     return getSessionTemperatureAxisConfig(filteredTemperatures, 8);
   }, [baseTemperatureData, getSessionTemperatureAxisConfig]);
@@ -573,7 +584,12 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
         const hasGravity =
           gravityPoint.value > 0 && !("hideDataPoint" in gravityPoint);
         const hasTemperature =
-          temperaturePoint.value > 0 && !("hideDataPoint" in temperaturePoint);
+          temperaturePoint &&
+          "value" in temperaturePoint &&
+          temperaturePoint.value !== undefined &&
+          temperaturePoint.value !== null &&
+          temperaturePoint.value > 0 &&
+          !("hideDataPoint" in temperaturePoint);
 
         let gravityLabelShift = 0;
 
@@ -621,9 +637,15 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
         }
 
         const hasGravity =
-          gravityPoint.value > 0 && !("hideDataPoint" in gravityPoint);
+          gravityPoint &&
+          gravityPoint.value > 0 &&
+          !("hideDataPoint" in gravityPoint);
         const hasTemperature =
-          temperaturePoint.value > 0 && !("hideDataPoint" in temperaturePoint);
+          "value" in temperaturePoint &&
+          temperaturePoint.value !== undefined &&
+          temperaturePoint.value !== null &&
+          temperaturePoint.value > 0 &&
+          !("hideDataPoint" in temperaturePoint);
 
         let temperatureLabelShift = 0;
 
@@ -667,9 +689,73 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     };
   }, [baseChartData, gravityAxisConfig, temperatureAxisConfig]);
 
-  // Final chart data with proper positioning
+  // Final chart data with proper positioning - keep arrays aligned for chart rendering
   const gravityChartData = combinedChartData.gravity;
-  const temperatureChartData = combinedChartData.temperature;
+
+  // Combined chart data: keep full array with startIndex for perfect alignment
+  const combinedTemperatureData = React.useMemo(() => {
+    if (
+      !combinedChartData.temperature ||
+      !Array.isArray(combinedChartData.temperature)
+    ) {
+      return { data: [], startIndex: 0 };
+    }
+
+    let tempData = [...combinedChartData.temperature];
+
+    // Remove trailing entries that have no temperature value (this works perfectly)
+    while (tempData.length > 0) {
+      const lastEntry = tempData[tempData.length - 1];
+      if (
+        !("value" in lastEntry) ||
+        (!lastEntry.value &&
+          lastEntry.value !== 0 &&
+          "hideDataPoint" in lastEntry &&
+          lastEntry.hideDataPoint === true)
+      ) {
+        tempData.pop();
+      } else {
+        break;
+      }
+    }
+
+    // Find first valid temperature entry index but DON'T remove leading entries
+    let startIndex = 0;
+    for (let i = 0; i < tempData.length; i++) {
+      const entry = tempData[i];
+      if (
+        !("value" in entry) ||
+        (!entry.value &&
+          entry.value !== 0 &&
+          "hideDataPoint" in entry &&
+          entry.hideDataPoint === true)
+      ) {
+        startIndex++;
+      } else {
+        break; // Found first valid entry
+      }
+    }
+
+    return { data: tempData, startIndex };
+  }, [combinedChartData.temperature]);
+
+  // Separate chart data: simple filtering of only valid temperature entries
+  const separateTemperatureData = React.useMemo(() => {
+    if (
+      !combinedChartData.temperature ||
+      !Array.isArray(combinedChartData.temperature)
+    ) {
+      return [];
+    }
+
+    return combinedChartData.temperature.filter(
+      entry =>
+        "value" in entry &&
+        entry.value != null &&
+        entry.value !== 0 &&
+        (!("hideDataPoint" in entry) || !entry.hideDataPoint)
+    );
+  }, [combinedChartData.temperature]);
 
   const gravityReferenceLines = React.useMemo(() => {
     // Use estimated_fg from recipe data first, then fall back to target_fg from session
@@ -712,7 +798,16 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     dataPointsColor: theme.colors.gravityLine,
     dataPointsRadius: 4,
     yAxisLabelSuffix: "",
-    formatYLabel: (label: string) => formatGravity(parseFloat(label)),
+    yAxisLabelTexts: (() => {
+      const labels = [];
+      for (let i = 0; i <= 6; i++) {
+        const value =
+          gravityAxisConfig.minValue +
+          (i * (gravityAxisConfig.maxValue - gravityAxisConfig.minValue)) / 6;
+        labels.push(formatGravity(value));
+      }
+      return labels;
+    })(),
     referenceLine1Config:
       gravityReferenceLines.length > 0 ? gravityReferenceLines[0] : undefined,
     pressEnabled: true,
@@ -721,11 +816,12 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     onFocus: handleDataPointInteraction,
   };
 
-  const temperatureChartConfig = {
+  // Simple temperature chart config for separate charts - no startIndex complications
+  const separateTemperatureChartConfig = {
     ...chartUtils.buildChartConfig(chartWidth, temperatureAxisConfig, theme, {
       height: 200,
       noOfSections: 4,
-      spacing: chartWidth / Math.max(temperatureChartData.length, 1),
+      spacing: chartWidth / Math.max(separateTemperatureData.length, 1),
       focusProximity: 8,
       showTextOnFocus: false,
       stepValue: Math.ceil(
@@ -737,6 +833,22 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     dataPointsColor: theme.colors.temperatureLine,
     dataPointsRadius: 4,
     yAxisLabelSuffix: getSessionTemperatureSymbol(),
+    yAxisLabelTexts: (() => {
+      const labels = [];
+      for (let i = 0; i <= 4; i++) {
+        const value =
+          temperatureAxisConfig.minValue +
+          (i *
+            (temperatureAxisConfig.maxValue - temperatureAxisConfig.minValue)) /
+            4;
+        if (typeof value === "number" && !isNaN(value)) {
+          labels.push(formatSessionTemperature(value, 0));
+        } else {
+          labels.push("0°C"); // Fallback label
+        }
+      }
+      return labels;
+    })(),
     formatYLabel: (label: string) => Math.round(parseFloat(label)).toString(),
     pressEnabled: true,
     onPress: handleDataPointInteraction,
@@ -758,7 +870,16 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     dataPointsColor: theme.colors.gravityLine,
     dataPointsRadius: 4,
     yAxisLabelSuffix: "",
-    formatYLabel: (label: string) => formatGravity(parseFloat(label)),
+    yAxisLabelTexts: (() => {
+      const labels = [];
+      for (let i = 0; i <= 6; i++) {
+        const value =
+          gravityAxisConfig.minValue +
+          (i * (gravityAxisConfig.maxValue - gravityAxisConfig.minValue)) / 6;
+        labels.push(formatGravity(value));
+      }
+      return labels;
+    })(),
     referenceLine1Config:
       gravityReferenceLines.length > 0 ? gravityReferenceLines[0] : undefined,
     showSecondaryYAxis: true,
@@ -788,6 +909,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       thickness: 3,
       dataPointsColor: theme.colors.temperatureLine,
       dataPointsRadius: 4, // Smaller to restrict touch area to data points only
+      startIndex: combinedTemperatureData?.startIndex || 0, // Use combined data for perfect alignment
       pressEnabled: true, // Enable press for secondary line
       onPress: handleDataPointInteraction, // Same handler for secondary data
       focusEnabled: true,
@@ -883,7 +1005,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
             </Text>
           </View>
         ) : null}
-        {temperatureChartData.length > 0 ? (
+        {(combinedTemperatureData?.data?.length || 0) > 0 ? (
           <View style={styles.stat}>
             <Text
               style={[styles.statLabel, { color: theme.colors.textSecondary }]}
@@ -892,17 +1014,20 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
             </Text>
             <Text style={[styles.statValue, { color: theme.colors.primary }]}>
               {(() => {
-                const last = [...temperatureChartData]
+                const last = [...(combinedTemperatureData?.data || [])]
                   .reverse()
                   .find(
                     d =>
+                      "value" in d &&
                       !(
                         d.value === 0 &&
                         "hideDataPoint" in d &&
                         d.hideDataPoint
                       )
                   );
-                return last ? formatSessionTemperature(last.value) : "—";
+                return last && "value" in last
+                  ? formatSessionTemperature(last.value)
+                  : "—";
               })()}
             </Text>
           </View>
@@ -946,13 +1071,14 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       >
         {combinedView ? (
           // Combined dual-axis chart
-          gravityChartData.length > 0 && temperatureChartData.length > 0 ? (
+          gravityChartData.length > 0 &&
+          (combinedTemperatureData?.data?.length || 0) > 0 ? (
             <ChartSection title="Combined View" theme={theme} styles={styles}>
               <ChartWrapper refreshKey={chartKeys.combined}>
                 <LineChart
                   {...combinedChartConfig}
                   data={gravityChartData}
-                  secondaryData={temperatureChartData}
+                  secondaryData={combinedTemperatureData?.data || []}
                 />
               </ChartWrapper>
             </ChartSection>
@@ -973,12 +1099,12 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
                   </ChartWrapper>
                 </ChartSection>
               ) : null}
-              {temperatureChartData.length > 0 ? (
+              {separateTemperatureData.length > 0 ? (
                 <ChartSection title="Temperature" theme={theme} styles={styles}>
                   <ChartWrapper refreshKey={chartKeys.temperature}>
                     <LineChart
-                      {...temperatureChartConfig}
-                      data={temperatureChartData}
+                      {...separateTemperatureChartConfig}
+                      data={separateTemperatureData}
                     />
                   </ChartWrapper>
                 </ChartSection>
@@ -1000,12 +1126,12 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
               </ChartSection>
             ) : null}
 
-            {temperatureChartData.length > 0 ? (
+            {separateTemperatureData.length > 0 ? (
               <ChartSection title="Temperature" theme={theme} styles={styles}>
                 <ChartWrapper refreshKey={chartKeys.temperature}>
                   <LineChart
-                    {...temperatureChartConfig}
-                    data={temperatureChartData}
+                    {...separateTemperatureChartConfig}
+                    data={separateTemperatureData}
                   />
                 </ChartWrapper>
               </ChartSection>
@@ -1031,7 +1157,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
             </Text>
           </View>
         ) : null}
-        {temperatureChartData.length > 0 ? (
+        {separateTemperatureData.length > 0 ? (
           <View style={styles.legendItem}>
             <View
               style={[

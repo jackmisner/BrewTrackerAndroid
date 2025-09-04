@@ -234,7 +234,7 @@ export default function IngredientPickerScreen() {
 
         // Check for caramel malts (e.g., "caramel 60", "caramel/crystal 40L", "caramel malt - 120L")
         const caramelRegex =
-          /(?:caramel|crystal)[\s\/-]*(?:malt[\s-]*)?(\d+)l?/i;
+          /(?:caramel|crystal)[\s/-]*(?:malt[\s-]*)?(\d+)l?/i;
         const aCaramelMatch = aName.match(caramelRegex);
         const bCaramelMatch = bName.match(caramelRegex);
 

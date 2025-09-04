@@ -173,7 +173,7 @@ export function BasicInfoForm({
           showsVerticalScrollIndicator={true}
           keyboardShouldPersistTaps="handled"
         >
-          {!!stylesError ? (
+          {stylesError ? (
             <View style={styles.infoSection}>
               <Text style={styles.infoText}>
                 Unable to load beer styles from server.

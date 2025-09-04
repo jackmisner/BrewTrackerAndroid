@@ -1,0 +1,60 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "react",
+    "jsx-a11y",
+    "jest",
+    "unicorn",
+    "react-hooks"
+  ],
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2021": true
+  },
+  "globals": {
+    "__DEV__": "readonly",
+    "fetch": "readonly",
+    "FormData": "readonly",
+    "Headers": "readonly",
+    "Request": "readonly",
+    "Response": "readonly",
+    "URL": "readonly",
+    "URLSearchParams": "readonly",
+    "describe": "readonly",
+    "it": "readonly",
+    "expect": "readonly",
+    "jest": "readonly",
+    "beforeEach": "readonly",
+    "afterEach": "readonly",
+    "beforeAll": "readonly",
+    "afterAll": "readonly",
+    "test": "readonly"
+  },
+  "rules": {
+    "no-unused-vars": "off",
+    "react/jsx-uses-react": "off",
+    "react/react-in-jsx-scope": "off",
+    "react-hooks/exhaustive-deps": "warn",
+    "no-control-regex": "off"
+  },
+  "overrides": [
+    {
+      "files": ["tests/**/*.{ts,tsx}", "**/*.test.{ts,tsx}", "tests/**/*.js"],
+      "rules": {
+        "no-unused-vars": "off",
+        "jest/no-standalone-expect": "off",
+        "react/no-children-prop": "off",
+        "jest/no-conditional-expect": "off",
+        "jest/expect-expect": "off"
+      }
+    },
+    {
+      "files": ["src/contexts/UnitContext.tsx"],
+      "rules": {
+        "react-hooks/exhaustive-deps": "off"
+      }
+    }
+  ]
+}

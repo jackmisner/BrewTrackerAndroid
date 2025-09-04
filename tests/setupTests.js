@@ -91,8 +91,8 @@ jest.mock("expo-router", () => ({
   }),
   useLocalSearchParams: () => ({}),
   useGlobalSearchParams: () => ({}),
-  Redirect: ({ href }) => null,
-  Link: ({ children, href }) => children,
+  Redirect: ({ href: _href }) => null,
+  Link: ({ children, href: _href }) => children,
   Stack: {
     Screen: ({ children }) => children,
   },
@@ -463,6 +463,30 @@ const SUPPRESSED_ERROR_PATTERNS = [
   // Storage permissions test errors
   /Error requesting media permissions:/,
   /Permission check failed/,
+  // BeerXML import/export test errors
+  /🍺 BeerXML Import - File selection error:/,
+  /🍺 BeerXML Import - Parsing error:/,
+  /🍺 BeerXML Import - Error:/,
+  /🍺 BeerXML Export - Error:/,
+  /🍺 BeerXML Export - Directory choice error:/,
+  /🍺 BeerXML Parse - Error:/,
+  /🍺 Ingredient Matching - Error:/,
+  /Failed to select file/,
+  /Invalid file data received/,
+  /No recipes found in the BeerXML file/,
+  /Invalid XML format/,
+  /Test error/,
+  /File selection failed/,
+  /Service error for testing/,
+  /API Error/,
+  /No XML content received from server/,
+  /Storage write failed/,
+  /File not found/,
+  /Invalid BeerXML format - missing RECIPES element/,
+  /🍺 BeerXML Match - Error:/,
+  /Unexpected matchIngredients response shape/,
+  /Error refreshing version history:/,
+  /Refresh failed/,
 ];
 
 const SUPPRESSED_WARN_PATTERNS = [
@@ -480,6 +504,11 @@ const SUPPRESSED_WARN_PATTERNS = [
   // AuthContext test warnings
   /Corrupted cached user data, removing:/,
   /Cache read failed/,
+  // BeerXML export test warnings
+  /🍺 BeerXML Export - SAF failed, falling back to sharing:/,
+  /🍺 BeerXML Parse - No recipes found in response/,
+  /🔍 Unknown response structure, returning empty list/,
+  /Cannot read properties of undefined \(reading 'granted'\)/,
 ];
 
 console.error = (...args) => {
