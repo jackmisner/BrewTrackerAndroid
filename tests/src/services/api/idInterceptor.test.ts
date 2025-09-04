@@ -272,7 +272,9 @@ describe("idInterceptor", () => {
     it("should throw when calling setupIDInterceptors with invalid axios instance", () => {
       const invalidInstance = {} as AxiosInstance;
 
-      expect(() => setupIDInterceptors(invalidInstance)).toThrow();
+      expect(() => setupIDInterceptors(invalidInstance)).toThrow(
+        "Cannot read properties of undefined (reading 'response')"
+      );
     });
 
     it("should throw when calling getInterceptorStatus with malformed axios instances", () => {
@@ -280,7 +282,9 @@ describe("idInterceptor", () => {
         interceptors: null,
       } as unknown as AxiosInstance;
 
-      expect(() => getInterceptorStatus(malformedInstance)).toThrow();
+      expect(() => getInterceptorStatus(malformedInstance)).toThrow(
+        "Cannot read properties of null (reading 'request')"
+      );
     });
 
     it("should handle removeIDInterceptors with partially malformed instances", () => {

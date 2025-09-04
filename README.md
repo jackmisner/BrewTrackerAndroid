@@ -126,6 +126,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │           └── contextMenuUtils.ts               # Shared utilities for context menu operations
 │   ├── contexts/                                     # React contexts for global state
 │   │   ├── AuthContext.tsx                           # Authentication context with secure token storage
+│   │   ├── ScreenDimensionsContext.tsx               # Screen dimensions management with support for foldable devices
 │   │   ├── ThemeContext.tsx                          # Theme management with light/dark mode support
 │   │   └── UnitContext.tsx                           # Unit system management (imperial/metric)
 │   ├── hooks/                                        # Custom React hooks
@@ -143,7 +144,8 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   ├── config.ts                                 # Service configuration and constants
 │   │   └── storageService.ts                         # Storage service for file operations and permissions
 │   ├── constants/                                    # Shared constants and configuration
-│   │   └── hopConstants.ts                           # Hop usage options, time presets, and type definitions
+│   │   ├── hopConstants.ts                           # Hop usage options, time presets, and type definitions
+│   │   └── testIDs.ts                                # Centralized test IDs for consistent testing across components
 │   ├── utils/                                        # Utility functions
 │   │   ├── formatUtils.ts                            # Comprehensive brewing data formatting utilities
 │   │   ├── idNormalization.ts                        # MongoDB ObjectId normalization utilities
@@ -187,6 +189,9 @@ BrewTrackerAndroid/                                   # React Native Android app
 ├── assets/                                           # Static assets (images, fonts, icons)
 ├── app.json                                          # Expo configuration for Android-only development
 ├── package.json                                      # React Native dependencies and Expo configuration
+├── eslint.config.js                                  # ESLint configuration (fallback)
+├── .oxlintrc.json                                    # oxlint configuration (primary linter)
+├── tsconfig.json                                     # TypeScript configuration with path aliases
 ├── LICENSE                                           # GPL-3.0-or-later license
 ├── LICENSE-HEADER.txt                                # License header for source files
 └── .env                                              # Environment variables for API URL and mobile configuration
@@ -200,6 +205,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 - **AsyncStorage**: Local data persistence for user preferences
 - **Axios**: HTTP client with request/response interceptors
 - **TypeScript**: Full type safety across the application
+- **oxlint**: Ultra-fast Rust-based linter (100x performance improvement over ESLint)
 - **Material Icons**: Consistent iconography from @expo/vector-icons
 
 ### File Organization Conventions
@@ -215,7 +221,9 @@ BrewTrackerAndroid/                                   # React Native Android app
 ### State Management
 
 - **Authentication**: React Context with Expo SecureStore for JWT tokens
+- **Screen Dimensions**: React Context with support for foldable devices
 - **Theme Management**: React Context with AsyncStorage persistence
+- **Unit System**: React Context for imperial/metric conversion
 - **Server Data**: React Query for caching, background updates, and offline support
 - **Local State**: React hooks (useState, useReducer) for component-level state
 
@@ -253,11 +261,20 @@ This approach provides:
 
 - `npm start` - Start Expo development server
 - `npm run android` - Start with Android-specific options
-- `npm run lint` - Run ESLint with TypeScript rules
-- `npm run lint:fix` - Run ESLint and auto-fix issues
+- `npm run lint` - Run oxlint (100x faster than ESLint)
+- `npm run lint:fix` - Run oxlint with auto-fix
+- `npm run lint:eslint` - Fallback to ESLint if needed
+- `npm run lint:eslint:fix` - ESLint with auto-fix
 - `npm run type-check` - Run TypeScript type checking
 - `npm run format` - Format code with Prettier
 - `npm run format:check` - Check code formatting
+
+### Code Quality
+
+- **TypeScript**: Strict type checking with `npm run type-check`
+- **Linting**: oxlint integration (100x faster than ESLint)
+- **Testing**: >70% coverage with 1,915+ comprehensive tests
+- **CI/CD**: Automated quality checks in GitHub Actions
 
 ### Environment Variables
 

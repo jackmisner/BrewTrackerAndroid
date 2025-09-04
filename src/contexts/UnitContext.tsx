@@ -624,8 +624,22 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
       getUnitSystemLabel,
       getCommonUnits,
     }),
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [unitSystem, loading, error]
+    [
+      unitSystem,
+      loading,
+      error,
+      convertForDisplay,
+      formatCurrentTemperature,
+      formatTemperature,
+      getCommonUnits,
+      getPreferredUnit,
+      getTemperatureSymbol,
+      getTemperatureAxisConfig,
+      getUnitSystemLabel,
+      updateUnitSystem,
+    ]
   );
 
   return (

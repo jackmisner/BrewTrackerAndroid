@@ -20,16 +20,12 @@ import {
 } from "./recipe";
 import {
   BrewSession,
-  CreateBrewSessionRequest,
-  UpdateBrewSessionRequest,
   FermentationEntry,
-  CreateFermentationEntryRequest,
-  UpdateFermentationEntryRequest,
   FermentationStats,
   BrewSessionSummary,
 } from "./brewSession";
 import { User, UserSettings } from "./user";
-import { ApiResponse, PaginatedResponse, ID } from "./common";
+import { ApiResponse, PaginatedResponse } from "./common";
 
 // Authentication API types
 export interface LoginRequest {

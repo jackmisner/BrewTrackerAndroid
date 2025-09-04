@@ -260,7 +260,7 @@ export function normalizeResponseData(data: any, entityType: EntityType): any {
  * @param entity - The object from which to extract ID fields
  * @param label - Optional label for debugging context
  */
-export function debugEntityIds(entity: any, label: string = "Entity"): void {
+export function debugEntityIds(entity: any, _label: string = "Entity"): void {
   if (!entity || typeof entity !== "object") {
     return;
   }

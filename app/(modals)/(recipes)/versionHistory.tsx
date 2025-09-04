@@ -180,7 +180,7 @@ export default function VersionHistoryScreen() {
       isRoot?: boolean;
       isAvailable?: boolean;
     },
-    index: number
+    _index: number
   ) => {
     const isClickable = !versionItem.isCurrent && versionItem.isAvailable;
 
