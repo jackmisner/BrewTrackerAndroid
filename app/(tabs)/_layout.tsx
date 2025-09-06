@@ -56,6 +56,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="utilities"
+        options={{
+          title: "Utilities",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="calculate" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",

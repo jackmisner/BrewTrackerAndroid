@@ -367,7 +367,7 @@ export function BasicInfoForm({
           onValueChange={value => onUpdateField("is_public", value)}
           trackColor={{
             false: theme.colors.border,
-            true: theme.colors.primary + "40",
+            true: theme.colors.primaryLight40,
           }}
           thumbColor={
             recipeData.is_public ? theme.colors.primary : theme.colors.textMuted

@@ -1,7 +1,7 @@
 {
   "name": "brewtracker",
   "main": "expo-router/entry",
-  "version": "0.15.1",
+  "version": "0.16.1",
   "license": "GPL-3.0-or-later",
   "scripts": {
     "start": "expo start",
@@ -64,7 +64,8 @@
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
     "uuid": "^11.1.0",
-    "zxcvbn": "^4.4.2"
+    "zxcvbn": "^4.4.2",
+    "expo-notifications": "~0.31.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

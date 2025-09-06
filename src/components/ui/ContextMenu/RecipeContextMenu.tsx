@@ -68,6 +68,7 @@ export function createDefaultRecipeActions(handlers: {
   onClone: (recipe: Recipe) => void;
   onBeerXMLExport: (recipe: Recipe) => void;
   onStartBrewing: (recipe: Recipe) => void;
+  onStartBoilTimer: (recipe: Recipe) => void;
   onDelete: (recipe: Recipe) => void;
 }): BaseAction<Recipe>[] {
   return [
@@ -102,6 +103,14 @@ export function createDefaultRecipeActions(handlers: {
       title: "Start Brewing",
       icon: "play-arrow",
       onPress: handlers.onStartBrewing,
+    },
+    {
+      id: "boil-timer",
+      title: "Start Boil Timer",
+      icon: "timer",
+      onPress: handlers.onStartBoilTimer,
+      // Only show for recipes with boil time and hop additions
+      hidden: recipe => !recipe.boil_time || recipe.boil_time <= 0,
     },
     {
       id: "delete",
