@@ -338,6 +338,13 @@ export default function RecipesScreen() {
         params: { recipeId: recipe.id },
       });
     },
+    onStartBoilTimer: (recipe: Recipe) => {
+      contextMenu.hideMenu();
+      router.push({
+        pathname: "/(modals)/(calculators)/boilTimer",
+        params: { recipeId: recipe.id },
+      });
+    },
     onDelete: (recipe: Recipe) => {
       // Ensure the context menu closes before prompting
       contextMenu.hideMenu();
