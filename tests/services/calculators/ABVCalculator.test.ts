@@ -104,6 +104,28 @@ describe("ABVCalculator", () => {
 
       expect(advanced.abv).toBeGreaterThan(simple.abv);
     });
+
+    it("should throw error when FG is provided in Brix", () => {
+      expect(() => {
+        ABVCalculator.calculate(1.05, 2.5, "sg", "brix", "simple");
+      }).toThrow(
+        "FG in Brix requires refractometer alcohol correction — provide SG or use corrected conversion"
+      );
+    });
+
+    it("should allow OG in Brix but not FG in Brix", () => {
+      // OG in Brix should work fine (unfermented wort)
+      expect(() => {
+        ABVCalculator.calculate(12.5, 1.01, "brix", "sg", "simple");
+      }).not.toThrow();
+
+      // But FG in Brix should fail
+      expect(() => {
+        ABVCalculator.calculate(12.5, 2.5, "brix", "brix", "simple");
+      }).toThrow(
+        "FG in Brix requires refractometer alcohol correction — provide SG or use corrected conversion"
+      );
+    });
   });
 
   describe("validation", () => {

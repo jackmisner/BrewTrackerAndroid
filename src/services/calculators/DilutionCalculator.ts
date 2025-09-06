@@ -176,6 +176,8 @@ export class DilutionCalculator {
     volumeUnit: string = "gal"
   ): DilutionResult {
     // Validate inputs
+    this.validateGravityInputs(currentGravity);
+    this.validateVolumeInputs(currentVolume);
     if (currentABV <= 0 || currentABV > 20) {
       throw new Error("Current ABV must be between 0% and 20%");
     }
@@ -240,10 +242,13 @@ export class DilutionCalculator {
     gravity1: number,
     gravity2?: number
   ): void {
+    if (!Number.isFinite(gravity1)) {
+      throw new Error("Gravity must be a finite number");
+    }
     if (gravity1 < 1.0 || gravity1 > 1.2) {
       throw new Error("Gravity must be between 1.000 and 1.200");
     }
-    if (gravity2 && (gravity2 < 1.0 || gravity2 > 1.2)) {
+    if (gravity2 !== undefined && (gravity2 < 1.0 || gravity2 > 1.2)) {
       throw new Error("Gravity must be between 1.000 and 1.200");
     }
   }

@@ -335,14 +335,14 @@ export default function RecipesScreen() {
     onStartBrewing: (recipe: Recipe) => {
       router.push({
         pathname: "/(modals)/(brewSessions)/createBrewSession",
-        params: { recipeId: recipe.id },
+        params: { recipeId: String(recipe.id) },
       });
     },
     onStartBoilTimer: (recipe: Recipe) => {
       contextMenu.hideMenu();
       router.push({
         pathname: "/(modals)/(calculators)/boilTimer",
-        params: { recipeId: recipe.id },
+        params: { recipeId: String(recipe.id) },
       });
     },
     onDelete: (recipe: Recipe) => {

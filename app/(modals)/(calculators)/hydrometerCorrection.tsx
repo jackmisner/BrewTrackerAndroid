@@ -200,7 +200,7 @@ export default function HydrometerCorrectionCalculatorScreen() {
             onChangeText={handleMeasuredGravityChange}
             placeholder="e.g., 1.050"
             min={0.99}
-            max={1.15}
+            max={1.2}
             step={0.001}
             precision={3}
             testID="hydrometer-measured-gravity"

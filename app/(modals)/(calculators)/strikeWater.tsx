@@ -11,6 +11,7 @@ import {
   SingleResult,
 } from "@components/calculators/ResultDisplay";
 import { useTheme } from "@contexts/ThemeContext";
+import { UnitConverter } from "@/src/services/calculators/UnitConverter";
 
 const TEMP_UNIT_OPTIONS = [
   { label: "°F", value: "f" as const, description: "Fahrenheit" },
@@ -169,16 +170,44 @@ export default function StrikeWaterCalculatorScreen() {
   };
 
   const handleTempUnitChange = (tempUnit: string) => {
+    const fromUnit = strikeWater.tempUnit as "f" | "c";
+    const toUnit = tempUnit as "f" | "c";
+
+    const convert = (v?: string) => {
+      const n = parseFloat(v ?? "");
+      return isNaN(n)
+        ? (v ?? "")
+        : UnitConverter.convertTemperature(n, fromUnit, toUnit).toFixed(0);
+    };
+
     dispatch({
       type: "SET_STRIKE_WATER",
-      payload: { tempUnit: tempUnit as typeof strikeWater.tempUnit },
+      payload: {
+        tempUnit: toUnit,
+        grainTemp: convert(strikeWater.grainTemp),
+        targetMashTemp: convert(strikeWater.targetMashTemp),
+      },
     });
   };
 
   const handleWeightUnitChange = (grainWeightUnit: string) => {
+    const from = strikeWater.grainWeightUnit;
+    const to = grainWeightUnit;
+    const n = parseFloat(strikeWater.grainWeight ?? "");
+    const converted = isNaN(n)
+      ? strikeWater.grainWeight
+      : UnitConverter.convertWeight(n, from, to);
     dispatch({
       type: "SET_STRIKE_WATER",
-      payload: { grainWeightUnit },
+      payload: {
+        grainWeightUnit: to,
+        grainWeight:
+          typeof converted === "number"
+            ? to === "oz"
+              ? converted.toFixed(1)
+              : converted.toFixed(2)
+            : converted,
+      },
     });
   };
 

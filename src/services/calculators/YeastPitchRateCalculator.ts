@@ -96,10 +96,13 @@ export class YeastPitchRateCalculator {
     yeastType: "liquid" | "dry"
   ): number {
     const now = new Date();
-    const ageInMonths =
+    const rawAgeInMonths =
       (now.getFullYear() - productionDate.getFullYear()) * 12 +
       (now.getMonth() - productionDate.getMonth()) +
       (now.getDate() < productionDate.getDate() ? -1 : 0);
+
+    // Clamp age to minimum of 0 to handle future dates
+    const ageInMonths = Math.max(0, rawAgeInMonths);
 
     let viability = 100;
 
@@ -121,7 +124,8 @@ export class YeastPitchRateCalculator {
       }
     }
 
-    return Math.round(viability);
+    // Ensure viability is capped at 100%
+    return Math.round(Math.min(viability, 100));
   }
 
   /**
@@ -265,8 +269,10 @@ export class YeastPitchRateCalculator {
     if (beerVolume <= 0) {
       throw new Error("Beer volume must be greater than 0");
     }
-    if (viability < 0 || viability > 100) {
-      throw new Error("Yeast viability must be between 0% and 100%");
+    if (viability <= 0 || viability > 100) {
+      throw new Error(
+        "Yeast viability must be greater than 0% and at most 100%"
+      );
     }
   }
 

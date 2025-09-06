@@ -480,6 +480,24 @@ describe("NumberInput", () => {
       expect(stepUpButton.props.disabled).toBe(true);
       expect(stepDownButton.props.disabled).toBe(true);
     });
+
+    it("should disable unit button when disabled", () => {
+      const onUnitPress = jest.fn();
+      const { getByTestId } = render(
+        <NumberInput
+          {...defaultProps}
+          disabled={true}
+          unit="gal"
+          onUnitPress={onUnitPress}
+        />
+      );
+
+      const unitButton = getByTestId(
+        TEST_IDS.patterns.touchableOpacityAction("unit")
+      );
+
+      expect(unitButton.props.disabled).toBe(true);
+    });
   });
 
   describe("edge cases", () => {

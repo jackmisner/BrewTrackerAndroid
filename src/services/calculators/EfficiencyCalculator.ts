@@ -86,10 +86,21 @@ export class EfficiencyCalculator {
 
   /**
    * Calculate expected gravity points from grain bill
+   * Returns total gravity points for the batch (grain weight × PPG)
+   *
+   * Note: The batchSizeGal parameter is included for API consistency with other
+   * brewing calculations, but is not used in this basic calculation. The function
+   * returns total gravity points rather than points per gallon because efficiency
+   * calculations require comparison with actualPoints which are also total points.
+   *
+   * For reference:
+   * - expectedPoints = sum(weight × ppg) = total gravity points from grain
+   * - actualPoints = (actualOG - 1.0) × 1000 × batchSize = total gravity points achieved
+   * - efficiency = (actualPoints / expectedPoints) × 100
    */
   public static calculateExpectedPoints(
     grainBill: GrainBillItem[],
-    batchSizeGal: number
+    batchSizeGal: number // Kept for API consistency, not used in calculation
   ): number {
     let totalPoints = 0;
 

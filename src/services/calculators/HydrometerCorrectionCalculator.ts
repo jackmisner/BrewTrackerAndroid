@@ -101,6 +101,7 @@ export class HydrometerCorrectionCalculator {
   /**
    * Calculate the temperature at which a given gravity reading would be correct
    * Useful for determining if temperature correction is needed
+   * Uses bisection method for robust convergence
    */
   public static findCorrectTemperature(
     measuredGravity: number,
@@ -108,32 +109,42 @@ export class HydrometerCorrectionCalculator {
     calibrationTemp: number,
     tempUnit: "f" | "c" = "f"
   ): number {
-    // This is an iterative calculation - we'll use Newton's method
-    let estimatedTemp = tempUnit === "f" ? 68 : 20; // Start with room temperature
+    // Set initial bounds based on physical temperature limits
+    let low: number, high: number;
+    if (tempUnit === "f") {
+      low = 32; // Freezing point of water in Fahrenheit
+      high = 212; // Boiling point of water in Fahrenheit
+    } else {
+      low = 0; // Freezing point of water in Celsius
+      high = 100; // Boiling point of water in Celsius
+    }
+
     const tolerance = 0.001;
     const maxIterations = 100;
 
     for (let i = 0; i < maxIterations; i++) {
+      const mid = (low + high) / 2;
+
       const result = this.calculateCorrection(
         measuredGravity,
-        estimatedTemp,
+        mid,
         calibrationTemp,
         tempUnit
       );
       const error = result.correctedGravity - targetGravity;
 
+      // Check for convergence
       if (Math.abs(error) < tolerance) {
-        return Math.round(estimatedTemp * 10) / 10;
+        return Math.round(mid * 10) / 10;
       }
 
-      // Adjust estimate (simple gradient descent)
-      estimatedTemp -= error * 100;
-
-      // Keep within reasonable bounds
-      if (tempUnit === "f") {
-        estimatedTemp = Math.max(32, Math.min(212, estimatedTemp));
+      // Use the sign of error to choose which half to keep
+      // If correctedGravity > targetGravity, the temperature is too high
+      // If correctedGravity < targetGravity, the temperature is too low
+      if (error > 0) {
+        high = mid; // Temperature too high, search lower half
       } else {
-        estimatedTemp = Math.max(0, Math.min(100, estimatedTemp));
+        low = mid; // Temperature too low, search upper half
       }
     }
 

@@ -57,7 +57,7 @@ export class StrikeWaterCalculator {
 
     // Calculate water volume using water-to-grain ratio (qt/lb)
     const waterVolumeQuarts = waterToGrainRatio * grainWeightLbs;
-    const waterVolumeLbs = waterVolumeQuarts; // 1 quart water ≈ 1 pound
+    const waterVolumeLbs = waterVolumeQuarts * 2.08; // Convert quarts to pounds (1 quart water = 2.08 pounds)
 
     // Calculate thermal masses
     const grainThermalMass = grainWeightLbs * this.GRAIN_THERMAL_MASS;

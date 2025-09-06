@@ -439,12 +439,13 @@ function calculatorReducer(
         ...state,
         preferences: { ...state.preferences, ...action.payload },
       };
-    case "ADD_TO_HISTORY":
+    case "ADD_TO_HISTORY": {
       if (!state.preferences.saveHistory) return state;
       const { calculatorType, inputs, result } = action.payload;
+      const now = Date.now();
       const historyEntry = {
-        id: Date.now().toString(),
-        timestamp: Date.now(),
+        id: String(now),
+        timestamp: now,
         inputs,
         result,
       };
@@ -458,6 +459,7 @@ function calculatorReducer(
           ],
         },
       };
+    }
     case "CLEAR_HISTORY":
       return {
         ...state,
@@ -466,7 +468,7 @@ function calculatorReducer(
           [action.payload]: [],
         },
       };
-    case "RESET_CALCULATOR":
+    case "RESET_CALCULATOR": {
       const resetKey = action.payload as keyof CalculatorState;
       if (resetKey in initialState) {
         return {
@@ -475,6 +477,7 @@ function calculatorReducer(
         };
       }
       return state;
+    }
     case "LOAD_PERSISTED_STATE":
       return deepMergePersistedState(state, action.payload);
     default:

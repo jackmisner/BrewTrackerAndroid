@@ -4,23 +4,22 @@
  * Tests mash and brewhouse efficiency calculations
  */
 
-import {
-  EfficiencyCalculator,
-  GrainBillItem,
-} from "@services/calculators/EfficiencyCalculator";
-
-// Mock UnitConverter since it's already tested
+// Mock UnitConverter since it's already tested - must be at top before imports
 jest.mock("@services/calculators/UnitConverter", () => ({
   UnitConverter: {
     convertVolume: jest.fn((value, from, to) => {
       // Simple volume conversions for testing
       if (from === to) return value;
       if (from === "l" && to === "gal") return value * 0.264172;
-      if (from === "gal" && to === "gal") return value;
-      return value;
+      return value; // Default fallback
     }),
   },
 }));
+
+import {
+  EfficiencyCalculator,
+  GrainBillItem,
+} from "@services/calculators/EfficiencyCalculator";
 
 describe("EfficiencyCalculator", () => {
   // Mock grain bill data

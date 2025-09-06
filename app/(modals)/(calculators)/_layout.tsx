@@ -20,9 +20,9 @@ export default function CalculatorsModalsLayout() {
       <Stack.Screen name="strikeWater" />
       <Stack.Screen name="hydrometerCorrection" />
       <Stack.Screen name="dilution" />
-      <Stack.Screen name="primingSugar" />
-      <Stack.Screen name="yeastPitchRate" />
-      <Stack.Screen name="efficiency" />
+      {/* <Stack.Screen name="primingSugar" /> */}
+      {/* <Stack.Screen name="yeastPitchRate" /> */}
+      {/* <Stack.Screen name="efficiency" /> */}
       <Stack.Screen name="boilTimer" />
     </Stack>
   );

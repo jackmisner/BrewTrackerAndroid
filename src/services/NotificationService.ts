@@ -3,11 +3,24 @@
  *
  * Handles local notifications for hop additions and timer events.
  * Provides audio alerts, vibration, and background notifications.
+ *
+ * IMPORTANT: Expo Go Limitations
+ * ===============================
+ * As of SDK 53+, expo-notifications has limited functionality in Expo Go:
+ * - Scheduled notifications may not work properly in Expo Go
+ * - Push notifications are not supported in Expo Go
+ * - For full notification functionality, use a development build instead
+ *
+ * This may cause notifications to fire immediately or not at all in Expo Go.
+ * The code includes comprehensive debugging to help identify timing issues.
+ *
+ * Development Build Required:
+ * - Use `npx expo run:android` instead of Expo Go for proper notification testing
+ * - See: https://docs.expo.dev/develop/development-builds/introduction/
  */
 
 import * as Notifications from "expo-notifications";
 import * as Haptics from "expo-haptics";
-import { Platform } from "react-native";
 
 export interface HopAlert {
   time: number;
@@ -19,6 +32,38 @@ export interface HopAlert {
 export class NotificationService {
   private static notificationIdentifiers: string[] = [];
   private static isInitialized = false;
+
+  /**
+   * Build a properly typed time trigger for notifications
+   */
+  private static buildTimeTrigger({
+    seconds,
+    minutes,
+    hours,
+  }: {
+    seconds?: number;
+    minutes?: number;
+    hours?: number;
+  }) {
+    const trigger: {
+      type: any;
+      seconds?: number;
+      minutes?: number;
+      hours?: number;
+      channelId?: string;
+    } = {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+    };
+
+    if (seconds !== undefined) trigger.seconds = seconds;
+    if (minutes !== undefined) trigger.minutes = minutes;
+    if (hours !== undefined) trigger.hours = hours;
+
+    // Add channelId for Android (Android-only app)
+    trigger.channelId = "boil-timer";
+
+    return trigger;
+  }
 
   /**
    * Initialize notification service and request permissions
@@ -54,16 +99,14 @@ export class NotificationService {
       }
 
       // Configure notification channel for Android
-      if (Platform.OS === "android") {
-        await Notifications.setNotificationChannelAsync("boil-timer", {
-          name: "Boil Timer",
-          importance: Notifications.AndroidImportance.HIGH,
-          vibrationPattern: [0, 250, 250, 250],
-          lightColor: "#f4511e",
-          sound: "default",
-          description: "Notifications for hop additions and boil timer events",
-        });
-      }
+      await Notifications.setNotificationChannelAsync("boil-timer", {
+        name: "Boil Timer",
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: "#f4511e",
+        sound: "default",
+        description: "Notifications for hop additions and boil timer events",
+      });
 
       this.isInitialized = true;
       return true;
@@ -99,10 +142,7 @@ export class NotificationService {
             unit,
           },
         },
-        trigger: {
-          seconds: timeInSeconds,
-          channelId: "boil-timer",
-        } as any,
+        trigger: this.buildTimeTrigger({ seconds: timeInSeconds }),
       });
 
       this.notificationIdentifiers.push(identifier);
@@ -126,6 +166,22 @@ export class NotificationService {
       const isInitialized = await this.initialize();
       if (!isInitialized) return null;
 
+      if (__DEV__) {
+        console.log(
+          `⏰ Scheduling notification "${title}" in ${timeInSeconds}s (${timeInSeconds / 60} min from now)`
+        );
+      }
+
+      // Validate notification time - must be at least 1 second in the future
+      if (timeInSeconds < 1) {
+        if (__DEV__) {
+          console.warn(
+            `⚠️ Invalid notification time: ${timeInSeconds}s - must be >= 1s`
+          );
+        }
+        return null;
+      }
+
       const identifier = await Notifications.scheduleNotificationAsync({
         content: {
           title,
@@ -138,13 +194,17 @@ export class NotificationService {
             ...data,
           },
         },
-        trigger: {
-          seconds: timeInSeconds,
-          channelId: "boil-timer",
-        } as any,
+        trigger: this.buildTimeTrigger({ seconds: timeInSeconds }),
       });
 
       this.notificationIdentifiers.push(identifier);
+
+      if (__DEV__) {
+        console.log(
+          `✅ Scheduled notification "${title}" with ID: ${identifier}`
+        );
+      }
+
       return identifier;
     } catch (error) {
       console.error("Failed to schedule timer alert:", error);
@@ -166,14 +226,38 @@ export class NotificationService {
       { time: 60, message: "1 minute remaining in boil" },
     ];
 
+    if (__DEV__) {
+      console.log(
+        `📅 Scheduling milestone notifications for ${boilDurationSeconds}s (${boilDurationSeconds / 60} min) boil`
+      );
+    }
+
     for (const milestone of milestones) {
       if (boilDurationSeconds > milestone.time) {
         const notifyTime = boilDurationSeconds - milestone.time;
-        await this.scheduleTimerAlert(
-          "⏰ Boil Timer Update",
-          milestone.message,
-          notifyTime,
-          { milestone: milestone.time }
+
+        if (__DEV__) {
+          console.log(
+            `📅 Milestone ${milestone.time / 60}min: scheduling notification in ${notifyTime}s (${notifyTime / 60} min from now)`
+          );
+        }
+
+        // Only schedule if notification time is at least 5 seconds in the future
+        if (notifyTime >= 5) {
+          await this.scheduleTimerAlert(
+            "⏰ Boil Timer Update",
+            milestone.message,
+            notifyTime,
+            { milestone: milestone.time }
+          );
+        } else if (__DEV__) {
+          console.warn(
+            `⚠️ Skipping milestone ${milestone.time / 60}min - notifyTime too small (${notifyTime}s)`
+          );
+        }
+      } else if (__DEV__) {
+        console.log(
+          `📅 Skipping milestone ${milestone.time / 60}min - boil duration too short`
         );
       }
     }
@@ -185,6 +269,12 @@ export class NotificationService {
   public static async scheduleBoilCompleteNotification(
     boilDurationSeconds: number
   ): Promise<string | null> {
+    if (__DEV__) {
+      console.log(
+        `✅ Scheduling boil completion notification in ${boilDurationSeconds}s (${boilDurationSeconds / 60} min from now)`
+      );
+    }
+
     return await this.scheduleTimerAlert(
       "✅ Boil Complete!",
       "Your boil has finished. Time to cool and transfer!",
@@ -302,6 +392,36 @@ export class NotificationService {
   }
 
   /**
+   * Log all currently scheduled notifications for debugging
+   */
+  public static async logScheduledNotifications(): Promise<void> {
+    if (!__DEV__) return;
+
+    try {
+      const notifications = await this.getScheduledNotifications();
+      console.log(
+        `📋 Currently scheduled notifications: ${notifications.length}`
+      );
+
+      notifications.forEach((notification, index) => {
+        const triggerTime =
+          notification.trigger && "seconds" in notification.trigger
+            ? notification.trigger.seconds
+            : "immediate";
+
+        console.log(`  ${index + 1}. "${notification.content.title}"`);
+        console.log(
+          `     Trigger: ${triggerTime}s from now (${typeof triggerTime === "number" ? triggerTime / 60 : triggerTime} min)`
+        );
+        console.log(`     ID: ${notification.identifier}`);
+        console.log(`     Body: ${notification.content.body}`);
+      });
+    } catch (error) {
+      console.error("Failed to log scheduled notifications:", error);
+    }
+  }
+
+  /**
    * Schedule all hop alerts for a recipe
    */
   public static async scheduleHopAlertsForRecipe(
@@ -309,11 +429,48 @@ export class NotificationService {
     boilDurationSeconds: number
   ): Promise<Map<number, string>> {
     const scheduledAlerts = new Map<number, string>();
+    const boilDurationMinutes = boilDurationSeconds / 60;
+
+    if (__DEV__) {
+      console.log(
+        `🍺 Scheduling hop alerts for ${hopAlerts.length} hops in ${boilDurationMinutes}min boil`
+      );
+    }
 
     for (const hop of hopAlerts) {
-      // Calculate when to send the alert (30 seconds before hop addition)
+      // Calculate when to send the alert
       const hopAdditionTime = hop.time * 60; // Convert minutes to seconds
+
+      // Special case: if hop addition time equals boil duration, notify immediately
+      if (hop.time === boilDurationMinutes) {
+        if (__DEV__) {
+          console.log(
+            `🍺 Hop "${hop.name}" at ${hop.time}min equals boil time - will notify immediately when timer starts`
+          );
+        }
+
+        // Schedule an immediate notification (1 second delay to ensure timer has started)
+        const identifier = await this.scheduleHopAlert(
+          hop.name,
+          hop.amount,
+          hop.unit,
+          1 // 1 second delay
+        );
+
+        if (identifier) {
+          scheduledAlerts.set(hop.time, identifier);
+        }
+        continue;
+      }
+
+      // Normal case: notify 30 seconds before hop addition
       const alertTime = boilDurationSeconds - hopAdditionTime - 30; // 30 seconds before
+
+      if (__DEV__) {
+        console.log(
+          `🍺 Hop "${hop.name}" at ${hop.time}min: scheduling alert in ${alertTime}s (${alertTime / 60} min from now)`
+        );
+      }
 
       // Only schedule alerts with a meaningful time buffer (>= 10 seconds)
       if (alertTime >= 10) {
@@ -329,8 +486,8 @@ export class NotificationService {
         }
       } else if (__DEV__) {
         // Debug logging for skipped hop alerts
-        console.log(
-          `Skipping hop alert for "${hop.name}" at ${hop.time}min - alertTime too small (${alertTime}s)`
+        console.warn(
+          `⚠️ Skipping hop alert for "${hop.name}" at ${hop.time}min - alertTime too small (${alertTime}s)`
         );
       }
     }

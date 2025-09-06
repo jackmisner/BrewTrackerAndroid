@@ -455,96 +455,83 @@ export default function BoilTimerCalculatorScreen() {
   }, []);
 
   // Timer logic
+  // Keep latest state in refs for stable interval tick
+  const timeRemainingRef = useRef(boilTimer.timeRemaining);
+  const hopAlertsRef = useRef(boilTimer.hopAlerts);
   useEffect(() => {
-    if (
-      boilTimer.isRunning &&
-      !boilTimer.isPaused &&
-      boilTimer.timeRemaining > 0
-    ) {
-      intervalRef.current = setInterval(() => {
-        const newTimeRemaining = Math.max(0, boilTimer.timeRemaining - 1);
-
-        dispatch({
-          type: "SET_BOIL_TIMER",
-          payload: { timeRemaining: newTimeRemaining },
-        });
-
-        // Check for hop additions that need alerts
-        const currentMinutes = Math.ceil(newTimeRemaining / 60);
-        const alertsToUpdate: number[] = [];
-
-        boilTimer.hopAlerts.forEach((hop, index) => {
-          if (
+    timeRemainingRef.current = boilTimer.timeRemaining;
+  }, [boilTimer.timeRemaining]);
+  useEffect(() => {
+    hopAlertsRef.current = boilTimer.hopAlerts;
+  }, [boilTimer.hopAlerts]);
+  useEffect(() => {
+    // If not running or paused, clear any existing interval
+    if (!boilTimer.isRunning || boilTimer.isPaused) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      return;
+    }
+    // Single stable tick function
+    const tick = () => {
+      const newTimeRemaining = Math.max(0, timeRemainingRef.current - 1);
+      // Update timeRemaining both in state and ref
+      dispatch({
+        type: "SET_BOIL_TIMER",
+        payload: { timeRemaining: newTimeRemaining },
+      });
+      timeRemainingRef.current = newTimeRemaining;
+      // Check for hop additions
+      const currentMinutes = Math.ceil(newTimeRemaining / 60);
+      const alertsToUpdate = hopAlertsRef.current
+        .map((hop, index) => ({ hop, index }))
+        .filter(
+          ({ hop, index }) =>
             hop.time === currentMinutes &&
             !hop.added &&
-            !hop.alertScheduled &&
             !scheduledHopAlertsRef.current.has(index)
-          ) {
-            // Mark as scheduled in ref to prevent duplicates
-            scheduledHopAlertsRef.current.add(index);
-
-            // Trigger immediate notification for hop addition
-            NotificationService.sendImmediateNotification(
-              "🍺 Hop Addition Time!",
-              `Add ${hop.amount} ${hop.unit} of ${hop.name}`,
-              { hopIndex: index }
-            );
-
-            // Collect indices to update in state
-            alertsToUpdate.push(index);
-          }
+        );
+      if (alertsToUpdate.length > 0) {
+        alertsToUpdate.forEach(({ hop, index }) => {
+          scheduledHopAlertsRef.current.add(index);
+          NotificationService.sendImmediateNotification(
+            "🍺 Hop Addition Time!",
+            `Add ${hop.amount} ${hop.unit} of ${hop.name}`,
+            { hopIndex: index }
+          );
         });
 
-        // Perform single state update if any alerts were scheduled
-        if (alertsToUpdate.length > 0) {
-          const updatedAlerts = [...boilTimer.hopAlerts];
-          alertsToUpdate.forEach(index => {
-            updatedAlerts[index] = {
-              ...updatedAlerts[index],
-              alertScheduled: true,
-            };
-          });
-          dispatch({
-            type: "SET_BOIL_TIMER",
-            payload: { hopAlerts: updatedAlerts },
-          });
-        }
-
-        // Timer complete
-        if (newTimeRemaining === 0) {
-          dispatch({
-            type: "SET_BOIL_TIMER",
-            payload: { isRunning: false, isPaused: false },
-          });
-
-          NotificationService.sendImmediateNotification(
-            "✅ Boil Complete!",
-            "Your boil has finished. Time to cool and transfer!"
-          );
-
-          Alert.alert(
-            "Boil Complete!",
-            "Your boil has finished. Time to cool and transfer!",
-            [{ text: "OK" }]
-          );
-        }
-      }, 1000);
-
-      return () => {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-        }
-      };
-    } else if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-  }, [
-    boilTimer.isRunning,
-    boilTimer.isPaused,
-    boilTimer.timeRemaining,
-    boilTimer.hopAlerts,
-    dispatch,
-  ]);
+        const updatedAlerts = hopAlertsRef.current.map((h, i) =>
+          alertsToUpdate.some(({ index }) => index === i)
+            ? { ...h, alertScheduled: true }
+            : h
+        );
+        hopAlertsRef.current = updatedAlerts;
+        dispatch({
+          type: "SET_BOIL_TIMER",
+          payload: { hopAlerts: updatedAlerts },
+        });
+      }
+      // When timer hits zero, stop and notify
+      if (newTimeRemaining === 0) {
+        dispatch({
+          type: "SET_BOIL_TIMER",
+          payload: { isRunning: false, isPaused: false },
+        });
+        NotificationService.sendImmediateNotification(
+          "✅ Boil Complete!",
+          "Your boil has finished. Time to cool and transfer!"
+        );
+        Alert.alert(
+          "Boil Complete!",
+          "Your boil has finished. Time to cool and transfer!",
+          [{ text: "OK" }]
+        );
+      }
+    };
+    intervalRef.current = setInterval(tick, 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [boilTimer.isRunning, boilTimer.isPaused, dispatch]);
 
   const handleManualDurationChange = (value: string) => {
     const duration = parseInt(value) || 60;
@@ -561,20 +548,46 @@ export default function BoilTimerCalculatorScreen() {
   const handleStart = async () => {
     if (boilTimer.timeRemaining <= 0) return;
 
-    // Clear scheduled hop alerts ref when starting timer
+    // NOTIFICATION BUG FIX NOTES:
+    // ===========================
+    // If notifications are firing immediately instead of at scheduled times:
+    // 1. This could be due to Expo Go limitations (use development build)
+    // 2. Check that timeRemaining is calculated correctly
+    // 3. Comprehensive debugging has been added below to identify issues
+    // 4. Special handling added for hop additions equal to boil duration
+
+    const startTime = Date.now();
+    if (__DEV__) {
+      console.log(`🚀 Starting boil timer:`);
+      console.log(`  - Duration: ${boilTimer.duration} minutes`);
+      console.log(
+        `  - Time remaining: ${boilTimer.timeRemaining}s (${boilTimer.timeRemaining / 60} min)`
+      );
+      console.log(`  - Recipe mode: ${boilTimer.isRecipeMode}`);
+      console.log(`  - Hop alerts: ${boilTimer.hopAlerts.length}`);
+      console.log(`  - Start time: ${new Date(startTime).toISOString()}`);
+    }
+
+    // Reset dedupe and ensure a clean schedule on (re)start
     scheduledHopAlertsRef.current.clear();
+    await NotificationService.cancelAllAlerts();
 
     dispatch({
       type: "SET_BOIL_TIMER",
       payload: {
         isRunning: true,
         isPaused: false,
-        timerStartedAt: Date.now(),
+        timerStartedAt: startTime,
       },
     });
 
     // Schedule notifications for hop additions if in recipe mode
     if (boilTimer.isRecipeMode && boilTimer.hopAlerts.length > 0) {
+      if (__DEV__) {
+        console.log(
+          `🍺 Scheduling ${boilTimer.hopAlerts.length} hop alerts for recipe mode`
+        );
+      }
       await NotificationService.scheduleHopAlertsForRecipe(
         boilTimer.hopAlerts,
         boilTimer.timeRemaining
@@ -582,14 +595,29 @@ export default function BoilTimerCalculatorScreen() {
     }
 
     // Schedule milestone notifications
+    if (__DEV__) {
+      console.log(`📅 Scheduling milestone notifications`);
+    }
     await NotificationService.scheduleMilestoneNotifications(
       boilTimer.timeRemaining
     );
 
     // Schedule boil complete notification
+    if (__DEV__) {
+      console.log(`✅ Scheduling boil completion notification`);
+    }
     await NotificationService.scheduleBoilCompleteNotification(
       boilTimer.timeRemaining
     );
+
+    if (__DEV__) {
+      console.log(
+        `🚀 Timer started successfully in ${Date.now() - startTime}ms`
+      );
+
+      // Log all scheduled notifications for debugging
+      await NotificationService.logScheduledNotifications();
+    }
 
     NotificationService.triggerHapticFeedback("medium");
   };
@@ -599,6 +627,8 @@ export default function BoilTimerCalculatorScreen() {
       type: "SET_BOIL_TIMER",
       payload: { isPaused: true },
     });
+    // Prevent stale notifications from firing while paused
+    NotificationService.cancelAllAlerts();
     NotificationService.triggerHapticFeedback("light");
   };
 

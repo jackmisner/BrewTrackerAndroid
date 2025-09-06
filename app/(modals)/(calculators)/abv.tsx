@@ -261,7 +261,7 @@ export default function ABVCalculatorScreen() {
             onChangeText={handleFGChange}
             placeholder={`e.g., ${abv.unitType === "sg" ? "1.010" : "2.5"}`}
             unit={getUnitLabel()}
-            min={abv.unitType === "sg" ? 0.99 : 0}
+            min={abv.unitType === "sg" ? 1.0 : 0}
             max={abv.unitType === "sg" ? 1.05 : 15}
             step={abv.unitType === "sg" ? 0.001 : 0.1}
             precision={abv.unitType === "sg" ? 3 : 1}

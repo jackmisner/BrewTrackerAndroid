@@ -30,6 +30,9 @@ jest.mock("expo-notifications", () => ({
   AndroidNotificationPriority: {
     HIGH: "HIGH",
   },
+  SchedulableTriggerInputTypes: {
+    TIME_INTERVAL: "timeInterval",
+  },
 }));
 
 // Mock expo-haptics
@@ -42,10 +45,10 @@ jest.mock("expo-haptics", () => ({
   },
 }));
 
-// Mock Platform
+// Mock Platform - Android only
 jest.mock("react-native", () => ({
   Platform: {
-    OS: "ios", // Default to iOS, can be overridden in individual tests
+    OS: "android", // Android-only development
   },
 }));
 
@@ -138,16 +141,6 @@ describe("NotificationService", () => {
       });
     });
 
-    it("should not set up Android channel on iOS", async () => {
-      (Platform as any).OS = "ios";
-      mockGetPermissions.mockResolvedValue({ status: "granted" });
-
-      const result = await NotificationService.initialize();
-
-      expect(result).toBe(true);
-      expect(mockSetNotificationChannel).not.toHaveBeenCalled();
-    });
-
     it("should return true if already initialized", async () => {
       // First initialization
       await NotificationService.initialize();
@@ -203,6 +196,7 @@ describe("NotificationService", () => {
           },
         },
         trigger: {
+          type: expect.any(String),
           seconds: 1800,
           channelId: "boil-timer",
         },
@@ -271,6 +265,7 @@ describe("NotificationService", () => {
           },
         },
         trigger: {
+          type: expect.any(String),
           seconds: 3600,
           channelId: "boil-timer",
         },
@@ -577,17 +572,17 @@ describe("NotificationService", () => {
         3600 // 60 minute boil
       );
 
-      // The algorithm calculates: boilDuration - hopTime*60 - 30
-      // For 60min boil: 3600 - 60*60 - 30 = -30s (negative, so skipped)
+      // The algorithm has been updated to handle special cases:
+      // For 60min hop in 60min boil: Special case - immediate notification (1s delay)
       // For 15min hop: 3600 - 15*60 - 30 = 2670s (valid)
       // For 0min hop: 3600 - 0*60 - 30 = 3570s (valid)
-      expect(result.size).toBe(2); // Should skip 60-minute hop (negative alertTime)
+      expect(result.size).toBe(3); // Now includes 60-minute hop (immediate notification)
+      expect(result.has(60)).toBe(true); // 60-minute hop gets immediate notification
       expect(result.has(15)).toBe(true);
       expect(result.has(0)).toBe(true);
-      expect(result.has(60)).toBe(false); // Skipped due to negative alert time
 
-      // Should be called twice (15min and 0min hops)
-      expect(mockScheduleNotification).toHaveBeenCalledTimes(2);
+      // Should be called three times (all hops scheduled)
+      expect(mockScheduleNotification).toHaveBeenCalledTimes(3);
     });
 
     it("should skip hops with small alert times", async () => {
@@ -623,18 +618,20 @@ describe("NotificationService", () => {
       (global as any).__DEV__ = true;
 
       const consoleSpy = jest.spyOn(console, "log").mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation();
 
       await NotificationService.scheduleHopAlertsForRecipe(
         [{ time: 3, name: "Very Late Hop", amount: 0.5, unit: "oz" }],
         90 // 1.5 minute boil (90s)
       );
 
-      // 90s boil - 3min hop (180s) - 30s = -120s (negative, so skipped)
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Skipping hop alert for "Very Late Hop"')
+      // 90s boil - 3min hop (180s) - 30s = -120s (negative, so skipped with warning)
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('⚠️ Skipping hop alert for "Very Late Hop"')
       );
 
       consoleSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
       (global as any).__DEV__ = originalDev;
     });
   });

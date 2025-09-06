@@ -206,7 +206,7 @@ describe("YeastPitchRateCalculator", () => {
           "standard",
           -10
         );
-      }).toThrow("Yeast viability must be between 0% and 100%");
+      }).toThrow("Yeast viability must be greater than 0% and at most 100%");
 
       expect(() => {
         YeastPitchRateCalculator.calculatePitchRate(
@@ -217,7 +217,7 @@ describe("YeastPitchRateCalculator", () => {
           "standard",
           110
         );
-      }).toThrow("Yeast viability must be between 0% and 100%");
+      }).toThrow("Yeast viability must be greater than 0% and at most 100%");
     });
 
     it("should use default package type when invalid type provided", () => {

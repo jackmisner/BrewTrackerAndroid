@@ -15,8 +15,8 @@ export interface PrimingSugarResult {
 export class PrimingSugarCalculator {
   // Sugar conversion factors (grams per 12oz bottle for 1 volume of CO2)
   private static readonly SUGAR_FACTORS: Record<string, number> = {
-    "corn-sugar": 2.5, // Dextrose
-    "table-sugar": 2.3, // Sucrose
+    "corn-sugar": 3.2, // Dextrose (updated to align with cited sources)
+    "table-sugar": 2.9, // Sucrose (~10% lower than dextrose)
     dme: 3.0, // Dry malt extract
     honey: 2.9, // Honey (varies by type)
     "brown-sugar": 2.7, // Brown sugar

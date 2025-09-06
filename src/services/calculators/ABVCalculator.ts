@@ -95,11 +95,14 @@ export class ABVCalculator {
   }
 
   /**
-   * Convert Brix to Specific Gravity (approximate)
+   * Convert Brix to Specific Gravity for UNFERMENTED WORT ONLY
    * Formula: SG = 1 + (Brix / (258.6 - ((Brix / 258.2) * 227.1)))
    * Note: Brix is approximately equal to Plato for brewing purposes
-   * WARNING: This conversion is accurate for unfermented wort only.
+   *
+   * WARNING: This conversion is ONLY accurate for unfermented wort.
+   * DO NOT use this for final gravity measurements from a refractometer.
    * For fermented samples, refractometer readings require alcohol correction.
+   * Use brixToSGFermented() or provide corrected SG values instead.
    */
   public static brixToSG(brix: number): number {
     return this.platoToSG(brix);
@@ -112,6 +115,22 @@ export class ABVCalculator {
   public static sgToBrix(sg: number): number {
     return this.sgToPlato(sg);
   }
+
+  /**
+   * TODO: Future implementation for fermented Brix conversion
+   * Convert fermented Brix reading to SG with alcohol correction
+   * Formula would need OG and FG Brix values to calculate alcohol correction factor
+   *
+   * @param ogSG - Original gravity in SG units
+   * @param fgBrix - Final gravity in Brix from refractometer
+   * @param ogUnit - Unit of original gravity measurement
+   * @returns Corrected specific gravity
+   */
+  // public static brixToSGFermented(ogSG: number, fgBrix: number, ogUnit: "sg" | "plato" | "brix"): number {
+  //   // Implementation would use refractometer correction formula
+  //   // e.g., corrected SG = 1.001843 - 0.002318474*OG - 0.000007775*OG^2 - 0.000000034*OG^3 + 0.00574*FG + 0.00003344*FG^2 + 0.000000086*FG^3
+  //   throw new Error("Not yet implemented - use external refractometer correction calculator");
+  // }
 
   /**
    * Validate specific gravity value
@@ -137,6 +156,13 @@ export class ABVCalculator {
     fgUnit: "sg" | "plato" | "brix",
     formula: "simple" | "advanced" = "simple"
   ): ABVResult {
+    // Fail-fast guard: Detect FG in Brix and throw error
+    if (fgUnit === "brix") {
+      throw new Error(
+        "FG in Brix requires refractometer alcohol correction — provide SG or use corrected conversion"
+      );
+    }
+
     // Convert all inputs to SG
     let ogSG = og;
     let fgSG = fg;
@@ -149,9 +175,8 @@ export class ABVCalculator {
 
     if (fgUnit === "plato") {
       fgSG = this.platoToSG(fg);
-    } else if (fgUnit === "brix") {
-      fgSG = this.brixToSG(fg);
     }
+    // Note: fgUnit === "brix" case is handled by fail-fast guard above
 
     // Validate converted values
     if (!this.isValidSG(ogSG) || !this.isValidSG(fgSG)) {

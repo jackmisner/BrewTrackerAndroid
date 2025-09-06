@@ -49,15 +49,26 @@ export function NumberInput({
   const theme = useTheme();
 
   const handleStepUp = () => {
-    const currentValue = parseFloat(value) || 0;
-    const newValue = Math.min(max ?? Infinity, currentValue + step);
-    onChangeText(newValue.toFixed(precision));
+    const currentValue = parseFloat(value);
+    const base = Number.isFinite(currentValue) ? currentValue : (min ?? 0);
+    const next = base + step;
+    const rounded = Number(next.toFixed(precision)); // round first
+    const clamped = Math.min(
+      max ?? Infinity,
+      Math.max(min ?? -Infinity, rounded)
+    );
+    onChangeText(clamped.toFixed(precision));
   };
 
   const handleStepDown = () => {
     const currentValue = parseFloat(value) || 0;
-    const newValue = Math.max(min ?? 0, currentValue - step);
-    onChangeText(newValue.toFixed(precision));
+    const next = currentValue - step;
+    const rounded = Number(next.toFixed(precision)); // round first
+    const clamped = Math.max(
+      min ?? -Infinity,
+      Math.min(max ?? Infinity, rounded)
+    );
+    onChangeText(clamped.toFixed(precision));
   };
 
   const handleTextChange = (text: string) => {
@@ -178,7 +189,7 @@ export function NumberInput({
                 },
               ]}
               onPress={onUnitPress}
-              disabled={!onUnitPress}
+              disabled={disabled || !onUnitPress}
               testID={TEST_IDS.patterns.touchableOpacityAction("unit")}
             >
               <Text
