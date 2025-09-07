@@ -167,4 +167,104 @@ describe("UnitConverter", () => {
       expect(result).toBe(453.592); // Should be exactly this due to rounding
     });
   });
+
+  describe("error handling", () => {
+    describe("temperature errors", () => {
+      it("should throw error for unknown from temperature unit", () => {
+        expect(() => {
+          UnitConverter.convertTemperature(100, "invalid", "c");
+        }).toThrow("Unknown temperature unit: invalid");
+      });
+
+      it("should throw error for unknown to temperature unit", () => {
+        expect(() => {
+          UnitConverter.convertTemperature(100, "c", "invalid");
+        }).toThrow("Unknown temperature unit: invalid");
+      });
+
+      it("should handle Kelvin conversion", () => {
+        const result = UnitConverter.convertTemperature(273.15, "k", "c");
+        expect(result).toBeCloseTo(0, 2);
+      });
+
+      it("should handle Fahrenheit to Kelvin conversion", () => {
+        const result = UnitConverter.convertTemperature(32, "f", "k");
+        expect(result).toBeCloseTo(273.15, 2);
+      });
+
+      it("should handle same unit temperature conversion", () => {
+        const result = UnitConverter.convertTemperature(100, "c", "c");
+        expect(result).toBe(100);
+      });
+    });
+
+    describe("weight errors", () => {
+      it("should throw error for unknown from weight unit", () => {
+        expect(() => {
+          UnitConverter.convertWeight(1, "invalid", "g");
+        }).toThrow("Unknown weight unit: invalid");
+      });
+
+      it("should throw error for unknown to weight unit", () => {
+        expect(() => {
+          UnitConverter.convertWeight(1, "g", "invalid");
+        }).toThrow("Unknown weight unit: invalid");
+      });
+
+      it("should handle case-insensitive weight unit matching after initial check", () => {
+        const result = UnitConverter.convertWeight(1, "LB", "lb");
+        expect(result).toBe(1);
+      });
+    });
+
+    describe("volume errors", () => {
+      it("should throw error for unknown from volume unit", () => {
+        expect(() => {
+          UnitConverter.convertVolume(1, "invalid", "l");
+        }).toThrow("Unknown volume unit: invalid");
+      });
+
+      it("should throw error for unknown to volume unit", () => {
+        expect(() => {
+          UnitConverter.convertVolume(1, "l", "invalid");
+        }).toThrow("Unknown volume unit: invalid");
+      });
+
+      it("should handle case-insensitive volume unit matching after initial check", () => {
+        const result = UnitConverter.convertVolume(1, "GAL", "gal");
+        expect(result).toBe(1);
+      });
+    });
+  });
+
+  describe("utility methods", () => {
+    it("should return all weight units", () => {
+      const units = UnitConverter.getWeightUnits();
+      expect(units).toContain("g");
+      expect(units).toContain("kg");
+      expect(units).toContain("lb");
+      expect(units).toContain("oz");
+      expect(units.length).toBeGreaterThan(0);
+    });
+
+    it("should return all volume units", () => {
+      const units = UnitConverter.getVolumeUnits();
+      expect(units).toContain("l");
+      expect(units).toContain("ml");
+      expect(units).toContain("gal");
+      expect(units).toContain("floz");
+      expect(units.length).toBeGreaterThan(0);
+    });
+
+    it("should return all temperature units", () => {
+      const units = UnitConverter.getTemperatureUnits();
+      expect(units).toContain("f");
+      expect(units).toContain("c");
+      expect(units).toContain("k");
+      expect(units).toContain("fahrenheit");
+      expect(units).toContain("celsius");
+      expect(units).toContain("kelvin");
+      expect(units.length).toBe(6);
+    });
+  });
 });

@@ -255,4 +255,264 @@ describe("BoilTimerCalculator", () => {
       expect(BoilTimerCalculator.formatTime(90.7)).toBe("01:30");
     });
   });
+
+  describe("getHopAlertTimes", () => {
+    it("should calculate alert times for hop additions", () => {
+      const hopSchedule: HopAddition[] = [
+        { time: 60, name: "Cascade", amount: 1.0, unit: "oz" },
+        { time: 15, name: "Centennial", amount: 0.5, unit: "oz" },
+        { time: 0, name: "Whirlpool", amount: 1.0, unit: "oz" },
+      ];
+
+      const alertMap = BoilTimerCalculator.getHopAlertTimes(hopSchedule);
+
+      // 60min hop: alert at 60*60+30 = 3630 seconds
+      // 15min hop: alert at 15*60+30 = 930 seconds
+      // 0min hop: alert at 0*60+30 = 30 seconds
+      expect(alertMap.size).toBe(3);
+      expect(alertMap.has(3630)).toBe(true);
+      expect(alertMap.has(930)).toBe(true);
+      expect(alertMap.has(30)).toBe(true);
+    });
+
+    it("should group multiple hops at same time", () => {
+      const hopSchedule: HopAddition[] = [
+        { time: 15, name: "Cascade", amount: 1.0, unit: "oz" },
+        { time: 15, name: "Centennial", amount: 0.5, unit: "oz" },
+      ];
+
+      const alertMap = BoilTimerCalculator.getHopAlertTimes(hopSchedule);
+
+      expect(alertMap.size).toBe(1);
+      expect(alertMap.has(930)).toBe(true); // 15*60+30
+      expect(alertMap.get(930)?.length).toBe(2);
+    });
+
+    it("should handle empty hop schedule", () => {
+      const alertMap = BoilTimerCalculator.getHopAlertTimes([]);
+      expect(alertMap.size).toBe(0);
+    });
+  });
+
+  describe("validateRecipeForTimer", () => {
+    it("should validate a good recipe", () => {
+      const result = BoilTimerCalculator.validateRecipeForTimer(mockRecipe);
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+      expect(result.warnings).toHaveLength(0);
+    });
+
+    it("should detect missing boil time", () => {
+      const badRecipe = { ...mockRecipe, boil_time: 0 };
+      const result = BoilTimerCalculator.validateRecipeForTimer(badRecipe);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain("Recipe must have a valid boil time");
+    });
+
+    it("should warn about very long boil times", () => {
+      const longBoilRecipe = { ...mockRecipe, boil_time: 200 }; // > 3 hours
+      const result = BoilTimerCalculator.validateRecipeForTimer(longBoilRecipe);
+
+      expect(result.isValid).toBe(true);
+      expect(result.warnings).toContain(
+        "Boil time is unusually long (>3 hours)"
+      );
+    });
+
+    it("should warn about recipes with no hops", () => {
+      const noHopRecipe = {
+        ...mockRecipe,
+        ingredients: [
+          {
+            id: "grain-1",
+            name: "Pale Malt",
+            type: "grain",
+            amount: 8.0,
+            unit: "lb",
+          },
+        ],
+      } as Recipe;
+
+      const result = BoilTimerCalculator.validateRecipeForTimer(noHopRecipe);
+
+      expect(result.isValid).toBe(true);
+      expect(result.warnings).toContain("Recipe has no hop additions");
+    });
+
+    it("should warn about hops with no time specified", () => {
+      const noTimeRecipe = {
+        ...mockRecipe,
+        ingredients: [
+          {
+            id: "hop-1",
+            name: "Mystery Hop",
+            type: "hop",
+            amount: 1.0,
+            unit: "oz",
+            time: undefined,
+          },
+        ],
+      } as Recipe;
+
+      const result = BoilTimerCalculator.validateRecipeForTimer(noTimeRecipe);
+
+      expect(result.isValid).toBe(true);
+      expect(result.warnings).toContain(
+        "Hop Mystery Hop has no addition time specified"
+      );
+    });
+
+    it("should error on negative hop times", () => {
+      const negativeTimeRecipe = {
+        ...mockRecipe,
+        ingredients: [
+          {
+            id: "hop-1",
+            name: "Bad Hop",
+            type: "hop",
+            amount: 1.0,
+            unit: "oz",
+            time: -5,
+          },
+        ],
+      } as Recipe;
+
+      const result =
+        BoilTimerCalculator.validateRecipeForTimer(negativeTimeRecipe);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(
+        "Hop Bad Hop has a negative addition time (-5min)"
+      );
+    });
+
+    it("should error when hop time exceeds boil time", () => {
+      const exceedsBoilRecipe = {
+        ...mockRecipe,
+        boil_time: 30,
+        ingredients: [
+          {
+            id: "hop-1",
+            name: "Long Hop",
+            type: "hop",
+            amount: 1.0,
+            unit: "oz",
+            time: 60, // Exceeds 30min boil
+          },
+        ],
+      } as Recipe;
+
+      const result =
+        BoilTimerCalculator.validateRecipeForTimer(exceedsBoilRecipe);
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContain(
+        "Hop Long Hop addition time (60min) exceeds boil time (30min)"
+      );
+    });
+
+    it("should handle null hop times", () => {
+      const nullTimeRecipe = {
+        ...mockRecipe,
+        ingredients: [
+          {
+            id: "hop-1",
+            name: "Null Hop",
+            type: "hop",
+            amount: 1.0,
+            unit: "oz",
+            time: undefined,
+          } as RecipeIngredient,
+        ],
+      } as Recipe;
+
+      const result = BoilTimerCalculator.validateRecipeForTimer(nullTimeRecipe);
+
+      expect(result.isValid).toBe(true);
+      expect(result.warnings).toContain(
+        "Hop Null Hop has no addition time specified"
+      );
+    });
+  });
+
+  describe("getTimeToNextAddition", () => {
+    it("should find next hop addition", () => {
+      const hopAlerts = [
+        { time: 60, added: false },
+        { time: 30, added: false },
+        { time: 15, added: false },
+        { time: 0, added: false },
+      ];
+
+      // Current time remaining: 35 minutes (2100 seconds)
+      const result = BoilTimerCalculator.getTimeToNextAddition(2100, hopAlerts);
+
+      expect(result.nextAddition).toEqual({ time: 30, added: false });
+      expect(result.timeUntilNext).toBe(300); // 2100 - 30*60 = 300 seconds
+    });
+
+    it("should skip already added hops", () => {
+      const hopAlerts = [
+        { time: 60, added: true }, // Already added
+        { time: 30, added: false },
+        { time: 15, added: false },
+      ];
+
+      // Current time remaining: 35 minutes (2100 seconds)
+      const result = BoilTimerCalculator.getTimeToNextAddition(2100, hopAlerts);
+
+      expect(result.nextAddition).toEqual({ time: 30, added: false });
+      expect(result.timeUntilNext).toBe(300); // 2100 - 30*60
+    });
+
+    it("should handle case when no additions remain", () => {
+      const hopAlerts = [
+        { time: 60, added: true },
+        { time: 30, added: true },
+        { time: 15, added: true },
+      ];
+
+      const result = BoilTimerCalculator.getTimeToNextAddition(900, hopAlerts);
+
+      expect(result.nextAddition).toBeNull();
+      expect(result.timeUntilNext).toBe(0);
+    });
+
+    it("should handle case when no additions are due yet", () => {
+      const hopAlerts = [
+        { time: 60, added: false },
+        { time: 30, added: false },
+      ];
+
+      // Current time remaining: 25 minutes (1500 seconds) - less than any hop time
+      const result = BoilTimerCalculator.getTimeToNextAddition(1500, hopAlerts);
+
+      expect(result.nextAddition).toBeNull();
+      expect(result.timeUntilNext).toBe(0);
+    });
+
+    it("should handle empty hop alerts", () => {
+      const result = BoilTimerCalculator.getTimeToNextAddition(1800, []);
+
+      expect(result.nextAddition).toBeNull();
+      expect(result.timeUntilNext).toBe(0);
+    });
+
+    it("should find the most recent due addition", () => {
+      const hopAlerts = [
+        { time: 30, added: false },
+        { time: 15, added: false },
+        { time: 10, added: false },
+      ];
+
+      // Current time remaining: 12 minutes (720 seconds)
+      const result = BoilTimerCalculator.getTimeToNextAddition(720, hopAlerts);
+
+      // Should return the 10min hop (most recent that's due)
+      expect(result.nextAddition).toEqual({ time: 10, added: false });
+      expect(result.timeUntilNext).toBe(120); // 720 - 10*60
+    });
+  });
 });
