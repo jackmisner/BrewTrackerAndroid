@@ -20,7 +20,9 @@ export class ABVCalculator {
     }
 
     const abv = (og - fg) * 131.25;
-    const attenuation = ((og - fg) / (og - 1.0)) * 100;
+
+    // Guard against division by zero when og <= 1.0
+    const attenuation = og <= 1.0 ? 0 : ((og - fg) / (og - 1.0)) * 100;
     const calories = this.calculateCalories(og, fg);
 
     return {
@@ -45,7 +47,9 @@ export class ABVCalculator {
     }
     // More accurate formula: ABV = 76.08 * (og-fg) / (1.775-og) * (fg/0.794)
     const abv = ((76.08 * (og - fg)) / (1.775 - og)) * (fg / 0.794);
-    const attenuation = ((og - fg) / (og - 1.0)) * 100;
+
+    // Guard against division by zero when og <= 1.0
+    const attenuation = og <= 1.0 ? 0 : ((og - fg) / (og - 1.0)) * 100;
     const calories = this.calculateCalories(og, fg);
 
     return {

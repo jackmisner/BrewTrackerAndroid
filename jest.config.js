@@ -8,6 +8,7 @@ module.exports = {
     "node_modules/(?!(react-native|@react-native|react-native-.*|@expo|expo|@tanstack|axios|uuid|expo-document-picker|expo-media-library|expo-sharing|expo-file-system|expo-modules-core|expo-font|expo-haptics|@react-native/virtualized-lists|react-native/Libraries/Components/ScrollView)/)",
   ],
   moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/$1",
     "^@src/(.*)$": "<rootDir>/src/$1",
     "^@components/(.*)$": "<rootDir>/src/components/$1",
     "^@contexts/(.*)$": "<rootDir>/src/contexts/$1",
