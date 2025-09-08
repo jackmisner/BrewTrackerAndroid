@@ -1,6 +1,7 @@
 import React from "react";
-import { View, Text, StyleSheet, ViewStyle, StyleProp } from "react-native";
+import { View, Text, ViewStyle, StyleProp } from "react-native";
 import { useTheme } from "@contexts/ThemeContext";
+import { calculatorCardStyles } from "@styles/components/calculators/calculatorCardStyles";
 
 interface CalculatorCardProps {
   title: string;
@@ -18,7 +19,7 @@ export function CalculatorCard({
   return (
     <View
       style={[
-        styles.card,
+        calculatorCardStyles.card,
         {
           backgroundColor: theme.colors.backgroundSecondary,
           borderColor: theme.colors.borderLight,
@@ -26,26 +27,10 @@ export function CalculatorCard({
         style,
       ]}
     >
-      <Text style={[styles.title, { color: theme.colors.text }]}>{title}</Text>
-      <View style={styles.content}>{children}</View>
+      <Text style={[calculatorCardStyles.title, { color: theme.colors.text }]}>
+        {title}
+      </Text>
+      <View style={calculatorCardStyles.content}>{children}</View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 12,
-  },
-  content: {
-    gap: 12,
-  },
-});

@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from "react";
-import { View, ScrollView, StyleSheet } from "react-native";
+import { View, ScrollView } from "react-native";
 import { useCalculators } from "@contexts/CalculatorsContext";
 import { DilutionCalculator } from "@services/calculators/DilutionCalculator";
 import { CalculatorCard } from "@components/calculators/CalculatorCard";
@@ -7,6 +7,7 @@ import { CalculatorHeader } from "@components/calculators/CalculatorHeader";
 import { NumberInput } from "@components/calculators/NumberInput";
 import { ResultDisplay } from "@components/calculators/ResultDisplay";
 import { useTheme } from "@contexts/ThemeContext";
+import { calculatorScreenStyles } from "@styles/modals/calculators/calculatorScreenStyles";
 
 export default function DilutionCalculatorScreen() {
   const theme = useTheme();
@@ -108,11 +109,14 @@ export default function DilutionCalculatorScreen() {
 
   return (
     <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[
+        calculatorScreenStyles.container,
+        { backgroundColor: theme.colors.background },
+      ]}
     >
       <CalculatorHeader title="Dilution Calculator" />
 
-      <ScrollView style={styles.scrollContent}>
+      <ScrollView style={calculatorScreenStyles.scrollContent}>
         <CalculatorCard title="Current Beer">
           <NumberInput
             label="Original Gravity"
@@ -179,12 +183,3 @@ export default function DilutionCalculatorScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    flex: 1,
-  },
-});

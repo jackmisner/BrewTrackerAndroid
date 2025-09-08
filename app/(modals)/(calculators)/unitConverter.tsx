@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from "react";
-import { View, ScrollView, StyleSheet } from "react-native";
+import { View, ScrollView } from "react-native";
 import { useCalculators } from "@contexts/CalculatorsContext";
 import { UnitConverter } from "@services/calculators/UnitConverter";
 import { CalculatorCard } from "@components/calculators/CalculatorCard";
@@ -8,6 +8,7 @@ import { NumberInput } from "@components/calculators/NumberInput";
 import { UnitToggle, DropdownToggle } from "@components/calculators/UnitToggle";
 import { SingleResult } from "@components/calculators/ResultDisplay";
 import { useTheme } from "@contexts/ThemeContext";
+import { calculatorScreenStyles } from "@styles/modals/calculators/calculatorScreenStyles";
 
 const CONVERSION_CATEGORIES = [
   { label: "Weight", value: "weight" as const },
@@ -210,11 +211,14 @@ export default function UnitConverterScreen() {
 
   return (
     <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[
+        calculatorScreenStyles.container,
+        { backgroundColor: theme.colors.background },
+      ]}
     >
       <CalculatorHeader title="Unit Converter" />
 
-      <ScrollView style={styles.scrollContent}>
+      <ScrollView style={calculatorScreenStyles.scrollContent}>
         <CalculatorCard title="Conversion Type">
           <UnitToggle
             value={unitConverter.category}
@@ -266,12 +270,3 @@ export default function UnitConverterScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    flex: 1,
-  },
-});
