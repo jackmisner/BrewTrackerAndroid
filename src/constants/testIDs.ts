@@ -198,6 +198,19 @@ export const TEST_IDS = {
     reviewContainer: "beerxml-review-container",
   },
 
+  // Boil Timer - Use pattern functions in component code:
+  // TEST_IDS.patterns.touchableOpacityAction("start-timer") etc.
+  boilTimer: {
+    screen: "boil-timer-screen",
+    durationInput: "boil-duration-input", // Already matches component testID
+    recipeSelector: "recipe-selector",
+    timerDisplay: "timer-display",
+    progressBar: "progress-bar",
+    hopAddition: (index: number) => `hop-addition-${index}`,
+    hopScheduleTitle: "hop-schedule-title",
+    hopScheduleSubtitle: "hop-schedule-subtitle",
+  },
+
   // Dynamic Pattern Generators
   patterns: PATTERN_GENERATORS,
 } as const;

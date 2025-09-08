@@ -18,6 +18,8 @@ jest.mock("react-native", () => ({
   TouchableOpacity: "TouchableOpacity",
   StyleSheet: {
     create: (styles: any) => styles,
+    flatten: (styles: any) =>
+      Array.isArray(styles) ? Object.assign({}, ...styles) : styles,
   },
   Alert: {
     alert: jest.fn(),
@@ -27,7 +29,7 @@ jest.mock("react-native", () => ({
   },
   AppState: {
     currentState: "active",
-    addEventListener: jest.fn(),
+    addEventListener: jest.fn(() => ({ remove: jest.fn() })),
   },
 }));
 
@@ -62,6 +64,7 @@ const mockCalculatorsState: any = {
   unitConverter: {},
   history: [],
 };
+const INITIAL_BOIL_TIMER_STATE = mockCalculatorsState.boilTimer;
 
 const mockDispatch = jest.fn();
 
@@ -90,7 +93,7 @@ jest.mock("@contexts/ThemeContext", () => ({
 
 // Mock services
 const mockBoilTimerCalculator = {
-  createFromRecipe: jest.fn(recipe => ({
+  createFromRecipe: jest.fn(() => ({
     boilTime: 60,
     hopAlerts: [
       {
@@ -169,34 +172,102 @@ jest.mock("@tanstack/react-query", () => ({
 }));
 
 // Mock child components
-jest.mock("@components/calculators/CalculatorCard", () => ({
-  CalculatorCard: ({ title, children, testID }: any) => "CalculatorCard",
-}));
+jest.mock("@components/calculators/CalculatorCard", () => {
+  const React = require("react");
+  const RN = require("react-native");
+  return {
+    CalculatorCard: ({ title, children, testID }: any) =>
+      React.createElement(
+        RN.View,
+        { testID },
+        React.createElement(RN.Text, {}, title),
+        children
+      ),
+  };
+});
 
-jest.mock("@components/calculators/CalculatorHeader", () => ({
-  CalculatorHeader: ({ title, testID }: any) => "CalculatorHeader",
-}));
+jest.mock("@components/calculators/CalculatorHeader", () => {
+  const React = require("react");
+  const RN = require("react-native");
+  return {
+    CalculatorHeader: ({ title, testID }: any) =>
+      React.createElement(
+        RN.View,
+        { testID },
+        React.createElement(RN.Text, {}, title)
+      ),
+  };
+});
 
-jest.mock("@components/calculators/NumberInput", () => ({
-  NumberInput: ({
-    label,
-    value,
-    onChangeText,
-    testID,
-    placeholder,
-    disabled,
-    ...props
-  }: any) => "NumberInput",
-}));
+jest.mock("@components/calculators/NumberInput", () => {
+  const React = require("react");
+  const RN = require("react-native");
+  return {
+    NumberInput: ({
+      label,
+      value,
+      onChangeText,
+      testID,
+      placeholder,
+      disabled,
+      ...props
+    }: any) =>
+      React.createElement(
+        RN.TouchableOpacity,
+        { testID: testID, disabled },
+        React.createElement(
+          RN.TouchableOpacity,
+          {
+            onPress: () => onChangeText && onChangeText("45"),
+            disabled,
+          },
+          React.createElement(RN.Text, {}, `${label}: ${value || placeholder}`)
+        )
+      ),
+  };
+});
 
-jest.mock("@components/boilTimer/RecipeSelector", () => ({
-  RecipeSelector: ({
-    selectedRecipe,
-    onRecipeSelect,
-    onManualMode,
-    disabled,
-  }: any) => "RecipeSelector",
-}));
+jest.mock("@components/boilTimer/RecipeSelector", () => {
+  const React = require("react");
+  const RN = require("react-native");
+  return {
+    RecipeSelector: ({
+      selectedRecipe,
+      onRecipeSelect,
+      onManualMode,
+      disabled,
+      testID,
+    }: any) =>
+      React.createElement(
+        RN.TouchableOpacity,
+        { testID: testID, disabled },
+        React.createElement(
+          RN.TouchableOpacity,
+          {
+            testID: "recipe-select-button",
+            onPress: () =>
+              onRecipeSelect &&
+              onRecipeSelect({
+                id: "test-recipe",
+                name: "Test Recipe",
+                boil_time: 60,
+              }),
+            disabled,
+          },
+          React.createElement(RN.Text, {}, "Select Recipe")
+        ),
+        React.createElement(
+          RN.TouchableOpacity,
+          {
+            testID: "manual-mode-button",
+            onPress: onManualMode,
+            disabled,
+          },
+          React.createElement(RN.Text, {}, "Manual Mode")
+        )
+      ),
+  };
+});
 
 describe("BoilTimerCalculatorScreen", () => {
   beforeEach(() => {
@@ -204,14 +275,7 @@ describe("BoilTimerCalculatorScreen", () => {
 
     // Reset state to defaults
     mockCalculatorsState.boilTimer = {
-      duration: 60,
-      timeRemaining: 3600,
-      isRunning: false,
-      isPaused: false,
-      selectedRecipe: null,
-      isRecipeMode: false,
-      hopAlerts: [],
-      timerStartedAt: undefined,
+      ...INITIAL_BOIL_TIMER_STATE,
     };
 
     // Reset service mocks
@@ -305,13 +369,15 @@ describe("BoilTimerCalculatorScreen", () => {
   });
 
   it("should auto-load recipe from URL params", async () => {
-    // The useQuery hook is mocked to return recipe data
-    // We just need to verify the component renders without error
     const component = render(<BoilTimerCalculatorScreen />);
+
+    // With URL param recipeId set to "test-recipe-id", the component should attempt
+    // to load recipe data. Since useQuery is mocked, we verify the component renders
+    // successfully and that the timer component is in the correct state
     expect(component).toBeTruthy();
 
-    // The mocked useQuery already returns the recipe data
-    // so we don't need to wait for an API call
+    // Verify the component renders the header correctly
+    expect(component.getByText("Boil Timer")).toBeTruthy();
   });
 
   it("should handle recipe selection", async () => {
@@ -338,18 +404,12 @@ describe("BoilTimerCalculatorScreen", () => {
 
     const component = render(<BoilTimerCalculatorScreen />);
 
-    // Simulate recipe selection - we need to trigger the handler directly
-    // since we can't easily trigger it through the mocked RecipeSelector
-    await act(async () => {
-      // Get the handleRecipeSelect function by calling it directly
-      // This is a workaround since we can't access the handler through the mock
-      const mockRecipeSelect = mockBoilTimerCalculator.createFromRecipe;
-      mockRecipeSelect(recipe);
-    });
+    // The recipe selection happens via RecipeSelector component
+    // Since it's mocked as "CalculatorCard", we verify component renders
+    expect(component).toBeTruthy();
 
-    expect(mockBoilTimerCalculator.createFromRecipe).toHaveBeenCalledWith(
-      recipe
-    );
+    // Verify that BoilTimerCalculator service is available for recipe processing
+    expect(mockBoilTimerCalculator.createFromRecipe).toBeDefined();
   });
 
   it("should handle recipe loading errors", async () => {
@@ -373,23 +433,28 @@ describe("BoilTimerCalculatorScreen", () => {
     consoleSpy.mockRestore();
   });
 
-  it("should handle manual mode selection", () => {
+  it("should handle manual mode selection", async () => {
     const component = render(<BoilTimerCalculatorScreen />);
 
-    // Manual mode should reset to basic timer mode
-    // Since we can't easily trigger the RecipeSelector handler,
-    // we just verify the component renders properly
+    // Verify manual mode is the default (no recipe selected)
+    // The component shows "Manual Timer" text when no recipe is selected
+    expect(component.getByText("Manual Timer")).toBeTruthy();
+
+    // Component should render in manual mode by default
     expect(component).toBeTruthy();
   });
 
-  it("should handle manual duration change", () => {
+  it("should handle manual duration change", async () => {
     mockCalculatorsState.boilTimer.isRecipeMode = false;
 
     const component = render(<BoilTimerCalculatorScreen />);
 
-    // Manual duration change should update duration and timeRemaining
-    // This would be triggered by the NumberInput onChangeText handler
+    // The NumberInput component is mocked, so we verify it's available for interaction
+    // In manual mode, the duration input should be rendered
     expect(component).toBeTruthy();
+
+    // Verify the component is in manual mode (showing default duration)
+    expect(component.getByText("60:00")).toBeTruthy();
   });
 
   it("should initialize notifications on mount", async () => {
@@ -432,18 +497,22 @@ describe("BoilTimerCalculatorScreen", () => {
   it("should format time correctly", () => {
     mockCalculatorsState.boilTimer.timeRemaining = 3665; // 61 minutes and 5 seconds
 
-    const component = render(<BoilTimerCalculatorScreen />);
-    expect(component).toBeTruthy();
+    const { getByText } = render(<BoilTimerCalculatorScreen />);
+
     // The formatted time "61:05" should be displayed in the timer
+    expect(getByText("61:05")).toBeTruthy();
   });
 
   it("should calculate progress percentage correctly", () => {
     mockCalculatorsState.boilTimer.duration = 60;
     mockCalculatorsState.boilTimer.timeRemaining = 1800; // 30 minutes remaining
 
-    const component = render(<BoilTimerCalculatorScreen />);
-    expect(component).toBeTruthy();
+    const { getByTestId } = render(<BoilTimerCalculatorScreen />);
+
     // Progress should be 50% (30 minutes of 60 minute boil complete)
+    const progressBar = getByTestId("progress-bar");
+    expect(progressBar).toBeTruthy();
+    // Progress calculation: (3600 - 1800) / 3600 = 0.5 = 50%
   });
 
   it("should handle app state changes - going to background", async () => {
@@ -594,37 +663,97 @@ describe("BoilTimerCalculatorScreen", () => {
 
   it("should handle timer start scheduling notifications", async () => {
     mockCalculatorsState.boilTimer.timeRemaining = 3600;
+    mockCalculatorsState.boilTimer.isRecipeMode = true;
+    mockCalculatorsState.boilTimer.hopAlerts = [
+      { time: 30, name: "Centennial", amount: 1, unit: "oz" },
+    ];
 
-    render(<BoilTimerCalculatorScreen />);
+    const { queryByTestId } = render(<BoilTimerCalculatorScreen />);
 
-    // The start handler would schedule notifications
-    // We can verify the services are available
-    expect(mockNotificationService.cancelAllAlerts).toBeDefined();
-    expect(
-      mockNotificationService.scheduleMilestoneNotifications
-    ).toBeDefined();
-    expect(
-      mockNotificationService.scheduleBoilCompleteNotification
-    ).toBeDefined();
+    // Use queryByTestId to check if the button exists before trying to use it
+    const startButton = queryByTestId("start-timer-button");
+    expect(startButton).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(startButton!);
+    });
+
+    await waitFor(() => {
+      expect(mockNotificationService.cancelAllAlerts).toHaveBeenCalled();
+      expect(
+        mockNotificationService.scheduleMilestoneNotifications
+      ).toHaveBeenCalledWith(3600); // timeRemaining in seconds
+      expect(
+        mockNotificationService.scheduleBoilCompleteNotification
+      ).toHaveBeenCalledWith(3600); // timeRemaining in seconds
+      expect(
+        mockNotificationService.scheduleHopAlertsForRecipe
+      ).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            time: 30,
+            name: "Centennial",
+            amount: 1,
+            unit: "oz",
+          }),
+        ]),
+        3600
+      );
+    });
   });
 
-  it("should handle timer pause", () => {
-    render(<BoilTimerCalculatorScreen />);
+  it("should handle timer pause", async () => {
+    mockCalculatorsState.boilTimer.isRunning = true;
 
-    // Pause should cancel alerts and trigger haptic feedback
-    expect(mockNotificationService.cancelAllAlerts).toBeDefined();
-    expect(mockNotificationService.triggerHapticFeedback).toBeDefined();
+    const { queryByTestId } = render(<BoilTimerCalculatorScreen />);
+
+    const pauseButton = queryByTestId("pause-timer-button");
+    expect(pauseButton).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(pauseButton!);
+    });
+
+    await waitFor(() => {
+      expect(mockNotificationService.cancelAllAlerts).toHaveBeenCalled();
+      expect(mockNotificationService.triggerHapticFeedback).toHaveBeenCalled();
+      expect(mockDispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "SET_BOIL_TIMER",
+          payload: expect.objectContaining({
+            isPaused: true,
+          }),
+        })
+      );
+    });
   });
 
-  it("should handle timer stop with confirmation", () => {
-    render(<BoilTimerCalculatorScreen />);
+  it("should handle timer stop with confirmation", async () => {
+    mockCalculatorsState.boilTimer.isRunning = true;
 
-    // Stop should show confirmation alert
-    expect(Alert.alert).toBeDefined();
+    const { getByTestId } = render(<BoilTimerCalculatorScreen />);
+
+    const stopButton = getByTestId("stop-timer-button");
+
+    await act(async () => {
+      fireEvent.press(stopButton);
+    });
+
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith(
+        "Stop Timer",
+        "Are you sure you want to stop the timer?",
+        expect.arrayContaining([
+          expect.objectContaining({ text: "Cancel" }),
+          expect.objectContaining({ text: "Stop" }),
+        ])
+      );
+    });
   });
 
-  it("should handle timer reset", () => {
+  it("should handle timer reset", async () => {
     mockCalculatorsState.boilTimer.duration = 60;
+    mockCalculatorsState.boilTimer.timeRemaining = 1800;
     mockCalculatorsState.boilTimer.hopAlerts = [
       {
         time: 60,
@@ -636,119 +765,187 @@ describe("BoilTimerCalculatorScreen", () => {
       },
     ];
 
-    const component = render(<BoilTimerCalculatorScreen />);
+    const { getByTestId } = render(<BoilTimerCalculatorScreen />);
 
-    // Reset should restore original duration and reset hop states
-    expect(component).toBeTruthy();
+    const resetButton = getByTestId("reset-timer-button");
+
+    await act(async () => {
+      fireEvent.press(resetButton);
+    });
+
+    await waitFor(() => {
+      expect(mockDispatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "SET_BOIL_TIMER",
+          payload: expect.objectContaining({
+            timeRemaining: 3600, // Reset to full duration (60 * 60)
+            isRunning: false,
+            isPaused: false,
+          }),
+        })
+      );
+    });
   });
 
-  it("should handle hop addition marking", () => {
-    mockCalculatorsState.boilTimer.hopAlerts = [
-      {
-        time: 60,
-        name: "Cascade",
-        amount: 1,
-        unit: "oz",
-        added: false,
-        alertScheduled: false,
-      },
-    ];
+  it("should handle hop addition marking", async () => {
+    // Set up state with hop alerts
+    mockCalculatorsState.boilTimer = {
+      ...mockCalculatorsState.boilTimer,
+      hopAlerts: [
+        {
+          time: 60,
+          name: "Cascade",
+          amount: 1,
+          unit: "oz",
+          added: false,
+          alertScheduled: false,
+        },
+      ],
+    };
 
-    const component = render(<BoilTimerCalculatorScreen />);
+    const { queryByTestId } = render(<BoilTimerCalculatorScreen />);
 
-    // Marking hop as added should dispatch action
-    expect(component).toBeTruthy();
+    const hopButton = queryByTestId("hop-addition-0");
+
+    // Check if hop button exists before pressing it
+    expect(hopButton).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.press(hopButton!);
+    });
+
+    await waitFor(() => {
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "MARK_HOP_ADDED",
+        payload: 0,
+      });
+    });
   });
 
   it("should render hop addition cards correctly", () => {
-    mockCalculatorsState.boilTimer.hopAlerts = [
-      {
-        time: 60,
-        name: "Cascade",
-        amount: 1,
-        unit: "oz",
-        added: false,
-        alertScheduled: false,
-      },
-      {
-        time: 30,
-        name: "Centennial",
-        amount: 0.5,
-        unit: "oz",
-        added: true,
-        alertScheduled: true,
-      },
-    ];
+    // Set up state with hop alerts
+    mockCalculatorsState.boilTimer = {
+      ...mockCalculatorsState.boilTimer,
+      hopAlerts: [
+        {
+          time: 60,
+          name: "Cascade",
+          amount: 1,
+          unit: "oz",
+          added: false,
+          alertScheduled: false,
+        },
+        {
+          time: 30,
+          name: "Centennial",
+          amount: 0.5,
+          unit: "oz",
+          added: false,
+          alertScheduled: true,
+        },
+      ],
+    };
 
-    const component = render(<BoilTimerCalculatorScreen />);
-    expect(component).toBeTruthy();
+    const { getByText, getByTestId } = render(<BoilTimerCalculatorScreen />);
+
+    // Verify hop cards are rendered
+    expect(getByText("Cascade")).toBeTruthy();
+    expect(getByText("Centennial")).toBeTruthy();
+    expect(getByText("1 oz")).toBeTruthy();
+    expect(getByText("0.5 oz")).toBeTruthy();
+
+    // Verify hop addition buttons exist
+    expect(getByTestId("hop-addition-0")).toBeTruthy();
+    expect(getByTestId("hop-addition-1")).toBeTruthy();
   });
 
   it("should show hop schedule subtitle correctly", () => {
-    mockCalculatorsState.boilTimer.hopAlerts = [
-      {
-        time: 60,
-        name: "Cascade",
-        amount: 1,
-        unit: "oz",
-        added: false,
-        alertScheduled: false,
-      },
-    ];
+    // Set up state with single hop alert
+    mockCalculatorsState.boilTimer = {
+      ...mockCalculatorsState.boilTimer,
+      hopAlerts: [
+        {
+          time: 60,
+          name: "Cascade",
+          amount: 1,
+          unit: "oz",
+          added: false,
+          alertScheduled: false,
+        },
+      ],
+    };
 
-    const component = render(<BoilTimerCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Should show "1 hop addition scheduled"
+    const { getByText } = render(<BoilTimerCalculatorScreen />);
+
+    expect(getByText("1 hop addition scheduled")).toBeTruthy();
   });
 
   it("should show hop schedule subtitle with plural", () => {
-    mockCalculatorsState.boilTimer.hopAlerts = [
-      {
-        time: 60,
-        name: "Cascade",
-        amount: 1,
-        unit: "oz",
-        added: false,
-        alertScheduled: false,
-      },
-      {
-        time: 30,
-        name: "Centennial",
-        amount: 0.5,
-        unit: "oz",
-        added: false,
-        alertScheduled: false,
-      },
-    ];
+    // Set up state with multiple hop alerts
+    mockCalculatorsState.boilTimer = {
+      ...mockCalculatorsState.boilTimer,
+      hopAlerts: [
+        {
+          time: 60,
+          name: "Cascade",
+          amount: 1,
+          unit: "oz",
+          added: false,
+          alertScheduled: false,
+        },
+        {
+          time: 30,
+          name: "Centennial",
+          amount: 0.5,
+          unit: "oz",
+          added: false,
+          alertScheduled: false,
+        },
+      ],
+    };
 
-    const component = render(<BoilTimerCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Should show "2 hop additions scheduled"
+    const { getByText } = render(<BoilTimerCalculatorScreen />);
+
+    expect(getByText("2 hop additions scheduled")).toBeTruthy();
   });
 
   it("should handle disabled state when timer has no time remaining", () => {
     mockCalculatorsState.boilTimer.timeRemaining = 0;
 
-    const component = render(<BoilTimerCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Timer controls should be disabled
+    const { queryByTestId } = render(<BoilTimerCalculatorScreen />);
+
+    const startButton = queryByTestId("start-timer-button");
+    expect(startButton).toBeTruthy();
+    expect(startButton!.props.disabled).toBe(true);
   });
 
   it("should handle disabled recipe selection when timer is running", () => {
-    mockCalculatorsState.boilTimer.isRunning = true;
+    // Set up running timer state
+    mockCalculatorsState.boilTimer = {
+      ...mockCalculatorsState.boilTimer,
+      isRunning: true,
+    };
 
-    const component = render(<BoilTimerCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Recipe selector should be disabled
+    const { queryByTestId } = render(<BoilTimerCalculatorScreen />);
+
+    const recipeSelector = queryByTestId("recipe-selector");
+    expect(recipeSelector).toBeTruthy();
+    expect(recipeSelector!.props.disabled).toBe(true);
   });
 
   it("should handle disabled duration input when timer is running", () => {
-    mockCalculatorsState.boilTimer.isRunning = true;
-    mockCalculatorsState.boilTimer.isRecipeMode = false;
+    // Set up manual mode with running timer
+    mockCalculatorsState.boilTimer = {
+      ...mockCalculatorsState.boilTimer,
+      isRunning: true,
+      isRecipeMode: false,
+    };
 
-    const component = render(<BoilTimerCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Duration input should be disabled
+    const { queryByTestId } = render(<BoilTimerCalculatorScreen />);
+
+    const durationInput = queryByTestId("boil-duration-input");
+    expect(durationInput).toBeTruthy();
+    expect(durationInput!.props.disabled).toBe(true);
   });
 
   it("should show recipe name in timer display when recipe is selected", () => {
@@ -759,26 +956,32 @@ describe("BoilTimerCalculatorScreen", () => {
       boil_time: 60,
     };
 
-    const component = render(<BoilTimerCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Should show recipe name instead of "Manual Timer"
+    const { getByText } = render(<BoilTimerCalculatorScreen />);
+
+    expect(getByText("IPA Recipe")).toBeTruthy();
   });
 
   it("should show manual timer label when no recipe is selected", () => {
     mockCalculatorsState.boilTimer.selectedRecipe = null;
 
-    const component = render(<BoilTimerCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Should show "Manual Timer"
+    const { getByText } = render(<BoilTimerCalculatorScreen />);
+
+    expect(getByText("Manual Timer")).toBeTruthy();
   });
 
   it("should handle edge case with zero duration", () => {
     mockCalculatorsState.boilTimer.duration = 0;
     mockCalculatorsState.boilTimer.timeRemaining = 0;
 
-    const component = render(<BoilTimerCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Should handle zero duration gracefully
+    const { getByText, queryByTestId } = render(<BoilTimerCalculatorScreen />);
+
+    // Should display zero time correctly
+    expect(getByText("00:00")).toBeTruthy();
+
+    // Start button should be disabled with zero duration
+    const startButton = queryByTestId("start-timer-button");
+    expect(startButton).toBeTruthy();
+    expect(startButton!.props.disabled).toBe(true);
   });
 
   it("should clean up intervals on unmount", () => {
@@ -788,6 +991,6 @@ describe("BoilTimerCalculatorScreen", () => {
     unmount();
 
     // Cleanup should have occurred without errors
-    expect(unmount).toBeTruthy();
+    expect(mockTimerPersistenceService.stopCheckpointing).toHaveBeenCalled();
   });
 });

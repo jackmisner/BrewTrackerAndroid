@@ -17,6 +17,18 @@ jest.mock("react-native", () => ({
   ScrollView: "ScrollView",
   StyleSheet: {
     create: (styles: any) => styles,
+    flatten: (styles: any) => {
+      if (styles == null) return {};
+      if (!Array.isArray(styles)) return styles;
+      const out = {};
+      const push = (s: any) => {
+        if (!s) return; // skip null/undefined/false
+        if (Array.isArray(s)) s.forEach(push);
+        else Object.assign(out, s);
+      };
+      styles.forEach(push);
+      return out;
+    },
   },
 }));
 
@@ -67,24 +79,54 @@ jest.mock("@services/calculators/ABVCalculator", () => ({
 }));
 
 // Mock child components
-jest.mock("@components/calculators/CalculatorCard", () => ({
-  CalculatorCard: ({ title, children, testID }: any) => "CalculatorCard",
-}));
+jest.mock("@components/calculators/CalculatorCard", () => {
+  const React = require("react");
+  const RN = require("react-native");
+  return {
+    CalculatorCard: ({ title, children, testID }: any) =>
+      React.createElement(
+        RN.View,
+        { testID },
+        React.createElement(RN.Text, {}, title),
+        children
+      ),
+  };
+});
 
-jest.mock("@components/calculators/CalculatorHeader", () => ({
-  CalculatorHeader: ({ title, testID }: any) => "CalculatorHeader",
-}));
+jest.mock("@components/calculators/CalculatorHeader", () => {
+  const React = require("react");
+  const RN = require("react-native");
+  return {
+    CalculatorHeader: ({ title, testID }: any) =>
+      React.createElement(
+        RN.View,
+        { testID },
+        React.createElement(RN.Text, {}, title)
+      ),
+  };
+});
 
-jest.mock("@components/calculators/NumberInput", () => ({
-  NumberInput: ({
-    label,
-    value,
-    onChangeText,
-    testID,
-    placeholder,
-    ...props
-  }: any) => "NumberInput",
-}));
+jest.mock("@components/calculators/NumberInput", () => {
+  const React = require("react");
+  const RN = require("react-native");
+  return {
+    NumberInput: ({ label, testID, placeholder }: any) =>
+      React.createElement(
+        RN.View,
+        { testID: testID ?? "NumberInput" },
+        React.createElement(
+          RN.Text,
+          { testID: `${testID}-label` },
+          label ?? ""
+        ),
+        React.createElement(
+          RN.Text,
+          { testID: `${testID}-placeholder` },
+          placeholder ?? ""
+        )
+      ),
+  };
+});
 
 jest.mock("@components/calculators/UnitToggle", () => ({
   UnitToggle: ({ label, value, onChange, options, testID }: any) =>
@@ -219,6 +261,8 @@ describe("ABVCalculatorScreen", () => {
   });
 
   it("should clear result when inputs are invalid", async () => {
+    const { ABVCalculator } = require("@services/calculators/ABVCalculator");
+    ABVCalculator.calculate.mockClear();
     mockCalculatorsState.abv = {
       originalGravity: "invalid",
       finalGravity: "1.010",
@@ -235,6 +279,7 @@ describe("ABVCalculatorScreen", () => {
         payload: { result: null },
       });
     });
+    expect(ABVCalculator.calculate).not.toHaveBeenCalled();
   });
 
   it("should handle calculation errors gracefully", async () => {
@@ -272,48 +317,22 @@ describe("ABVCalculatorScreen", () => {
     }
   });
 
-  it("should test getPlaceholderText function for different unit types", () => {
-    // Helper function extracted from component logic
-    const getPlaceholderText = (unitType: string) => {
-      switch (unitType) {
-        case "sg":
-          return "1.050";
-        case "plato":
-          return "12.5";
-        case "brix":
-          return "12.5";
-        default:
-          return "1.050";
-      }
-    };
+  it("renders unit-specific placeholders", () => {
+    // SG
+    mockCalculatorsState.abv.unitType = "sg";
+    const { getByText, rerender, debug } = render(<ABVCalculatorScreen />);
+    debug();
+    expect(getByText("e.g., 1.050")).toBeTruthy();
 
-    // Test all unit types
-    expect(getPlaceholderText("sg")).toBe("1.050");
-    expect(getPlaceholderText("plato")).toBe("12.5");
-    expect(getPlaceholderText("brix")).toBe("12.5");
-    expect(getPlaceholderText("unknown")).toBe("1.050");
-  });
+    // Plato
+    mockCalculatorsState.abv.unitType = "plato";
+    rerender(<ABVCalculatorScreen />);
+    expect(getByText("e.g., 12.5")).toBeTruthy();
 
-  it("should test getUnitLabel function for different unit types", () => {
-    // Helper function extracted from component logic
-    const getUnitLabel = (unitType: string) => {
-      switch (unitType) {
-        case "sg":
-          return "";
-        case "plato":
-          return "°P";
-        case "brix":
-          return "°Bx";
-        default:
-          return "";
-      }
-    };
-
-    // Test all unit types
-    expect(getUnitLabel("sg")).toBe("");
-    expect(getUnitLabel("plato")).toBe("°P");
-    expect(getUnitLabel("brix")).toBe("°Bx");
-    expect(getUnitLabel("unknown")).toBe("");
+    // Brix
+    mockCalculatorsState.abv.unitType = "brix";
+    rerender(<ABVCalculatorScreen />);
+    expect(getByText("e.g., 12.5")).toBeTruthy();
   });
 
   it("should calculate additional results when result is available", () => {
@@ -353,7 +372,7 @@ describe("ABVCalculatorScreen", () => {
     calculateSpy.mockRestore();
   });
 
-  it("should return null additional results when calculation fails", () => {
+  it("should return null additional results when calculation fails", async () => {
     const { ABVCalculator } = require("@services/calculators/ABVCalculator");
     ABVCalculator.calculate.mockImplementation(() => {
       throw new Error("Calculation error");
@@ -372,9 +391,9 @@ describe("ABVCalculatorScreen", () => {
 
     render(<ABVCalculatorScreen />);
 
-    // Verify that the error was logged when calculation failed in additionalResults
-    // Note: This might be called from the main calculation or additional results calculation
-    expect(consoleSpy).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalled();
+    });
 
     consoleSpy.mockRestore();
   });

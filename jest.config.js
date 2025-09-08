@@ -4,8 +4,11 @@ module.exports = {
   setupFilesAfterEnv: ["<rootDir>/tests/setupTests.js"],
   testMatch: ["**/tests/**/*.test.{ts,tsx,js}"],
   moduleDirectories: ["node_modules", "src", "app"],
+  transform: {
+    "^.+\\.[jt]sx?$": "babel-jest",
+  },
   transformIgnorePatterns: [
-    "node_modules/(?!(react-native|@react-native|react-native-.*|@expo|expo|@tanstack|axios|uuid|expo-document-picker|expo-media-library|expo-sharing|expo-file-system|expo-modules-core|expo-font|expo-haptics|@react-native/virtualized-lists|react-native/Libraries/Components/ScrollView)/)",
+    "node_modules/(?!(react-native|@react-native|@react-navigation|@expo|expo|@unimodules|unimodules|@react-native-community|@expo/vector-icons)/)",
   ],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",

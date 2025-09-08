@@ -10,6 +10,15 @@ export interface ABVResult {
 }
 
 export class ABVCalculator {
+  private static computeAttenuation(og: number, fg: number): number {
+    if (og <= 1.0) {
+      throw new Error(
+        "Original gravity must be > 1.000 for attenuation calculation"
+      );
+    }
+    const attn = ((og - fg) / (og - 1.0)) * 100;
+    return Math.min(100, Math.max(0, attn));
+  }
   /**
    * Simple ABV calculation using the standard formula
    * ABV = (OG - FG) * 131.25
@@ -21,8 +30,8 @@ export class ABVCalculator {
 
     const abv = (og - fg) * 131.25;
 
-    // Guard against division by zero when og <= 1.0
-    const attenuation = og <= 1.0 ? 0 : ((og - fg) / (og - 1.0)) * 100;
+    // Apparent attenuation (clamped to [0,100]); throws if og <= 1.000
+    const attenuation = this.computeAttenuation(og, fg);
     const calories = this.calculateCalories(og, fg);
 
     return {

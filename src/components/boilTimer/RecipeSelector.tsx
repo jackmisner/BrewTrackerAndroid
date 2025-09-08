@@ -21,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTheme, ThemeContextValue } from "@contexts/ThemeContext";
 import { Recipe } from "@src/types";
 import ApiService from "@services/api/apiService";
+import { TEST_IDS } from "@constants/testIDs";
 
 interface RecipeSelectorProps {
   selectedRecipe: {
@@ -32,6 +33,7 @@ interface RecipeSelectorProps {
   onRecipeSelect: (recipe: Recipe | null) => void;
   onManualMode: () => void;
   disabled?: boolean;
+  testID?: string;
 }
 
 interface RecipeItemProps {
@@ -60,6 +62,9 @@ const RecipeItem: React.FC<RecipeItemProps> = ({
       },
     ]}
     onPress={() => onSelect(recipe)}
+    testID={TEST_IDS.patterns.touchableOpacityAction(
+      `recipe-select-${recipe.id}`
+    )}
   >
     <View style={styles.recipeItemContent}>
       <Text
@@ -99,6 +104,7 @@ export const RecipeSelector: React.FC<RecipeSelectorProps> = ({
   onRecipeSelect,
   onManualMode,
   disabled = false,
+  testID,
 }) => {
   const theme = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
@@ -152,6 +158,7 @@ export const RecipeSelector: React.FC<RecipeSelectorProps> = ({
         ]}
         onPress={() => !disabled && setModalVisible(true)}
         disabled={disabled}
+        testID={testID}
       >
         <View style={styles.selectorContent}>
           <MaterialIcons
@@ -257,6 +264,7 @@ export const RecipeSelector: React.FC<RecipeSelectorProps> = ({
               { borderBottomColor: theme.colors.borderLight },
             ]}
             onPress={handleManualMode}
+            testID={TEST_IDS.patterns.touchableOpacityAction("manual-mode")}
           >
             <MaterialIcons
               name="timer"

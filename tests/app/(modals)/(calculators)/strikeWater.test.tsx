@@ -68,6 +68,8 @@ const mockStrikeWaterCalculator = {
 };
 
 jest.mock("@services/calculators/StrikeWaterCalculator", () => ({
+  __esModule: true,
+  default: mockStrikeWaterCalculator,
   StrikeWaterCalculator: mockStrikeWaterCalculator,
 }));
 
@@ -96,6 +98,8 @@ const mockUnitConverter = {
 };
 
 jest.mock("@/src/services/calculators/UnitConverter", () => ({
+  __esModule: true,
+  default: mockUnitConverter,
   UnitConverter: mockUnitConverter,
 }));
 

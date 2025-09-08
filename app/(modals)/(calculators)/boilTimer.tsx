@@ -32,6 +32,7 @@ import * as Notifications from "expo-notifications";
 import { useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import ApiService from "@services/api/apiService";
+import { TEST_IDS } from "@constants/testIDs";
 import {
   useCalculators,
   CalculatorAction,
@@ -93,6 +94,7 @@ const TimerControls: React.FC<TimerControlsProps> = ({
         ]}
         onPress={onStart}
         disabled={disabled}
+        testID={TEST_IDS.patterns.touchableOpacityAction("start-timer")}
       >
         <MaterialIcons name="play-arrow" size={32} color="white" />
         <Text style={styles.buttonText}>Start</Text>
@@ -108,6 +110,11 @@ const TimerControls: React.FC<TimerControlsProps> = ({
           },
         ]}
         onPress={isPaused ? onStart : onPause}
+        testID={
+          isPaused
+            ? TEST_IDS.patterns.touchableOpacityAction("resume-timer")
+            : TEST_IDS.patterns.touchableOpacityAction("pause-timer")
+        }
       >
         <MaterialIcons
           name={isPaused ? "play-arrow" : "pause"}
@@ -121,6 +128,7 @@ const TimerControls: React.FC<TimerControlsProps> = ({
     <TouchableOpacity
       style={[styles.secondaryButton, { backgroundColor: theme.colors.error }]}
       onPress={onStop}
+      testID={TEST_IDS.patterns.touchableOpacityAction("stop-timer")}
     >
       <MaterialIcons name="stop" size={24} color="white" />
       <Text style={styles.secondaryButtonText}>Stop</Text>
@@ -132,6 +140,7 @@ const TimerControls: React.FC<TimerControlsProps> = ({
         { backgroundColor: theme.colors.textSecondary },
       ]}
       onPress={onReset}
+      testID={TEST_IDS.patterns.touchableOpacityAction("reset-timer")}
     >
       <MaterialIcons name="refresh" size={24} color="white" />
       <Text style={styles.secondaryButtonText}>Reset</Text>
@@ -225,6 +234,7 @@ const HopAdditionCard: React.FC<HopAdditionCardProps> = ({
               },
             ]}
             onPress={() => onMarkAdded(index)}
+            testID={TEST_IDS.boilTimer.hopAddition(index)}
           >
             <MaterialIcons name="add" size={20} color="white" />
             <Text style={styles.addButtonText}>Mark Added</Text>
@@ -309,7 +319,7 @@ export default function BoilTimerCalculatorScreen() {
   // Auto-load recipe from URL params if provided
   useEffect(() => {
     if (paramRecipe && !boilTimer.selectedRecipe && !isLoadingRecipe) {
-      console.log("Auto-loading recipe from URL params:", paramRecipe.name);
+      // console.log("Auto-loading recipe from URL params:", paramRecipe.name);
       handleRecipeSelect(paramRecipe);
     }
   }, [
@@ -325,7 +335,7 @@ export default function BoilTimerCalculatorScreen() {
       try {
         const restoredState = await TimerPersistenceService.loadTimerState();
         if (restoredState) {
-          console.log("Restored timer state from storage");
+          // console.log("Restored timer state from storage");
 
           // Update context with restored state
           restoreBoilTimerState(restoredState, dispatch);
@@ -358,7 +368,7 @@ export default function BoilTimerCalculatorScreen() {
         nextAppState === "active"
       ) {
         // App came to foreground
-        console.log("App came to foreground");
+        // console.log("App came to foreground");
         const restoredState =
           await TimerPersistenceService.handleAppForeground();
 
@@ -380,7 +390,7 @@ export default function BoilTimerCalculatorScreen() {
         }
       } else if (nextAppState.match(/inactive|background/)) {
         // App going to background
-        console.log("App going to background");
+        // console.log("App going to background");
         await TimerPersistenceService.handleAppBackground(boilTimer);
       }
 
@@ -423,14 +433,14 @@ export default function BoilTimerCalculatorScreen() {
       // Set up notification listeners
       const foregroundListener = NotificationService.setupForegroundListener(
         notification => {
-          console.log("Foreground notification received:", notification);
+          // console.log("Foreground notification received:", notification);
           NotificationService.triggerHapticFeedback("heavy");
         }
       );
 
       const responseListener = NotificationService.setupResponseListener(
         response => {
-          console.log("Notification response:", response);
+          // console.log("Notification response:", response);
           // Handle notification tap - could navigate to timer or show alert
         }
       );
@@ -557,16 +567,16 @@ export default function BoilTimerCalculatorScreen() {
     // 4. Special handling added for hop additions equal to boil duration
 
     const startTime = Date.now();
-    if (__DEV__) {
-      console.log(`🚀 Starting boil timer:`);
-      console.log(`  - Duration: ${boilTimer.duration} minutes`);
-      console.log(
-        `  - Time remaining: ${boilTimer.timeRemaining}s (${boilTimer.timeRemaining / 60} min)`
-      );
-      console.log(`  - Recipe mode: ${boilTimer.isRecipeMode}`);
-      console.log(`  - Hop alerts: ${boilTimer.hopAlerts.length}`);
-      console.log(`  - Start time: ${new Date(startTime).toISOString()}`);
-    }
+    // if (__DEV__) {
+    //   console.log(`🚀 Starting boil timer:`);
+    //   console.log(`  - Duration: ${boilTimer.duration} minutes`);
+    //   console.log(
+    //     `  - Time remaining: ${boilTimer.timeRemaining}s (${boilTimer.timeRemaining / 60} min)`
+    //   );
+    //   console.log(`  - Recipe mode: ${boilTimer.isRecipeMode}`);
+    //   console.log(`  - Hop alerts: ${boilTimer.hopAlerts.length}`);
+    //   console.log(`  - Start time: ${new Date(startTime).toISOString()}`);
+    // }
 
     // Reset dedupe and ensure a clean schedule on (re)start
     scheduledHopAlertsRef.current.clear();
@@ -583,11 +593,11 @@ export default function BoilTimerCalculatorScreen() {
 
     // Schedule notifications for hop additions if in recipe mode
     if (boilTimer.isRecipeMode && boilTimer.hopAlerts.length > 0) {
-      if (__DEV__) {
-        console.log(
-          `🍺 Scheduling ${boilTimer.hopAlerts.length} hop alerts for recipe mode`
-        );
-      }
+      // if (__DEV__) {
+      //   console.log(
+      //     `🍺 Scheduling ${boilTimer.hopAlerts.length} hop alerts for recipe mode`
+      //   );
+      // }
       await NotificationService.scheduleHopAlertsForRecipe(
         boilTimer.hopAlerts,
         boilTimer.timeRemaining
@@ -595,25 +605,25 @@ export default function BoilTimerCalculatorScreen() {
     }
 
     // Schedule milestone notifications
-    if (__DEV__) {
-      console.log(`📅 Scheduling milestone notifications`);
-    }
+    // if (__DEV__) {
+    //   console.log(`📅 Scheduling milestone notifications`);
+    // }
     await NotificationService.scheduleMilestoneNotifications(
       boilTimer.timeRemaining
     );
 
     // Schedule boil complete notification
-    if (__DEV__) {
-      console.log(`✅ Scheduling boil completion notification`);
-    }
+    // if (__DEV__) {
+    //   console.log(`✅ Scheduling boil completion notification`);
+    // }
     await NotificationService.scheduleBoilCompleteNotification(
       boilTimer.timeRemaining
     );
 
     if (__DEV__) {
-      console.log(
-        `🚀 Timer started successfully in ${Date.now() - startTime}ms`
-      );
+      // console.log(
+      //   `🚀 Timer started successfully in ${Date.now() - startTime}ms`
+      // );
 
       // Log all scheduled notifications for debugging
       await NotificationService.logScheduledNotifications();
@@ -701,6 +711,7 @@ export default function BoilTimerCalculatorScreen() {
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
+      testID={TEST_IDS.boilTimer.screen}
     >
       <CalculatorHeader title="Boil Timer" />
 
@@ -715,6 +726,7 @@ export default function BoilTimerCalculatorScreen() {
             onRecipeSelect={handleRecipeSelect}
             onManualMode={() => handleRecipeSelect(null)}
             disabled={boilTimer.isRunning}
+            testID={TEST_IDS.boilTimer.recipeSelector}
           />
 
           {!boilTimer.isRecipeMode && (
@@ -728,7 +740,7 @@ export default function BoilTimerCalculatorScreen() {
               max={240}
               step={5}
               precision={0}
-              testID="boil-duration-input"
+              testID={TEST_IDS.boilTimer.durationInput}
               disabled={boilTimer.isRunning}
             />
           )}
@@ -740,6 +752,7 @@ export default function BoilTimerCalculatorScreen() {
             styles.timerDisplay,
             { backgroundColor: theme.colors.backgroundSecondary },
           ]}
+          testID={TEST_IDS.boilTimer.timerDisplay}
         >
           <View style={styles.timerHeader}>
             <Text
@@ -771,6 +784,7 @@ export default function BoilTimerCalculatorScreen() {
               styles.progressBar,
               { backgroundColor: theme.colors.borderLight },
             ]}
+            testID={TEST_IDS.boilTimer.progressBar}
           >
             <View
               style={[
