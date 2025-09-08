@@ -2,7 +2,6 @@
 
 A React Native mobile app for the BrewTracker homebrewing platform, built with Expo.
 
-
 ## Getting Started
 
 ### Prerequisites
@@ -157,7 +156,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── EfficiencyCalculator.ts               # Mash and brewhouse efficiency calculations (Service created, modal route not implemented yet)
 │   │   │   ├── HydrometerCorrectionCalculator.ts     # Temperature-corrected hydrometer readings
 │   │   │   ├── PrimingSugarCalculator.ts             # Carbonation and priming sugar calculations (Service created, modal route not implemented yet)
-│   │   │   ├── StrikeWaterCalculator.ts              # Mash strike water temperature calculations 
+│   │   │   ├── StrikeWaterCalculator.ts              # Mash strike water temperature calculations
 │   │   │   ├── UnitConverter.ts                      # Unit conversion utilities and logic
 │   │   │   └── YeastPitchRateCalculator.ts           # Yeast pitching rate and viability calculations (Service created, modal route not implemented yet)
 │   │   ├── config.ts                                 # Service configuration and constants
@@ -395,15 +394,15 @@ The BrewTrackerAndroid API service layer has been hardened with robust security 
 ```typescript
 // Error handling with normalization
 try {
-   const recipe = await ApiService.recipes.getById("recipe-id");
+  const recipe = await ApiService.recipes.getById("recipe-id");
 } catch (error) {
-   const normalized = ApiService.handleApiError(error);
+  const normalized = ApiService.handleApiError(error);
 
   if (normalized.isRetryable) {
-     // Will be automatically retried for GET requests
+    // Will be automatically retried for GET requests
     console.log("Retrying request...");
   } else {
-     // Handle non-retryable errors
+    // Handle non-retryable errors
     showUserError(normalized.message);
   }
 }
@@ -445,6 +444,7 @@ EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
 **Current Focus:** Implementing final advanced features to achieve 100% web app parity
 
 #### High Priority Missing Features:
+
 - **AI Optimization Engine**: Recipe analysis and improvement suggestions
 - **Advanced Analytics**: Brewing dashboard and comprehensive reporting
 - **Enhanced Ingredient Database**: Advanced ingredient management and search
