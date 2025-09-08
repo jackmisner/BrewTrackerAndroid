@@ -394,29 +394,11 @@ export class NotificationService {
   /**
    * Log all currently scheduled notifications for debugging
    */
+
   public static async logScheduledNotifications(): Promise<void> {
     if (!__DEV__) return;
-
-    try {
-      // const notifications = await this.getScheduledNotifications();
-      // console.log(
-      //   `📋 Currently scheduled notifications: ${notifications.length}`
-      // );
-      // notifications.forEach((notification, index) => {
-      //   const triggerTime =
-      //     notification.trigger && "seconds" in notification.trigger
-      //       ? notification.trigger.seconds
-      //       : "immediate";
-      //   console.log(`  ${index + 1}. "${notification.content.title}"`);
-      //   console.log(
-      //     `     Trigger: ${triggerTime}s from now (${typeof triggerTime === "number" ? triggerTime / 60 : triggerTime} min)`
-      //   );
-      //   console.log(`     ID: ${notification.identifier}`);
-      //   console.log(`     Body: ${notification.content.body}`);
-      // });
-    } catch (error) {
-      console.error("Failed to log scheduled notifications:", error);
-    }
+    const notifications = await this.getScheduledNotifications();
+    console.log(`📋 Scheduled notifications: ${notifications.length}`);
   }
 
   /**
