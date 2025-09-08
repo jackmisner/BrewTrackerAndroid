@@ -1,12 +1,16 @@
 import { lightColors, darkColors, colors } from "@src/styles/common/colors";
 
 const validateHexColor = (colorValue: string): boolean => {
-  // Allow #rgb, #rrggbb, or named colors like 'white', 'black'
+  // Allow #rgb, #rrggbb, rgba(), or named colors like 'white', 'black'
   const isHex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(colorValue);
+  const isRgba =
+    /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([0-9]*\.?[0-9]+))?\s*\)$/.test(
+      colorValue
+    );
   const isNamedColor = ["#fff", "#ffffff", "#000", "#000000"].includes(
     colorValue
   );
-  return isHex || isNamedColor;
+  return isHex || isRgba || isNamedColor;
 };
 
 describe("Color Constants", () => {

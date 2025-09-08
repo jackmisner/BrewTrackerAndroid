@@ -35,9 +35,22 @@ jest.mock("@services/api/apiService", () => ({
   },
 }));
 
-jest.mock("@src/components/ui/ContextMenu/BaseContextMenu", () => ({
-  BaseContextMenu: ({ children }: { children: React.ReactNode }) => children,
-}));
+jest.mock("@src/components/ui/ContextMenu/BaseContextMenu", () => {
+  const React = require("react");
+  const RN = require("react-native");
+  return {
+    BaseContextMenu: ({ visible, actions, item }: any) => {
+      if (!visible || !item) return null;
+      return React.createElement(
+        RN.View,
+        {},
+        actions.map((action: any) =>
+          React.createElement(RN.Text, { key: action.id }, action.title)
+        )
+      );
+    },
+  };
+});
 
 describe("FermentationEntryContextMenu", () => {
   const defaultProps = {
@@ -64,10 +77,18 @@ describe("FermentationEntryContextMenu", () => {
     jest.clearAllMocks();
   });
 
-  it("should render without crashing", () => {
-    expect(() => {
-      render(<FermentationEntryContextMenu {...defaultProps} />);
-    }).not.toThrow();
+  it("should render menu options when entry is provided", () => {
+    const props = {
+      ...defaultProps,
+      entry: mockEntry,
+      entryIndex: 1,
+    };
+
+    const { getByText } = render(<FermentationEntryContextMenu {...props} />);
+
+    expect(getByText("View Details")).toBeTruthy();
+    expect(getByText("Edit Entry")).toBeTruthy();
+    expect(getByText("Delete Entry")).toBeTruthy();
   });
 
   it("should render with entry data", () => {

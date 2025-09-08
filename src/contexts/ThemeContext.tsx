@@ -52,6 +52,10 @@ export type ThemeMode = "light" | "dark" | "system";
  */
 export interface ThemeColors {
   primary: string;
+  primaryLight10: string;
+  primaryLight20: string;
+  primaryLight30: string;
+  primaryLight40: string;
   primaryText: string;
   background: string;
   backgroundSecondary: string;

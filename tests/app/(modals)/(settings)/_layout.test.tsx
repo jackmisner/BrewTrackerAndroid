@@ -24,7 +24,9 @@ jest.mock("expo-router", () => {
 });
 
 describe("SettingsModalsLayout", () => {
-  it("should render without crashing", () => {
+  it("should render layout component successfully", () => {
+    // Layout components primarily serve as navigation structure
+    // Testing that they render without errors is sufficient for these simple wrappers
     expect(() => {
       render(<SettingsModalsLayout />);
     }).not.toThrow();

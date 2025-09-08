@@ -39,6 +39,7 @@ import { AuthProvider } from "@contexts/AuthContext";
 import { ThemeProvider, useTheme } from "@contexts/ThemeContext";
 import { UnitProvider } from "@contexts/UnitContext";
 import { ScreenDimensionsProvider } from "@contexts/ScreenDimensionsContext";
+import { CalculatorsProvider } from "@contexts/CalculatorsContext";
 import { queryClient } from "@services/api/queryClient";
 
 // Component to handle StatusBar with theme
@@ -55,44 +56,46 @@ export default function RootLayout() {
         <ScreenDimensionsProvider>
           <AuthProvider>
             <UnitProvider>
-              <Stack
-                screenOptions={{
-                  headerStyle: {
-                    backgroundColor: "#f4511e",
-                  },
-                  headerTintColor: "#fff",
-                  headerTitleStyle: {
-                    fontWeight: "bold",
-                  },
-                }}
-              >
-                <Stack.Screen
-                  name="index"
-                  options={{
-                    title: "BrewTracker",
-                    headerShown: false,
+              <CalculatorsProvider>
+                <Stack
+                  screenOptions={{
+                    headerStyle: {
+                      backgroundColor: "#f4511e",
+                    },
+                    headerTintColor: "#fff",
+                    headerTitleStyle: {
+                      fontWeight: "bold",
+                    },
                   }}
-                />
-                <Stack.Screen
-                  name="(auth)"
-                  options={{
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen
-                  name="(tabs)"
-                  options={{
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen
-                  name="(modals)"
-                  options={{
-                    headerShown: false,
-                    presentation: "modal",
-                  }}
-                />
-              </Stack>
+                >
+                  <Stack.Screen
+                    name="index"
+                    options={{
+                      title: "BrewTracker",
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="(auth)"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="(tabs)"
+                    options={{
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="(modals)"
+                    options={{
+                      headerShown: false,
+                      presentation: "modal",
+                    }}
+                  />
+                </Stack>
+              </CalculatorsProvider>
             </UnitProvider>
           </AuthProvider>
         </ScreenDimensionsProvider>
