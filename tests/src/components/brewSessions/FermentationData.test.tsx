@@ -119,7 +119,7 @@ describe("FermentationData", () => {
     expect(getByText("pH")).toBeTruthy();
   });
 
-    it("should display fermentation entry data", () => {
+  it("should display fermentation entry data", () => {
     const fermentationData = [
       {
         id: "entry-1",
@@ -137,8 +137,8 @@ describe("FermentationData", () => {
     const { getByText } = render(<FermentationData {...props} />);
     const expectedDate = new Date("2024-01-15T10:30:00Z").toLocaleDateString();
     expect(getByText(expectedDate)).toBeTruthy(); // Date formatted
-    expect(getByText("1.020")).toBeTruthy();       // Gravity
-    expect(getByText("20°C")).toBeTruthy();        // Temperature
-    expect(getByText("4.50")).toBeTruthy();        // pH
+    expect(getByText("1.020")).toBeTruthy(); // Gravity
+    expect(getByText("20°C")).toBeTruthy(); // Temperature
+    expect(getByText("4.50")).toBeTruthy(); // pH
   });
 });
