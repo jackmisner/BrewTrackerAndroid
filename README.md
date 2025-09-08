@@ -2,17 +2,6 @@
 
 A React Native mobile app for the BrewTracker homebrewing platform, built with Expo.
 
-## Features
-
-- **Authentication**: Complete login/register flow with email verification and JWT tokens
-- **Recipe Management**: Full CRUD operations, recipe cloning with versioning, complete version history
-- **BeerXML Import/Export**: Complete mobile workflow with file picker, ingredient matching, and sharing
-- **Brew Session Tracking**: Full CRUD operations with fermentation data entry and tracking
-- **Advanced Features**: Recipe cloning system, version history with timeline navigation
-- **User Profile**: Settings management with theme support
-- **Offline Support**: React Query caching for improved performance
-- **Native Experience**: Touch-optimized UI with theme support and responsive design
-
 ## Getting Started
 
 ### Prerequisites
@@ -75,6 +64,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   ├── index.tsx                                 # Dashboard/home screen with brewing overview
 │   │   ├── recipes.tsx                               # Recipe management and browsing
 │   │   ├── brewSessions.tsx                          # Brew session tracking and management
+│   │   ├── utilities.tsx                             # Brewing calculators and utility tools
 │   │   ├── profile.tsx                               # User profile and settings with secure logout
 │   │   └── _layout.tsx                               # Tab navigation layout with Material Icons
 │   ├── (modals)/                                     # Modal/detail screens (not in tab navigation)
@@ -83,8 +73,9 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── _layout.tsx                           # Recipe modals layout
 │   │   │   ├── viewRecipe.tsx                        # Individual recipe detail view with ingredients and metrics
 │   │   │   ├── createRecipe.tsx                      # Multi-step recipe creation wizard
-│   │   │   ├── editRecipe.tsx                        # Recipe editing interface
-│   │   │   ├── versionHistory.tsx                    # Recipe version history timeline navigation
+│   │   │   ├── editRecipe/                           # Recipe editing interfaces
+│   │   │   │   └── [id].tsx                          # Individual recipe editing with ID routing
+│   │   │   ├── versionHistory.tsx                    # Recipe version history timeline navigation (358 lines)
 │   │   │   └── ingredientPicker.tsx                  # Full-screen ingredient selection with search and filtering
 │   │   ├── (beerxml)/                                # BeerXML import/export workflow screens
 │   │   │   ├── importBeerXML.tsx                     # BeerXML file selection and parsing
@@ -94,9 +85,19 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── _layout.tsx                           # Brew session modals layout
 │   │   │   ├── viewBrewSession.tsx                   # Individual brew session detail view with metrics and status
 │   │   │   ├── createBrewSession.tsx                 # Multi-step brew session creation wizard
-│   │   │   ├── editBrewSession.tsx                   # Brew session editing interface
+│   │   │   ├── editBrewSession/                      # Brew session editing interfaces
+│   │   │   │   └── [id].tsx                          # Individual brew session editing with ID routing
 │   │   │   ├── addFermentationEntry.tsx              # Add new fermentation data entries
-│   │   │   └── editFermentationEntry.tsx             # Edit existing fermentation data entries
+│   │   │   └── editFermentationEntry/                # Fermentation entry editing interfaces
+│   │   │       └── [id].tsx                          # Individual fermentation entry editing with ID routing
+│   │   ├── (calculators)/                            # Brewing calculator tools
+│   │   │   ├── _layout.tsx                           # Calculator modals layout
+│   │   │   ├── abv.tsx                               # ABV (Alcohol by Volume) calculator
+│   │   │   ├── dilution.tsx                          # Water dilution calculator
+│   │   │   ├── strikeWater.tsx                       # Strike water temperature calculator
+│   │   │   ├── hydrometerCorrection.tsx              # Hydrometer temperature correction calculator
+│   │   │   ├── unitConverter.tsx                     # Unit conversion calculator
+│   │   │   └── boilTimer.tsx                         # Boil timer with hop addition alerts
 │   │   └── (settings)/                               # Settings screens
 │   │       ├── _layout.tsx                           # Settings modals layout
 │   │       └── settings.tsx                          # User settings and preferences
@@ -108,6 +109,12 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── FermentationChart.tsx                 # Interactive fermentation tracking charts with dual-axis
 │   │   │   ├── FermentationData.tsx                  # Fermentation data display and management component
 │   │   │   └── FermentationEntryContextMenu.tsx      # Context menu for fermentation entry actions
+│   │   ├── calculators/                              # Brewing calculator components
+│   │   │   ├── CalculatorCard.tsx                    # Reusable calculator card component for utilities screen
+│   │   │   ├── CalculatorHeader.tsx                  # Standard calculator header with title and description
+│   │   │   ├── ResultDisplay.tsx                     # Standardized result display component for calculations
+│   │   │   ├── UnitToggle.tsx                        # Unit system toggle component for calculator inputs
+│   │   │   └── NumberInput.tsx                       # Specialized number input component for calculator forms
 │   │   ├── recipes/                                  # Recipe management components
 │   │   │   ├── BrewingMetrics/                       # Recipe metrics display components
 │   │   │   │   └── BrewingMetricsDisplay.tsx         # Reusable brewing metrics with SRM color visualization
@@ -126,6 +133,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │           └── contextMenuUtils.ts               # Shared utilities for context menu operations
 │   ├── contexts/                                     # React contexts for global state
 │   │   ├── AuthContext.tsx                           # Authentication context with secure token storage
+│   │   ├── CalculatorsContext.tsx                    # Calculator state management and shared logic
 │   │   ├── ScreenDimensionsContext.tsx               # Screen dimensions management with support for foldable devices
 │   │   ├── ThemeContext.tsx                          # Theme management with light/dark mode support
 │   │   └── UnitContext.tsx                           # Unit system management (imperial/metric)
@@ -141,6 +149,16 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   └── idInterceptor.ts                      # MongoDB ObjectId to string normalization
 │   │   ├── beerxml/                                  # BeerXML processing services
 │   │   │   └── BeerXMLService.ts                     # BeerXML import/export with mobile file integration
+│   │   ├── calculators/                              # Brewing calculation services
+│   │   │   ├── ABVCalculator.ts                      # Alcohol by Volume calculation logic
+│   │   │   ├── BoilTimerCalculator.ts                # Boil timer and hop addition scheduling
+│   │   │   ├── DilutionCalculator.ts                 # Water dilution and blending calculations
+│   │   │   ├── EfficiencyCalculator.ts               # Mash and brewhouse efficiency calculations (Service created, modal route not implemented yet)
+│   │   │   ├── HydrometerCorrectionCalculator.ts     # Temperature-corrected hydrometer readings
+│   │   │   ├── PrimingSugarCalculator.ts             # Carbonation and priming sugar calculations (Service created, modal route not implemented yet)
+│   │   │   ├── StrikeWaterCalculator.ts              # Mash strike water temperature calculations
+│   │   │   ├── UnitConverter.ts                      # Unit conversion utilities and logic
+│   │   │   └── YeastPitchRateCalculator.ts           # Yeast pitching rate and viability calculations (Service created, modal route not implemented yet)
 │   │   ├── config.ts                                 # Service configuration and constants
 │   │   └── storageService.ts                         # Storage service for file operations and permissions
 │   ├── constants/                                    # Shared constants and configuration
@@ -269,12 +287,13 @@ This approach provides:
 - `npm run format` - Format code with Prettier
 - `npm run format:check` - Check code formatting
 
-### Code Quality
+### Code Quality & Testing
 
-- **TypeScript**: Strict type checking with `npm run type-check`
-- **Linting**: oxlint integration (100x faster than ESLint)
-- **Testing**: >70% coverage with 1,915+ comprehensive tests
-- **CI/CD**: Automated quality checks in GitHub Actions
+- **TypeScript**: Strict type checking with `npm run type-check` (must pass for all commits)
+- **Linting**: oxlint primary linter (100x faster than ESLint), ESLint fallback available
+- **Testing**: >70% coverage with 2,500+ comprehensive tests across all features
+- **Quality Gates**: All CRUD operations, advanced features, and UI components fully tested
+- **CI/CD**: Automated quality checks ensure code standards
 
 ### Environment Variables
 
@@ -397,34 +416,38 @@ EXPO_PUBLIC_API_URL=https://api.brewtracker.com/v1  # Must be valid URL
 EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
 ```
 
-## 💡 **Strategic Considerations**
+## 💡 **Development Achievements & Architecture**
 
-### **Mobile-First Adaptations Complete:**
+### **Phase 5 Completion Status: ~85% Feature Parity** ✅
 
-- ✅ Touch-optimized ingredient selection with full picker interface
-- ✅ 4-step recipe builder optimized for mobile screens
-- ✅ Touch-friendly context menus and navigation
-- ✅ Gesture-based navigation with Expo Router and modals
-- ✅ Complete BeerXML import/export with 3-screen mobile workflow and ingredient matching
+### ✅ Core Features Complete
 
-### **Backend Capabilities:**
+- **Authentication**: Complete login/register flow with email verification and secure JWT token storage
+- **Recipe Management**: Full CRUD operations with 4-step creation wizard and real-time calculations
+- **Recipe Cloning System**: Differentiated logic for private recipes (versioning) vs public recipes (attribution)
+- **Version History**: Complete timeline navigation with visual version tree and interactive browsing
+- **BeerXML Import/Export**: 3-screen mobile workflow with ingredient matching and file sharing
+- **Brew Session Tracking**: Full CRUD operations with comprehensive fermentation data management
+- **Advanced UI/UX**: Touch-optimized interface, context menus, gesture navigation, and theme support
+- **Testing Infrastructure**: >70% coverage with 2,500+ comprehensive tests
 
-- ✅ Most APIs exist for missing features (verify relevant endpoints per feature)
-- ✅ Mobile-optimized endpoints available
-- ✅ Comprehensive data models support all features
+### 🔧 Advanced Technical Features
 
-### **Architecture Readiness:**
+- **React Query Integration**: Optimistic updates, cache invalidation, and background sync
+- **Secure Storage**: JWT tokens in Expo SecureStore (not localStorage)
+- **Mobile-First Design**: 48dp touch targets, responsive layouts, foldable device support
+- **Network Resilience**: Hardened API service with retry logic and error normalization
+- **Type Safety**: Full TypeScript coverage with strict type checking
 
-- ✅ React Query caching supports complex features
-  🔶 Offline Write Strategy:
-  - Pending mutation queue with retry/backoff
-  - Conflict resolution policy (last-write-wins or server-merged)
-  - Idempotency keys for create/edit to prevent duplicates
-  - User feedback for out-of-sync edits
-- ✅ Type definitions exist for all data models
-- ✅ Theme system can handle complex UIs
-- ✅ Navigation structure supports modal workflows
-  **Current Status:** Phase 5 Nearly Complete (~85% Feature Parity), focusing on AI integration and advanced analytics to achieve full feature parity with web application.
+### 🎯 Phase 5+ Roadmap: Final Feature Parity (~15% Remaining)
+
+**Current Focus:** Implementing final advanced features to achieve 100% web app parity
+
+#### High Priority Missing Features:
+
+- **AI Optimization Engine**: Recipe analysis and improvement suggestions
+- **Advanced Analytics**: Brewing dashboard and comprehensive reporting
+- **Enhanced Ingredient Database**: Advanced ingredient management and search
 
 ## Contributing
 
