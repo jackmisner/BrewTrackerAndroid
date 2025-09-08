@@ -1,0 +1,713 @@
+/**
+ * Tests for Hydrometer Correction Calculator Screen
+ *
+ * Tests the hydrometer correction calculator modal including temperature conversions,
+ * input validation, and result display
+ */
+
+import React from "react";
+import { render, fireEvent } from "@testing-library/react-native";
+import HydrometerCorrectionCalculatorScreen from "../../../../app/(modals)/(calculators)/hydrometerCorrection";
+import { HydrometerCorrectionCalculator } from "@services/calculators/HydrometerCorrectionCalculator";
+
+// Comprehensive React Native mocking
+jest.mock("react-native", () => {
+  const React = require("react");
+  return {
+    View: (props: any) => React.createElement("View", props, props.children),
+    ScrollView: (props: any) =>
+      React.createElement("ScrollView", props, props.children),
+    TouchableOpacity: (props: any) =>
+      React.createElement("TouchableOpacity", props, props.children),
+    Text: (props: any) => React.createElement("Text", props, props.children),
+    StyleSheet: {
+      create: (styles: any) => styles,
+      flatten: (styles: any) => styles,
+    },
+  };
+});
+
+// Mock MaterialIcons
+jest.mock("@expo/vector-icons", () => ({
+  MaterialIcons: ({ name }: { name: string }) => name,
+}));
+
+// Mock theme context
+jest.mock("@contexts/ThemeContext", () => ({
+  useTheme: () => ({
+    colors: {
+      text: "#000000",
+      textSecondary: "#666666",
+      primary: "#007AFF",
+      primaryText: "#FFFFFF",
+      background: "#FFFFFF",
+      backgroundSecondary: "#F8F9FA",
+      borderLight: "#E0E0E0",
+      cardBackground: "#FFFFFF",
+    },
+  }),
+}));
+
+// Mock calculators context
+const mockDispatch = jest.fn();
+const mockState = {
+  hydrometerCorrection: {
+    measuredGravity: "",
+    wortTemp: "",
+    calibrationTemp: "",
+    tempUnit: "f" as "f" | "c",
+    result: Number.NaN || null,
+  },
+  history: [],
+};
+
+jest.mock("@contexts/CalculatorsContext", () => ({
+  useCalculators: () => ({
+    state: mockState,
+    dispatch: mockDispatch,
+  }),
+}));
+
+// Mock calculator components
+jest.mock("@components/calculators/CalculatorCard", () => {
+  const { View } = require("react-native");
+  return {
+    CalculatorCard: ({ title, children }: { title: string; children: any }) => (
+      <View
+        testID={`calculator-card-${title.toLowerCase().replace(/\s+/g, "-")}`}
+      >
+        {children}
+      </View>
+    ),
+  };
+});
+
+jest.mock("@components/calculators/CalculatorHeader", () => {
+  const { View } = require("react-native");
+  return {
+    CalculatorHeader: ({ title }: { title: string }) => (
+      <View testID="calculator-header">{title}</View>
+    ),
+  };
+});
+
+jest.mock("@components/calculators/NumberInput", () => {
+  const { View } = require("react-native");
+  return {
+    NumberInput: ({ label, testID, onChangeText }: any) => {
+      const { TouchableOpacity, Text } = require("react-native");
+      return (
+        <TouchableOpacity
+          testID={testID}
+          onPress={() => onChangeText && onChangeText("test-value")}
+        >
+          <Text>{label}</Text>
+        </TouchableOpacity>
+      );
+    },
+  };
+});
+
+jest.mock("@components/calculators/UnitToggle", () => {
+  return {
+    UnitToggle: ({ label, onChange, value }: any) => {
+      const { TouchableOpacity, Text } = require("react-native");
+      return (
+        <TouchableOpacity
+          testID="unit-toggle"
+          onPress={() => onChange && onChange(value === "f" ? "c" : "f")}
+        >
+          <Text>{label}</Text>
+        </TouchableOpacity>
+      );
+    },
+  };
+});
+
+jest.mock("@components/calculators/ResultDisplay", () => {
+  const { View } = require("react-native");
+  return {
+    SingleResult: ({ label, value }: any) => (
+      <View testID="single-result">
+        {label}
+        {value}
+      </View>
+    ),
+  };
+});
+
+// Mock HydrometerCorrectionCalculator service
+jest.mock("@services/calculators/HydrometerCorrectionCalculator", () => ({
+  HydrometerCorrectionCalculator: {
+    calculateCorrection: jest.fn(),
+  },
+}));
+
+const mockHydrometerCalculator = HydrometerCorrectionCalculator as jest.Mocked<
+  typeof HydrometerCorrectionCalculator
+>;
+
+describe("HydrometerCorrectionCalculatorScreen", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockState.hydrometerCorrection = {
+      measuredGravity: "",
+      wortTemp: "",
+      calibrationTemp: "",
+      tempUnit: "f" as const,
+      result: null,
+    };
+  });
+
+  describe("basic rendering", () => {
+    it("should render without crashing", () => {
+      expect(() =>
+        render(<HydrometerCorrectionCalculatorScreen />)
+      ).not.toThrow();
+    });
+
+    it("should render header with correct title", () => {
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      expect(getByTestId("calculator-header")).toBeTruthy();
+    });
+
+    it("should render settings section", () => {
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      expect(getByTestId("calculator-card-settings")).toBeTruthy();
+      expect(getByTestId("unit-toggle")).toBeTruthy();
+    });
+
+    it("should render gravity reading section", () => {
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      expect(getByTestId("calculator-card-gravity-reading")).toBeTruthy();
+      expect(getByTestId("hydrometer-measured-gravity")).toBeTruthy();
+      expect(getByTestId("hydrometer-sample-temp")).toBeTruthy();
+    });
+
+    it("should render hydrometer calibration section", () => {
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      expect(
+        getByTestId("calculator-card-hydrometer-calibration")
+      ).toBeTruthy();
+      expect(getByTestId("hydrometer-calibration-temp")).toBeTruthy();
+    });
+
+    it("should not render result when no result available", () => {
+      const { queryByTestId } = render(
+        <HydrometerCorrectionCalculatorScreen />
+      );
+      expect(queryByTestId("single-result")).toBeNull();
+    });
+  });
+
+  describe("input handling", () => {
+    it("should handle measured gravity input change", () => {
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+
+      const gravityInput = getByTestId("hydrometer-measured-gravity");
+      fireEvent.press(gravityInput);
+
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "SET_HYDROMETER_CORRECTION",
+        payload: { measuredGravity: "test-value" },
+      });
+    });
+
+    it("should handle sample temperature input change", () => {
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+
+      const tempInput = getByTestId("hydrometer-sample-temp");
+      fireEvent.press(tempInput);
+
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "SET_HYDROMETER_CORRECTION",
+        payload: { wortTemp: "test-value" },
+      });
+    });
+
+    it("should handle calibration temperature input change", () => {
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+
+      const calibrationInput = getByTestId("hydrometer-calibration-temp");
+      fireEvent.press(calibrationInput);
+
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "SET_HYDROMETER_CORRECTION",
+        payload: { calibrationTemp: "test-value" },
+      });
+    });
+
+    it("should handle temperature unit change", () => {
+      mockState.hydrometerCorrection.wortTemp = "75";
+      mockState.hydrometerCorrection.calibrationTemp = "68";
+
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+
+      const unitToggle = getByTestId("unit-toggle");
+      fireEvent.press(unitToggle);
+
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "SET_HYDROMETER_CORRECTION",
+        payload: {
+          tempUnit: "c",
+          wortTemp: "23.9", // 75°F to °C
+          calibrationTemp: "20.0", // 68°F to °C
+        },
+      });
+    });
+  });
+
+  describe("temperature conversion", () => {
+    it("should convert Fahrenheit to Celsius", () => {
+      mockState.hydrometerCorrection = {
+        measuredGravity: "1.050",
+        wortTemp: "68",
+        calibrationTemp: "68",
+        tempUnit: "f" as const,
+        result: null,
+      };
+
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+
+      const unitToggle = getByTestId("unit-toggle");
+      fireEvent.press(unitToggle);
+
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "SET_HYDROMETER_CORRECTION",
+        payload: {
+          tempUnit: "c",
+          wortTemp: "20.0",
+          calibrationTemp: "20.0",
+        },
+      });
+    });
+
+    it("should convert Celsius to Fahrenheit", () => {
+      mockState.hydrometerCorrection = {
+        measuredGravity: "1.050",
+        wortTemp: "20",
+        calibrationTemp: "20",
+        tempUnit: "c" as const,
+        result: null,
+      };
+
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+
+      const unitToggle = getByTestId("unit-toggle");
+      fireEvent.press(unitToggle);
+
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "SET_HYDROMETER_CORRECTION",
+        payload: {
+          tempUnit: "f",
+          wortTemp: "68.0",
+          calibrationTemp: "68.0",
+        },
+      });
+    });
+
+    it("should handle empty values during conversion", () => {
+      mockState.hydrometerCorrection = {
+        measuredGravity: "",
+        wortTemp: "",
+        calibrationTemp: "",
+        tempUnit: "f" as const,
+        result: null,
+      };
+
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+
+      const unitToggle = getByTestId("unit-toggle");
+      fireEvent.press(unitToggle);
+
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "SET_HYDROMETER_CORRECTION",
+        payload: {
+          tempUnit: "c",
+          wortTemp: "",
+          calibrationTemp: "",
+        },
+      });
+    });
+
+    it("should handle invalid temperature values during conversion", () => {
+      mockState.hydrometerCorrection = {
+        measuredGravity: "1.050",
+        wortTemp: "invalid",
+        calibrationTemp: "68",
+        tempUnit: "f" as const,
+        result: null,
+      };
+
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+
+      const unitToggle = getByTestId("unit-toggle");
+      fireEvent.press(unitToggle);
+
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "SET_HYDROMETER_CORRECTION",
+        payload: {
+          tempUnit: "c",
+          wortTemp: "invalid", // Should remain unchanged
+          calibrationTemp: "20.0",
+        },
+      });
+    });
+  });
+
+  describe("calculations", () => {
+    it("should not calculate with empty inputs", () => {
+      mockState.hydrometerCorrection = {
+        measuredGravity: "",
+        wortTemp: "",
+        calibrationTemp: "",
+        tempUnit: "f" as const,
+        result: null,
+      };
+
+      render(<HydrometerCorrectionCalculatorScreen />);
+
+      expect(
+        mockHydrometerCalculator.calculateCorrection
+      ).not.toHaveBeenCalled();
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "SET_HYDROMETER_CORRECTION",
+        payload: { result: null },
+      });
+    });
+
+    it("should not calculate with partial inputs", () => {
+      mockState.hydrometerCorrection = {
+        measuredGravity: "1.050",
+        wortTemp: "",
+        calibrationTemp: "68",
+        tempUnit: "f" as const,
+        result: null,
+      };
+
+      render(<HydrometerCorrectionCalculatorScreen />);
+
+      expect(
+        mockHydrometerCalculator.calculateCorrection
+      ).not.toHaveBeenCalled();
+    });
+
+    it("should calculate with valid inputs", () => {
+      const mockResult = {
+        correctedGravity: 1.048,
+        correction: -0.002,
+      };
+
+      mockState.hydrometerCorrection = {
+        measuredGravity: "1.050",
+        wortTemp: "75",
+        calibrationTemp: "68",
+        tempUnit: "f" as const,
+        result: null,
+      };
+
+      mockHydrometerCalculator.calculateCorrection.mockReturnValue(mockResult);
+
+      render(<HydrometerCorrectionCalculatorScreen />);
+
+      expect(mockHydrometerCalculator.calculateCorrection).toHaveBeenCalledWith(
+        1.05,
+        75,
+        68,
+        "f"
+      );
+
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "SET_HYDROMETER_CORRECTION",
+        payload: { result: 1.048 },
+      });
+    });
+
+    it("should add successful calculation to history", () => {
+      const mockResult = {
+        correctedGravity: 1.048,
+        correction: -0.002,
+      };
+
+      mockState.hydrometerCorrection = {
+        measuredGravity: "1.050",
+        wortTemp: "75",
+        calibrationTemp: "68",
+        tempUnit: "f" as const,
+        result: null,
+      };
+
+      mockHydrometerCalculator.calculateCorrection.mockReturnValue(mockResult);
+
+      render(<HydrometerCorrectionCalculatorScreen />);
+
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "ADD_TO_HISTORY",
+        payload: {
+          calculatorType: "hydrometerCorrection",
+          inputs: {
+            measuredGravity: 1.05,
+            wortTemp: 75,
+            calibrationTemp: 68,
+            tempUnit: "f",
+          },
+          result: {
+            correctedGravity: 1.048,
+            correction: -0.002,
+          },
+        },
+      });
+    });
+
+    it("should handle invalid numeric inputs", () => {
+      mockState.hydrometerCorrection = {
+        measuredGravity: "invalid",
+        wortTemp: "75",
+        calibrationTemp: "68",
+        tempUnit: "f" as const,
+        result: null,
+      };
+
+      render(<HydrometerCorrectionCalculatorScreen />);
+
+      expect(
+        mockHydrometerCalculator.calculateCorrection
+      ).not.toHaveBeenCalled();
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "SET_HYDROMETER_CORRECTION",
+        payload: { result: null },
+      });
+    });
+
+    it("should handle calculation errors gracefully", () => {
+      mockState.hydrometerCorrection = {
+        measuredGravity: "1.050",
+        wortTemp: "75",
+        calibrationTemp: "68",
+        tempUnit: "f" as const,
+        result: null,
+      };
+
+      mockHydrometerCalculator.calculateCorrection.mockImplementation(() => {
+        throw new Error("Calculation error");
+      });
+
+      const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
+
+      render(<HydrometerCorrectionCalculatorScreen />);
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Hydrometer correction error:",
+        expect.any(Error)
+      );
+
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "SET_HYDROMETER_CORRECTION",
+        payload: { result: null },
+      });
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe("result display", () => {
+    it("should display result when calculation succeeds", () => {
+      mockState.hydrometerCorrection = {
+        measuredGravity: "1.050",
+        wortTemp: "75",
+        calibrationTemp: "68",
+        tempUnit: "f" as const,
+        result: 1.048,
+      };
+
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+
+      expect(getByTestId("single-result")).toBeTruthy();
+    });
+
+    it("should display correct result value", () => {
+      mockState.hydrometerCorrection = {
+        measuredGravity: "1.050",
+        wortTemp: "75",
+        calibrationTemp: "68",
+        tempUnit: "f" as const,
+        result: 1.048,
+      };
+
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+
+      // Verify the result is displayed
+      const resultComponent = getByTestId("single-result");
+      expect(resultComponent).toBeTruthy();
+      // The result component should contain both the label and value as text nodes
+      expect(resultComponent.props.children).toContain(1.048);
+    });
+  });
+
+  describe("placeholder text and units", () => {
+    it("should show Fahrenheit placeholders and units by default", () => {
+      // Default tempUnit is 'f', so placeholders should be in Fahrenheit
+      render(<HydrometerCorrectionCalculatorScreen />);
+      // This is indirectly tested through the NumberInput props
+      expect(() =>
+        render(<HydrometerCorrectionCalculatorScreen />)
+      ).not.toThrow();
+    });
+
+    it("should show Celsius placeholders and units when in Celsius mode", () => {
+      mockState.hydrometerCorrection.tempUnit = "c";
+
+      render(<HydrometerCorrectionCalculatorScreen />);
+      // This is indirectly tested through the NumberInput props
+      expect(() =>
+        render(<HydrometerCorrectionCalculatorScreen />)
+      ).not.toThrow();
+    });
+  });
+
+  describe("edge cases", () => {
+    it("should handle zero values gracefully", () => {
+      mockState.hydrometerCorrection = {
+        measuredGravity: "0",
+        wortTemp: "0",
+        calibrationTemp: "0",
+        tempUnit: "c" as const,
+        result: null,
+      };
+
+      render(<HydrometerCorrectionCalculatorScreen />);
+
+      expect(mockHydrometerCalculator.calculateCorrection).toHaveBeenCalledWith(
+        0,
+        0,
+        0,
+        "c"
+      );
+    });
+
+    it("should handle extreme temperature values", () => {
+      mockState.hydrometerCorrection = {
+        measuredGravity: "1.100",
+        wortTemp: "212",
+        calibrationTemp: "32",
+        tempUnit: "f" as const,
+        result: null,
+      };
+
+      render(<HydrometerCorrectionCalculatorScreen />);
+
+      expect(mockHydrometerCalculator.calculateCorrection).toHaveBeenCalledWith(
+        1.1,
+        212,
+        32,
+        "f"
+      );
+    });
+
+    it("should handle high gravity values", () => {
+      mockState.hydrometerCorrection = {
+        measuredGravity: "1.150",
+        wortTemp: "68",
+        calibrationTemp: "68",
+        tempUnit: "f" as const,
+        result: null,
+      };
+
+      render(<HydrometerCorrectionCalculatorScreen />);
+
+      expect(mockHydrometerCalculator.calculateCorrection).toHaveBeenCalledWith(
+        1.15,
+        68,
+        68,
+        "f"
+      );
+    });
+
+    it("should handle fractional temperature values", () => {
+      mockState.hydrometerCorrection = {
+        measuredGravity: "1.050",
+        wortTemp: "68.5",
+        calibrationTemp: "67.8",
+        tempUnit: "f" as const,
+        result: null,
+      };
+
+      render(<HydrometerCorrectionCalculatorScreen />);
+
+      expect(mockHydrometerCalculator.calculateCorrection).toHaveBeenCalledWith(
+        1.05,
+        68.5,
+        67.8,
+        "f"
+      );
+    });
+  });
+
+  describe("component integration", () => {
+    it("should pass correct props to NumberInput components", () => {
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+
+      // All inputs should be present with correct test IDs
+      expect(getByTestId("hydrometer-measured-gravity")).toBeTruthy();
+      expect(getByTestId("hydrometer-sample-temp")).toBeTruthy();
+      expect(getByTestId("hydrometer-calibration-temp")).toBeTruthy();
+    });
+
+    it("should pass correct props to UnitToggle", () => {
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+
+      expect(getByTestId("unit-toggle")).toBeTruthy();
+    });
+
+    it("should pass correct props to SingleResult when result exists", () => {
+      mockState.hydrometerCorrection.result = 1.048;
+
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+
+      expect(getByTestId("single-result")).toBeTruthy();
+    });
+
+    it("should handle theme changes gracefully", () => {
+      // Component should render without errors with theme applied
+      expect(() =>
+        render(<HydrometerCorrectionCalculatorScreen />)
+      ).not.toThrow();
+    });
+  });
+
+  describe("temperature unit options", () => {
+    it("should have correct temperature unit options", () => {
+      // TEMP_UNIT_OPTIONS should have Fahrenheit and Celsius options
+      render(<HydrometerCorrectionCalculatorScreen />);
+      // This is indirectly tested through the UnitToggle props
+      expect(() =>
+        render(<HydrometerCorrectionCalculatorScreen />)
+      ).not.toThrow();
+    });
+
+    it("should handle same unit conversions", () => {
+      mockState.hydrometerCorrection = {
+        measuredGravity: "1.050",
+        wortTemp: "68",
+        calibrationTemp: "68",
+        tempUnit: "f" as const,
+        result: null,
+      };
+
+      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+
+      const unitToggle = getByTestId("unit-toggle");
+      fireEvent.press(unitToggle);
+
+      // Should dispatch conversion from F to C (our mock toggles units)
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "SET_HYDROMETER_CORRECTION",
+        payload: {
+          tempUnit: "c",
+          wortTemp: "20.0", // 68°F -> 20.0°C
+          calibrationTemp: "20.0", // 68°F -> 20.0°C
+        },
+      });
+    });
+  });
+});

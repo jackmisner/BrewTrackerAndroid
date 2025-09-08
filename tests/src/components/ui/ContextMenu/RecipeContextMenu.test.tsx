@@ -106,6 +106,7 @@ const createMockActionHandlers = () => ({
   onClone: jest.fn(),
   onBeerXMLExport: jest.fn(),
   onStartBrewing: jest.fn(),
+  onStartBoilTimer: jest.fn(),
   onShare: jest.fn(),
   onDelete: jest.fn(),
 });
@@ -243,6 +244,7 @@ describe("createDefaultRecipeActions", () => {
         "clone",
         "beerxml-export",
         "brew",
+        "boil-timer",
         "delete",
       ]);
     });

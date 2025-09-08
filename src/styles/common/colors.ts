@@ -6,6 +6,10 @@
 export const lightColors = {
   // Primary colors
   primary: "#f4511e",
+  primaryLight10: "rgba(244, 81, 30, 0.1)",
+  primaryLight20: "rgba(244, 81, 30, 0.2)",
+  primaryLight30: "rgba(244, 81, 30, 0.3)",
+  primaryLight40: "rgba(244, 81, 30, 0.4)",
   primaryText: "#fff",
   errorBackground: "#fee2e2",
   successBackground: "#f0f9ff",
@@ -41,6 +45,10 @@ export const lightColors = {
 export const darkColors = {
   // Primary colors (keep brand color consistent)
   primary: "#f4511e",
+  primaryLight10: "rgba(244, 81, 30, 0.1)",
+  primaryLight20: "rgba(244, 81, 30, 0.2)",
+  primaryLight30: "rgba(244, 81, 30, 0.3)",
+  primaryLight40: "rgba(244, 81, 30, 0.4)",
   primaryText: "#fff",
   errorBackground: "#fee2e2",
   successBackground: "#f0f9ff",
