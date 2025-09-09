@@ -51,7 +51,7 @@ const createRecipeStateFromExisting = (
     existingRecipe.mash_temperature ?? (unitSystem === "imperial" ? 152 : 67),
   mash_temp_unit:
     existingRecipe.mash_temp_unit ?? (unitSystem === "imperial" ? "F" : "C"),
-  mash_time: existingRecipe.mash_time ?? 60,
+  mash_time: existingRecipe.mash_time ?? undefined,
   is_public: existingRecipe.is_public ?? false,
   notes: existingRecipe.notes ?? "",
   ingredients: existingRecipe.ingredients ?? [],
@@ -198,21 +198,28 @@ export default function EditRecipeScreen() {
     mutationFn: async (formData: RecipeFormData) => {
       // Helper function to convert values to optional numbers
       const toOptionalNumber = (v: any): number | undefined => {
-        if (v === "" || v === null || v === undefined) {
+        if (v === null || v === undefined) {
+          return undefined;
+        }
+        if (typeof v === "string" && v.trim() === "") {
           return undefined;
         }
         const n = typeof v === "number" ? v : Number(v);
         return Number.isFinite(n) ? n : undefined;
       };
 
-      // Sanitize ingredients to ensure all numeric fields are valid
+      // Filter out ingredients with zero/empty amounts first
       // Note: Adding explicit ID mapping as fallback - the API interceptor should handle this but seems to have issues with nested ingredients
-      const sanitizedIngredients = formData.ingredients.map(ingredient => {
+      const validIngredients = formData.ingredients.filter(ingredient => {
+        const amt = toOptionalNumber(ingredient.amount);
+        return amt !== undefined && amt > 0;
+      });
+
+      const sanitizedIngredients = validIngredients.map(ingredient => {
         const sanitized: any = { ...ingredient };
 
-        // Ensure required amount is a valid number (treat empty as missing)
-        const amt = toOptionalNumber(sanitized.amount);
-        sanitized.amount = amt !== undefined ? amt : 0;
+        // Amount is already validated as positive, so just use it
+        sanitized.amount = toOptionalNumber(sanitized.amount);
         {
           const v = toOptionalNumber(sanitized.potential);
           if (v === undefined) {
@@ -289,12 +296,14 @@ export default function EditRecipeScreen() {
           Number(formData.efficiency) <= 100
             ? Number(formData.efficiency)
             : 75,
-        mash_temperature:
-          Number.isFinite(Number(formData.mash_temperature)) &&
-          Number(formData.mash_temperature) > 0
-            ? Number(formData.mash_temperature)
-            : 152,
-        mash_temp_unit: formData.mash_temp_unit || "F",
+        // Unit-aware fallback (°F:152, °C:67)
+        mash_temperature: (() => {
+          const unit = formData.mash_temp_unit || "C";
+          const fallback = unit === "C" ? 67 : 152;
+          const t = Number(formData.mash_temperature);
+          return Number.isFinite(t) && t > 0 ? t : fallback;
+        })(),
+        mash_temp_unit: formData.mash_temp_unit || "C",
         mash_time: Number.isFinite(Number(formData.mash_time))
           ? Number(formData.mash_time)
           : undefined,
@@ -414,6 +423,31 @@ export default function EditRecipeScreen() {
   };
 
   /**
+   * Helper function to validate ingredients have positive amounts
+   */
+  const hasValidIngredients = () => {
+    if (recipeData.ingredients.length === 0) {
+      return false;
+    }
+
+    const toOptionalNumber = (v: any): number | undefined => {
+      if (v === null || v === undefined) {
+        return undefined;
+      }
+      if (typeof v === "string" && v.trim() === "") {
+        return undefined;
+      }
+      const n = typeof v === "number" ? v : Number(v);
+      return Number.isFinite(n) ? n : undefined;
+    };
+
+    return recipeData.ingredients.some(ingredient => {
+      const amt = toOptionalNumber(ingredient.amount);
+      return amt !== undefined && amt > 0;
+    });
+  };
+
+  /**
    * Form validation
    */
   const canProceed = () => {
@@ -431,7 +465,7 @@ export default function EditRecipeScreen() {
           (recipeData.mash_time === undefined || recipeData.mash_time >= 0)
         );
       case RecipeStep.INGREDIENTS:
-        return recipeData.ingredients.length > 0;
+        return hasValidIngredients();
       case RecipeStep.REVIEW:
         return true;
       default:
@@ -443,7 +477,7 @@ export default function EditRecipeScreen() {
     return (
       recipeData.name.trim().length > 0 &&
       recipeData.batch_size > 0 &&
-      recipeData.ingredients.length > 0 &&
+      hasValidIngredients() &&
       hasUnsavedChanges &&
       !updateRecipeMutation.isPending
     );
