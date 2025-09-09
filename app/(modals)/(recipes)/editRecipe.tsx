@@ -299,21 +299,31 @@ export default function EditRecipeScreen() {
         ingredients: sanitizedIngredients,
         // Include estimated metrics if available
         ...(metricsData && {
-          estimated_og: Number.isFinite(Number(metricsData.og))
-            ? Number(metricsData.og)
-            : null,
-          estimated_fg: Number.isFinite(Number(metricsData.fg))
-            ? Number(metricsData.fg)
-            : null,
-          estimated_abv: Number.isFinite(Number(metricsData.abv))
-            ? Number(metricsData.abv)
-            : null,
-          estimated_ibu: Number.isFinite(Number(metricsData.ibu))
-            ? Number(metricsData.ibu)
-            : null,
-          estimated_srm: Number.isFinite(Number(metricsData.srm))
-            ? Number(metricsData.srm)
-            : null,
+          estimated_og:
+            typeof metricsData.og === "number" &&
+            Number.isFinite(metricsData.og)
+              ? metricsData.og
+              : null,
+          estimated_fg:
+            typeof metricsData.fg === "number" &&
+            Number.isFinite(metricsData.fg)
+              ? metricsData.fg
+              : null,
+          estimated_abv:
+            typeof metricsData.abv === "number" &&
+            Number.isFinite(metricsData.abv)
+              ? metricsData.abv
+              : null,
+          estimated_ibu:
+            typeof metricsData.ibu === "number" &&
+            Number.isFinite(metricsData.ibu)
+              ? metricsData.ibu
+              : null,
+          estimated_srm:
+            typeof metricsData.srm === "number" &&
+            Number.isFinite(metricsData.srm)
+              ? metricsData.srm
+              : null,
         }),
       };
 
