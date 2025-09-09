@@ -275,7 +275,11 @@ export default function EditRecipeScreen() {
         name: formData.name || "",
         style: formData.style || "",
         description: formData.description || "",
-        batch_size: Number(formData.batch_size) || 5,
+        batch_size:
+          Number.isFinite(Number(formData.batch_size)) &&
+          Number(formData.batch_size) > 0
+            ? Number(formData.batch_size)
+            : 5,
         batch_size_unit: formData.batch_size_unit || "gal",
         boil_time: Number.isFinite(Number(formData.boil_time))
           ? Number(formData.boil_time)
@@ -287,7 +291,9 @@ export default function EditRecipeScreen() {
           ? Number(formData.mash_temperature)
           : 152,
         mash_temp_unit: formData.mash_temp_unit || "F",
-        mash_time: formData.mash_time ? Number(formData.mash_time) : undefined,
+        mash_time: Number.isFinite(Number(formData.mash_time))
+          ? Number(formData.mash_time)
+          : undefined,
         is_public: Boolean(formData.is_public),
         notes: formData.notes || "",
         ingredients: sanitizedIngredients,

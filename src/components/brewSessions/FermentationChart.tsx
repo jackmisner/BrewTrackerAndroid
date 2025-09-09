@@ -80,7 +80,11 @@ const chartUtils = {
     axisConfig: { minValue: number; maxValue: number }
   ): number => {
     const range = axisConfig.maxValue - axisConfig.minValue;
+    if (!Number.isFinite(range) || range <= 0) {
+      return 0.5; // center on flat/invalid ranges
+    }
     const normalizedPosition = (value - axisConfig.minValue) / range;
+
     return Math.min(1, Math.max(0, normalizedPosition));
   },
 
@@ -332,11 +336,14 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
           const processedEntry: ProcessedDataPoint = {
             x: dayNumber,
-            ...(entry.gravity !== undefined && { gravity: entry.gravity }),
-            ...(entry.temperature !== undefined && {
-              temperature: entry.temperature,
-            }),
-            ...(entry.ph !== undefined && { ph: entry.ph }),
+            ...(typeof entry.gravity === "number" &&
+              Number.isFinite(entry.gravity) && { gravity: entry.gravity }),
+            ...(typeof entry.temperature === "number" &&
+              Number.isFinite(entry.temperature) && {
+                temperature: entry.temperature,
+              }),
+            ...(typeof entry.ph === "number" &&
+              Number.isFinite(entry.ph) && { ph: entry.ph }),
             date: entryDate.toLocaleDateString(),
             rawDate: entryDate, // Keep the actual Date object for chart formatting
           };
@@ -522,7 +529,16 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
           !(d.value === 0 && "hideDataPoint" in d && d.hideDataPoint === true)
       )
       .map(d => d.value);
-    const maxGravity = actualOG || Math.max(...gravityValues);
+    if (
+      gravityValues.length === 0 &&
+      (actualOG == null || !Number.isFinite(actualOG))
+    ) {
+      return { minValue: 1.0, maxValue: 1.1 };
+    }
+    const maxGravity =
+      actualOG != null && Number.isFinite(actualOG)
+        ? (actualOG as number)
+        : Math.max(...gravityValues);
     const allValues = [...gravityValues, maxGravity];
 
     return chartUtils.createAxisConfig(allValues, 0.01);
@@ -565,11 +581,11 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       // Ensure reasonable axis bounds
       const minValue = Math.max(
         Math.floor(min - buffer),
-        temperatureUnit === "C" ? -5 : 20 // Reasonable lower bounds
+        effectiveUnit === "C" ? -5 : 20 // Reasonable lower bounds
       );
       const maxValue = Math.min(
         Math.ceil(max + buffer),
-        temperatureUnit === "C" ? 50 : 120 // Reasonable upper bounds
+        effectiveUnit === "C" ? 50 : 120 // Reasonable upper bounds
       );
 
       return { minValue, maxValue };
