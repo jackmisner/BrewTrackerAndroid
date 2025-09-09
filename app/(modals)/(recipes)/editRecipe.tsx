@@ -33,6 +33,18 @@ enum RecipeStep {
 
 const STEP_TITLES = ["Basic Info", "Parameters", "Ingredients", "Review"];
 
+// Helper function to convert values to optional numbers
+const toOptionalNumber = (v: any): number | undefined => {
+  if (v === null || v === undefined) {
+    return undefined;
+  }
+  if (typeof v === "string" && v.trim() === "") {
+    return undefined;
+  }
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : undefined;
+};
+
 // Create unit-aware initial recipe state from existing recipe
 const createRecipeStateFromExisting = (
   existingRecipe: Recipe,
@@ -196,20 +208,7 @@ export default function EditRecipeScreen() {
   // Update recipe mutation
   const updateRecipeMutation = useMutation({
     mutationFn: async (formData: RecipeFormData) => {
-      // Helper function to convert values to optional numbers
-      const toOptionalNumber = (v: any): number | undefined => {
-        if (v === null || v === undefined) {
-          return undefined;
-        }
-        if (typeof v === "string" && v.trim() === "") {
-          return undefined;
-        }
-        const n = typeof v === "number" ? v : Number(v);
-        return Number.isFinite(n) ? n : undefined;
-      };
-
       // Filter out ingredients with zero/empty amounts first
-      // Note: Adding explicit ID mapping as fallback - the API interceptor should handle this but seems to have issues with nested ingredients
       const validIngredients = formData.ingredients.filter(ingredient => {
         const amt = toOptionalNumber(ingredient.amount);
         return amt !== undefined && amt > 0;
@@ -241,7 +240,7 @@ export default function EditRecipeScreen() {
           if (v === undefined) {
             delete sanitized.alpha_acid;
           } else {
-            sanitized.alpha_acid = v;
+            sanitized.alpha_acid = Math.max(0, Math.min(100, v));
           }
         }
         {
@@ -249,7 +248,7 @@ export default function EditRecipeScreen() {
           if (v === undefined) {
             delete sanitized.time;
           } else {
-            sanitized.time = v;
+            sanitized.time = Math.max(0, v);
           }
         }
         {
@@ -257,7 +256,7 @@ export default function EditRecipeScreen() {
           if (v === undefined) {
             delete sanitized.attenuation;
           } else {
-            sanitized.attenuation = v;
+            sanitized.attenuation = Math.max(0, Math.min(100, v));
           }
         }
 
@@ -432,17 +431,6 @@ export default function EditRecipeScreen() {
     if (recipeData.ingredients.length === 0) {
       return false;
     }
-
-    const toOptionalNumber = (v: any): number | undefined => {
-      if (v === null || v === undefined) {
-        return undefined;
-      }
-      if (typeof v === "string" && v.trim() === "") {
-        return undefined;
-      }
-      const n = typeof v === "number" ? v : Number(v);
-      return Number.isFinite(n) ? n : undefined;
-    };
 
     return recipeData.ingredients.some(ingredient => {
       const amt = toOptionalNumber(ingredient.amount);
