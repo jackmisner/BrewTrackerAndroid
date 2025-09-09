@@ -53,7 +53,9 @@ export class StorageService {
    * Check if running on Android 13+ (API 33+)
    */
   private static isAndroid13Plus(): boolean {
-    if (Platform.OS !== "android") return false;
+    if (Platform.OS !== "android") {
+      return false;
+    }
     return Platform.Version >= ANDROID_API_LEVELS.ANDROID_13;
   }
 
@@ -61,7 +63,9 @@ export class StorageService {
    * Check if running on Android 10+ (API 29+)
    */
   private static isAndroid10Plus(): boolean {
-    if (Platform.OS !== "android") return false;
+    if (Platform.OS !== "android") {
+      return false;
+    }
     return Platform.Version >= ANDROID_API_LEVELS.ANDROID_10;
   }
 

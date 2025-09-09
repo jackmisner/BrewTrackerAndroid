@@ -58,7 +58,9 @@ export function BaseContextMenu<T>({
    * Handles action press with haptic feedback and confirmation for destructive actions
    */
   const handleActionPress = async (action: BaseAction<T>) => {
-    if (!item) return;
+    if (!item) {
+      return;
+    }
 
     // Provide haptic feedback (best-effort)
     try {
@@ -77,7 +79,9 @@ export function BaseContextMenu<T>({
    * Filters actions based on item state and action conditions
    */
   const getVisibleActions = (): BaseAction<T>[] => {
-    if (!item) return [];
+    if (!item) {
+      return [];
+    }
 
     return actions.filter(action => {
       // Hide action if hidden condition is met
@@ -92,7 +96,9 @@ export function BaseContextMenu<T>({
    * Checks if an action should be disabled
    */
   const isActionDisabled = (action: BaseAction<T>): boolean => {
-    if (!item) return true;
+    if (!item) {
+      return true;
+    }
     if (action.disabled && action.disabled(item)) {
       return true;
     }

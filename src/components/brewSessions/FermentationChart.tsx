@@ -1,18 +1,12 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  Pressable,
-} from "react-native";
+import { View, Text, TouchableOpacity, Modal, Pressable } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
 import { FermentationEntry, Recipe } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import { useScreenDimensions } from "@contexts/ScreenDimensionsContext";
 import { formatGravity } from "@utils/formatUtils";
+import { fermentationChartStyles } from "@styles/components/charts/fermentationChartStyles";
 
 // Chart wrapper component that forces complete remount
 const ChartWrapper: React.FC<{
@@ -31,14 +25,18 @@ const ChartSection: React.FC<{
   title: string;
   children: React.ReactNode;
   theme: any;
-  styles: any;
-}> = ({ title, children, theme, styles }) => {
+}> = ({ title, children, theme }) => {
   return (
-    <View style={styles.chartSection}>
-      <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
+    <View style={fermentationChartStyles.chartSection}>
+      <Text
+        style={[
+          fermentationChartStyles.chartTitle,
+          { color: theme.colors.text },
+        ]}
+      >
         {title}
       </Text>
-      <View style={styles.chart}>{children}</View>
+      <View style={fermentationChartStyles.chart}>{children}</View>
     </View>
   );
 };
@@ -49,15 +47,22 @@ const ModalDataRow: React.FC<{
   value: string;
   valueColor?: string;
   theme: any;
-  styles: any;
-}> = ({ label, value, valueColor, theme, styles }) => {
+}> = ({ label, value, valueColor, theme }) => {
   return (
-    <View style={styles.modalRow}>
-      <Text style={[styles.modalLabel, { color: theme.colors.textSecondary }]}>
+    <View style={fermentationChartStyles.modalRow}>
+      <Text
+        style={[
+          fermentationChartStyles.modalLabel,
+          { color: theme.colors.textSecondary },
+        ]}
+      >
         {label}:
       </Text>
       <Text
-        style={[styles.modalValue, { color: valueColor || theme.colors.text }]}
+        style={[
+          fermentationChartStyles.modalValue,
+          { color: valueColor || theme.colors.text },
+        ]}
       >
         {value}
       </Text>
@@ -75,7 +80,11 @@ const chartUtils = {
     axisConfig: { minValue: number; maxValue: number }
   ): number => {
     const range = axisConfig.maxValue - axisConfig.minValue;
+    if (!Number.isFinite(range) || range <= 0) {
+      return 0.5; // center on flat/invalid ranges
+    }
     const normalizedPosition = (value - axisConfig.minValue) / range;
+
     return Math.min(1, Math.max(0, normalizedPosition));
   },
 
@@ -86,7 +95,9 @@ const chartUtils = {
     values: number[],
     padding: number = 0.01
   ): { minValue: number; maxValue: number } => {
-    if (values.length === 0) return { minValue: 0, maxValue: 1 };
+    if (values.length === 0) {
+      return { minValue: 0, maxValue: 1 };
+    }
 
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
@@ -266,7 +277,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     };
 
     // Helper function to extract date from entry
-    const getEntryDate = (entry: any) => {
+    const getEntryDate = (entry: any): Date | null => {
       // Try different possible date field names
       const possibleDates = [
         entry.entry_date,
@@ -276,49 +287,73 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
         entry.date_recorded,
       ].filter(Boolean);
 
-      for (const dateStr of possibleDates) {
-        if (dateStr && typeof dateStr === "string") {
-          const parsedDate = new Date(dateStr);
-          if (!isNaN(parsedDate.getTime())) {
-            return normalizeDate(parsedDate);
+      for (const candidate of possibleDates) {
+        if (typeof candidate === "string" || typeof candidate === "number") {
+          const parsed =
+            typeof candidate === "number"
+              ? new Date(
+                  // accept seconds or milliseconds epoch
+                  candidate > 1e12 ? candidate : candidate * 1000
+                )
+              : new Date(candidate);
+          if (!isNaN(parsed.getTime())) {
+            return normalizeDate(parsed);
           }
         }
       }
-
-      return normalizeDate(new Date()); // Fallback to current date, normalized
+      return null; // explicit invalid
     };
 
     const sortedData = [...fermentationData].sort((a, b) => {
       // Sorting entries by date
       const dateA = getEntryDate(a);
       const dateB = getEntryDate(b);
+      if (dateA === null && dateB === null) {
+        return 0;
+      }
+      if (dateA === null) {
+        return 1;
+      }
+      if (dateB === null) {
+        return -1;
+      }
       return dateA.getTime() - dateB.getTime();
     });
 
     const firstDate = getEntryDate(sortedData[0]);
 
-    return sortedData.map((entry, index) => {
-      const entryDate = getEntryDate(entry);
-      // Since dates are normalized to midnight, this calculation will work correctly
-      // for consecutive calendar days, ensuring Day 1, Day 2, etc.
-      const dayNumber =
-        Math.floor(
-          (entryDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)
-        ) + 1;
+    return sortedData
+      .map((entry, _index) => {
+        const entryDate = getEntryDate(entry);
+        // Since dates are normalized to midnight, this calculation will work correctly
+        // for consecutive calendar days, ensuring Day 1, Day 2, etc.
+        if (entryDate !== null && firstDate !== null) {
+          const dayNumber =
+            Math.floor(
+              (entryDate.getTime() - firstDate.getTime()) /
+                (1000 * 60 * 60 * 24)
+            ) + 1;
 
-      const processedEntry = {
-        x: dayNumber,
-        gravity: entry.gravity ?? undefined,
-        temperature: entry.temperature ?? undefined,
-        ph: entry.ph ?? undefined,
-        date: entryDate.toLocaleDateString(),
-        rawDate: entryDate, // Keep the actual Date object for chart formatting
-      };
+          const processedEntry: ProcessedDataPoint = {
+            x: dayNumber,
+            ...(typeof entry.gravity === "number" &&
+              Number.isFinite(entry.gravity) && { gravity: entry.gravity }),
+            ...(typeof entry.temperature === "number" &&
+              Number.isFinite(entry.temperature) && {
+                temperature: entry.temperature,
+              }),
+            ...(typeof entry.ph === "number" &&
+              Number.isFinite(entry.ph) && { ph: entry.ph }),
+            date: entryDate.toLocaleDateString(),
+            rawDate: entryDate, // Keep the actual Date object for chart formatting
+          };
 
-      // Processed entry successfully
-
-      return processedEntry;
-    });
+          // Processed entry successfully
+          return processedEntry;
+        }
+        return undefined;
+      })
+      .filter((entry): entry is ProcessedDataPoint => entry !== undefined);
   }, [fermentationData]);
 
   // Data point click/focus handler with themed modal
@@ -417,7 +452,9 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
   // Convert to chart format without positioning first - positioning will be calculated later
   const baseChartData = React.useMemo(() => {
-    if (processedData.length === 0) return { gravity: [], temperature: [] };
+    if (processedData.length === 0) {
+      return { gravity: [], temperature: [] };
+    }
 
     // Create base data arrays without positioning
     const alignedData = processedData.map((point, index) => {
@@ -492,7 +529,16 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
           !(d.value === 0 && "hideDataPoint" in d && d.hideDataPoint === true)
       )
       .map(d => d.value);
-    const maxGravity = actualOG || Math.max(...gravityValues);
+    if (
+      gravityValues.length === 0 &&
+      (actualOG == null || !Number.isFinite(actualOG))
+    ) {
+      return { minValue: 1.0, maxValue: 1.1 };
+    }
+    const maxGravity =
+      actualOG != null && Number.isFinite(actualOG)
+        ? (actualOG as number)
+        : Math.max(...gravityValues);
     const allValues = [...gravityValues, maxGravity];
 
     return chartUtils.createAxisConfig(allValues, 0.01);
@@ -504,9 +550,11 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       temperatures: number[],
       bufferPercent: number = 10
     ): { minValue: number; maxValue: number } => {
+      const effectiveUnit =
+        temperatureUnit ?? (units.unitSystem === "metric" ? "C" : "F");
       if (temperatures.length === 0) {
         // Default ranges based on session temperature unit
-        if (temperatureUnit === "C") {
+        if (effectiveUnit === "C") {
           return { minValue: 15, maxValue: 27 };
         } else {
           return { minValue: 60, maxValue: 80 };
@@ -519,30 +567,30 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
       // Calculate intelligent buffer based on data spread
       let buffer;
-      if (range < (temperatureUnit === "C" ? 1 : 2)) {
+      if (range < (effectiveUnit === "C" ? 1 : 2)) {
         // Very tight range, use minimum buffer
-        buffer = temperatureUnit === "C" ? 2 : 4;
+        buffer = effectiveUnit === "C" ? 2 : 4;
       } else {
         // Use percentage-based buffer with minimum
         buffer = Math.max(
           range * (bufferPercent / 100),
-          temperatureUnit === "C" ? 1 : 2
+          effectiveUnit === "C" ? 1 : 2
         );
       }
 
       // Ensure reasonable axis bounds
       const minValue = Math.max(
         Math.floor(min - buffer),
-        temperatureUnit === "C" ? -5 : 20 // Reasonable lower bounds
+        effectiveUnit === "C" ? -5 : 20 // Reasonable lower bounds
       );
       const maxValue = Math.min(
         Math.ceil(max + buffer),
-        temperatureUnit === "C" ? 50 : 120 // Reasonable upper bounds
+        effectiveUnit === "C" ? 50 : 120 // Reasonable upper bounds
       );
 
       return { minValue, maxValue };
     },
-    [temperatureUnit]
+    [temperatureUnit, units.unitSystem]
   );
 
   const temperatureAxisConfig = React.useMemo(() => {
@@ -567,7 +615,9 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
   // Add positioning to chart data using actual axis configurations
   const combinedChartData = React.useMemo(() => {
-    if (baseChartData.gravity.length === 0) return baseChartData;
+    if (baseChartData.gravity.length === 0) {
+      return baseChartData;
+    }
 
     // Use chart utilities for visual height calculations
 
@@ -921,19 +971,30 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
   if (processedData.length === 0) {
     return (
       <View
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
+        style={[
+          fermentationChartStyles.container,
+          { backgroundColor: theme.colors.background },
+        ]}
       >
-        <Text style={[styles.title, { color: theme.colors.text }]}>
+        <Text
+          style={[fermentationChartStyles.title, { color: theme.colors.text }]}
+        >
           Fermentation Progress
         </Text>
-        <View style={styles.emptyState}>
+        <View style={fermentationChartStyles.emptyState}>
           <Text
-            style={[styles.emptyText, { color: theme.colors.textSecondary }]}
+            style={[
+              fermentationChartStyles.emptyText,
+              { color: theme.colors.textSecondary },
+            ]}
           >
             No fermentation data available
           </Text>
           <Text
-            style={[styles.emptySubtext, { color: theme.colors.textMuted }]}
+            style={[
+              fermentationChartStyles.emptySubtext,
+              { color: theme.colors.textMuted },
+            ]}
           >
             Start logging fermentation readings to see the progress chart
           </Text>
@@ -944,16 +1005,21 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
   return (
     <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[
+        fermentationChartStyles.container,
+        { backgroundColor: theme.colors.background },
+      ]}
     >
-      <View style={styles.titleContainer}>
-        <Text style={[styles.title, { color: theme.colors.text }]}>
+      <View style={fermentationChartStyles.titleContainer}>
+        <Text
+          style={[fermentationChartStyles.title, { color: theme.colors.text }]}
+        >
           Fermentation Progress
         </Text>
-        <View style={styles.buttonContainer}>
+        <View style={fermentationChartStyles.buttonContainer}>
           <TouchableOpacity
             style={[
-              styles.refreshButton,
+              fermentationChartStyles.refreshButton,
               { backgroundColor: theme.colors.border },
             ]}
             onPress={() => {
@@ -961,18 +1027,28 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
               setChartRefreshKey(prev => prev + 1);
             }}
           >
-            <Text style={[styles.buttonText, { color: theme.colors.text }]}>
+            <Text
+              style={[
+                fermentationChartStyles.buttonText,
+                { color: theme.colors.text },
+              ]}
+            >
               ↻
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
-              styles.toggleButton,
+              fermentationChartStyles.toggleButton,
               { backgroundColor: theme.colors.border },
             ]}
             onPress={handleViewToggle}
           >
-            <Text style={[styles.toggleText, { color: theme.colors.text }]}>
+            <Text
+              style={[
+                fermentationChartStyles.toggleText,
+                { color: theme.colors.text },
+              ]}
+            >
               {combinedView ? "Separate" : "Combined"}
             </Text>
           </TouchableOpacity>
@@ -980,15 +1056,23 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       </View>
 
       {/* Chart Stats */}
-      <View style={styles.statsRow}>
+      <View style={fermentationChartStyles.statsRow}>
         {gravityChartData.length > 0 ? (
-          <View style={styles.stat}>
+          <View style={fermentationChartStyles.stat}>
             <Text
-              style={[styles.statLabel, { color: theme.colors.textSecondary }]}
+              style={[
+                fermentationChartStyles.statLabel,
+                { color: theme.colors.textSecondary },
+              ]}
             >
               Latest Gravity
             </Text>
-            <Text style={[styles.statValue, { color: theme.colors.primary }]}>
+            <Text
+              style={[
+                fermentationChartStyles.statValue,
+                { color: theme.colors.primary },
+              ]}
+            >
               {(() => {
                 const last = [...gravityChartData]
                   .reverse()
@@ -1006,13 +1090,21 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
           </View>
         ) : null}
         {(combinedTemperatureData?.data?.length || 0) > 0 ? (
-          <View style={styles.stat}>
+          <View style={fermentationChartStyles.stat}>
             <Text
-              style={[styles.statLabel, { color: theme.colors.textSecondary }]}
+              style={[
+                fermentationChartStyles.statLabel,
+                { color: theme.colors.textSecondary },
+              ]}
             >
               Latest Temp
             </Text>
-            <Text style={[styles.statValue, { color: theme.colors.primary }]}>
+            <Text
+              style={[
+                fermentationChartStyles.statValue,
+                { color: theme.colors.primary },
+              ]}
+            >
               {(() => {
                 const last = [...(combinedTemperatureData?.data || [])]
                   .reverse()
@@ -1033,13 +1125,21 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
           </View>
         ) : null}
         {recipeData?.estimated_fg != null || expectedFG != null ? (
-          <View style={styles.stat}>
+          <View style={fermentationChartStyles.stat}>
             <Text
-              style={[styles.statLabel, { color: theme.colors.textSecondary }]}
+              style={[
+                fermentationChartStyles.statLabel,
+                { color: theme.colors.textSecondary },
+              ]}
             >
               Expected FG
             </Text>
-            <Text style={[styles.statValue, { color: theme.colors.primary }]}>
+            <Text
+              style={[
+                fermentationChartStyles.statValue,
+                { color: theme.colors.primary },
+              ]}
+            >
               {(() => {
                 const finalFG = recipeData?.estimated_fg ?? expectedFG;
                 return finalFG != null ? formatGravity(finalFG) : "—";
@@ -1047,13 +1147,21 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
             </Text>
           </View>
         ) : null}
-        <View style={styles.stat}>
+        <View style={fermentationChartStyles.stat}>
           <Text
-            style={[styles.statLabel, { color: theme.colors.textSecondary }]}
+            style={[
+              fermentationChartStyles.statLabel,
+              { color: theme.colors.textSecondary },
+            ]}
           >
             Duration
           </Text>
-          <Text style={[styles.statValue, { color: theme.colors.primary }]}>
+          <Text
+            style={[
+              fermentationChartStyles.statValue,
+              { color: theme.colors.primary },
+            ]}
+          >
             {(() => {
               const days = Math.max(...processedData.map(d => d.x));
               return `${days} ${days === 1 ? "day" : "days"}`;
@@ -1065,7 +1173,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       {/* Main Chart */}
       <View
         style={[
-          styles.chartContainer,
+          fermentationChartStyles.chartContainer,
           { backgroundColor: theme.colors.background },
         ]}
       >
@@ -1073,7 +1181,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
           // Combined dual-axis chart
           gravityChartData.length > 0 &&
           (combinedTemperatureData?.data?.length || 0) > 0 ? (
-            <ChartSection title="Combined View" theme={theme} styles={styles}>
+            <ChartSection title="Combined View" theme={theme}>
               <ChartWrapper refreshKey={chartKeys.combined}>
                 <LineChart
                   {...combinedChartConfig}
@@ -1086,11 +1194,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
             // Show individual charts if only one type of data exists
             <>
               {gravityChartData.length > 0 ? (
-                <ChartSection
-                  title="Specific Gravity"
-                  theme={theme}
-                  styles={styles}
-                >
+                <ChartSection title="Specific Gravity" theme={theme}>
                   <ChartWrapper refreshKey={chartKeys.gravity}>
                     <LineChart
                       {...gravityChartConfig}
@@ -1100,7 +1204,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
                 </ChartSection>
               ) : null}
               {separateTemperatureData.length > 0 ? (
-                <ChartSection title="Temperature" theme={theme} styles={styles}>
+                <ChartSection title="Temperature" theme={theme}>
                   <ChartWrapper refreshKey={chartKeys.temperature}>
                     <LineChart
                       {...separateTemperatureChartConfig}
@@ -1115,11 +1219,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
           // Separate charts view
           <>
             {gravityChartData.length > 0 ? (
-              <ChartSection
-                title="Specific Gravity"
-                theme={theme}
-                styles={styles}
-              >
+              <ChartSection title="Specific Gravity" theme={theme}>
                 <ChartWrapper refreshKey={chartKeys.gravity}>
                   <LineChart {...gravityChartConfig} data={gravityChartData} />
                 </ChartWrapper>
@@ -1127,7 +1227,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
             ) : null}
 
             {separateTemperatureData.length > 0 ? (
-              <ChartSection title="Temperature" theme={theme} styles={styles}>
+              <ChartSection title="Temperature" theme={theme}>
                 <ChartWrapper refreshKey={chartKeys.temperature}>
                   <LineChart
                     {...separateTemperatureChartConfig}
@@ -1141,32 +1241,38 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       </View>
 
       {/* Legend */}
-      <View style={styles.legend}>
+      <View style={fermentationChartStyles.legend}>
         {gravityChartData.length > 0 ? (
-          <View style={styles.legendItem}>
+          <View style={fermentationChartStyles.legendItem}>
             <View
               style={[
-                styles.legendColor,
+                fermentationChartStyles.legendColor,
                 { backgroundColor: theme.colors.gravityLine },
               ]}
             />
             <Text
-              style={[styles.legendText, { color: theme.colors.textSecondary }]}
+              style={[
+                fermentationChartStyles.legendText,
+                { color: theme.colors.textSecondary },
+              ]}
             >
               Specific Gravity
             </Text>
           </View>
         ) : null}
         {separateTemperatureData.length > 0 ? (
-          <View style={styles.legendItem}>
+          <View style={fermentationChartStyles.legendItem}>
             <View
               style={[
-                styles.legendColor,
+                fermentationChartStyles.legendColor,
                 { backgroundColor: theme.colors.temperatureLine },
               ]}
             />
             <Text
-              style={[styles.legendText, { color: theme.colors.textSecondary }]}
+              style={[
+                fermentationChartStyles.legendText,
+                { color: theme.colors.textSecondary },
+              ]}
             >
               Temperature
             </Text>
@@ -1182,12 +1288,12 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
         onRequestClose={() => setModalVisible(false)}
       >
         <Pressable
-          style={styles.modalOverlay}
+          style={fermentationChartStyles.modalOverlay}
           onPress={() => setModalVisible(false)}
         >
           <Pressable
             style={[
-              styles.modalContent,
+              fermentationChartStyles.modalContent,
               {
                 backgroundColor: theme.colors.background,
                 borderColor: theme.colors.border,
@@ -1197,16 +1303,20 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
           >
             {modalData && (
               <>
-                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                <Text
+                  style={[
+                    fermentationChartStyles.modalTitle,
+                    { color: theme.colors.text },
+                  ]}
+                >
                   {modalData.title}
                 </Text>
 
-                <View style={styles.modalBody}>
+                <View style={fermentationChartStyles.modalBody}>
                   <ModalDataRow
                     label="Date"
                     value={modalData.date}
                     theme={theme}
-                    styles={styles}
                   />
 
                   {modalData.gravity && (
@@ -1215,7 +1325,6 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
                       value={modalData.gravity}
                       valueColor={theme.colors.gravityLine}
                       theme={theme}
-                      styles={styles}
                     />
                   )}
 
@@ -1225,7 +1334,6 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
                       value={modalData.temperature}
                       valueColor={theme.colors.temperatureLine}
                       theme={theme}
-                      styles={styles}
                     />
                   )}
 
@@ -1234,21 +1342,20 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
                       label="pH"
                       value={modalData.ph}
                       theme={theme}
-                      styles={styles}
                     />
                   )}
                 </View>
 
                 <TouchableOpacity
                   style={[
-                    styles.modalCloseButton,
+                    fermentationChartStyles.modalCloseButton,
                     { backgroundColor: theme.colors.primary },
                   ]}
                   onPress={() => setModalVisible(false)}
                 >
                   <Text
                     style={[
-                      styles.modalCloseText,
+                      fermentationChartStyles.modalCloseText,
                       { color: theme.colors.primaryText },
                     ]}
                   >
@@ -1263,186 +1370,3 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    borderRadius: 12,
-    marginVertical: 8,
-  },
-  titleContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: "bold",
-    flex: 1,
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  refreshButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
-    minWidth: 32,
-    alignItems: "center",
-  },
-  buttonText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  toggleButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  toggleText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    flexWrap: "wrap",
-    marginBottom: 16,
-    paddingHorizontal: 8,
-    gap: 8,
-  },
-  stat: {
-    alignItems: "center",
-  },
-  statLabel: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  chartContainer: {
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    paddingRight: 20, // Extra padding on right for secondary Y-axis
-    overflow: "visible", // Allow secondary axis to be visible
-    alignItems: "center", // Center chart horizontally
-  },
-  chartSection: {
-    marginBottom: 20,
-    paddingHorizontal: 8, // Add horizontal padding to prevent title truncation
-  },
-  chartTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 12, // Increase bottom margin
-    textAlign: "center",
-    paddingHorizontal: 16, // Add padding to prevent text truncation
-    lineHeight: 18, // Ensure proper line height
-  },
-  chart: {
-    height: 200,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4, // Add small top margin for better spacing
-    overflow: "visible", // Allow secondary axis to be visible
-    paddingRight: 15, // Extra padding for secondary axis labels
-  },
-  legend: {
-    flexDirection: "row",
-    justifyContent: "center",
-    flexWrap: "wrap",
-    gap: 16,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 8,
-  },
-  legendColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 6,
-  },
-  legendText: {
-    fontSize: 12,
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  emptySubtext: {
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  // Modal styles for data point details
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  modalContent: {
-    borderRadius: 12,
-    padding: 24,
-    minWidth: 280,
-    maxWidth: "90%",
-    borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  modalBody: {
-    marginBottom: 20,
-  },
-  modalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 6,
-  },
-  modalLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  modalValue: {
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  modalCloseButton: {
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    alignItems: "center",
-  },
-  modalCloseText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});

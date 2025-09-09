@@ -100,7 +100,7 @@ export class EfficiencyCalculator {
    */
   public static calculateExpectedPoints(
     grainBill: GrainBillItem[],
-    batchSizeGal: number // Kept for API consistency, not used in calculation
+    _batchSizeGal: number // Kept for API consistency, not used in calculation
   ): number {
     let totalPoints = 0;
 

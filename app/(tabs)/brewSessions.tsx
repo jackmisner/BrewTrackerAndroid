@@ -209,7 +209,9 @@ export default function BrewSessionsScreen() {
             text: "Delete",
             style: "destructive",
             onPress: () => {
-              if (deleteMutation.isPending) return;
+              if (deleteMutation.isPending) {
+                return;
+              }
               contextMenu.hideMenu();
               deleteMutation.mutate(brewSession.id, {
                 onSuccess: () => {
@@ -232,7 +234,9 @@ export default function BrewSessionsScreen() {
   };
 
   const getStatusColor = (status: BrewSession["status"]) => {
-    if (!status) return "#4CAF50"; // Default for non-completed
+    if (!status) {
+      return "#4CAF50";
+    } // Default for non-completed
 
     switch (status) {
       case "active":
@@ -251,7 +255,9 @@ export default function BrewSessionsScreen() {
   };
 
   const getStatusIcon = (status: BrewSession["status"]) => {
-    if (!status) return "help-outline";
+    if (!status) {
+      return "help-outline";
+    }
 
     switch (status) {
       case "active":

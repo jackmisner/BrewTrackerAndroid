@@ -10,8 +10,12 @@ import { HydrometerCorrectionCalculator } from "@services/calculators/Hydrometer
 jest.mock("@services/calculators/UnitConverter", () => ({
   UnitConverter: {
     convertTemperature: jest.fn((value, from, to) => {
-      if (from === "c" && to === "f") return (value * 9) / 5 + 32;
-      if (from === "f" && to === "c") return ((value - 32) * 5) / 9;
+      if (from === "c" && to === "f") {
+        return (value * 9) / 5 + 32;
+      }
+      if (from === "f" && to === "c") {
+        return ((value - 32) * 5) / 9;
+      }
       return value;
     }),
   },

@@ -77,7 +77,9 @@ function withAlpha(color: string, alpha: number): string {
   const m = color.match(
     /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+))?\s*\)$/i
   );
-  if (m) return `rgba(${m[1]}, ${m[2]}, ${m[3]}, ${alpha})`;
+  if (m) {
+    return `rgba(${m[1]}, ${m[2]}, ${m[3]}, ${alpha})`;
+  }
   return color; // fallback
 }
 

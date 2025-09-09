@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from "react";
-import { View, ScrollView, StyleSheet } from "react-native";
+import { View, ScrollView } from "react-native";
 import { useCalculators } from "@contexts/CalculatorsContext";
 import { ABVCalculator } from "@services/calculators/ABVCalculator";
 import { CalculatorCard } from "@components/calculators/CalculatorCard";
@@ -11,6 +11,7 @@ import {
   SingleResult,
 } from "@components/calculators/ResultDisplay";
 import { useTheme } from "@contexts/ThemeContext";
+import { calculatorScreenStyles } from "@styles/modals/calculators/calculatorScreenStyles";
 
 const FORMULA_OPTIONS = [
   {
@@ -180,7 +181,9 @@ export default function ABVCalculatorScreen() {
     const og = parseFloat(abv.originalGravity);
     const fg = parseFloat(abv.finalGravity);
 
-    if (isNaN(og) || isNaN(fg)) return null;
+    if (isNaN(og) || isNaN(fg)) {
+      return null;
+    }
 
     try {
       const fullResult = ABVCalculator.calculate(
@@ -220,11 +223,14 @@ export default function ABVCalculatorScreen() {
 
   return (
     <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[
+        calculatorScreenStyles.container,
+        { backgroundColor: theme.colors.background },
+      ]}
     >
       <CalculatorHeader title="ABV Calculator" />
 
-      <ScrollView style={styles.scrollContent}>
+      <ScrollView style={calculatorScreenStyles.scrollContent}>
         <CalculatorCard title="Settings">
           <DropdownToggle
             label="Formula"
@@ -292,12 +298,3 @@ export default function ABVCalculatorScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    flex: 1,
-  },
-});

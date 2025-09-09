@@ -166,13 +166,17 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
                 const fresh = await ApiService.user.getSettings();
                 const freshUnits: UnitSystem =
                   fresh.data.settings.preferred_units || "imperial";
-                if (isMounted) setUnitSystem(freshUnits);
+                if (isMounted) {
+                  setUnitSystem(freshUnits);
+                }
                 await AsyncStorage.setItem(
                   STORAGE_KEYS.USER_SETTINGS,
                   JSON.stringify(fresh.data.settings)
                 );
               } else {
-                if (isMounted) setUnitSystem("imperial");
+                if (isMounted) {
+                  setUnitSystem("imperial");
+                }
               }
             } catch (bgError: any) {
               if (bgError?.response?.status !== 401) {
@@ -181,15 +185,23 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
                   bgError
                 );
               }
-              if (isMounted) setUnitSystem("imperial");
+              if (isMounted) {
+                setUnitSystem("imperial");
+              }
             }
-            if (isMounted) setLoading(false);
+            if (isMounted) {
+              setLoading(false);
+            }
             return;
           }
           const preferredUnits: UnitSystem =
             settings.preferred_units || "imperial";
-          if (isMounted) setUnitSystem(preferredUnits);
-          if (isMounted) setLoading(false);
+          if (isMounted) {
+            setUnitSystem(preferredUnits);
+          }
+          if (isMounted) {
+            setLoading(false);
+          }
 
           // Only fetch fresh data in background if authenticated
           if (isAuthenticated) {
@@ -220,7 +232,9 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
           const settings = await ApiService.user.getSettings();
           const preferredUnits: UnitSystem =
             settings.data.settings.preferred_units || "imperial";
-          if (isMounted) setUnitSystem(preferredUnits);
+          if (isMounted) {
+            setUnitSystem(preferredUnits);
+          }
           // Cache for offline use
           await AsyncStorage.setItem(
             STORAGE_KEYS.USER_SETTINGS,
@@ -228,16 +242,22 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
           );
         } else {
           // Use default for unauthenticated users
-          if (isMounted) setUnitSystem("imperial");
+          if (isMounted) {
+            setUnitSystem("imperial");
+          }
         }
       } catch (err: any) {
         // Only log non-auth errors
         if (err.response?.status !== 401) {
           console.warn("Failed to load unit preferences, using default:", err);
         }
-        if (isMounted) setUnitSystem("imperial"); // Fallback to imperial
+        if (isMounted) {
+          setUnitSystem("imperial");
+        } // Fallback to imperial
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -327,7 +347,9 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
     toUnit: string
   ): UnitConversion => {
     const numValue = parseFloat(value.toString());
-    if (isNaN(numValue)) return { value: 0, unit: toUnit };
+    if (isNaN(numValue)) {
+      return { value: 0, unit: toUnit };
+    }
 
     // If same unit, return as-is
     if (fromUnit === toUnit) {
@@ -419,7 +441,9 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
     precision: number = 2
   ): string => {
     const numValue = parseFloat(value.toString());
-    if (isNaN(numValue)) return "0 " + unit;
+    if (isNaN(numValue)) {
+      return "0 " + unit;
+    }
 
     // Determine appropriate precision based on value and unit
     let displayPrecision = precision;
@@ -494,7 +518,9 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
     fromSystem: UnitSystem,
     toSystem: UnitSystem
   ): number => {
-    if (fromSystem === toSystem) return value;
+    if (fromSystem === toSystem) {
+      return value;
+    }
 
     if (fromSystem === "imperial" && toSystem === "metric") {
       return ((value - 32) * 5) / 9;

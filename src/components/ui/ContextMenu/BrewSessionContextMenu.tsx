@@ -24,7 +24,9 @@ export function BrewSessionContextMenu({
   onClose,
   position,
 }: BrewSessionContextMenuProps) {
-  if (!brewSession) return null;
+  if (!brewSession) {
+    return null;
+  }
 
   const title = brewSession.name || "Unnamed Session";
   const subtitle = getStatusDisplayText(brewSession.status) || "Unknown Status";
@@ -46,7 +48,9 @@ export function BrewSessionContextMenu({
  * Helper function to get display-friendly status text
  */
 function getStatusDisplayText(status: string | undefined): string {
-  if (!status) return "Unknown Status";
+  if (!status) {
+    return "Unknown Status";
+  }
 
   // Convert status to display format
   switch (status) {

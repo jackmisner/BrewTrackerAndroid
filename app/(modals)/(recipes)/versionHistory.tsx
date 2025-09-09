@@ -43,7 +43,9 @@ export default function VersionHistoryScreen() {
   } = useQuery<RecipeVersionHistoryResponse>({
     queryKey: ["versionHistory", recipe_id],
     queryFn: async () => {
-      if (!recipe_id) throw new Error("No recipe ID provided");
+      if (!recipe_id) {
+        throw new Error("No recipe ID provided");
+      }
 
       try {
         const response = await ApiService.recipes.getVersionHistory(recipe_id);
@@ -67,7 +69,9 @@ export default function VersionHistoryScreen() {
   } = useQuery<Recipe>({
     queryKey: ["recipe", recipe_id],
     queryFn: async () => {
-      if (!recipe_id) throw new Error("No recipe ID provided");
+      if (!recipe_id) {
+        throw new Error("No recipe ID provided");
+      }
       const response = await ApiService.recipes.getById(recipe_id);
       return response.data;
     },
@@ -93,7 +97,9 @@ export default function VersionHistoryScreen() {
 
   // Build version list using property-based type guards
   const buildVersionList = () => {
-    if (!versionHistoryData) return [];
+    if (!versionHistoryData) {
+      return [];
+    }
 
     // Use type guards to handle different response shapes
     if (isEnhancedVersionHistoryResponse(versionHistoryData)) {

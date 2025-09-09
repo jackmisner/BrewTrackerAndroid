@@ -1,7 +1,8 @@
 import React from "react";
-import { View, Text, StyleSheet, ViewStyle } from "react-native";
+import { View, Text, StyleProp, ViewStyle } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
+import { resultDisplayStyles } from "@styles/components/calculators/resultDisplayStyles";
 
 interface ResultItem {
   label: string;
@@ -14,7 +15,7 @@ interface ResultItem {
 interface ResultDisplayProps {
   results: ResultItem[];
   title?: string;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   highlight?: boolean;
 }
 
@@ -30,8 +31,12 @@ export function ResultDisplay({
     value: string | number,
     precision: number = 2
   ): string => {
-    if (typeof value === "string") return value;
-    if (typeof value !== "number") return "-";
+    if (typeof value === "string") {
+      return value;
+    }
+    if (typeof value !== "number") {
+      return "-";
+    }
 
     return precision === 0
       ? Math.round(value).toString()
@@ -41,7 +46,7 @@ export function ResultDisplay({
   return (
     <View
       style={[
-        styles.container,
+        resultDisplayStyles.container,
         {
           backgroundColor: highlight
             ? theme.colors.primaryLight10
@@ -53,23 +58,25 @@ export function ResultDisplay({
         style,
       ]}
     >
-      <Text style={[styles.title, { color: theme.colors.text }]}>{title}</Text>
+      <Text style={[resultDisplayStyles.title, { color: theme.colors.text }]}>
+        {title}
+      </Text>
 
-      <View style={styles.resultsList}>
+      <View style={resultDisplayStyles.resultsList}>
         {results.map((result, index) => (
-          <View key={index} style={styles.resultItem}>
-            <View style={styles.resultLabelContainer}>
+          <View key={index} style={resultDisplayStyles.resultItem}>
+            <View style={resultDisplayStyles.resultLabelContainer}>
               {result.icon && (
                 <MaterialIcons
                   name={result.icon}
                   size={18}
                   color={theme.colors.textSecondary}
-                  style={styles.resultIcon}
+                  style={resultDisplayStyles.resultIcon}
                 />
               )}
               <Text
                 style={[
-                  styles.resultLabel,
+                  resultDisplayStyles.resultLabel,
                   { color: theme.colors.textSecondary },
                 ]}
               >
@@ -77,10 +84,10 @@ export function ResultDisplay({
               </Text>
             </View>
 
-            <View style={styles.resultValueContainer}>
+            <View style={resultDisplayStyles.resultValueContainer}>
               <Text
                 style={[
-                  styles.resultValue,
+                  resultDisplayStyles.resultValue,
                   {
                     color: highlight ? theme.colors.primary : theme.colors.text,
                     fontWeight: highlight ? "600" : "500",
@@ -92,7 +99,7 @@ export function ResultDisplay({
               {result.unit && (
                 <Text
                   style={[
-                    styles.resultUnit,
+                    resultDisplayStyles.resultUnit,
                     {
                       color: highlight
                         ? theme.colors.primary
@@ -118,7 +125,7 @@ interface SingleResultProps {
   icon?: keyof typeof MaterialIcons.glyphMap;
   precision?: number;
   size?: "small" | "medium" | "large";
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 export function SingleResult({
@@ -158,7 +165,7 @@ export function SingleResult({
   return (
     <View
       style={[
-        styles.singleResultContainer,
+        resultDisplayStyles.singleResultContainer,
         {
           backgroundColor: theme.colors.primaryLight10,
           borderColor: theme.colors.primaryLight30,
@@ -167,18 +174,18 @@ export function SingleResult({
         style,
       ]}
     >
-      <View style={styles.singleResultHeader}>
+      <View style={resultDisplayStyles.singleResultHeader}>
         {icon && (
           <MaterialIcons
             name={icon}
             size={currentSize.labelSize + 4}
             color={theme.colors.textSecondary}
-            style={styles.singleResultIcon}
+            style={resultDisplayStyles.singleResultIcon}
           />
         )}
         <Text
           style={[
-            styles.singleResultLabel,
+            resultDisplayStyles.singleResultLabel,
             {
               color: theme.colors.textSecondary,
               fontSize: currentSize.labelSize,
@@ -189,10 +196,10 @@ export function SingleResult({
         </Text>
       </View>
 
-      <View style={styles.singleResultValueContainer}>
+      <View style={resultDisplayStyles.singleResultValueContainer}>
         <Text
           style={[
-            styles.singleResultValue,
+            resultDisplayStyles.singleResultValue,
             {
               color: theme.colors.primary,
               fontSize: currentSize.valueSize,
@@ -208,7 +215,7 @@ export function SingleResult({
         {unit && (
           <Text
             style={[
-              styles.singleResultUnit,
+              resultDisplayStyles.singleResultUnit,
               {
                 color: theme.colors.primary,
                 fontSize: currentSize.unitSize,
@@ -222,79 +229,3 @@ export function SingleResult({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    borderRadius: 8,
-    borderWidth: 1,
-    padding: 16,
-    marginVertical: 8,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 12,
-  },
-  resultsList: {
-    gap: 8,
-  },
-  resultItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 4,
-  },
-  resultLabelContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  resultIcon: {
-    marginRight: 6,
-  },
-  resultLabel: {
-    fontSize: 14,
-  },
-  resultValueContainer: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 4,
-  },
-  resultValue: {
-    fontSize: 16,
-    textAlign: "right",
-  },
-  resultUnit: {
-    fontSize: 12,
-  },
-
-  // Single result styles
-  singleResultContainer: {
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: "center",
-    marginVertical: 8,
-  },
-  singleResultHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  singleResultIcon: {
-    marginRight: 6,
-  },
-  singleResultLabel: {
-    fontWeight: "500",
-  },
-  singleResultValueContainer: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 6,
-  },
-  singleResultValue: {
-    fontWeight: "bold",
-  },
-  singleResultUnit: {
-    fontWeight: "500",
-  },
-});

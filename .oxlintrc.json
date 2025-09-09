@@ -33,11 +33,20 @@
     "test": "readonly"
   },
   "rules": {
-    "no-unused-vars": "off",
+    "no-unused-vars": "warn",
     "react/jsx-uses-react": "off",
     "react/react-in-jsx-scope": "off",
     "react-hooks/exhaustive-deps": "warn",
-    "no-control-regex": "off"
+    "no-control-regex": "off",
+    "curly": "warn",
+    "no-duplicate-imports": "warn",
+    "prefer-const": "warn",
+    "no-template-curly-in-string": "warn",
+    "no-debugger": "warn",
+    "no-extra-boolean-cast": "warn",
+    "no-unneeded-ternary": "warn",
+    "no-useless-concat": "warn",
+    "no-useless-constructor": "warn"
   },
   "overrides": [
     {

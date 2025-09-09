@@ -25,7 +25,9 @@ const ForgotPasswordScreen: React.FC = () => {
   };
 
   const handleForgotPassword = async (): Promise<void> => {
-    if (isLoading) return;
+    if (isLoading) {
+      return;
+    }
     if (!email.trim()) {
       Alert.alert("Error", "Please enter your email address");
       return;
@@ -136,7 +138,9 @@ const ForgotPasswordScreen: React.FC = () => {
                 value={email}
                 onChangeText={text => {
                   setEmail(text);
-                  if (error) clearError();
+                  if (error) {
+                    clearError();
+                  }
                 }}
                 keyboardType="email-address"
                 autoCapitalize="none"

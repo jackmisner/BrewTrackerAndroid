@@ -31,9 +31,15 @@ import { IngredientInput } from "@src/types";
 import { TEST_IDS } from "@src/constants/testIDs";
 
 function coerceIngredientTime(input: unknown): number | undefined {
-  if (input == null) return undefined; // keep missing as missing
-  if (typeof input === "boolean") return undefined; // ignore booleans
-  if (input === "" || input === 0 || input === "0") return 0; // preserve explicit zero
+  if (input == null) {
+    return undefined;
+  } // keep missing as missing
+  if (typeof input === "boolean") {
+    return undefined;
+  } // ignore booleans
+  if (input === "" || input === 0 || input === "0") {
+    return 0;
+  } // preserve explicit zero
   const n = typeof input === "number" ? input : Number(input);
   return Number.isFinite(n) && n >= 0 ? n : undefined; // reject NaN/±Inf/negatives
 }
@@ -405,15 +411,20 @@ export default function ImportReviewScreen() {
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Batch Size:</Text>
               <Text style={styles.detailValue}>
-                {recipeData.batch_size?.toFixed(1) || "N/A"}{" "}
-                {recipeData.batch_size_unit === "l" ? "L" : "gal"}
+                {(() => {
+                  const n = Number(recipeData.batch_size);
+                  return Number.isFinite(n) ? n.toFixed(1) : "N/A";
+                })()}{" "}
+                {String(recipeData.batch_size_unit).toLowerCase() === "l"
+                  ? "L"
+                  : "gal"}
               </Text>
             </View>
 
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Boil Time:</Text>
               <Text style={styles.detailValue}>
-                {coerceIngredientTime(recipeData.boil_time) || 60} minutes
+                {coerceIngredientTime(recipeData.boil_time) ?? 60} minutes
               </Text>
             </View>
 
@@ -530,7 +541,9 @@ export default function ImportReviewScreen() {
                   (ing: any) => ing.type === type
                 ) || [];
 
-              if (ingredients.length === 0) return null;
+              if (ingredients.length === 0) {
+                return null;
+              }
 
               return (
                 <View key={type} style={styles.ingredientTypeSection}>

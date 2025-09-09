@@ -1,8 +1,10 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@contexts/ThemeContext";
 import { useRouter } from "expo-router";
+import { createCalculatorHeaderStyles } from "@styles/components/calculators/calculatorHeaderStyles";
 
 interface CalculatorHeaderProps {
   title: string;
@@ -12,6 +14,8 @@ interface CalculatorHeaderProps {
 export function CalculatorHeader({ title, onClose }: CalculatorHeaderProps) {
   const theme = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const calculatorHeaderStyles = createCalculatorHeaderStyles(insets);
 
   const handleClose = () => {
     if (onClose) {
@@ -22,10 +26,15 @@ export function CalculatorHeader({ title, onClose }: CalculatorHeaderProps) {
   };
 
   return (
-    <View style={[styles.header, { backgroundColor: theme.colors.primary }]}>
+    <View
+      style={[
+        calculatorHeaderStyles.header,
+        { backgroundColor: theme.colors.primary },
+      ]}
+    >
       <TouchableOpacity
         onPress={handleClose}
-        style={styles.headerButton}
+        style={calculatorHeaderStyles.headerButton}
         accessibilityRole="button"
         accessibilityLabel="Close calculator"
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -37,34 +46,16 @@ export function CalculatorHeader({ title, onClose }: CalculatorHeaderProps) {
         />
       </TouchableOpacity>
 
-      <Text style={[styles.headerTitle, { color: theme.colors.primaryText }]}>
+      <Text
+        style={[
+          calculatorHeaderStyles.headerTitle,
+          { color: theme.colors.primaryText },
+        ]}
+      >
         {title}
       </Text>
 
-      <View style={styles.headerButton} />
+      <View style={calculatorHeaderStyles.headerButton} />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 50, // Account for status bar
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    flex: 1,
-    textAlign: "center",
-  },
-});

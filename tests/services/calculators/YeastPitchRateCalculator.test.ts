@@ -11,9 +11,15 @@ jest.mock("@services/calculators/UnitConverter", () => ({
   UnitConverter: {
     convertVolume: jest.fn((value, from, to) => {
       // Simple volume conversions for testing
-      if (from === to) return value;
-      if (from === "gal" && to === "l") return value * 3.78541;
-      if (from === "l" && to === "l") return value;
+      if (from === to) {
+        return value;
+      }
+      if (from === "gal" && to === "l") {
+        return value * 3.78541;
+      }
+      if (from === "l" && to === "l") {
+        return value;
+      }
       return value;
     }),
   },

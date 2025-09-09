@@ -440,7 +440,9 @@ function calculatorReducer(
         preferences: { ...state.preferences, ...action.payload },
       };
     case "ADD_TO_HISTORY": {
-      if (!state.preferences.saveHistory) return state;
+      if (!state.preferences.saveHistory) {
+        return state;
+      }
       const { calculatorType, inputs, result } = action.payload;
       const now = Date.now();
       const historyEntry = {

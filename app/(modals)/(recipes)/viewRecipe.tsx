@@ -61,7 +61,9 @@ export default function ViewRecipeScreen() {
   } = useQuery<Recipe>({
     queryKey: ["recipe", recipe_id], // Unique key per recipe
     queryFn: async () => {
-      if (!recipe_id) throw new Error("No recipe ID provided");
+      if (!recipe_id) {
+        throw new Error("No recipe ID provided");
+      }
       const response = await ApiService.recipes.getById(recipe_id);
       return response.data;
     },
@@ -74,7 +76,9 @@ export default function ViewRecipeScreen() {
   const { data: versionHistoryData } = useQuery<RecipeVersionHistoryResponse>({
     queryKey: ["versionHistory", recipe_id],
     queryFn: async () => {
-      if (!recipe_id) throw new Error("No recipe ID provided");
+      if (!recipe_id) {
+        throw new Error("No recipe ID provided");
+      }
       const response = await ApiService.recipes.getVersionHistory(recipe_id);
       return response.data;
     },
@@ -181,7 +185,9 @@ export default function ViewRecipeScreen() {
       ingredients: Recipe["ingredients"],
       icon: string
     ) => {
-      if (ingredients.length === 0) return null;
+      if (ingredients.length === 0) {
+        return null;
+      }
 
       return (
         <View style={styles.ingredientGroup}>

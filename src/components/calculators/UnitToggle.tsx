@@ -1,14 +1,9 @@
 import React from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ViewStyle,
-} from "react-native";
+import { View, Text, TouchableOpacity, ViewStyle } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { TEST_IDS } from "@constants/testIDs";
+import { unitToggleStyles } from "@styles/components/calculators/unitToggleStyles";
 
 interface UnitToggleProps {
   value: string;
@@ -30,16 +25,16 @@ export function UnitToggle({
   const theme = useTheme();
 
   return (
-    <View style={[styles.container, style]}>
+    <View style={[unitToggleStyles.container, style]}>
       {label && (
-        <Text style={[styles.label, { color: theme.colors.text }]}>
+        <Text style={[unitToggleStyles.label, { color: theme.colors.text }]}>
           {label}
         </Text>
       )}
 
       <View
         style={[
-          styles.toggleContainer,
+          unitToggleStyles.toggleContainer,
           {
             backgroundColor: theme.colors.backgroundSecondary,
             borderColor: theme.colors.borderLight,
@@ -55,7 +50,7 @@ export function UnitToggle({
             <TouchableOpacity
               key={option.value}
               style={[
-                styles.toggleButton,
+                unitToggleStyles.toggleButton,
                 {
                   backgroundColor: isSelected
                     ? theme.colors.primary
@@ -74,7 +69,7 @@ export function UnitToggle({
             >
               <Text
                 style={[
-                  styles.toggleText,
+                  unitToggleStyles.toggleText,
                   {
                     color: isSelected
                       ? theme.colors.primaryText
@@ -123,16 +118,16 @@ export function DropdownToggle({
   };
 
   return (
-    <View style={[styles.container, style]}>
+    <View style={[unitToggleStyles.container, style]}>
       {label && (
-        <Text style={[styles.label, { color: theme.colors.text }]}>
+        <Text style={[unitToggleStyles.label, { color: theme.colors.text }]}>
           {label}
         </Text>
       )}
 
       <TouchableOpacity
         style={[
-          styles.dropdownButton,
+          unitToggleStyles.dropdownButton,
           {
             backgroundColor: theme.colors.background,
             borderColor: theme.colors.borderLight,
@@ -144,7 +139,7 @@ export function DropdownToggle({
       >
         <Text
           style={[
-            styles.dropdownText,
+            unitToggleStyles.dropdownText,
             {
               color: selectedOption
                 ? theme.colors.text
@@ -165,7 +160,7 @@ export function DropdownToggle({
       {isOpen && (
         <View
           style={[
-            styles.dropdown,
+            unitToggleStyles.dropdown,
             {
               backgroundColor: theme.colors.backgroundSecondary,
               borderColor: theme.colors.borderLight,
@@ -176,7 +171,7 @@ export function DropdownToggle({
             <TouchableOpacity
               key={option.value}
               style={[
-                styles.dropdownItem,
+                unitToggleStyles.dropdownItem,
                 {
                   backgroundColor:
                     value === option.value
@@ -189,10 +184,10 @@ export function DropdownToggle({
                 `dropdown-option-${option.value}`
               )}
             >
-              <View style={styles.dropdownItemContent}>
+              <View style={unitToggleStyles.dropdownItemContent}>
                 <Text
                   style={[
-                    styles.dropdownItemText,
+                    unitToggleStyles.dropdownItemText,
                     {
                       color:
                         value === option.value
@@ -207,7 +202,7 @@ export function DropdownToggle({
                 {option.description && (
                   <Text
                     style={[
-                      styles.dropdownItemDescription,
+                      unitToggleStyles.dropdownItemDescription,
                       { color: theme.colors.textSecondary },
                     ]}
                   >
@@ -230,74 +225,3 @@ export function DropdownToggle({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: 4,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: 6,
-  },
-  toggleContainer: {
-    flexDirection: "row",
-    borderRadius: 8,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 44,
-  },
-  toggleText: {
-    fontSize: 14,
-  },
-
-  // Dropdown styles
-  dropdownButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderRadius: 8,
-    minHeight: 44,
-  },
-  dropdownText: {
-    fontSize: 14,
-    flex: 1,
-  },
-  dropdown: {
-    position: "absolute",
-    top: "100%",
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-    borderWidth: 1,
-    borderRadius: 8,
-    marginTop: 4,
-    maxHeight: 200,
-  },
-  dropdownItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  dropdownItemContent: {
-    flex: 1,
-  },
-  dropdownItemText: {
-    fontSize: 14,
-  },
-  dropdownItemDescription: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-});

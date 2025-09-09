@@ -110,7 +110,7 @@ export default function ImportBeerXMLScreen() {
   /**
    * Parse the selected BeerXML content
    */
-  const parseBeerXML = async (content: string, filename: string) => {
+  const parseBeerXML = async (content: string, _filename: string) => {
     try {
       // Parse using backend service
       const recipes = await BeerXMLService.parseBeerXML(content);
@@ -310,7 +310,9 @@ export default function ImportBeerXMLScreen() {
                   (ing: any) => ing.type === type
                 ).length || 0;
 
-              if (count === 0) return null;
+              if (count === 0) {
+                return null;
+              }
 
               return (
                 <Text key={type} style={styles.ingredientTypeCount}>

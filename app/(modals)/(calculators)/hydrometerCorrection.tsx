@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from "react";
-import { View, ScrollView, StyleSheet } from "react-native";
+import { View, ScrollView } from "react-native";
 import { useCalculators } from "@contexts/CalculatorsContext";
 import { HydrometerCorrectionCalculator } from "@services/calculators/HydrometerCorrectionCalculator";
 import { CalculatorCard } from "@components/calculators/CalculatorCard";
@@ -8,6 +8,7 @@ import { NumberInput } from "@components/calculators/NumberInput";
 import { UnitToggle } from "@components/calculators/UnitToggle";
 import { SingleResult } from "@components/calculators/ResultDisplay";
 import { useTheme } from "@contexts/ThemeContext";
+import { calculatorScreenStyles } from "@styles/modals/calculators/calculatorScreenStyles";
 
 const TEMP_UNIT_OPTIONS = [
   { label: "°F", value: "f" as const, description: "Fahrenheit" },
@@ -121,10 +122,14 @@ export default function HydrometerCorrectionCalculatorScreen() {
     fromUnit: string,
     toUnit: string
   ): string => {
-    if (!value || fromUnit === toUnit) return value;
+    if (!value || fromUnit === toUnit) {
+      return value;
+    }
 
     const numValue = parseFloat(value);
-    if (!isFinite(numValue)) return value;
+    if (!isFinite(numValue)) {
+      return value;
+    }
 
     let converted: number;
     if (fromUnit === "f" && toUnit === "c") {
@@ -179,11 +184,14 @@ export default function HydrometerCorrectionCalculatorScreen() {
 
   return (
     <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[
+        calculatorScreenStyles.container,
+        { backgroundColor: theme.colors.background },
+      ]}
     >
       <CalculatorHeader title="Hydrometer Correction" />
 
-      <ScrollView style={styles.scrollContent}>
+      <ScrollView style={calculatorScreenStyles.scrollContent}>
         <CalculatorCard title="Settings">
           <UnitToggle
             label="Temperature Unit"
@@ -246,12 +254,3 @@ export default function HydrometerCorrectionCalculatorScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    flex: 1,
-  },
-});

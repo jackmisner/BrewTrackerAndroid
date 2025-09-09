@@ -40,7 +40,9 @@ const ResetPasswordScreen: React.FC = () => {
   }, [token]);
 
   const getPasswordStrength = (password: string): string => {
-    if (!password) return "";
+    if (!password) {
+      return "";
+    }
 
     // Use zxcvbn to evaluate password strength
     const result = zxcvbn(password);
@@ -107,9 +109,9 @@ const ResetPasswordScreen: React.FC = () => {
     try {
       await resetPassword(token, formData.newPassword);
       setSuccess(true);
-    } catch (error) {
+    } catch (err: unknown) {
       // Error is handled by the context and displayed through error state
-      console.error("Password reset failed:", error);
+      console.error("Password reset failed:", err);
       // Optionally show a fallback alert if context error handling fails
       if (!error) {
         Alert.alert("Error", "Failed to reset password. Please try again.");
@@ -216,7 +218,9 @@ const ResetPasswordScreen: React.FC = () => {
                 onChangeText={text => {
                   // Don't trim here to allow spaces within password, but validate on submit
                   setFormData(prev => ({ ...prev, newPassword: text }));
-                  if (error) clearError();
+                  if (error) {
+                    clearError();
+                  }
                 }}
                 secureTextEntry={!showPassword}
                 autoComplete="new-password"
@@ -271,7 +275,9 @@ const ResetPasswordScreen: React.FC = () => {
                 value={formData.confirmPassword}
                 onChangeText={text => {
                   setFormData(prev => ({ ...prev, confirmPassword: text }));
-                  if (error) clearError();
+                  if (error) {
+                    clearError();
+                  }
                 }}
                 secureTextEntry={!showConfirmPassword}
                 autoComplete="new-password"

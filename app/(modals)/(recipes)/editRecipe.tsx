@@ -33,28 +33,48 @@ enum RecipeStep {
 
 const STEP_TITLES = ["Basic Info", "Parameters", "Ingredients", "Review"];
 
+// Helper function to convert values to optional numbers
+const toOptionalNumber = (v: any): number | undefined => {
+  if (v === null || v === undefined) {
+    return undefined;
+  }
+  if (typeof v === "string" && v.trim() === "") {
+    return undefined;
+  }
+  if (typeof v === "boolean") {
+    return undefined;
+  }
+  const n =
+    typeof v === "number"
+      ? v
+      : typeof v === "string"
+        ? Number.parseFloat(v)
+        : Number(v);
+  return Number.isFinite(n) ? n : undefined;
+};
+
 // Create unit-aware initial recipe state from existing recipe
 const createRecipeStateFromExisting = (
   existingRecipe: Recipe,
   unitSystem: "imperial" | "metric"
 ): RecipeFormData => ({
-  name: existingRecipe.name || "",
-  style: existingRecipe.style || "",
-  description: existingRecipe.description || "",
-  batch_size: existingRecipe.batch_size || (unitSystem === "imperial" ? 5 : 19),
+  name: existingRecipe.name ?? "",
+  style: existingRecipe.style ?? "",
+  description: existingRecipe.description ?? "",
+  batch_size: existingRecipe.batch_size ?? (unitSystem === "imperial" ? 5 : 19),
   batch_size_unit:
-    existingRecipe.batch_size_unit || (unitSystem === "imperial" ? "gal" : "l"),
+    existingRecipe.batch_size_unit ?? (unitSystem === "imperial" ? "gal" : "l"),
   unit_system: unitSystem,
-  boil_time: existingRecipe.boil_time || 60,
-  efficiency: existingRecipe.efficiency || 75,
+  boil_time: existingRecipe.boil_time ?? 60,
+  efficiency: existingRecipe.efficiency ?? 75,
   mash_temperature:
-    existingRecipe.mash_temperature || (unitSystem === "imperial" ? 152 : 67),
+    existingRecipe.mash_temperature ?? (unitSystem === "imperial" ? 152 : 67),
   mash_temp_unit:
-    existingRecipe.mash_temp_unit || (unitSystem === "imperial" ? "F" : "C"),
-  mash_time: existingRecipe.mash_time || 60,
-  is_public: existingRecipe.is_public || false,
-  notes: existingRecipe.notes || "",
-  ingredients: existingRecipe.ingredients || [],
+    existingRecipe.mash_temp_unit ?? (unitSystem === "imperial" ? "F" : "C"),
+  mash_time: existingRecipe.mash_time ?? undefined,
+  is_public: existingRecipe.is_public ?? false,
+  notes: existingRecipe.notes ?? "",
+  ingredients: existingRecipe.ingredients ?? [],
 });
 
 // Recipe builder reducer (same as createRecipe)
@@ -138,7 +158,7 @@ export default function EditRecipeScreen() {
     efficiency: 75,
     mash_temperature: unitSystem === "imperial" ? 152 : 67,
     mash_temp_unit: unitSystem === "imperial" ? "F" : "C",
-    mash_time: 60,
+    mash_time: undefined,
     is_public: false,
     notes: "",
     ingredients: [],
@@ -156,7 +176,6 @@ export default function EditRecipeScreen() {
   } = useQuery<Recipe>({
     queryKey: ["recipe", recipe_id],
     queryFn: async () => {
-      if (!recipe_id) throw new Error("No recipe ID provided");
       const response = await ApiService.recipes.getById(recipe_id);
       return response.data;
     },
@@ -197,61 +216,56 @@ export default function EditRecipeScreen() {
   // Update recipe mutation
   const updateRecipeMutation = useMutation({
     mutationFn: async (formData: RecipeFormData) => {
-      if (!recipe_id) throw new Error("No recipe ID provided");
+      // Filter out ingredients with zero/empty amounts first
+      const validIngredients = formData.ingredients.filter(ingredient => {
+        const amt = toOptionalNumber(ingredient.amount);
+        return amt !== undefined && amt > 0;
+      });
 
-      // Sanitize ingredients to ensure all numeric fields are valid
-      // Note: Adding explicit ID mapping as fallback - the API interceptor should handle this but seems to have issues with nested ingredients
-      const sanitizedIngredients = formData.ingredients.map(ingredient => {
+      const sanitizedIngredients = validIngredients.map(ingredient => {
         const sanitized: any = { ...ingredient };
 
-        // Ensure required amount is a valid number
-        sanitized.amount = Number(sanitized.amount) || 0;
-
-        // Clean up optional numeric fields - convert null to undefined or valid numbers
-        if (
-          sanitized.potential !== undefined &&
-          (sanitized.potential === null || isNaN(Number(sanitized.potential)))
-        ) {
-          delete sanitized.potential;
-        } else if (sanitized.potential !== undefined) {
-          sanitized.potential = Number(sanitized.potential);
+        // Amount is already validated as positive, so just use it
+        sanitized.amount = toOptionalNumber(sanitized.amount);
+        {
+          const v = toOptionalNumber(sanitized.potential);
+          if (v === undefined) {
+            delete sanitized.potential;
+          } else {
+            sanitized.potential = v;
+          }
         }
-
-        if (
-          sanitized.color !== undefined &&
-          (sanitized.color === null || isNaN(Number(sanitized.color)))
-        ) {
-          delete sanitized.color;
-        } else if (sanitized.color !== undefined) {
-          sanitized.color = Number(sanitized.color);
+        {
+          const v = toOptionalNumber(sanitized.color);
+          if (v === undefined) {
+            delete sanitized.color;
+          } else {
+            sanitized.color = v;
+          }
         }
-
-        if (
-          sanitized.alpha_acid !== undefined &&
-          (sanitized.alpha_acid === null || isNaN(Number(sanitized.alpha_acid)))
-        ) {
-          delete sanitized.alpha_acid;
-        } else if (sanitized.alpha_acid !== undefined) {
-          sanitized.alpha_acid = Number(sanitized.alpha_acid);
+        {
+          const v = toOptionalNumber(sanitized.alpha_acid);
+          if (v === undefined) {
+            delete sanitized.alpha_acid;
+          } else {
+            sanitized.alpha_acid = Math.max(0, Math.min(100, v));
+          }
         }
-
-        if (
-          sanitized.time !== undefined &&
-          (sanitized.time === null || isNaN(Number(sanitized.time)))
-        ) {
-          delete sanitized.time;
-        } else if (sanitized.time !== undefined) {
-          sanitized.time = Number(sanitized.time);
+        {
+          const v = toOptionalNumber(sanitized.time);
+          if (v === undefined) {
+            delete sanitized.time;
+          } else {
+            sanitized.time = Math.max(0, v);
+          }
         }
-
-        if (
-          sanitized.attenuation !== undefined &&
-          (sanitized.attenuation === null ||
-            isNaN(Number(sanitized.attenuation)))
-        ) {
-          delete sanitized.attenuation;
-        } else if (sanitized.attenuation !== undefined) {
-          sanitized.attenuation = Number(sanitized.attenuation);
+        {
+          const v = toOptionalNumber(sanitized.attenuation);
+          if (v === undefined) {
+            delete sanitized.attenuation;
+          } else {
+            sanitized.attenuation = Math.max(0, Math.min(100, v));
+          }
         }
 
         // Remove fields that shouldn't be sent to API for updates
@@ -271,23 +285,65 @@ export default function EditRecipeScreen() {
         name: formData.name || "",
         style: formData.style || "",
         description: formData.description || "",
-        batch_size: Number(formData.batch_size) || 5,
-        batch_size_unit: formData.batch_size_unit || "gal",
-        boil_time: Number(formData.boil_time) || 60,
-        efficiency: Number(formData.efficiency) || 75,
-        mash_temperature: Number(formData.mash_temperature) || 152,
-        mash_temp_unit: formData.mash_temp_unit || "F",
-        mash_time: formData.mash_time ? Number(formData.mash_time) : undefined,
+        batch_size: (() => {
+          const v = toOptionalNumber(formData.batch_size);
+          return v && v > 0 ? v : 5;
+        })(),
+        batch_size_unit:
+          formData.batch_size_unit || (unitSystem === "metric" ? "l" : "gal"),
+        boil_time: (() => {
+          const v = toOptionalNumber(formData.boil_time);
+          return v !== undefined && v >= 0 && v <= 300 ? v : 60;
+        })(),
+        efficiency: (() => {
+          const v = toOptionalNumber(formData.efficiency);
+          return v !== undefined && v > 0 && v <= 100 ? v : 75;
+        })(),
+        // Unit-aware clamp with sensible fallback (°F:152, °C:67)
+        mash_temperature: (() => {
+          const unit =
+            formData.mash_temp_unit || (unitSystem === "metric" ? "C" : "F");
+          const fallback = unit === "C" ? 67 : 152;
+          const t = Number(formData.mash_temperature);
+          if (!Number.isFinite(t)) {
+            return fallback;
+          }
+          const [min, max] = unit === "C" ? [60, 77] : [140, 170];
+          return Math.min(max, Math.max(min, t));
+        })(),
+        mash_temp_unit:
+          formData.mash_temp_unit || (unitSystem === "metric" ? "C" : "F"),
+        mash_time: toOptionalNumber(formData.mash_time),
         is_public: Boolean(formData.is_public),
         notes: formData.notes || "",
         ingredients: sanitizedIngredients,
         // Include estimated metrics if available
         ...(metricsData && {
-          estimated_og: Number(metricsData.og) || null,
-          estimated_fg: Number(metricsData.fg) || null,
-          estimated_abv: Number(metricsData.abv) || null,
-          estimated_ibu: Number(metricsData.ibu) || null,
-          estimated_srm: Number(metricsData.srm) || null,
+          estimated_og:
+            typeof metricsData.og === "number" &&
+            Number.isFinite(metricsData.og)
+              ? metricsData.og
+              : null,
+          estimated_fg:
+            typeof metricsData.fg === "number" &&
+            Number.isFinite(metricsData.fg)
+              ? metricsData.fg
+              : null,
+          estimated_abv:
+            typeof metricsData.abv === "number" &&
+            Number.isFinite(metricsData.abv)
+              ? metricsData.abv
+              : null,
+          estimated_ibu:
+            typeof metricsData.ibu === "number" &&
+            Number.isFinite(metricsData.ibu)
+              ? metricsData.ibu
+              : null,
+          estimated_srm:
+            typeof metricsData.srm === "number" &&
+            Number.isFinite(metricsData.srm)
+              ? metricsData.srm
+              : null,
         }),
       };
 
@@ -374,16 +430,52 @@ export default function EditRecipeScreen() {
   };
 
   /**
+   * Helper function to validate ingredients have positive amounts
+   */
+  const hasValidIngredients = () => {
+    if (recipeData.ingredients.length === 0) {
+      return false;
+    }
+
+    return recipeData.ingredients.some(ingredient => {
+      const amt = toOptionalNumber(ingredient.amount);
+      return amt !== undefined && amt > 0;
+    });
+  };
+
+  /**
    * Form validation
    */
   const canProceed = () => {
     switch (currentStep) {
       case RecipeStep.BASIC_INFO:
-        return recipeData.name.trim().length > 0;
+        return (
+          recipeData.name.trim().length > 0 &&
+          recipeData.style.trim().length > 0
+        );
       case RecipeStep.PARAMETERS:
-        return recipeData.batch_size > 0 && recipeData.boil_time > 0;
+        return (
+          recipeData.batch_size > 0 &&
+          recipeData.boil_time >= 0 &&
+          recipeData.boil_time <= 300 &&
+          recipeData.efficiency > 0 &&
+          recipeData.efficiency <= 100 &&
+          // Mash temp bounds per unit (F: 140–170, C: 60–77)
+          (() => {
+            const unit =
+              recipeData.mash_temp_unit ||
+              (recipeData.unit_system === "metric" ? "C" : "F");
+            const [min, max] = unit === "C" ? [60, 77] : [140, 170];
+            return (
+              recipeData.mash_temperature >= min &&
+              recipeData.mash_temperature <= max
+            );
+          })() &&
+          (recipeData.mash_time === undefined ||
+            (recipeData.mash_time >= 0 && recipeData.mash_time <= 480))
+        );
       case RecipeStep.INGREDIENTS:
-        return recipeData.ingredients.length > 0;
+        return hasValidIngredients();
       case RecipeStep.REVIEW:
         return true;
       default:
@@ -395,7 +487,7 @@ export default function EditRecipeScreen() {
     return (
       recipeData.name.trim().length > 0 &&
       recipeData.batch_size > 0 &&
-      recipeData.ingredients.length > 0 &&
+      hasValidIngredients() &&
       hasUnsavedChanges &&
       !updateRecipeMutation.isPending
     );
@@ -454,26 +546,17 @@ export default function EditRecipeScreen() {
     switch (currentStep) {
       case RecipeStep.BASIC_INFO:
         return (
-          <BasicInfoForm
-            recipeData={recipeData}
-            onUpdateField={updateField}
-            isEditing={true}
-          />
+          <BasicInfoForm recipeData={recipeData} onUpdateField={updateField} />
         );
       case RecipeStep.PARAMETERS:
         return (
-          <ParametersForm
-            recipeData={recipeData}
-            onUpdateField={updateField}
-            isEditing={true}
-          />
+          <ParametersForm recipeData={recipeData} onUpdateField={updateField} />
         );
       case RecipeStep.INGREDIENTS:
         return (
           <IngredientsForm
             recipeData={recipeData}
             onUpdateField={updateField}
-            isEditing={true}
           />
         );
       case RecipeStep.REVIEW:

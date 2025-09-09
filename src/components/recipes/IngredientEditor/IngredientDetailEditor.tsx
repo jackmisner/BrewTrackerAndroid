@@ -442,7 +442,9 @@ export function IngredientDetailEditor({
     );
   };
 
-  if (!isVisible) return null;
+  if (!isVisible) {
+    return null;
+  }
 
   const availableUnits =
     UNIT_OPTIONS[ingredient.type as IngredientType] || UNIT_OPTIONS.other;

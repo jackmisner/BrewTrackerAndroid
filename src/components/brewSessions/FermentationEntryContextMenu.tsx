@@ -48,9 +48,13 @@ export const FermentationEntryContextMenu: React.FC<
   });
 
   const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return "Unknown Date";
+    if (!dateString) {
+      return "Unknown Date";
+    }
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "Invalid date";
+    if (isNaN(date.getTime())) {
+      return "Invalid date";
+    }
     return date.toLocaleDateString();
   };
 
@@ -94,7 +98,9 @@ export const FermentationEntryContextMenu: React.FC<
     // For now, just show an alert with entry details
     // In the future, this could open a detailed view modal
     const { entry } = contextData;
-    if (!entry) return;
+    if (!entry) {
+      return;
+    }
 
     const details = [
       `Date: ${formatDate(entry.entry_date || entry.date)}`,
@@ -139,7 +145,9 @@ export const FermentationEntryContextMenu: React.FC<
     },
   ];
 
-  if (!entry || entryIndex === undefined || !brewSessionId) return null;
+  if (!entry || entryIndex === undefined || !brewSessionId) {
+    return null;
+  }
 
   const contextData = { entry, index: entryIndex, brewSessionId };
 

@@ -149,7 +149,9 @@ jest.mock("@src/hooks/useRecipeMetrics", () => ({
 // Mock time utils
 jest.mock("@src/utils/timeUtils", () => ({
   formatHopTime: jest.fn((time: number, use: string) => {
-    if (use === "dry-hop") return `${time} days`;
+    if (use === "dry-hop") {
+      return `${time} days`;
+    }
     return `${time} min`;
   }),
 }));
@@ -785,7 +787,6 @@ describe("IngredientsForm", () => {
         <IngredientsForm
           recipeData={defaultRecipeData}
           onUpdateField={mockOnUpdateField}
-          isEditing={true}
         />
       );
 

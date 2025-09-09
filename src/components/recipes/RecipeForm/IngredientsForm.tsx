@@ -31,7 +31,6 @@ const GRAIN_TYPE_DISPLAY_MAPPING: Record<string, string> = {
 interface IngredientsFormProps {
   recipeData: RecipeFormData;
   onUpdateField: (field: keyof RecipeFormData, value: any) => void;
-  isEditing?: boolean;
 }
 
 /**
@@ -47,7 +46,6 @@ interface IngredientsFormProps {
 export function IngredientsForm({
   recipeData,
   onUpdateField,
-  isEditing = false,
 }: IngredientsFormProps) {
   const theme = useTheme();
   const styles = createRecipeStyles(theme);
@@ -85,9 +83,13 @@ export function IngredientsForm({
   useEffect(() => {
     const raw = params.selectedIngredient;
     const serialized = Array.isArray(raw) ? raw[0] : raw;
-    if (!serialized) return;
+    if (!serialized) {
+      return;
+    }
     // Skip if already processed
-    if (processedParamRef.current === serialized) return;
+    if (processedParamRef.current === serialized) {
+      return;
+    }
     try {
       let ingredient: RecipeIngredient;
       try {

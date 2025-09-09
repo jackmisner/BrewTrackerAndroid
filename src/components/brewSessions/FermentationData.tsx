@@ -24,8 +24,8 @@ interface FermentationDataProps {
 
 export const FermentationData: React.FC<FermentationDataProps> = ({
   fermentationData,
-  expectedFG,
-  actualOG,
+  expectedFG: _expectedFG,
+  actualOG: _actualOG,
   temperatureUnit,
   brewSessionId,
 }) => {
@@ -43,19 +43,27 @@ export const FermentationData: React.FC<FermentationDataProps> = ({
   }>();
 
   const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return "Unknown Date";
+    if (!dateString) {
+      return "Unknown Date";
+    }
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "Invalid date";
+    if (isNaN(date.getTime())) {
+      return "Invalid date";
+    }
     return date.toLocaleDateString();
   };
 
   const formatGravity = (gravity: number | undefined) => {
-    if (gravity == null) return "—";
+    if (gravity == null) {
+      return "—";
+    }
     return gravity.toFixed(3);
   };
 
   const formatTemperature = (temp: number | undefined) => {
-    if (temp == null) return "—";
+    if (temp == null) {
+      return "—";
+    }
     return `${temp}°${temperatureUnit || "F"}`;
   };
 

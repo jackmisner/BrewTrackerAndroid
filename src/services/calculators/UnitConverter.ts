@@ -54,7 +54,9 @@ export class UnitConverter {
     const from = fromUnit.toLowerCase();
     const to = toUnit.toLowerCase();
 
-    if (from === to) return value;
+    if (from === to) {
+      return value;
+    }
 
     // Convert to Celsius first
     let celsius: number;

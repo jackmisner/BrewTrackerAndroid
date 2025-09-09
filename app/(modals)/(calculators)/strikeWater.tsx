@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from "react";
-import { View, ScrollView, StyleSheet } from "react-native";
+import { View, ScrollView } from "react-native";
 import { useCalculators } from "@contexts/CalculatorsContext";
 import { StrikeWaterCalculator } from "@services/calculators/StrikeWaterCalculator";
 import { CalculatorCard } from "@components/calculators/CalculatorCard";
@@ -12,6 +12,7 @@ import {
 } from "@components/calculators/ResultDisplay";
 import { useTheme } from "@contexts/ThemeContext";
 import { UnitConverter } from "@/src/services/calculators/UnitConverter";
+import { calculatorScreenStyles } from "@styles/modals/calculators/calculatorScreenStyles";
 
 const TEMP_UNIT_OPTIONS = [
   { label: "°F", value: "f" as const, description: "Fahrenheit" },
@@ -232,11 +233,14 @@ export default function StrikeWaterCalculatorScreen() {
 
   return (
     <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[
+        calculatorScreenStyles.container,
+        { backgroundColor: theme.colors.background },
+      ]}
     >
       <CalculatorHeader title="Strike Water Calculator" />
 
-      <ScrollView style={styles.scrollContent}>
+      <ScrollView style={{ flex: 1 }}>
         <CalculatorCard title="Settings">
           <UnitToggle
             label="Temperature Unit"
@@ -334,12 +338,3 @@ export default function StrikeWaterCalculatorScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    flex: 1,
-  },
-});

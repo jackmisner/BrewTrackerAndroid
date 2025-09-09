@@ -4,12 +4,12 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   ViewStyle,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { TEST_IDS } from "@constants/testIDs";
+import { numberInputStyles } from "@styles/components/calculators/numberInputStyles";
 
 interface NumberInputProps {
   label: string;
@@ -109,12 +109,14 @@ export function NumberInput({
     : theme.colors.borderLight;
 
   return (
-    <View style={[styles.container, style]}>
-      <Text style={[styles.label, { color: theme.colors.text }]}>{label}</Text>
+    <View style={[numberInputStyles.container, style]}>
+      <Text style={[numberInputStyles.label, { color: theme.colors.text }]}>
+        {label}
+      </Text>
 
       <View
         style={[
-          styles.inputContainer,
+          numberInputStyles.inputContainer,
           {
             backgroundColor: theme.colors.background,
             borderColor: inputBorderColor,
@@ -123,7 +125,7 @@ export function NumberInput({
       >
         <TextInput
           style={[
-            styles.input,
+            numberInputStyles.input,
             {
               color: theme.colors.text,
             },
@@ -137,12 +139,12 @@ export function NumberInput({
           testID={testID}
         />
 
-        <View style={styles.controls}>
+        <View style={numberInputStyles.controls}>
           {(min !== undefined || max !== undefined) && (
-            <View style={styles.steppers}>
+            <View style={numberInputStyles.steppers}>
               <TouchableOpacity
                 style={[
-                  styles.stepperButton,
+                  numberInputStyles.stepperButton,
                   { backgroundColor: theme.colors.backgroundSecondary },
                 ]}
                 onPress={handleStepDown}
@@ -160,7 +162,7 @@ export function NumberInput({
 
               <TouchableOpacity
                 style={[
-                  styles.stepperButton,
+                  numberInputStyles.stepperButton,
                   { backgroundColor: theme.colors.backgroundSecondary },
                 ]}
                 onPress={handleStepUp}
@@ -181,7 +183,7 @@ export function NumberInput({
           {unit && (
             <TouchableOpacity
               style={[
-                styles.unitButton,
+                numberInputStyles.unitButton,
                 {
                   backgroundColor: onUnitPress
                     ? theme.colors.primaryLight20
@@ -194,7 +196,7 @@ export function NumberInput({
             >
               <Text
                 style={[
-                  styles.unitText,
+                  numberInputStyles.unitText,
                   {
                     color: onUnitPress
                       ? theme.colors.primary
@@ -217,14 +219,19 @@ export function NumberInput({
       </View>
 
       {error && (
-        <Text style={[styles.helperText, { color: theme.colors.error }]}>
+        <Text
+          style={[numberInputStyles.helperText, { color: theme.colors.error }]}
+        >
           {error}
         </Text>
       )}
 
       {helperText && !error && (
         <Text
-          style={[styles.helperText, { color: theme.colors.textSecondary }]}
+          style={[
+            numberInputStyles.helperText,
+            { color: theme.colors.textSecondary },
+          ]}
         >
           {helperText}
         </Text>
@@ -232,61 +239,3 @@ export function NumberInput({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginVertical: 4,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: 6,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minHeight: 48,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: 4,
-  },
-  controls: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  steppers: {
-    flexDirection: "row",
-    gap: 4,
-  },
-  stepperButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  unitButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    gap: 4,
-  },
-  unitText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  helperText: {
-    fontSize: 12,
-    marginTop: 4,
-    marginLeft: 4,
-  },
-});

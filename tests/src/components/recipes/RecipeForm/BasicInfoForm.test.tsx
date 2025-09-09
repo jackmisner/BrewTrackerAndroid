@@ -611,7 +611,6 @@ describe("BasicInfoForm", () => {
         <BasicInfoForm
           recipeData={defaultRecipeData}
           onUpdateField={mockOnUpdateField}
-          isEditing={true}
         />
       );
 

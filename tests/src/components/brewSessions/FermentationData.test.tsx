@@ -13,13 +13,22 @@ jest.mock("react-native", () => ({
   StyleSheet: {
     create: (styles: any) => styles,
     flatten: (styles: any) => {
-      if (styles == null) return {};
-      if (!Array.isArray(styles)) return styles;
+      if (styles == null) {
+        return {};
+      }
+      if (!Array.isArray(styles)) {
+        return styles;
+      }
       const out = {};
       const push = (s: any) => {
-        if (!s) return; // skip null/undefined/false
-        if (Array.isArray(s)) s.forEach(push);
-        else Object.assign(out, s);
+        if (!s) {
+          return;
+        } // skip null/undefined/false
+        if (Array.isArray(s)) {
+          s.forEach(push);
+        } else {
+          Object.assign(out, s);
+        }
       };
       styles.forEach(push);
       return out;
@@ -83,7 +92,6 @@ describe("FermentationData", () => {
     fermentationData: [],
     expectedFG: 1.01,
     actualOG: 1.05,
-
     temperatureUnit: "C",
     brewSessionId: "session-123",
   };

@@ -1,9 +1,8 @@
 import React from "react";
 import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
-import { Alert, Linking } from "react-native";
+import { Alert, Linking, type AlertButton } from "react-native";
 import ProfileScreen from "../../../app/(tabs)/profile";
 import { mockData, testUtils } from "../../testUtils";
-import type { AlertButton } from "react-native";
 
 // Shared style mock constant
 const styleMock = {
