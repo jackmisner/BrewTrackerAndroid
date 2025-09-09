@@ -283,7 +283,8 @@ export default function EditRecipeScreen() {
           Number(formData.batch_size) > 0
             ? Number(formData.batch_size)
             : 5,
-        batch_size_unit: formData.batch_size_unit || "gal",
+        batch_size_unit:
+          formData.batch_size_unit || (unitSystem === "metric" ? "l" : "gal"),
         boil_time:
           Number.isFinite(Number(formData.boil_time)) &&
           Number(formData.boil_time) >= 0 &&
@@ -298,12 +299,14 @@ export default function EditRecipeScreen() {
             : 75,
         // Unit-aware fallback (°F:152, °C:67)
         mash_temperature: (() => {
-          const unit = formData.mash_temp_unit || "C";
+          const unit =
+            formData.mash_temp_unit || (unitSystem === "metric" ? "C" : "F");
           const fallback = unit === "C" ? 67 : 152;
           const t = Number(formData.mash_temperature);
           return Number.isFinite(t) && t > 0 ? t : fallback;
         })(),
-        mash_temp_unit: formData.mash_temp_unit || "C",
+        mash_temp_unit:
+          formData.mash_temp_unit || (unitSystem === "metric" ? "C" : "F"),
         mash_time: Number.isFinite(Number(formData.mash_time))
           ? Number(formData.mash_time)
           : undefined,
