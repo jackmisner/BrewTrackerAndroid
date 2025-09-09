@@ -411,15 +411,20 @@ export default function ImportReviewScreen() {
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Batch Size:</Text>
               <Text style={styles.detailValue}>
-                {recipeData.batch_size?.toFixed(1) || "N/A"}{" "}
-                {recipeData.batch_size_unit === "l" ? "L" : "gal"}
+                {(() => {
+                  const n = Number(recipeData.batch_size);
+                  return Number.isFinite(n) ? n.toFixed(1) : "N/A";
+                })()}{" "}
+                {String(recipeData.batch_size_unit).toLowerCase() === "l"
+                  ? "L"
+                  : "gal"}
               </Text>
             </View>
 
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Boil Time:</Text>
               <Text style={styles.detailValue}>
-                {coerceIngredientTime(recipeData.boil_time) || 60} minutes
+                {coerceIngredientTime(recipeData.boil_time) ?? 60} minutes
               </Text>
             </View>
 

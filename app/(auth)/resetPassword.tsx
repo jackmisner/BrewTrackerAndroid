@@ -109,9 +109,9 @@ const ResetPasswordScreen: React.FC = () => {
     try {
       await resetPassword(token, formData.newPassword);
       setSuccess(true);
-    } catch (error) {
+    } catch (err: unknown) {
       // Error is handled by the context and displayed through error state
-      console.error("Password reset failed:", error);
+      console.error("Password reset failed:", err);
       // Optionally show a fallback alert if context error handling fails
       if (!error) {
         Alert.alert("Error", "Failed to reset password. Please try again.");

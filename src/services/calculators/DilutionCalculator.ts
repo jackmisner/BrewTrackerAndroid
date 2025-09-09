@@ -85,6 +85,7 @@ export class DilutionCalculator {
     // Calculate final gravity if original gravity is provided
     let finalGravity: number | undefined;
     if (originalGravity !== undefined) {
+      this.validateGravityInputs(originalGravity);
       const originalPoints = (originalGravity - 1.0) * 1000;
       const concentratedPoints = originalPoints * concentrationFactor;
       finalGravity =

@@ -38,23 +38,23 @@ const createRecipeStateFromExisting = (
   existingRecipe: Recipe,
   unitSystem: "imperial" | "metric"
 ): RecipeFormData => ({
-  name: existingRecipe.name || "",
-  style: existingRecipe.style || "",
-  description: existingRecipe.description || "",
-  batch_size: existingRecipe.batch_size || (unitSystem === "imperial" ? 5 : 19),
+  name: existingRecipe.name ?? "",
+  style: existingRecipe.style ?? "",
+  description: existingRecipe.description ?? "",
+  batch_size: existingRecipe.batch_size ?? (unitSystem === "imperial" ? 5 : 19),
   batch_size_unit:
-    existingRecipe.batch_size_unit || (unitSystem === "imperial" ? "gal" : "l"),
+    existingRecipe.batch_size_unit ?? (unitSystem === "imperial" ? "gal" : "l"),
   unit_system: unitSystem,
-  boil_time: existingRecipe.boil_time || 60,
-  efficiency: existingRecipe.efficiency || 75,
+  boil_time: existingRecipe.boil_time ?? 60,
+  efficiency: existingRecipe.efficiency ?? 75,
   mash_temperature:
-    existingRecipe.mash_temperature || (unitSystem === "imperial" ? 152 : 67),
+    existingRecipe.mash_temperature ?? (unitSystem === "imperial" ? 152 : 67),
   mash_temp_unit:
-    existingRecipe.mash_temp_unit || (unitSystem === "imperial" ? "F" : "C"),
-  mash_time: existingRecipe.mash_time || 60,
-  is_public: existingRecipe.is_public || false,
-  notes: existingRecipe.notes || "",
-  ingredients: existingRecipe.ingredients || [],
+    existingRecipe.mash_temp_unit ?? (unitSystem === "imperial" ? "F" : "C"),
+  mash_time: existingRecipe.mash_time ?? 60,
+  is_public: existingRecipe.is_public ?? false,
+  notes: existingRecipe.notes ?? "",
+  ingredients: existingRecipe.ingredients ?? [],
 });
 
 // Recipe builder reducer (same as createRecipe)
@@ -277,9 +277,15 @@ export default function EditRecipeScreen() {
         description: formData.description || "",
         batch_size: Number(formData.batch_size) || 5,
         batch_size_unit: formData.batch_size_unit || "gal",
-        boil_time: Number(formData.boil_time) || 60,
-        efficiency: Number(formData.efficiency) || 75,
-        mash_temperature: Number(formData.mash_temperature) || 152,
+        boil_time: Number.isFinite(Number(formData.boil_time))
+          ? Number(formData.boil_time)
+          : 60,
+        efficiency: Number.isFinite(Number(formData.efficiency))
+          ? Number(formData.efficiency)
+          : 75,
+        mash_temperature: Number.isFinite(Number(formData.mash_temperature))
+          ? Number(formData.mash_temperature)
+          : 152,
         mash_temp_unit: formData.mash_temp_unit || "F",
         mash_time: formData.mash_time ? Number(formData.mash_time) : undefined,
         is_public: Boolean(formData.is_public),
@@ -287,11 +293,21 @@ export default function EditRecipeScreen() {
         ingredients: sanitizedIngredients,
         // Include estimated metrics if available
         ...(metricsData && {
-          estimated_og: Number(metricsData.og) || null,
-          estimated_fg: Number(metricsData.fg) || null,
-          estimated_abv: Number(metricsData.abv) || null,
-          estimated_ibu: Number(metricsData.ibu) || null,
-          estimated_srm: Number(metricsData.srm) || null,
+          estimated_og: Number.isFinite(Number(metricsData.og))
+            ? Number(metricsData.og)
+            : null,
+          estimated_fg: Number.isFinite(Number(metricsData.fg))
+            ? Number(metricsData.fg)
+            : null,
+          estimated_abv: Number.isFinite(Number(metricsData.abv))
+            ? Number(metricsData.abv)
+            : null,
+          estimated_ibu: Number.isFinite(Number(metricsData.ibu))
+            ? Number(metricsData.ibu)
+            : null,
+          estimated_srm: Number.isFinite(Number(metricsData.srm))
+            ? Number(metricsData.srm)
+            : null,
         }),
       };
 
@@ -385,7 +401,7 @@ export default function EditRecipeScreen() {
       case RecipeStep.BASIC_INFO:
         return recipeData.name.trim().length > 0;
       case RecipeStep.PARAMETERS:
-        return recipeData.batch_size > 0 && recipeData.boil_time > 0;
+        return recipeData.batch_size > 0 && recipeData.boil_time >= 0;
       case RecipeStep.INGREDIENTS:
         return recipeData.ingredients.length > 0;
       case RecipeStep.REVIEW:

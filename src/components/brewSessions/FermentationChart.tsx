@@ -534,9 +534,11 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       temperatures: number[],
       bufferPercent: number = 10
     ): { minValue: number; maxValue: number } => {
+      const effectiveUnit =
+        temperatureUnit ?? (units.unitSystem === "metric" ? "C" : "F");
       if (temperatures.length === 0) {
         // Default ranges based on session temperature unit
-        if (temperatureUnit === "C") {
+        if (effectiveUnit === "C") {
           return { minValue: 15, maxValue: 27 };
         } else {
           return { minValue: 60, maxValue: 80 };
@@ -549,14 +551,14 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
       // Calculate intelligent buffer based on data spread
       let buffer;
-      if (range < (temperatureUnit === "C" ? 1 : 2)) {
+      if (range < (effectiveUnit === "C" ? 1 : 2)) {
         // Very tight range, use minimum buffer
-        buffer = temperatureUnit === "C" ? 2 : 4;
+        buffer = effectiveUnit === "C" ? 2 : 4;
       } else {
         // Use percentage-based buffer with minimum
         buffer = Math.max(
           range * (bufferPercent / 100),
-          temperatureUnit === "C" ? 1 : 2
+          effectiveUnit === "C" ? 1 : 2
         );
       }
 
@@ -572,7 +574,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
       return { minValue, maxValue };
     },
-    [temperatureUnit]
+    [temperatureUnit, units.unitSystem]
   );
 
   const temperatureAxisConfig = React.useMemo(() => {
