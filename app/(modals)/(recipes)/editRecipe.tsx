@@ -156,9 +156,6 @@ export default function EditRecipeScreen() {
   } = useQuery<Recipe>({
     queryKey: ["recipe", recipe_id],
     queryFn: async () => {
-      if (!recipe_id) {
-        throw new Error("No recipe ID provided");
-      }
       const response = await ApiService.recipes.getById(recipe_id);
       return response.data;
     },
@@ -199,63 +196,62 @@ export default function EditRecipeScreen() {
   // Update recipe mutation
   const updateRecipeMutation = useMutation({
     mutationFn: async (formData: RecipeFormData) => {
-      if (!recipe_id) {
-        throw new Error("No recipe ID provided");
-      }
+      // Helper function to convert values to optional numbers
+      const toOptionalNumber = (v: any): number | undefined => {
+        if (v === "" || v === null || v === undefined) {
+          return undefined;
+        }
+        const n = typeof v === "number" ? v : Number(v);
+        return Number.isFinite(n) ? n : undefined;
+      };
 
       // Sanitize ingredients to ensure all numeric fields are valid
       // Note: Adding explicit ID mapping as fallback - the API interceptor should handle this but seems to have issues with nested ingredients
       const sanitizedIngredients = formData.ingredients.map(ingredient => {
         const sanitized: any = { ...ingredient };
 
-        // Ensure required amount is a valid number
-        sanitized.amount = Number(sanitized.amount) || 0;
-
-        // Clean up optional numeric fields - convert null to undefined or valid numbers
-        if (
-          sanitized.potential !== undefined &&
-          (sanitized.potential === null || isNaN(Number(sanitized.potential)))
-        ) {
-          delete sanitized.potential;
-        } else if (sanitized.potential !== undefined) {
-          sanitized.potential = Number(sanitized.potential);
+        // Ensure required amount is a valid number (treat empty as missing)
+        const amt = toOptionalNumber(sanitized.amount);
+        sanitized.amount = amt !== undefined ? amt : 0;
+        {
+          const v = toOptionalNumber(sanitized.potential);
+          if (v === undefined) {
+            delete sanitized.potential;
+          } else {
+            sanitized.potential = v;
+          }
         }
-
-        if (
-          sanitized.color !== undefined &&
-          (sanitized.color === null || isNaN(Number(sanitized.color)))
-        ) {
-          delete sanitized.color;
-        } else if (sanitized.color !== undefined) {
-          sanitized.color = Number(sanitized.color);
+        {
+          const v = toOptionalNumber(sanitized.color);
+          if (v === undefined) {
+            delete sanitized.color;
+          } else {
+            sanitized.color = v;
+          }
         }
-
-        if (
-          sanitized.alpha_acid !== undefined &&
-          (sanitized.alpha_acid === null || isNaN(Number(sanitized.alpha_acid)))
-        ) {
-          delete sanitized.alpha_acid;
-        } else if (sanitized.alpha_acid !== undefined) {
-          sanitized.alpha_acid = Number(sanitized.alpha_acid);
+        {
+          const v = toOptionalNumber(sanitized.alpha_acid);
+          if (v === undefined) {
+            delete sanitized.alpha_acid;
+          } else {
+            sanitized.alpha_acid = v;
+          }
         }
-
-        if (
-          sanitized.time !== undefined &&
-          (sanitized.time === null || isNaN(Number(sanitized.time)))
-        ) {
-          delete sanitized.time;
-        } else if (sanitized.time !== undefined) {
-          sanitized.time = Number(sanitized.time);
+        {
+          const v = toOptionalNumber(sanitized.time);
+          if (v === undefined) {
+            delete sanitized.time;
+          } else {
+            sanitized.time = v;
+          }
         }
-
-        if (
-          sanitized.attenuation !== undefined &&
-          (sanitized.attenuation === null ||
-            isNaN(Number(sanitized.attenuation)))
-        ) {
-          delete sanitized.attenuation;
-        } else if (sanitized.attenuation !== undefined) {
-          sanitized.attenuation = Number(sanitized.attenuation);
+        {
+          const v = toOptionalNumber(sanitized.attenuation);
+          if (v === undefined) {
+            delete sanitized.attenuation;
+          } else {
+            sanitized.attenuation = v;
+          }
         }
 
         // Remove fields that shouldn't be sent to API for updates
@@ -281,15 +277,23 @@ export default function EditRecipeScreen() {
             ? Number(formData.batch_size)
             : 5,
         batch_size_unit: formData.batch_size_unit || "gal",
-        boil_time: Number.isFinite(Number(formData.boil_time))
-          ? Number(formData.boil_time)
-          : 60,
-        efficiency: Number.isFinite(Number(formData.efficiency))
-          ? Number(formData.efficiency)
-          : 75,
-        mash_temperature: Number.isFinite(Number(formData.mash_temperature))
-          ? Number(formData.mash_temperature)
-          : 152,
+        boil_time:
+          Number.isFinite(Number(formData.boil_time)) &&
+          Number(formData.boil_time) >= 0 &&
+          Number(formData.boil_time) <= 300
+            ? Number(formData.boil_time)
+            : 60,
+        efficiency:
+          Number.isFinite(Number(formData.efficiency)) &&
+          Number(formData.efficiency) > 0 &&
+          Number(formData.efficiency) <= 100
+            ? Number(formData.efficiency)
+            : 75,
+        mash_temperature:
+          Number.isFinite(Number(formData.mash_temperature)) &&
+          Number(formData.mash_temperature) > 0
+            ? Number(formData.mash_temperature)
+            : 152,
         mash_temp_unit: formData.mash_temp_unit || "F",
         mash_time: Number.isFinite(Number(formData.mash_time))
           ? Number(formData.mash_time)
@@ -417,7 +421,15 @@ export default function EditRecipeScreen() {
       case RecipeStep.BASIC_INFO:
         return recipeData.name.trim().length > 0;
       case RecipeStep.PARAMETERS:
-        return recipeData.batch_size > 0 && recipeData.boil_time >= 0;
+        return (
+          recipeData.batch_size > 0 &&
+          recipeData.boil_time >= 0 &&
+          recipeData.boil_time <= 300 &&
+          recipeData.efficiency > 0 &&
+          recipeData.efficiency <= 100 &&
+          recipeData.mash_temperature > 0 &&
+          (recipeData.mash_time === undefined || recipeData.mash_time >= 0)
+        );
       case RecipeStep.INGREDIENTS:
         return recipeData.ingredients.length > 0;
       case RecipeStep.REVIEW:
