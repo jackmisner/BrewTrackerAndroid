@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, ViewStyle } from "react-native";
+import { View, Text, StyleProp, ViewStyle } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { resultDisplayStyles } from "@styles/components/calculators/resultDisplayStyles";
@@ -15,7 +15,7 @@ interface ResultItem {
 interface ResultDisplayProps {
   results: ResultItem[];
   title?: string;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   highlight?: boolean;
 }
 
@@ -31,8 +31,12 @@ export function ResultDisplay({
     value: string | number,
     precision: number = 2
   ): string => {
-    if (typeof value === "string") return value;
-    if (typeof value !== "number") return "-";
+    if (typeof value === "string") {
+      return value;
+    }
+    if (typeof value !== "number") {
+      return "-";
+    }
 
     return precision === 0
       ? Math.round(value).toString()
@@ -121,7 +125,7 @@ interface SingleResultProps {
   icon?: keyof typeof MaterialIcons.glyphMap;
   precision?: number;
   size?: "small" | "medium" | "large";
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 export function SingleResult({

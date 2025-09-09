@@ -156,7 +156,9 @@ export default function EditRecipeScreen() {
   } = useQuery<Recipe>({
     queryKey: ["recipe", recipe_id],
     queryFn: async () => {
-      if (!recipe_id) throw new Error("No recipe ID provided");
+      if (!recipe_id) {
+        throw new Error("No recipe ID provided");
+      }
       const response = await ApiService.recipes.getById(recipe_id);
       return response.data;
     },
@@ -197,7 +199,9 @@ export default function EditRecipeScreen() {
   // Update recipe mutation
   const updateRecipeMutation = useMutation({
     mutationFn: async (formData: RecipeFormData) => {
-      if (!recipe_id) throw new Error("No recipe ID provided");
+      if (!recipe_id) {
+        throw new Error("No recipe ID provided");
+      }
 
       // Sanitize ingredients to ensure all numeric fields are valid
       // Note: Adding explicit ID mapping as fallback - the API interceptor should handle this but seems to have issues with nested ingredients
@@ -454,26 +458,17 @@ export default function EditRecipeScreen() {
     switch (currentStep) {
       case RecipeStep.BASIC_INFO:
         return (
-          <BasicInfoForm
-            recipeData={recipeData}
-            onUpdateField={updateField}
-            isEditing={true}
-          />
+          <BasicInfoForm recipeData={recipeData} onUpdateField={updateField} />
         );
       case RecipeStep.PARAMETERS:
         return (
-          <ParametersForm
-            recipeData={recipeData}
-            onUpdateField={updateField}
-            isEditing={true}
-          />
+          <ParametersForm recipeData={recipeData} onUpdateField={updateField} />
         );
       case RecipeStep.INGREDIENTS:
         return (
           <IngredientsForm
             recipeData={recipeData}
             onUpdateField={updateField}
-            isEditing={true}
           />
         );
       case RecipeStep.REVIEW:

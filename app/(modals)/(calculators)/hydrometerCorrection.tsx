@@ -122,10 +122,14 @@ export default function HydrometerCorrectionCalculatorScreen() {
     fromUnit: string,
     toUnit: string
   ): string => {
-    if (!value || fromUnit === toUnit) return value;
+    if (!value || fromUnit === toUnit) {
+      return value;
+    }
 
     const numValue = parseFloat(value);
-    if (!isFinite(numValue)) return value;
+    if (!isFinite(numValue)) {
+      return value;
+    }
 
     let converted: number;
     if (fromUnit === "f" && toUnit === "c") {

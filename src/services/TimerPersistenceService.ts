@@ -78,7 +78,9 @@ export class TimerPersistenceService {
   public static async loadTimerState(): Promise<BoilTimerState | null> {
     try {
       const stored = await AsyncStorage.getItem(TIMER_STORAGE_KEY);
-      if (!stored) return null;
+      if (!stored) {
+        return null;
+      }
 
       const checkpoint: TimerCheckpoint = JSON.parse(stored);
 
@@ -172,7 +174,9 @@ export class TimerPersistenceService {
    * Check if timer state has meaningfully changed since last save
    */
   private static hasStateChanged(currentState: BoilTimerState): boolean {
-    if (!this.lastSavedState) return true;
+    if (!this.lastSavedState) {
+      return true;
+    }
 
     // Check key properties that indicate meaningful change
     return (

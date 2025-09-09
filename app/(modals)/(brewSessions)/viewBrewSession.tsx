@@ -50,7 +50,9 @@ export default function ViewBrewSession() {
   const { data: recipeData } = useQuery<Recipe | undefined>({
     queryKey: ["recipe", brewSessionData?.recipe_id],
     queryFn: async () => {
-      if (!brewSessionData?.recipe_id) return undefined;
+      if (!brewSessionData?.recipe_id) {
+        return undefined;
+      }
       const response = await ApiService.recipes.getById(
         brewSessionData.recipe_id
       );
@@ -111,9 +113,13 @@ export default function ViewBrewSession() {
    * Converts ISO date strings to readable format
    */
   const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return "Not set";
+    if (!dateString) {
+      return "Not set";
+    }
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "Invalid date";
+    if (isNaN(date.getTime())) {
+      return "Invalid date";
+    }
     return date.toLocaleDateString();
   };
 
@@ -174,7 +180,9 @@ export default function ViewBrewSession() {
         <Text style={styles.metricLabel}>{label}</Text>
         <Text style={styles.metricValue} testID={testId}>
           {(() => {
-            if (value === undefined || value === null) return "—";
+            if (value === undefined || value === null) {
+              return "—";
+            }
             if (typeof value === "number") {
               const decimals =
                 label === "ABV" ? 1 : label.includes("G") ? 3 : 0;
@@ -444,7 +452,7 @@ export default function ViewBrewSession() {
           <Text style={styles.detailsTitle}>Fermentation Entries</Text>
           <FermentationData
             fermentationData={brewSession.fermentation_data || []}
-            expectedFG={recipeData?.estimated_fg || brewSession.target_fg}
+            expectedFG={recipeData?.estimated_fg ?? brewSession.target_fg}
             actualOG={brewSession.actual_og}
             temperatureUnit={brewSession.temperature_unit}
             brewSessionId={brewSessionId}

@@ -72,7 +72,9 @@ export default function CreateBrewSessionScreen() {
   } = useQuery({
     queryKey: ["recipe", recipeId],
     queryFn: async () => {
-      if (!recipeId) throw new Error("Recipe ID is required");
+      if (!recipeId) {
+        throw new Error("Recipe ID is required");
+      }
       return ApiService.recipes.getById(recipeId);
     },
     enabled: !!recipeId,

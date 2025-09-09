@@ -41,7 +41,9 @@ export function RecipeContextMenu({
   onClose,
   position,
 }: RecipeContextMenuProps) {
-  if (!recipe) return null;
+  if (!recipe) {
+    return null;
+  }
 
   const title = recipe.name || "Unnamed Recipe";
   const subtitle = recipe.style || "Unknown Style";

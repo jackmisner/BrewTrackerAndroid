@@ -240,7 +240,7 @@ export default function StrikeWaterCalculatorScreen() {
     >
       <CalculatorHeader title="Strike Water Calculator" />
 
-      <ScrollView style={calculatorScreenStyles.scrollContent}>
+      <ScrollView style={{ flex: 1 }}>
         <CalculatorCard title="Settings">
           <UnitToggle
             label="Temperature Unit"

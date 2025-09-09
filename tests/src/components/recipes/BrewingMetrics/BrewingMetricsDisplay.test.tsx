@@ -68,9 +68,15 @@ jest.mock("@utils/formatUtils", () => ({
   formatIBU: (value: number) => Math.round(value).toString(),
   formatSRM: (value: number) => value.toFixed(1),
   getSrmColor: (value: number) => {
-    if (value < 3) return "#FFE699";
-    if (value < 6) return "#FFD700";
-    if (value < 10) return "#FFAA00";
+    if (value < 3) {
+      return "#FFE699";
+    }
+    if (value < 6) {
+      return "#FFD700";
+    }
+    if (value < 10) {
+      return "#FFAA00";
+    }
     return "#8B4513";
   },
 }));

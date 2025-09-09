@@ -88,7 +88,9 @@ export default function IngredientMatchingScreen() {
         const matchingResults = await BeerXMLService.matchIngredients(
           recipeData.ingredients
         );
-        if (!isActive) return;
+        if (!isActive) {
+          return;
+        }
 
         // Initialize decisions
         const decisions = matchingResults.map(result => ({
@@ -131,7 +133,9 @@ export default function IngredientMatchingScreen() {
         }));
       } catch (error) {
         console.error("🍺 Ingredient Matching - Error:", error);
-        if (!isActive) return;
+        if (!isActive) {
+          return;
+        }
         setMatchingState(prev => ({
           ...prev,
           isLoading: false,

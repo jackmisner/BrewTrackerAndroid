@@ -64,7 +64,9 @@ export default function EditBrewSessionScreen() {
   } = useQuery({
     queryKey: ["brewSession", brewSessionId],
     queryFn: async () => {
-      if (!brewSessionId) throw new Error("Brew session ID is required");
+      if (!brewSessionId) {
+        throw new Error("Brew session ID is required");
+      }
       return ApiService.brewSessions.getById(brewSessionId);
     },
     enabled: !!brewSessionId,
@@ -136,7 +138,9 @@ export default function EditBrewSessionScreen() {
   };
 
   const formatDateForDisplay = (dateString: string) => {
-    if (!dateString) return "Select date";
+    if (!dateString) {
+      return "Select date";
+    }
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString();

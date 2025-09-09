@@ -81,7 +81,9 @@ export const toSlug = (value: string): string => {
   slugCache.set(value, slug);
   if (slugCache.size > MAX_SLUG_CACHE_ENTRIES) {
     const firstKey = slugCache.keys().next().value as string | undefined;
-    if (firstKey !== undefined) slugCache.delete(firstKey);
+    if (firstKey !== undefined) {
+      slugCache.delete(firstKey);
+    }
   }
   return slug;
 };

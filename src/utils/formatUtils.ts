@@ -44,7 +44,9 @@ export const getHopTimePlaceholder = (
   timeUnit: "minutes" | "days"
 ): string => {
   const usageOption = HOP_USAGE_OPTIONS.find(opt => opt.value === usage);
-  if (!usageOption) return "60";
+  if (!usageOption) {
+    return "60";
+  }
 
   if (timeUnit === "days") {
     return String(usageOption.defaultTime / 1440); // Convert minutes to days
@@ -64,7 +66,9 @@ export const convertHopTime = (
   fromUnit: "minutes" | "days",
   toUnit: "minutes" | "days"
 ): number => {
-  if (fromUnit === toUnit) return time;
+  if (fromUnit === toUnit) {
+    return time;
+  }
 
   if (fromUnit === "days" && toUnit === "minutes") {
     return time * 1440;
@@ -180,15 +184,21 @@ export const formatSRM = (srm: number | null | undefined): string => {
 export const getSrmColor = (
   srm: number | string | null | undefined
 ): string => {
-  if (!srm) return "#FFE699";
+  if (!srm) {
+    return "#FFE699";
+  }
   const numSrm = parseFloat(srm.toString());
-  if (isNaN(numSrm) || numSrm < 0) return "#FFE699";
+  if (isNaN(numSrm) || numSrm < 0) {
+    return "#FFE699";
+  }
 
   // Round to nearest integer for lookup
   const roundedSrm = Math.round(numSrm);
 
   // Colors for SRM 0-40, anything above 40 returns black
-  if (roundedSrm > 40) return "#000000";
+  if (roundedSrm > 40) {
+    return "#000000";
+  }
 
   const srmColors: string[] = [
     "#FFE699", // SRM 0

@@ -11,17 +11,25 @@ jest.mock("@services/calculators/UnitConverter", () => ({
   UnitConverter: {
     convertVolume: jest.fn((value, from, to) => {
       // Simple gallon conversion for testing
-      if (from === "gal" && to === "gal") return value;
-      if (from === "l" && to === "gal") return value * 0.264172;
+      if (from === "gal" && to === "gal") {
+        return value;
+      }
+      if (from === "l" && to === "gal") {
+        return value * 0.264172;
+      }
       return value;
     }),
     convertWeight: jest.fn((value, from, to) => {
       // Simple oz conversion for testing
-      if (from === "g" && to === "oz") return value * 0.035274;
+      if (from === "g" && to === "oz") {
+        return value * 0.035274;
+      }
       return value;
     }),
     convertTemperature: jest.fn((value, from, to) => {
-      if (from === "c" && to === "f") return (value * 9) / 5 + 32;
+      if (from === "c" && to === "f") {
+        return (value * 9) / 5 + 32;
+      }
       return value;
     }),
   },

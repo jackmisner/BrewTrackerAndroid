@@ -11,9 +11,15 @@ jest.mock("@services/calculators/UnitConverter", () => ({
   UnitConverter: {
     convertVolume: jest.fn((value, from, to) => {
       // Simple volume conversions for testing
-      if (from === to) return value;
-      if (from === "gal" && to === "l") return value * 3.78541;
-      if (from === "gal" && to === "qt") return value * 4;
+      if (from === to) {
+        return value;
+      }
+      if (from === "gal" && to === "l") {
+        return value * 3.78541;
+      }
+      if (from === "gal" && to === "qt") {
+        return value * 4;
+      }
       return value;
     }),
   },
@@ -25,8 +31,7 @@ describe("DilutionCalculator", () => {
       const result = DilutionCalculator.calculateDilution(
         1.06, // current gravity
         5, // current volume (gal)
-        1.05, // target gravity
-        "gal"
+        1.05 // target gravity
       );
 
       expect(result.finalVolume).toBeGreaterThan(5); // Should be larger volume
@@ -233,8 +238,7 @@ describe("DilutionCalculator", () => {
         1.02, // current gravity (FG)
         5, // current volume
         12, // current ABV (12%)
-        8, // target ABV (8%)
-        "gal"
+        8 // target ABV (8%)
       );
 
       // Dilution ratio = 12/8 = 1.5, so final volume = 5 × 1.5 = 7.5

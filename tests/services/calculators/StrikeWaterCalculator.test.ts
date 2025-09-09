@@ -11,20 +11,34 @@ jest.mock("@services/calculators/UnitConverter", () => ({
   UnitConverter: {
     convertWeight: jest.fn((value, from, to) => {
       // Simple pound conversion for testing
-      if (from === "lb" && to === "lb") return value;
-      if (from === "kg" && to === "lb") return value * 2.20462;
+      if (from === "lb" && to === "lb") {
+        return value;
+      }
+      if (from === "kg" && to === "lb") {
+        return value * 2.20462;
+      }
       return value;
     }),
     convertVolume: jest.fn((value, from, to) => {
       // Simple volume conversions
-      if (from === to) return value;
-      if (from === "qt" && to === "gal") return value * 0.25;
-      if (from === "qt" && to === "l") return value * 0.946353;
+      if (from === to) {
+        return value;
+      }
+      if (from === "qt" && to === "gal") {
+        return value * 0.25;
+      }
+      if (from === "qt" && to === "l") {
+        return value * 0.946353;
+      }
       return value;
     }),
     convertTemperature: jest.fn((value, from, to) => {
-      if (from === "c" && to === "f") return (value * 9) / 5 + 32;
-      if (from === "f" && to === "c") return ((value - 32) * 5) / 9;
+      if (from === "c" && to === "f") {
+        return (value * 9) / 5 + 32;
+      }
+      if (from === "f" && to === "c") {
+        return ((value - 32) * 5) / 9;
+      }
       return value;
     }),
   },

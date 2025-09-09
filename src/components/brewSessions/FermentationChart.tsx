@@ -91,7 +91,9 @@ const chartUtils = {
     values: number[],
     padding: number = 0.01
   ): { minValue: number; maxValue: number } => {
-    if (values.length === 0) return { minValue: 0, maxValue: 1 };
+    if (values.length === 0) {
+      return { minValue: 0, maxValue: 1 };
+    }
 
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
@@ -271,7 +273,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     };
 
     // Helper function to extract date from entry
-    const getEntryDate = (entry: any) => {
+    const getEntryDate = (entry: any): Date | null => {
       // Try different possible date field names
       const possibleDates = [
         entry.entry_date,
@@ -281,49 +283,70 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
         entry.date_recorded,
       ].filter(Boolean);
 
-      for (const dateStr of possibleDates) {
-        if (dateStr && typeof dateStr === "string") {
-          const parsedDate = new Date(dateStr);
-          if (!isNaN(parsedDate.getTime())) {
-            return normalizeDate(parsedDate);
+      for (const candidate of possibleDates) {
+        if (typeof candidate === "string" || typeof candidate === "number") {
+          const parsed =
+            typeof candidate === "number"
+              ? new Date(
+                  // accept seconds or milliseconds epoch
+                  candidate > 1e12 ? candidate : candidate * 1000
+                )
+              : new Date(candidate);
+          if (!isNaN(parsed.getTime())) {
+            return normalizeDate(parsed);
           }
         }
       }
-
-      return normalizeDate(new Date()); // Fallback to current date, normalized
+      return null; // explicit invalid
     };
 
     const sortedData = [...fermentationData].sort((a, b) => {
       // Sorting entries by date
       const dateA = getEntryDate(a);
       const dateB = getEntryDate(b);
+      if (dateA === null && dateB === null) {
+        return 0;
+      }
+      if (dateA === null) {
+        return 1;
+      }
+      if (dateB === null) {
+        return -1;
+      }
       return dateA.getTime() - dateB.getTime();
     });
 
     const firstDate = getEntryDate(sortedData[0]);
 
-    return sortedData.map((entry, index) => {
-      const entryDate = getEntryDate(entry);
-      // Since dates are normalized to midnight, this calculation will work correctly
-      // for consecutive calendar days, ensuring Day 1, Day 2, etc.
-      const dayNumber =
-        Math.floor(
-          (entryDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)
-        ) + 1;
+    return sortedData
+      .map((entry, _index) => {
+        const entryDate = getEntryDate(entry);
+        // Since dates are normalized to midnight, this calculation will work correctly
+        // for consecutive calendar days, ensuring Day 1, Day 2, etc.
+        if (entryDate !== null && firstDate !== null) {
+          const dayNumber =
+            Math.floor(
+              (entryDate.getTime() - firstDate.getTime()) /
+                (1000 * 60 * 60 * 24)
+            ) + 1;
 
-      const processedEntry = {
-        x: dayNumber,
-        gravity: entry.gravity ?? undefined,
-        temperature: entry.temperature ?? undefined,
-        ph: entry.ph ?? undefined,
-        date: entryDate.toLocaleDateString(),
-        rawDate: entryDate, // Keep the actual Date object for chart formatting
-      };
+          const processedEntry: ProcessedDataPoint = {
+            x: dayNumber,
+            ...(entry.gravity !== undefined && { gravity: entry.gravity }),
+            ...(entry.temperature !== undefined && {
+              temperature: entry.temperature,
+            }),
+            ...(entry.ph !== undefined && { ph: entry.ph }),
+            date: entryDate.toLocaleDateString(),
+            rawDate: entryDate, // Keep the actual Date object for chart formatting
+          };
 
-      // Processed entry successfully
-
-      return processedEntry;
-    });
+          // Processed entry successfully
+          return processedEntry;
+        }
+        return undefined;
+      })
+      .filter((entry): entry is ProcessedDataPoint => entry !== undefined);
   }, [fermentationData]);
 
   // Data point click/focus handler with themed modal
@@ -422,7 +445,9 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
   // Convert to chart format without positioning first - positioning will be calculated later
   const baseChartData = React.useMemo(() => {
-    if (processedData.length === 0) return { gravity: [], temperature: [] };
+    if (processedData.length === 0) {
+      return { gravity: [], temperature: [] };
+    }
 
     // Create base data arrays without positioning
     const alignedData = processedData.map((point, index) => {
@@ -572,7 +597,9 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
   // Add positioning to chart data using actual axis configurations
   const combinedChartData = React.useMemo(() => {
-    if (baseChartData.gravity.length === 0) return baseChartData;
+    if (baseChartData.gravity.length === 0) {
+      return baseChartData;
+    }
 
     // Use chart utilities for visual height calculations
 

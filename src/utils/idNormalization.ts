@@ -283,7 +283,9 @@ export function debugEntityIds(entity: any, _label: string = "Entity"): void {
  * Detect entity type based on object properties instead of unreliable URL field
  */
 function detectEntityTypeFromProperties(obj: any): EntityType | null {
-  if (!obj || typeof obj !== "object") return null;
+  if (!obj || typeof obj !== "object") {
+    return null;
+  }
 
   // Check for specific backend ID field patterns
   if (

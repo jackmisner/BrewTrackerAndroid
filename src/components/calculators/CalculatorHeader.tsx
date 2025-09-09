@@ -1,9 +1,10 @@
 import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@contexts/ThemeContext";
 import { useRouter } from "expo-router";
-import { calculatorHeaderStyles } from "@styles/components/calculators/calculatorHeaderStyles";
+import { createCalculatorHeaderStyles } from "@styles/components/calculators/calculatorHeaderStyles";
 
 interface CalculatorHeaderProps {
   title: string;
@@ -13,6 +14,8 @@ interface CalculatorHeaderProps {
 export function CalculatorHeader({ title, onClose }: CalculatorHeaderProps) {
   const theme = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const calculatorHeaderStyles = createCalculatorHeaderStyles(insets);
 
   const handleClose = () => {
     if (onClose) {

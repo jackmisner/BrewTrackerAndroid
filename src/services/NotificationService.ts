@@ -55,9 +55,15 @@ export class NotificationService {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
     };
 
-    if (seconds !== undefined) trigger.seconds = seconds;
-    if (minutes !== undefined) trigger.minutes = minutes;
-    if (hours !== undefined) trigger.hours = hours;
+    if (seconds !== undefined) {
+      trigger.seconds = seconds;
+    }
+    if (minutes !== undefined) {
+      trigger.minutes = minutes;
+    }
+    if (hours !== undefined) {
+      trigger.hours = hours;
+    }
 
     // Add channelId for Android (Android-only app)
     trigger.channelId = "boil-timer";
@@ -69,7 +75,9 @@ export class NotificationService {
    * Initialize notification service and request permissions
    */
   public static async initialize(): Promise<boolean> {
-    if (this.isInitialized) return true;
+    if (this.isInitialized) {
+      return true;
+    }
 
     try {
       // Configure notification behavior
@@ -127,7 +135,9 @@ export class NotificationService {
   ): Promise<string | null> {
     try {
       const isInitialized = await this.initialize();
-      if (!isInitialized) return null;
+      if (!isInitialized) {
+        return null;
+      }
 
       const identifier = await Notifications.scheduleNotificationAsync({
         content: {
@@ -164,7 +174,9 @@ export class NotificationService {
   ): Promise<string | null> {
     try {
       const isInitialized = await this.initialize();
-      if (!isInitialized) return null;
+      if (!isInitialized) {
+        return null;
+      }
 
       // if (__DEV__) {
       //   console.log(
@@ -343,7 +355,9 @@ export class NotificationService {
   ): Promise<void> {
     try {
       const isInitialized = await this.initialize();
-      if (!isInitialized) return;
+      if (!isInitialized) {
+        return;
+      }
 
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -396,7 +410,9 @@ export class NotificationService {
    */
 
   public static async logScheduledNotifications(): Promise<void> {
-    if (!__DEV__) return;
+    if (!__DEV__) {
+      return;
+    }
     const notifications = await this.getScheduledNotifications();
     console.log(`📋 Scheduled notifications: ${notifications.length}`);
   }

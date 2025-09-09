@@ -191,7 +191,7 @@ export default function UnitConverterScreen() {
     });
   };
 
-  const swapUnits = () => {
+  const _swapUnits = () => {
     dispatch({
       type: "SET_UNIT_CONVERTER",
       payload: {

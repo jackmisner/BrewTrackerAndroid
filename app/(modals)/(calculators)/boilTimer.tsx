@@ -9,11 +9,9 @@ import React, { useEffect, useCallback, useRef } from "react";
 import {
   View,
   ScrollView,
-  StyleSheet,
   Alert,
   Text,
   TouchableOpacity,
-  Dimensions,
   AppState,
   AppStateStatus,
 } from "react-native";
@@ -38,8 +36,7 @@ import {
   CalculatorAction,
   BoilTimerState,
 } from "@contexts/CalculatorsContext";
-
-const { width } = Dimensions.get("window");
+import { calculatorScreenStyles } from "@styles/modals/calculators/calculatorScreenStyles";
 
 /**
  * Helper function to restore boil timer state from persistence
@@ -84,25 +81,25 @@ const TimerControls: React.FC<TimerControlsProps> = ({
   disabled = false,
   theme,
 }) => (
-  <View style={styles.timerControls}>
+  <View style={calculatorScreenStyles.timerControls}>
     {!isRunning ? (
       <TouchableOpacity
         style={[
-          styles.primaryButton,
+          calculatorScreenStyles.primaryButton,
           { backgroundColor: theme.colors.success },
-          disabled && styles.disabledButton,
+          disabled && calculatorScreenStyles.disabledButton,
         ]}
         onPress={onStart}
         disabled={disabled}
         testID={TEST_IDS.patterns.touchableOpacityAction("start-timer")}
       >
         <MaterialIcons name="play-arrow" size={32} color="white" />
-        <Text style={styles.buttonText}>Start</Text>
+        <Text style={calculatorScreenStyles.buttonText}>Start</Text>
       </TouchableOpacity>
     ) : (
       <TouchableOpacity
         style={[
-          styles.primaryButton,
+          calculatorScreenStyles.primaryButton,
           {
             backgroundColor: isPaused
               ? theme.colors.success
@@ -121,29 +118,34 @@ const TimerControls: React.FC<TimerControlsProps> = ({
           size={32}
           color="white"
         />
-        <Text style={styles.buttonText}>{isPaused ? "Resume" : "Pause"}</Text>
+        <Text style={calculatorScreenStyles.buttonText}>
+          {isPaused ? "Resume" : "Pause"}
+        </Text>
       </TouchableOpacity>
     )}
 
     <TouchableOpacity
-      style={[styles.secondaryButton, { backgroundColor: theme.colors.error }]}
+      style={[
+        calculatorScreenStyles.secondaryButton,
+        { backgroundColor: theme.colors.error },
+      ]}
       onPress={onStop}
       testID={TEST_IDS.patterns.touchableOpacityAction("stop-timer")}
     >
       <MaterialIcons name="stop" size={24} color="white" />
-      <Text style={styles.secondaryButtonText}>Stop</Text>
+      <Text style={calculatorScreenStyles.secondaryButtonText}>Stop</Text>
     </TouchableOpacity>
 
     <TouchableOpacity
       style={[
-        styles.secondaryButton,
+        calculatorScreenStyles.secondaryButton,
         { backgroundColor: theme.colors.textSecondary },
       ]}
       onPress={onReset}
       testID={TEST_IDS.patterns.touchableOpacityAction("reset-timer")}
     >
       <MaterialIcons name="refresh" size={24} color="white" />
-      <Text style={styles.secondaryButtonText}>Reset</Text>
+      <Text style={calculatorScreenStyles.secondaryButtonText}>Reset</Text>
     </TouchableOpacity>
   </View>
 );
@@ -176,7 +178,7 @@ const HopAdditionCard: React.FC<HopAdditionCardProps> = ({
   return (
     <View
       style={[
-        styles.hopCard,
+        calculatorScreenStyles.hopCard,
         {
           backgroundColor: hop.added
             ? theme.colors.success + "20"
@@ -195,36 +197,54 @@ const HopAdditionCard: React.FC<HopAdditionCardProps> = ({
         },
       ]}
     >
-      <View style={styles.hopCardContent}>
-        <View style={styles.hopInfo}>
-          <Text style={[styles.hopTime, { color: theme.colors.primary }]}>
+      <View style={calculatorScreenStyles.hopCardContent}>
+        <View style={calculatorScreenStyles.hopInfo}>
+          <Text
+            style={[
+              calculatorScreenStyles.hopTime,
+              { color: theme.colors.primary },
+            ]}
+          >
             {hop.time} min
           </Text>
-          <Text style={[styles.hopName, { color: theme.colors.text }]}>
+          <Text
+            style={[
+              calculatorScreenStyles.hopName,
+              { color: theme.colors.text },
+            ]}
+          >
             {hop.name}
           </Text>
           <Text
-            style={[styles.hopAmount, { color: theme.colors.textSecondary }]}
+            style={[
+              calculatorScreenStyles.hopAmount,
+              { color: theme.colors.textSecondary },
+            ]}
           >
             {hop.amount} {hop.unit}
           </Text>
         </View>
 
         {hop.added ? (
-          <View style={styles.addedIndicator}>
+          <View style={calculatorScreenStyles.addedIndicator}>
             <MaterialIcons
               name="check-circle"
               size={24}
               color={theme.colors.success}
             />
-            <Text style={[styles.addedText, { color: theme.colors.success }]}>
+            <Text
+              style={[
+                calculatorScreenStyles.addedText,
+                { color: theme.colors.success },
+              ]}
+            >
               Added
             </Text>
           </View>
         ) : (
           <TouchableOpacity
             style={[
-              styles.addButton,
+              calculatorScreenStyles.addButton,
               {
                 backgroundColor: isPending
                   ? theme.colors.warning
@@ -237,7 +257,7 @@ const HopAdditionCard: React.FC<HopAdditionCardProps> = ({
             testID={TEST_IDS.boilTimer.hopAddition(index)}
           >
             <MaterialIcons name="add" size={20} color="white" />
-            <Text style={styles.addButtonText}>Mark Added</Text>
+            <Text style={calculatorScreenStyles.addButtonText}>Mark Added</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -432,14 +452,14 @@ export default function BoilTimerCalculatorScreen() {
 
       // Set up notification listeners
       const foregroundListener = NotificationService.setupForegroundListener(
-        notification => {
+        _notification => {
           // console.log("Foreground notification received:", notification);
           NotificationService.triggerHapticFeedback("heavy");
         }
       );
 
       const responseListener = NotificationService.setupResponseListener(
-        response => {
+        _response => {
           // console.log("Notification response:", response);
           // Handle notification tap - could navigate to timer or show alert
         }
@@ -477,7 +497,9 @@ export default function BoilTimerCalculatorScreen() {
   useEffect(() => {
     // If not running or paused, clear any existing interval
     if (!boilTimer.isRunning || boilTimer.isPaused) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
       return;
     }
     // Single stable tick function
@@ -539,7 +561,9 @@ export default function BoilTimerCalculatorScreen() {
     };
     intervalRef.current = setInterval(tick, 1000);
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
     };
   }, [boilTimer.isRunning, boilTimer.isPaused, dispatch]);
 
@@ -556,7 +580,9 @@ export default function BoilTimerCalculatorScreen() {
   };
 
   const handleStart = async () => {
-    if (boilTimer.timeRemaining <= 0) return;
+    if (boilTimer.timeRemaining <= 0) {
+      return;
+    }
 
     // NOTIFICATION BUG FIX NOTES:
     // ===========================
@@ -710,13 +736,16 @@ export default function BoilTimerCalculatorScreen() {
 
   return (
     <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[
+        calculatorScreenStyles.container,
+        { backgroundColor: theme.colors.background },
+      ]}
       testID={TEST_IDS.boilTimer.screen}
     >
       <CalculatorHeader title="Boil Timer" />
 
       <ScrollView
-        style={styles.scrollContent}
+        style={calculatorScreenStyles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Recipe Selection */}
@@ -749,14 +778,17 @@ export default function BoilTimerCalculatorScreen() {
         {/* Timer Display */}
         <View
           style={[
-            styles.timerDisplay,
+            calculatorScreenStyles.timerDisplay,
             { backgroundColor: theme.colors.backgroundSecondary },
           ]}
           testID={TEST_IDS.boilTimer.timerDisplay}
         >
-          <View style={styles.timerHeader}>
+          <View style={calculatorScreenStyles.timerHeader}>
             <Text
-              style={[styles.timerLabel, { color: theme.colors.textSecondary }]}
+              style={[
+                calculatorScreenStyles.timerLabel,
+                { color: theme.colors.textSecondary },
+              ]}
             >
               {boilTimer.selectedRecipe
                 ? boilTimer.selectedRecipe.name
@@ -765,7 +797,7 @@ export default function BoilTimerCalculatorScreen() {
             {boilTimer.selectedRecipe && (
               <Text
                 style={[
-                  styles.timerStyle,
+                  calculatorScreenStyles.timerStyle,
                   { color: theme.colors.textSecondary },
                 ]}
               >
@@ -774,21 +806,26 @@ export default function BoilTimerCalculatorScreen() {
             )}
           </View>
 
-          <Text style={[styles.timerText, { color: theme.colors.text }]}>
+          <Text
+            style={[
+              calculatorScreenStyles.timerText,
+              { color: theme.colors.text },
+            ]}
+          >
             {formatTime(boilTimer.timeRemaining)}
           </Text>
 
           {/* Progress Bar */}
           <View
             style={[
-              styles.progressBar,
+              calculatorScreenStyles.progressBar,
               { backgroundColor: theme.colors.borderLight },
             ]}
             testID={TEST_IDS.boilTimer.progressBar}
           >
             <View
               style={[
-                styles.progressFill,
+                calculatorScreenStyles.progressFill,
                 {
                   backgroundColor: boilTimer.isRunning
                     ? theme.colors.primary
@@ -800,7 +837,10 @@ export default function BoilTimerCalculatorScreen() {
           </View>
 
           <Text
-            style={[styles.progressText, { color: theme.colors.textSecondary }]}
+            style={[
+              calculatorScreenStyles.progressText,
+              { color: theme.colors.textSecondary },
+            ]}
           >
             {Math.round(progressPercentage)}% complete
           </Text>
@@ -823,7 +863,7 @@ export default function BoilTimerCalculatorScreen() {
           <CalculatorCard title="Hop Additions">
             <Text
               style={[
-                styles.hopScheduleSubtitle,
+                calculatorScreenStyles.hopScheduleSubtitle,
                 { color: theme.colors.textSecondary },
               ]}
             >
@@ -831,7 +871,7 @@ export default function BoilTimerCalculatorScreen() {
               {boilTimer.hopAlerts.length !== 1 ? "s" : ""} scheduled
             </Text>
 
-            <View style={styles.hopList}>
+            <View style={calculatorScreenStyles.hopList}>
               {boilTimer.hopAlerts.map((hop, index) => (
                 <HopAdditionCard
                   key={index}
@@ -849,145 +889,3 @@ export default function BoilTimerCalculatorScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    flex: 1,
-  },
-  timerDisplay: {
-    margin: 16,
-    padding: 24,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-  timerHeader: {
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  timerLabel: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  timerStyle: {
-    fontSize: 14,
-    marginTop: 4,
-  },
-  timerText: {
-    fontSize: 48,
-    fontWeight: "bold",
-    fontFamily: "monospace",
-    marginBottom: 16,
-  },
-  progressBar: {
-    width: width - 80,
-    height: 8,
-    borderRadius: 4,
-    marginBottom: 8,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  progressText: {
-    fontSize: 14,
-  },
-  timerControls: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    marginVertical: 16,
-    gap: 12,
-  },
-  primaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
-    minWidth: 120,
-    justifyContent: "center",
-  },
-  secondaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    justifyContent: "center",
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "600",
-    marginLeft: 8,
-  },
-  secondaryButtonText: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "500",
-    marginLeft: 4,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  hopScheduleSubtitle: {
-    fontSize: 14,
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  hopList: {
-    gap: 12,
-  },
-  hopCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-  },
-  hopCardContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  hopInfo: {
-    flex: 1,
-  },
-  hopTime: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  hopName: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  hopAmount: {
-    fontSize: 14,
-  },
-  addedIndicator: {
-    alignItems: "center",
-  },
-  addedText: {
-    fontSize: 12,
-    fontWeight: "500",
-    marginTop: 4,
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addButtonText: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "500",
-    marginLeft: 4,
-  },
-});

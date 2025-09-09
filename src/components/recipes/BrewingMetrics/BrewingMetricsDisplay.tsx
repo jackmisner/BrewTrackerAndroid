@@ -66,10 +66,14 @@ export const BrewingMetricsDisplay: React.FC<BrewingMetricsProps> = ({
     value: number | undefined,
     unit?: string
   ): string => {
-    if (value === undefined || value === null) return "—";
+    if (value === undefined || value === null) {
+      return "—";
+    }
     // Coerce strings like "1.050" to numbers safely
     const num = typeof value === "number" ? value : Number(value);
-    if (!Number.isFinite(num)) return "—";
+    if (!Number.isFinite(num)) {
+      return "—";
+    }
 
     switch (label) {
       case "ABV":

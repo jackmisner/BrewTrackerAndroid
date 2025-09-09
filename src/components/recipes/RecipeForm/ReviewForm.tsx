@@ -164,7 +164,9 @@ export function ReviewForm({
       {["grain", "hop", "yeast", "other"].map(type => {
         const ingredients =
           ingredientsByType[type as keyof typeof ingredientsByType];
-        if (ingredients.length === 0) return null;
+        if (ingredients.length === 0) {
+          return null;
+        }
 
         return (
           <View key={type} style={styles.ingredientTypeSection}>

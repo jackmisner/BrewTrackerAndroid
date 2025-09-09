@@ -360,7 +360,9 @@ export default function DashboardScreen() {
             text: "Delete",
             style: "destructive",
             onPress: () => {
-              if (deleteMutation.isPending) return;
+              if (deleteMutation.isPending) {
+                return;
+              }
               const id = String(recipe.id);
               deleteMutation.mutate(id, {
                 onSuccess: () => {

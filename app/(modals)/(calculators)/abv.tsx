@@ -181,7 +181,9 @@ export default function ABVCalculatorScreen() {
     const og = parseFloat(abv.originalGravity);
     const fg = parseFloat(abv.finalGravity);
 
-    if (isNaN(og) || isNaN(fg)) return null;
+    if (isNaN(og) || isNaN(fg)) {
+      return null;
+    }
 
     try {
       const fullResult = ABVCalculator.calculate(

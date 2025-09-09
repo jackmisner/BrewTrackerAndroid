@@ -87,7 +87,9 @@ export function getDefaultHopTime(
 
   let defaultTime = defaultTimes[hopUse as keyof typeof defaultTimes] ?? 0;
   // Support alternative labels (e.g., "dry-hop")
-  if (defaultTime === 0 && isDryHop(hopUse)) defaultTime = 3;
+  if (defaultTime === 0 && isDryHop(hopUse)) {
+    defaultTime = 3;
+  }
 
   // If it's dry hop and we need minutes for storage, convert
   if (isDryHop(hopUse) && inMinutes) {

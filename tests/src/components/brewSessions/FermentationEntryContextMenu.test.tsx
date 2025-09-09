@@ -40,7 +40,9 @@ jest.mock("@src/components/ui/ContextMenu/BaseContextMenu", () => {
   const RN = require("react-native");
   return {
     BaseContextMenu: ({ visible, actions, item }: any) => {
-      if (!visible || !item) return null;
+      if (!visible || !item) {
+        return null;
+      }
       return React.createElement(
         RN.View,
         {},

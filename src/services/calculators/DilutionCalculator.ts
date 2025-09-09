@@ -27,8 +27,7 @@ export class DilutionCalculator {
   public static calculateDilution(
     currentGravity: number,
     currentVolume: number,
-    targetGravity: number,
-    volumeUnit: string = "gal"
+    targetGravity: number
   ): DilutionResult {
     // Validate inputs
     this.validateGravityInputs(currentGravity, targetGravity);
@@ -64,8 +63,7 @@ export class DilutionCalculator {
     targetVolume: number,
     boilOffRate: number, // volume per hour
     boilTime: number, // minutes
-    originalGravity?: number, // Optional: provide to calculate final gravity
-    volumeUnit: string = "gal"
+    originalGravity?: number // Optional: provide to calculate final gravity
   ): BoilOffResult {
     // Validate inputs
     this.validateVolumeInputs(targetVolume);
@@ -138,8 +136,7 @@ export class DilutionCalculator {
     gravity1: number,
     volume1: number,
     gravity2: number,
-    volume2: number,
-    volumeUnit: string = "gal"
+    volume2: number
   ): DilutionResult {
     // Validate inputs
     this.validateGravityInputs(gravity1);
@@ -172,8 +169,7 @@ export class DilutionCalculator {
     currentGravity: number,
     currentVolume: number,
     currentABV: number,
-    targetABV: number,
-    volumeUnit: string = "gal"
+    targetABV: number
   ): DilutionResult {
     // Validate inputs
     this.validateGravityInputs(currentGravity);
@@ -273,8 +269,12 @@ export class DilutionCalculator {
     fromUnit: string,
     toUnit: string
   ): DilutionResult | null {
-    if (fromUnit === toUnit) return result;
-    if (!result) return null;
+    if (fromUnit === toUnit) {
+      return result;
+    }
+    if (!result) {
+      return null;
+    }
     return {
       ...result,
       finalVolume: UnitConverter.convertVolume(

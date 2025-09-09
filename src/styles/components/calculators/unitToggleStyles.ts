@@ -36,7 +36,7 @@ export const unitToggleStyles = StyleSheet.create({
   },
   dropdown: {
     position: "absolute",
-    top: "100%",
+    top: 0,
     left: 0,
     right: 0,
     zIndex: 1000,
@@ -44,6 +44,8 @@ export const unitToggleStyles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 4,
     maxHeight: 200,
+    // Overlay visuals
+    elevation: 8,
   },
   dropdownItem: {
     ...sharedStyles.rowCenter,

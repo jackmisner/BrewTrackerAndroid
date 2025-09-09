@@ -645,7 +645,6 @@ describe("ParametersForm", () => {
         <ParametersForm
           recipeData={defaultRecipeData}
           onUpdateField={mockOnUpdateField}
-          isEditing={true}
         />
       );
 

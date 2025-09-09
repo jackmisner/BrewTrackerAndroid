@@ -110,9 +110,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   initialAuthState,
 }) => {
   const [user, setUser] = useState<User | null>(initialAuthState?.user || null);
-  const [isLoading, setIsLoading] = useState<boolean>(
-    initialAuthState ? false : true
-  );
+  const [isLoading, setIsLoading] = useState<boolean>(!initialAuthState);
   const [error, setError] = useState<string | null>(
     initialAuthState?.error || null
   );
@@ -287,7 +285,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
   const refreshUser = async (): Promise<void> => {
     try {
-      if (!user) return;
+      if (!user) {
+        return;
+      }
 
       const response = await ApiService.auth.getProfile();
       const userData = response.data;

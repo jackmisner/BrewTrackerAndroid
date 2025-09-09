@@ -11,7 +11,6 @@ import { TEST_IDS } from "@src/constants/testIDs";
 interface ParametersFormProps {
   recipeData: RecipeFormData;
   onUpdateField: (field: keyof RecipeFormData, value: any) => void;
-  isEditing?: boolean;
 }
 
 /**
@@ -27,7 +26,6 @@ interface ParametersFormProps {
 export function ParametersForm({
   recipeData,
   onUpdateField,
-  isEditing = false,
 }: ParametersFormProps) {
   const theme = useTheme();
   const { unitSystem } = useUnits();

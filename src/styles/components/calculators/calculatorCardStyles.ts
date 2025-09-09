@@ -3,11 +3,11 @@ import { sharedStyles } from "@styles/common/sharedStyles";
 
 export const calculatorCardStyles = StyleSheet.create({
   card: {
-    marginHorizontal: 16,
     ...sharedStyles.cardSpacing,
     borderRadius: 12,
     borderWidth: 1,
     ...sharedStyles.padding16,
+    marginHorizontal: 16, // ensure this wins over any margin* from cardSpacing
   },
   title: {
     fontSize: 18,
