@@ -150,7 +150,7 @@ export default function EditRecipeScreen() {
     efficiency: 75,
     mash_temperature: unitSystem === "imperial" ? 152 : 67,
     mash_temp_unit: unitSystem === "imperial" ? "F" : "C",
-    mash_time: 60,
+    mash_time: undefined,
     is_public: false,
     notes: "",
     ingredients: [],
@@ -296,13 +296,17 @@ export default function EditRecipeScreen() {
           Number(formData.efficiency) <= 100
             ? Number(formData.efficiency)
             : 75,
-        // Unit-aware fallback (°F:152, °C:67)
+        // Unit-aware clamp with sensible fallback (°F:152, °C:67)
         mash_temperature: (() => {
           const unit =
             formData.mash_temp_unit || (unitSystem === "metric" ? "C" : "F");
           const fallback = unit === "C" ? 67 : 152;
           const t = Number(formData.mash_temperature);
-          return Number.isFinite(t) && t > 0 ? t : fallback;
+          if (!Number.isFinite(t)) {
+            return fallback;
+          }
+          const [min, max] = unit === "C" ? [60, 77] : [140, 170];
+          return Math.min(max, Math.max(min, t));
         })(),
         mash_temp_unit:
           formData.mash_temp_unit || (unitSystem === "metric" ? "C" : "F"),
@@ -444,7 +448,10 @@ export default function EditRecipeScreen() {
   const canProceed = () => {
     switch (currentStep) {
       case RecipeStep.BASIC_INFO:
-        return recipeData.name.trim().length > 0;
+        return (
+          recipeData.name.trim().length > 0 &&
+          recipeData.style.trim().length > 0
+        );
       case RecipeStep.PARAMETERS:
         return (
           recipeData.batch_size > 0 &&
@@ -452,8 +459,19 @@ export default function EditRecipeScreen() {
           recipeData.boil_time <= 300 &&
           recipeData.efficiency > 0 &&
           recipeData.efficiency <= 100 &&
-          recipeData.mash_temperature > 0 &&
-          (recipeData.mash_time === undefined || recipeData.mash_time >= 0)
+          // Mash temp bounds per unit (F: 140–170, C: 60–77)
+          (() => {
+            const unit =
+              recipeData.mash_temp_unit ||
+              (recipeData.unit_system === "metric" ? "C" : "F");
+            const [min, max] = unit === "C" ? [60, 77] : [140, 170];
+            return (
+              recipeData.mash_temperature >= min &&
+              recipeData.mash_temperature <= max
+            );
+          }) &&
+          (recipeData.mash_time === undefined ||
+            (recipeData.mash_time >= 0 && recipeData.mash_time <= 480))
         );
       case RecipeStep.INGREDIENTS:
         return hasValidIngredients();
