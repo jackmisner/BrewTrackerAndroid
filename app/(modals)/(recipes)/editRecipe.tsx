@@ -470,7 +470,7 @@ export default function EditRecipeScreen() {
               recipeData.mash_temperature >= min &&
               recipeData.mash_temperature <= max
             );
-          }) &&
+          })() &&
           (recipeData.mash_time === undefined ||
             (recipeData.mash_time >= 0 && recipeData.mash_time <= 480))
         );
