@@ -41,7 +41,15 @@ const toOptionalNumber = (v: any): number | undefined => {
   if (typeof v === "string" && v.trim() === "") {
     return undefined;
   }
-  const n = typeof v === "number" ? v : Number(v);
+  if (typeof v === "boolean") {
+    return undefined;
+  }
+  const n =
+    typeof v === "number"
+      ? v
+      : typeof v === "string"
+        ? Number.parseFloat(v)
+        : Number(v);
   return Number.isFinite(n) ? n : undefined;
 };
 
@@ -277,25 +285,20 @@ export default function EditRecipeScreen() {
         name: formData.name || "",
         style: formData.style || "",
         description: formData.description || "",
-        batch_size:
-          Number.isFinite(Number(formData.batch_size)) &&
-          Number(formData.batch_size) > 0
-            ? Number(formData.batch_size)
-            : 5,
+        batch_size: (() => {
+          const v = toOptionalNumber(formData.batch_size);
+          return v && v > 0 ? v : 5;
+        })(),
         batch_size_unit:
           formData.batch_size_unit || (unitSystem === "metric" ? "l" : "gal"),
-        boil_time:
-          Number.isFinite(Number(formData.boil_time)) &&
-          Number(formData.boil_time) >= 0 &&
-          Number(formData.boil_time) <= 300
-            ? Number(formData.boil_time)
-            : 60,
-        efficiency:
-          Number.isFinite(Number(formData.efficiency)) &&
-          Number(formData.efficiency) > 0 &&
-          Number(formData.efficiency) <= 100
-            ? Number(formData.efficiency)
-            : 75,
+        boil_time: (() => {
+          const v = toOptionalNumber(formData.boil_time);
+          return v !== undefined && v >= 0 && v <= 300 ? v : 60;
+        })(),
+        efficiency: (() => {
+          const v = toOptionalNumber(formData.efficiency);
+          return v !== undefined && v > 0 && v <= 100 ? v : 75;
+        })(),
         // Unit-aware clamp with sensible fallback (°F:152, °C:67)
         mash_temperature: (() => {
           const unit =
@@ -310,9 +313,7 @@ export default function EditRecipeScreen() {
         })(),
         mash_temp_unit:
           formData.mash_temp_unit || (unitSystem === "metric" ? "C" : "F"),
-        mash_time: Number.isFinite(Number(formData.mash_time))
-          ? Number(formData.mash_time)
-          : undefined,
+        mash_time: toOptionalNumber(formData.mash_time),
         is_public: Boolean(formData.is_public),
         notes: formData.notes || "",
         ingredients: sanitizedIngredients,
