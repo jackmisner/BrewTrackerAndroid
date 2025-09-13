@@ -1,7 +1,8 @@
 import React from "react";
-import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
+import { fireEvent, waitFor, act } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import ForgotPasswordScreen from "../../../app/(auth)/forgotPassword";
+import { renderWithProviders } from "@/tests/testUtils";
 
 // Comprehensive React Native mocking to avoid ES6 module issues
 jest.mock("react-native", () => ({
@@ -19,15 +20,18 @@ jest.mock("react-native", () => ({
     create: (styles: any) => styles,
     flatten: (styles: any) => styles,
   },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
+  },
 }));
 
 jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: "MaterialIcons",
 }));
 
-jest.mock("@contexts/AuthContext", () => ({
-  useAuth: jest.fn(),
-}));
+// AuthContext is provided by renderWithProviders
 
 jest.mock("@styles/auth/loginStyles", () => ({
   loginStyles: {
@@ -79,26 +83,70 @@ jest.mock("@styles/auth/loginStyles", () => ({
 
 // Alert is now mocked in the react-native mock above
 
-const mockAuth = {
-  forgotPassword: jest.fn(),
+// Mock API functions that will be used by AuthContext
+const mockForgotPassword = jest.fn();
+const mockClearError = jest.fn();
+
+// Mock the API service that AuthContext uses
+jest.mock("@services/api/apiService", () => ({
+  default: {
+    auth: {
+      forgotPassword: mockForgotPassword,
+    },
+  },
+}));
+
+// Create a mockable useAuth implementation
+let mockAuthState = {
+  user: null as any,
   isLoading: false,
+  isAuthenticated: false,
   error: null as string | null,
-  clearError: jest.fn(),
 };
 
-// Setup mocks
-require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
+// Mock the specific useAuth import in the component
+jest.mock("@contexts/AuthContext", () => ({
+  ...jest.requireActual("@contexts/AuthContext"),
+  useAuth: () => ({
+    ...mockAuthState,
+    login: jest.fn(),
+    register: jest.fn(),
+    logout: jest.fn(),
+    refreshUser: jest.fn(),
+    clearError: mockClearError,
+    signInWithGoogle: jest.fn(),
+    verifyEmail: jest.fn(),
+    resendVerification: jest.fn(),
+    checkVerificationStatus: jest.fn(),
+    forgotPassword: mockForgotPassword,
+    resetPassword: jest.fn(),
+    getUserId: jest.fn(),
+  }),
+}));
+
+// Helper to override auth state for specific tests
+const setMockAuthState = (overrides: Partial<typeof mockAuthState>) => {
+  mockAuthState = { ...mockAuthState, ...overrides };
+};
 
 describe("ForgotPasswordScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAuth.isLoading = false;
-    mockAuth.error = null;
+    mockForgotPassword.mockClear();
+    mockClearError.mockClear();
+
+    // Reset auth state to defaults
+    setMockAuthState({
+      user: null,
+      isLoading: false,
+      isAuthenticated: false,
+      error: null,
+    });
   });
 
   describe("rendering - initial form", () => {
     it("should render all required elements", () => {
-      const { getByText, getByPlaceholderText } = render(
+      const { getByText, getByPlaceholderText } = renderWithProviders(
         <ForgotPasswordScreen />
       );
 
@@ -115,25 +163,23 @@ describe("ForgotPasswordScreen", () => {
     });
 
     it("should display error message when error exists", () => {
-      mockAuth.error = "User not found";
-      require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
+      setMockAuthState({ error: "User not found" });
 
-      const { getByText } = render(<ForgotPasswordScreen />);
+      const { getByText } = renderWithProviders(<ForgotPasswordScreen />);
 
       expect(getByText("User not found")).toBeTruthy();
     });
 
     it("should not display error message when no error", () => {
-      const { queryByText } = render(<ForgotPasswordScreen />);
+      const { queryByText } = renderWithProviders(<ForgotPasswordScreen />);
 
       expect(queryByText("User not found")).toBeNull();
     });
 
     it("should show loading text when loading", () => {
-      mockAuth.isLoading = true;
-      require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
+      setMockAuthState({ isLoading: true });
 
-      const { getByText } = render(<ForgotPasswordScreen />);
+      const { getByText } = renderWithProviders(<ForgotPasswordScreen />);
 
       expect(getByText("Sending...")).toBeTruthy();
     });
@@ -141,7 +187,9 @@ describe("ForgotPasswordScreen", () => {
 
   describe("user input", () => {
     it("should update email when typing", () => {
-      const { getByPlaceholderText } = render(<ForgotPasswordScreen />);
+      const { getByPlaceholderText } = renderWithProviders(
+        <ForgotPasswordScreen />
+      );
       const emailInput = getByPlaceholderText("Enter your email address");
 
       fireEvent.changeText(emailInput, "test@example.com");
@@ -150,19 +198,22 @@ describe("ForgotPasswordScreen", () => {
     });
 
     it("should clear error when typing", () => {
-      mockAuth.error = "Some error";
-      require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
+      setMockAuthState({ error: "Some error" });
 
-      const { getByPlaceholderText } = render(<ForgotPasswordScreen />);
+      const { getByPlaceholderText } = renderWithProviders(
+        <ForgotPasswordScreen />
+      );
       const emailInput = getByPlaceholderText("Enter your email address");
 
       fireEvent.changeText(emailInput, "test@example.com");
 
-      expect(mockAuth.clearError).toHaveBeenCalled();
+      expect(mockClearError).toHaveBeenCalled();
     });
 
     it("should have correct input properties", () => {
-      const { getByPlaceholderText } = render(<ForgotPasswordScreen />);
+      const { getByPlaceholderText } = renderWithProviders(
+        <ForgotPasswordScreen />
+      );
       const emailInput = getByPlaceholderText("Enter your email address");
 
       expect(emailInput.props.keyboardType).toBe("email-address");
@@ -173,29 +224,32 @@ describe("ForgotPasswordScreen", () => {
     });
 
     it("should disable input when loading", () => {
-      mockAuth.isLoading = true;
-      require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
+      setMockAuthState({ isLoading: true });
 
-      const { getByPlaceholderText } = render(<ForgotPasswordScreen />);
+      const { getByPlaceholderText } = renderWithProviders(
+        <ForgotPasswordScreen />
+      );
       const emailInput = getByPlaceholderText("Enter your email address");
 
       expect(emailInput.props.editable).toBe(false);
     });
 
     it("should call handleForgotPassword on submit editing", () => {
-      const { getByPlaceholderText } = render(<ForgotPasswordScreen />);
+      const { getByPlaceholderText } = renderWithProviders(
+        <ForgotPasswordScreen />
+      );
       const emailInput = getByPlaceholderText("Enter your email address");
 
       fireEvent.changeText(emailInput, "test@example.com");
       fireEvent(emailInput, "submitEditing");
 
-      expect(mockAuth.forgotPassword).toHaveBeenCalledWith("test@example.com");
+      expect(mockForgotPassword).toHaveBeenCalledWith("test@example.com");
     });
   });
 
   describe("form validation", () => {
     it("should show alert when email is empty", () => {
-      const { getByText } = render(<ForgotPasswordScreen />);
+      const { getByText } = renderWithProviders(<ForgotPasswordScreen />);
       const submitButton = getByText("Send Reset Link");
 
       fireEvent.press(submitButton);
@@ -204,11 +258,11 @@ describe("ForgotPasswordScreen", () => {
         "Error",
         "Please enter your email address"
       );
-      expect(mockAuth.forgotPassword).not.toHaveBeenCalled();
+      expect(mockForgotPassword).not.toHaveBeenCalled();
     });
 
     it("should show alert when email is only whitespace", () => {
-      const { getByText, getByPlaceholderText } = render(
+      const { getByText, getByPlaceholderText } = renderWithProviders(
         <ForgotPasswordScreen />
       );
       const emailInput = getByPlaceholderText("Enter your email address");
@@ -221,11 +275,11 @@ describe("ForgotPasswordScreen", () => {
         "Error",
         "Please enter your email address"
       );
-      expect(mockAuth.forgotPassword).not.toHaveBeenCalled();
+      expect(mockForgotPassword).not.toHaveBeenCalled();
     });
 
     it("should show alert for invalid email format", () => {
-      const { getByText, getByPlaceholderText } = render(
+      const { getByText, getByPlaceholderText } = renderWithProviders(
         <ForgotPasswordScreen />
       );
       const emailInput = getByPlaceholderText("Enter your email address");
@@ -238,7 +292,7 @@ describe("ForgotPasswordScreen", () => {
         "Error",
         "Please enter a valid email address"
       );
-      expect(mockAuth.forgotPassword).not.toHaveBeenCalled();
+      expect(mockForgotPassword).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -247,9 +301,10 @@ describe("ForgotPasswordScreen", () => {
       "test123@test-domain.com",
       "a@b.co",
     ])("should accept valid email format: %s", async email => {
-      mockAuth.forgotPassword.mockResolvedValue(undefined);
+      // Set up the global mock to resolve for this test
+      mockForgotPassword.mockResolvedValue(undefined);
 
-      const { getByText, getByPlaceholderText, unmount } = render(
+      const { getByText, getByPlaceholderText, unmount } = renderWithProviders(
         <ForgotPasswordScreen />
       );
 
@@ -267,21 +322,21 @@ describe("ForgotPasswordScreen", () => {
           "Error",
           "Please enter a valid email address"
         );
-        expect(mockAuth.forgotPassword).toHaveBeenCalledWith(email);
+        expect(mockForgotPassword).toHaveBeenCalledWith(email);
       } finally {
         unmount();
       }
     });
 
     it("should disable button for empty email", () => {
-      const { getByText } = render(<ForgotPasswordScreen />);
+      const { getByText } = renderWithProviders(<ForgotPasswordScreen />);
 
       // For empty email, verify button exists but we can't test disabled state with mocked components
       expect(getByText("Send Reset Link")).toBeTruthy();
     });
 
     it("should disable button for invalid email", () => {
-      const { getByText, getByPlaceholderText } = render(
+      const { getByText, getByPlaceholderText } = renderWithProviders(
         <ForgotPasswordScreen />
       );
       const emailInput = getByPlaceholderText("Enter your email address");
@@ -293,7 +348,7 @@ describe("ForgotPasswordScreen", () => {
     });
 
     it("should enable button for valid email", () => {
-      const { getByText, getByPlaceholderText } = render(
+      const { getByText, getByPlaceholderText } = renderWithProviders(
         <ForgotPasswordScreen />
       );
       const emailInput = getByPlaceholderText("Enter your email address");
@@ -305,12 +360,10 @@ describe("ForgotPasswordScreen", () => {
     });
 
     it("should disable button when loading", () => {
-      mockAuth.isLoading = true;
-      require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
+      setMockAuthState({ isLoading: true });
 
-      const { getByText, getByPlaceholderText, queryByText } = render(
-        <ForgotPasswordScreen />
-      );
+      const { getByText, getByPlaceholderText, queryByText } =
+        renderWithProviders(<ForgotPasswordScreen />);
       const emailInput = getByPlaceholderText("Enter your email address");
 
       fireEvent.changeText(emailInput, "test@example.com");
@@ -321,10 +374,9 @@ describe("ForgotPasswordScreen", () => {
     });
 
     it("should not call forgotPassword if already loading", async () => {
-      mockAuth.isLoading = true;
-      require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
+      setMockAuthState({ isLoading: true });
 
-      const { getByText, getByPlaceholderText } = render(
+      const { getByText, getByPlaceholderText } = renderWithProviders(
         <ForgotPasswordScreen />
       );
       const emailInput = getByPlaceholderText("Enter your email address");
@@ -336,15 +388,15 @@ describe("ForgotPasswordScreen", () => {
         fireEvent.press(submitButton);
       });
 
-      expect(mockAuth.forgotPassword).not.toHaveBeenCalled();
+      expect(mockForgotPassword).not.toHaveBeenCalled();
     });
   });
 
   describe("successful password reset request", () => {
     it("should call forgotPassword with trimmed email", async () => {
-      mockAuth.forgotPassword.mockResolvedValue(undefined);
+      mockForgotPassword.mockResolvedValue(undefined);
 
-      const { getByText, getByPlaceholderText } = render(
+      const { getByText, getByPlaceholderText } = renderWithProviders(
         <ForgotPasswordScreen />
       );
       const emailInput = getByPlaceholderText("Enter your email address");
@@ -356,13 +408,13 @@ describe("ForgotPasswordScreen", () => {
         fireEvent.press(submitButton);
       });
 
-      expect(mockAuth.forgotPassword).toHaveBeenCalledWith("test@example.com");
+      expect(mockForgotPassword).toHaveBeenCalledWith("test@example.com");
     });
 
     it("should show success screen after successful request", async () => {
-      mockAuth.forgotPassword.mockResolvedValue(undefined);
+      mockForgotPassword.mockResolvedValue(undefined);
 
-      const { getByText, getByPlaceholderText } = render(
+      const { getByText, getByPlaceholderText } = renderWithProviders(
         <ForgotPasswordScreen />
       );
       const emailInput = getByPlaceholderText("Enter your email address");
@@ -394,10 +446,10 @@ describe("ForgotPasswordScreen", () => {
 
   describe("success screen rendering", () => {
     it("should render success screen elements correctly", async () => {
-      mockAuth.forgotPassword.mockResolvedValue(undefined);
+      mockForgotPassword.mockResolvedValue(undefined);
 
       const { getByText, getByPlaceholderText, queryByPlaceholderText } =
-        render(<ForgotPasswordScreen />);
+        renderWithProviders(<ForgotPasswordScreen />);
       const emailInput = getByPlaceholderText("Enter your email address");
       const submitButton = getByText("Send Reset Link");
 
@@ -419,9 +471,9 @@ describe("ForgotPasswordScreen", () => {
   describe("error handling", () => {
     it("should handle forgotPassword errors gracefully", async () => {
       const errorMessage = "User not found";
-      mockAuth.forgotPassword.mockRejectedValue(new Error(errorMessage));
+      mockForgotPassword.mockRejectedValue(new Error(errorMessage));
 
-      const { getByText, getByPlaceholderText } = render(
+      const { getByText, getByPlaceholderText } = renderWithProviders(
         <ForgotPasswordScreen />
       );
       const emailInput = getByPlaceholderText("Enter your email address");
@@ -435,7 +487,7 @@ describe("ForgotPasswordScreen", () => {
 
       // Should not crash and should stay on form
       expect(getByText("Forgot Password")).toBeTruthy();
-      expect(mockAuth.forgotPassword).toHaveBeenCalledWith(
+      expect(mockForgotPassword).toHaveBeenCalledWith(
         "nonexistent@example.com"
       );
     });
@@ -458,7 +510,7 @@ describe("ForgotPasswordScreen", () => {
     ])(
       "should validate email '%s' as %s",
       async (email, isValid, expectedErrorMessage) => {
-        const { getByText, getByPlaceholderText } = render(
+        const { getByText, getByPlaceholderText } = renderWithProviders(
           <ForgotPasswordScreen />
         );
         const emailInput = getByPlaceholderText("Enter your email address");

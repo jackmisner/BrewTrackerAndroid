@@ -4,7 +4,6 @@
 
 import React from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
-// QueryClient and QueryClientProvider imported but not used in this test file
 import EditBrewSessionScreen from "../../../../app/(modals)/(brewSessions)/editBrewSession";
 
 // Mock React Native components
@@ -110,6 +109,14 @@ jest.mock("@contexts/ThemeContext", () => ({
       success: "#34C759",
       textSecondary: "#999999",
     },
+  }),
+}));
+
+// Mock user validation
+jest.mock("@utils/userValidation", () => ({
+  useUserValidation: () => ({
+    canUserModifyResource: jest.fn().mockResolvedValue(true),
+    validateUserOwnership: jest.fn().mockResolvedValue({ isValid: true }),
   }),
 }));
 

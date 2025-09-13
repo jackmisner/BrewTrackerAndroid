@@ -1,5 +1,5 @@
 /**
- * Comprehensive ApiService Tests - Real Implementation + Essential Logic Tests
+ * Comprehensive ApiService Tests
  */
 
 // CRITICAL: Set environment variable BEFORE any imports

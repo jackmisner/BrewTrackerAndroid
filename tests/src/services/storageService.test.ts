@@ -143,6 +143,7 @@ describe("StorageService", () => {
         name: "test.xml",
         size: 1024,
         mimeType: "application/xml",
+        lastModified: Date.now(),
       };
 
       mockDocumentPicker.getDocumentAsync.mockResolvedValue({
@@ -180,12 +181,14 @@ describe("StorageService", () => {
           name: "test1.xml",
           size: 1024,
           mimeType: "application/xml",
+          lastModified: Date.now(),
         },
         {
           uri: "file://test2.xml",
           name: "test2.xml",
           size: 2048,
           mimeType: "application/xml",
+          lastModified: Date.now(),
         },
       ];
 
@@ -226,7 +229,12 @@ describe("StorageService", () => {
     });
 
     it("should save and share file successfully", async () => {
-      mockFileSystem.writeAsStringAsync.mockResolvedValue();
+      const mockFile = {
+        uri: "file://cache/test.txt",
+        create: jest.fn().mockResolvedValue(undefined),
+        write: jest.fn().mockResolvedValue(undefined),
+      };
+      mockFileSystem.File.mockReturnValue(mockFile);
       mockSharing.isAvailableAsync.mockResolvedValue(true);
       mockSharing.shareAsync.mockResolvedValue(undefined);
 
@@ -238,10 +246,12 @@ describe("StorageService", () => {
 
       expect(result.success).toBe(true);
       expect(result.uri).toBe("file://cache/test.txt");
-      expect(mockFileSystem.writeAsStringAsync).toHaveBeenCalledWith(
-        "file://cache/test.txt",
-        "test content"
+      expect(mockFileSystem.File).toHaveBeenCalledWith(
+        mockFileSystem.Paths.cache,
+        "test.txt"
       );
+      expect(mockFile.create).toHaveBeenCalled();
+      expect(mockFile.write).toHaveBeenCalledWith("test content");
       expect(mockSharing.shareAsync).toHaveBeenCalledWith(
         "file://cache/test.txt",
         {
@@ -252,7 +262,12 @@ describe("StorageService", () => {
     });
 
     it("should handle sharing unavailable", async () => {
-      mockFileSystem.writeAsStringAsync.mockResolvedValue();
+      const mockFile = {
+        uri: "file://cache/test.txt",
+        create: jest.fn().mockResolvedValue(undefined),
+        write: jest.fn().mockResolvedValue(undefined),
+      };
+      mockFileSystem.File.mockReturnValue(mockFile);
       mockSharing.isAvailableAsync.mockResolvedValue(false);
 
       const result = await StorageService.saveAndShareFile(
@@ -265,9 +280,12 @@ describe("StorageService", () => {
     });
 
     it("should handle file write errors", async () => {
-      mockFileSystem.writeAsStringAsync.mockRejectedValue(
-        new Error("Write failed")
-      );
+      const mockFile = {
+        uri: "file://cache/test.txt",
+        create: jest.fn().mockResolvedValue(undefined),
+        write: jest.fn().mockRejectedValue(new Error("Write failed")),
+      };
+      mockFileSystem.File.mockReturnValue(mockFile);
 
       const result = await StorageService.saveAndShareFile(
         "content",
@@ -333,23 +351,31 @@ describe("StorageService", () => {
 
   describe("File Reading", () => {
     it("should read document file successfully", async () => {
-      mockFileSystem.readAsStringAsync.mockResolvedValue("file content");
+      const mockFile = {
+        exists: true,
+        text: jest.fn().mockResolvedValue("file content"),
+      };
+      mockFileSystem.File.mockReturnValue(mockFile);
 
       const result = await StorageService.readDocumentFile("file://test.txt");
 
       expect(result.success).toBe(true);
       expect(result.content).toBe("file content");
+      expect(mockFileSystem.File).toHaveBeenCalledWith("file://test.txt");
+      expect(mockFile.text).toHaveBeenCalled();
     });
 
     it("should handle file read errors", async () => {
-      mockFileSystem.readAsStringAsync.mockRejectedValue(
-        new Error("Read failed")
-      );
+      const mockFile = {
+        exists: false,
+        text: jest.fn().mockRejectedValue(new Error("Read failed")),
+      };
+      mockFileSystem.File.mockReturnValue(mockFile);
 
       const result = await StorageService.readDocumentFile("file://test.txt");
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Read failed");
+      expect(result.error).toBe("File not found at the specified URI");
     });
   });
 });
@@ -370,6 +396,7 @@ describe("BeerXMLService", () => {
         name: "recipe.xml",
         size: 2048,
         mimeType: "application/xml",
+        lastModified: Date.now(),
       };
 
       mockDocumentPicker.getDocumentAsync.mockResolvedValue({
@@ -377,9 +404,11 @@ describe("BeerXMLService", () => {
         assets: [mockDocument],
       });
 
-      mockFileSystem.readAsStringAsync.mockResolvedValue(
-        '<?xml version="1.0"?>...'
-      );
+      const mockFile = {
+        exists: true,
+        text: jest.fn().mockResolvedValue('<?xml version="1.0"?>...'),
+      };
+      mockFileSystem.File.mockReturnValue(mockFile);
 
       const result = await BeerXMLService.importBeerXML();
 
@@ -403,7 +432,16 @@ describe("BeerXMLService", () => {
 
   describe("Export BeerXML", () => {
     it("should export BeerXML file successfully", async () => {
-      mockFileSystem.writeAsStringAsync.mockResolvedValue();
+      // Mock directory picker to return null (user cancelled), so it falls back to sharing
+      mockFileSystem.Directory.pickDirectoryAsync.mockResolvedValue(null);
+
+      // Mock the sharing fallback
+      const mockFile = {
+        uri: "file://cache/My_Recipe_recipe.xml",
+        create: jest.fn().mockResolvedValue(undefined),
+        write: jest.fn().mockResolvedValue(undefined),
+      };
+      mockFileSystem.File.mockReturnValue(mockFile);
       mockSharing.isAvailableAsync.mockResolvedValue(true);
       mockSharing.shareAsync.mockResolvedValue(undefined);
 
@@ -414,10 +452,12 @@ describe("BeerXMLService", () => {
 
       expect(result.success).toBe(true);
       expect(result.method).toBe("share");
-      expect(mockFileSystem.writeAsStringAsync).toHaveBeenCalledWith(
-        "file://cache/My_Recipe_recipe.xml",
-        '<?xml version="1.0"?>...'
+      expect(mockFileSystem.File).toHaveBeenCalledWith(
+        mockFileSystem.Paths.cache,
+        "My_Recipe_recipe.xml"
       );
+      expect(mockFile.create).toHaveBeenCalled();
+      expect(mockFile.write).toHaveBeenCalledWith('<?xml version="1.0"?>...');
       expect(mockSharing.shareAsync).toHaveBeenCalledWith(
         "file://cache/My_Recipe_recipe.xml",
         {
@@ -429,12 +469,13 @@ describe("BeerXMLService", () => {
 
     it("should handle user cancellation during export", async () => {
       // Mock directory picker to be cancelled, but sharing succeeds as fallback
-      mockFileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync.mockResolvedValue(
-        {
-          granted: false,
-        }
-      );
-      mockFileSystem.writeAsStringAsync.mockResolvedValue();
+      mockFileSystem.Directory.pickDirectoryAsync.mockResolvedValue(null);
+      const mockFile = {
+        uri: "file://cache/My_Recipe_recipe.xml",
+        create: jest.fn().mockResolvedValue(undefined),
+        write: jest.fn().mockResolvedValue(undefined),
+      };
+      mockFileSystem.File.mockReturnValue(mockFile);
       mockSharing.isAvailableAsync.mockResolvedValue(true);
       mockSharing.shareAsync.mockResolvedValue(undefined);
 
@@ -446,9 +487,7 @@ describe("BeerXMLService", () => {
       // Should succeed via sharing fallback when directory picker is cancelled
       expect(result.success).toBe(true);
       expect(result.method).toBe("share");
-      expect(
-        mockFileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync
-      ).toHaveBeenCalled();
+      expect(mockFileSystem.Directory.pickDirectoryAsync).toHaveBeenCalled();
       expect(mockSharing.shareAsync).toHaveBeenCalled();
     });
   });
@@ -485,7 +524,12 @@ describe("BeerXMLService", () => {
     });
 
     it("should handle sharing service errors", async () => {
-      mockFileSystem.writeAsStringAsync.mockResolvedValue();
+      const mockFile = {
+        uri: "file://cache/test.txt",
+        create: jest.fn().mockResolvedValue(undefined),
+        write: jest.fn().mockResolvedValue(undefined),
+      };
+      mockFileSystem.File.mockReturnValue(mockFile);
       mockSharing.isAvailableAsync.mockResolvedValue(true);
       mockSharing.shareAsync.mockRejectedValue(new Error("Share failed"));
 
@@ -521,14 +565,16 @@ describe("BeerXMLService", () => {
     });
 
     it("should handle file read errors", async () => {
-      mockFileSystem.readAsStringAsync.mockRejectedValue(
-        new Error("File read failed")
-      );
+      const mockFile = {
+        exists: false,
+        text: jest.fn().mockRejectedValue(new Error("File read failed")),
+      };
+      mockFileSystem.File.mockReturnValue(mockFile);
 
       const result = await StorageService.readDocumentFile("file://test.txt");
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe("File read failed");
+      expect(result.error).toBe("File not found at the specified URI");
     });
 
     it("should handle album creation when album exists", async () => {
@@ -616,6 +662,7 @@ describe("BeerXMLService", () => {
         name: "test.xml",
         size: 1024,
         mimeType: "application/xml",
+        lastModified: Date.now(),
       };
 
       jest.spyOn(StorageService, "pickDocument").mockResolvedValue({

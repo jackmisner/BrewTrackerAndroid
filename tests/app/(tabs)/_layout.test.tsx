@@ -3,7 +3,7 @@
  */
 
 import React from "react";
-import { render } from "@testing-library/react-native";
+import { renderWithProviders } from "../../testUtils";
 import TabLayout from "../../../app/(tabs)/_layout";
 
 // Mock expo-router Tabs with Screen component
@@ -41,22 +41,12 @@ jest.mock("@expo/vector-icons", () => ({
   },
 }));
 
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: () => ({
-    colors: {
-      primary: "#007AFF",
-      background: "#FFFFFF",
-      textSecondary: "#8E8E93",
-      primaryText: "#FFFFFF",
-      borderLight: "#E5E5EA",
-    },
-  }),
-}));
+// ThemeContext is provided by testUtils
 
 describe("TabLayout", () => {
   it("should render without crashing", () => {
     expect(() => {
-      render(<TabLayout />);
+      renderWithProviders(<TabLayout />);
     }).not.toThrow();
   });
 });

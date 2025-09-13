@@ -1,10 +1,15 @@
 import React from "react";
-import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
+import { fireEvent, waitFor, act } from "@testing-library/react-native";
+import {
+  renderWithProviders,
+  mockData,
+  scenarios,
+  testUtils,
+} from "../../testUtils";
 import BrewSessionsScreen from "../../../app/(tabs)/brewSessions";
-import { mockData, scenarios, testUtils } from "../../testUtils";
 import { clear } from "console";
 
-// Mock React Native
+// Mock React Native with Appearance
 jest.mock("react-native", () => ({
   View: "View",
   Text: "Text",
@@ -15,9 +20,15 @@ jest.mock("react-native", () => ({
   Alert: {
     alert: jest.fn(),
   },
+  Platform: { OS: "ios" },
   StyleSheet: {
     create: (styles: any) => styles,
     flatten: (styles: any) => styles,
+  },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
   },
 }));
 
@@ -26,17 +37,13 @@ jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: "MaterialIcons",
 }));
 
+// Mock React Query
 jest.mock("@tanstack/react-query", () => {
   const actual = jest.requireActual("@tanstack/react-query");
   const queryClientMock = {
     invalidateQueries: jest.fn(),
-    // Add additional methods here if the component starts using them:
-    getQueryData: jest.fn(),
     setQueryData: jest.fn(),
-    removeQueries: jest.fn(),
-    clear: jest.fn(),
-    refetchQueries: jest.fn(),
-    cancelQueries: jest.fn(),
+    getQueryData: jest.fn(),
   };
   return {
     ...actual,
@@ -68,7 +75,9 @@ jest.mock("@services/api/apiService", () => ({
   },
 }));
 
+// Mock ThemeContext hook
 jest.mock("@contexts/ThemeContext", () => ({
+  ...jest.requireActual("@contexts/ThemeContext"),
   useTheme: jest.fn(),
 }));
 
@@ -228,7 +237,7 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should render active tab as selected by default", () => {
-      const { getByText } = render(<BrewSessionsScreen />);
+      const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
       expect(getByText("Active (2)")).toBeTruthy(); // fermenting + active
       expect(getByText("Completed (1)")).toBeTruthy();
@@ -237,7 +246,7 @@ describe("BrewSessionsScreen", () => {
     it("should switch to completed tab when URL parameter is set", () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "completed" });
 
-      const { getByText } = render(<BrewSessionsScreen />);
+      const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
       expect(getByText("Completed (1)")).toBeTruthy();
     });
@@ -245,7 +254,7 @@ describe("BrewSessionsScreen", () => {
     it("should navigate to active tab when pressed from completed tab", () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "completed" });
 
-      const { getByText } = render(<BrewSessionsScreen />);
+      const { getByText } = renderWithProviders(<BrewSessionsScreen />);
       const activeTab = getByText("Active (2)");
 
       fireEvent.press(activeTab);
@@ -257,7 +266,7 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should navigate to completed tab when pressed", () => {
-      const { getByText } = render(<BrewSessionsScreen />);
+      const { getByText } = renderWithProviders(<BrewSessionsScreen />);
       const completedTab = getByText("Completed (1)");
 
       fireEvent.press(completedTab);
@@ -269,7 +278,7 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should display correct session counts in tabs", () => {
-      const { getByText } = render(<BrewSessionsScreen />);
+      const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
       expect(getByText("Active (2)")).toBeTruthy();
       expect(getByText("Completed (1)")).toBeTruthy();
@@ -285,7 +294,7 @@ describe("BrewSessionsScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { getByText } = render(<BrewSessionsScreen />);
+      const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
       expect(getByText("Loading brew sessions...")).toBeTruthy();
     });
@@ -300,7 +309,7 @@ describe("BrewSessionsScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { getByText } = render(<BrewSessionsScreen />);
+      const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
       expect(getByText("Backend Not Available")).toBeTruthy();
       expect(
@@ -319,7 +328,7 @@ describe("BrewSessionsScreen", () => {
         refetch: mockRefetch,
       });
 
-      const { getByText } = render(<BrewSessionsScreen />);
+      const { getByText } = renderWithProviders(<BrewSessionsScreen />);
       const retryButton = getByText("Retry");
 
       fireEvent.press(retryButton);
@@ -358,7 +367,7 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should render FlatList with active brew sessions", () => {
-      const { queryByText } = render(<BrewSessionsScreen />);
+      const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
       // Verify active tab is displayed with correct count
       expect(queryByText("Active (1)")).toBeTruthy();
@@ -369,7 +378,7 @@ describe("BrewSessionsScreen", () => {
     it("should handle completed brew sessions tab logic", () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "completed" });
 
-      const { queryByText } = render(<BrewSessionsScreen />);
+      const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
       // When activeTab is "completed", component should handle tab state correctly
       // Verify tabs are still rendered with counts
@@ -378,7 +387,7 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should provide correct data to FlatList", () => {
-      const { queryByText } = render(<BrewSessionsScreen />);
+      const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
       // Verify component processes data correctly by checking the data structure
       // mockUseQuery should have been called with correct query key
@@ -394,7 +403,7 @@ describe("BrewSessionsScreen", () => {
     it("should handle brew session navigation logic", () => {
       const mockPush = jest.spyOn(require("expo-router").router, "push");
 
-      const { getByText } = render(<BrewSessionsScreen />);
+      const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
       // Test tab navigation - click on Completed tab
       const completedTab = getByText("Completed (1)");
@@ -420,7 +429,7 @@ describe("BrewSessionsScreen", () => {
         }
       );
 
-      render(<BrewSessionsScreen />);
+      renderWithProviders(<BrewSessionsScreen />);
 
       // Verify context menu hook was called (indicates context menu setup)
       expect(
@@ -437,7 +446,7 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should show empty state for active brew sessions", () => {
-      const { getByText } = render(<BrewSessionsScreen />);
+      const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
       expect(getByText("No Active Brews")).toBeTruthy();
       expect(
@@ -449,7 +458,7 @@ describe("BrewSessionsScreen", () => {
     it("should show empty state for completed brew sessions", () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "completed" });
 
-      const { getByText } = render(<BrewSessionsScreen />);
+      const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
       expect(getByText("No Completed Brews")).toBeTruthy();
       expect(
@@ -458,7 +467,7 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should navigate to recipes when start brewing is pressed", () => {
-      const { getByText } = render(<BrewSessionsScreen />);
+      const { getByText } = renderWithProviders(<BrewSessionsScreen />);
       const startBrewingButton = getByText("Start Brewing");
 
       fireEvent.press(startBrewingButton);
@@ -476,7 +485,7 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should show floating action button only for active tab", () => {
-      const { queryByText } = render(<BrewSessionsScreen />);
+      const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
       // Verify component renders active tab (which should show FAB)
       expect(queryByText("Active (0)")).toBeTruthy();
@@ -487,7 +496,7 @@ describe("BrewSessionsScreen", () => {
     it("should not show floating action button for completed tab", () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "completed" });
 
-      const { queryByText } = render(<BrewSessionsScreen />);
+      const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
       // Verify component handles completed tab state correctly
       expect(queryByText("Active (0)")).toBeTruthy();
@@ -507,7 +516,7 @@ describe("BrewSessionsScreen", () => {
         refetch: mockRefetch,
       }));
 
-      render(<BrewSessionsScreen />);
+      renderWithProviders(<BrewSessionsScreen />);
 
       // Since we can't easily test RefreshControl directly due to mocking,
       // we'll test that the refetch function is available
@@ -533,7 +542,7 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should display different status badges correctly", () => {
-      const { queryByText } = render(<BrewSessionsScreen />);
+      const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
       // Verify component renders with status handling capabilities
       expect(queryByText("Active (3)")).toBeTruthy(); // fermenting + paused + failed
@@ -561,7 +570,7 @@ describe("BrewSessionsScreen", () => {
     it("should calculate and display brewing progress", () => {
       // Since FlatList is mocked, we can't test the actual rendering of items
       // Instead, we verify that the component receives the correct data and can render without errors
-      const { queryByText } = render(<BrewSessionsScreen />);
+      const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
       // Verify the screen renders successfully with the mock data
       // The component should not crash and should display the tabs with counts
@@ -590,7 +599,7 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should create context menu actions with correct handlers", () => {
-      render(<BrewSessionsScreen />);
+      renderWithProviders(<BrewSessionsScreen />);
 
       expect(
         require("@src/components/ui/ContextMenu/BrewSessionContextMenu")
@@ -624,7 +633,7 @@ describe("BrewSessionsScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { queryByText } = render(<BrewSessionsScreen />);
+      const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
       // Brew session with empty name should not be rendered
       expect(queryByText("Unknown")).toBeNull();
@@ -638,7 +647,7 @@ describe("BrewSessionsScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { getByText } = render(<BrewSessionsScreen />);
+      const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
       expect(getByText("Active (0)")).toBeTruthy();
       expect(getByText("Completed (0)")).toBeTruthy();
@@ -661,7 +670,7 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should format dates correctly", () => {
-      const { queryByText } = render(<BrewSessionsScreen />);
+      const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
       // Verify component renders with date handling capabilities
       expect(queryByText("Active (1)")).toBeTruthy();

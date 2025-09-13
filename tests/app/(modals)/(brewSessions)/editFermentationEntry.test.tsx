@@ -3,8 +3,10 @@
  */
 
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { fireEvent, waitFor } from "@testing-library/react-native";
+import { renderWithProviders, testUtils } from "@/tests/testUtils";
 import EditFermentationEntryScreen from "../../../../app/(modals)/(brewSessions)/editFermentationEntry";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 // Mock React Native components
 jest.mock("react-native", () => ({
@@ -59,6 +61,11 @@ jest.mock("react-native", () => ({
     flatten: (styles: any) =>
       Array.isArray(styles) ? Object.assign({}, ...styles) : styles,
   },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
+  },
 }));
 
 jest.mock("@expo/vector-icons", () => ({
@@ -74,22 +81,26 @@ jest.mock("@expo/vector-icons", () => ({
 }));
 
 // Mock external dependencies
-jest.mock("@tanstack/react-query", () => ({
-  useQuery: jest.fn(() => ({
-    data: null,
-    isLoading: false,
-    error: null,
-  })),
-  useMutation: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
-    error: null,
-  })),
-  useQueryClient: jest.fn(() => ({
-    invalidateQueries: jest.fn(),
-  })),
-}));
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query");
+  return {
+    ...actual,
+    useQuery: jest.fn(() => ({
+      data: null,
+      isLoading: false,
+      error: null,
+    })),
+    useMutation: jest.fn(() => ({
+      mutate: jest.fn(),
+      mutateAsync: jest.fn(),
+      isPending: false,
+      error: null,
+    })),
+    useQueryClient: jest.fn(() => ({
+      invalidateQueries: jest.fn(),
+    })),
+  };
+});
 
 jest.mock("expo-router", () => ({
   router: {
@@ -109,24 +120,87 @@ jest.mock("@react-native-community/datetimepicker", () => {
   return MockDateTimePicker;
 });
 
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: () => ({
-    colors: {
-      primary: "#007AFF",
-      background: "#FFFFFF",
-      surface: "#F2F2F7",
-      text: "#000000",
-      textSecondary: "#666666",
-      border: "#C7C7CC",
-      success: "#34C759",
-      warning: "#FF9500",
-      error: "#FF3B30",
-    },
-    fonts: {
-      regular: { fontSize: 16, fontWeight: "400" },
-      medium: { fontSize: 16, fontWeight: "500" },
-      bold: { fontSize: 16, fontWeight: "700" },
-    },
+jest.mock("@contexts/ThemeContext", () => {
+  const React = require("react");
+  return {
+    useTheme: () => ({
+      colors: {
+        primary: "#007AFF",
+        background: "#FFFFFF",
+        surface: "#F2F2F7",
+        text: "#000000",
+        textSecondary: "#666666",
+        border: "#C7C7CC",
+        success: "#34C759",
+        warning: "#FF9500",
+        error: "#FF3B30",
+      },
+      fonts: {
+        regular: { fontSize: 16, fontWeight: "400" },
+        medium: { fontSize: 16, fontWeight: "500" },
+        bold: { fontSize: 16, fontWeight: "700" },
+      },
+    }),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+// Mock context providers for testUtils
+jest.mock("@contexts/NetworkContext", () => {
+  const React = require("react");
+  return {
+    NetworkProvider: ({ children }: { children: React.ReactNode }) => children,
+    useNetwork: () => ({ isConnected: true }),
+  };
+});
+
+jest.mock("@contexts/DeveloperContext", () => {
+  const React = require("react");
+  return {
+    DeveloperProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+    useDeveloper: () => ({ isDeveloperMode: false }),
+  };
+});
+
+jest.mock("@contexts/UnitContext", () => {
+  const React = require("react");
+  return {
+    UnitProvider: ({ children }: { children: React.ReactNode }) => children,
+    useUnit: () => ({ temperatureUnit: "F", weightUnit: "lb" }),
+  };
+});
+
+jest.mock("@contexts/CalculatorsContext", () => {
+  const React = require("react");
+  return {
+    CalculatorsProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+    useCalculators: () => ({ state: {}, dispatch: jest.fn() }),
+  };
+});
+
+jest.mock("@contexts/AuthContext", () => {
+  const React = require("react");
+  return {
+    AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+    useAuth: () => ({
+      user: null,
+      isLoading: false,
+      isAuthenticated: false,
+      error: null,
+      login: jest.fn(),
+      register: jest.fn(),
+      logout: jest.fn(),
+    }),
+  };
+});
+
+jest.mock("@utils/userValidation", () => ({
+  useUserValidation: () => ({
+    validateUser: jest.fn().mockResolvedValue(true),
+    canUserModifyResource: jest.fn().mockResolvedValue(true),
+    isValidating: false,
   }),
 }));
 
@@ -178,6 +252,7 @@ const mockApiService = require("@services/api/apiService").default;
 describe("EditFermentationEntryScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    testUtils.resetCounters();
   });
 
   describe("Basic Rendering", () => {
@@ -199,7 +274,9 @@ describe("EditFermentationEntryScreen", () => {
         },
       });
 
-      expect(() => render(<EditFermentationEntryScreen />)).not.toThrow();
+      expect(() =>
+        renderWithProviders(<EditFermentationEntryScreen />)
+      ).not.toThrow();
     });
 
     it("should render basic screen structure", () => {
@@ -212,7 +289,9 @@ describe("EditFermentationEntryScreen", () => {
         },
       });
 
-      const { getByText } = render(<EditFermentationEntryScreen />);
+      const { getByText } = renderWithProviders(
+        <EditFermentationEntryScreen />
+      );
 
       // Should render the screen title
       expect(getByText("Edit Fermentation Entry")).toBeTruthy();
@@ -228,7 +307,9 @@ describe("EditFermentationEntryScreen", () => {
         },
       });
 
-      const { getByText } = render(<EditFermentationEntryScreen />);
+      const { getByText } = renderWithProviders(
+        <EditFermentationEntryScreen />
+      );
 
       await waitFor(() => {
         expect(getByText("Entry Not Found")).toBeTruthy();
@@ -242,7 +323,9 @@ describe("EditFermentationEntryScreen", () => {
         isLoading: false,
         error: new Error("Failed to fetch session"),
       });
-      const { getByText } = render(<EditFermentationEntryScreen />);
+      const { getByText } = renderWithProviders(
+        <EditFermentationEntryScreen />
+      );
       await waitFor(() => {
         // Title still renders in error state header
         expect(getByText("Edit Fermentation Entry")).toBeTruthy();
@@ -276,7 +359,9 @@ describe("EditFermentationEntryScreen", () => {
         error: null,
       });
 
-      const { getByText } = render(<EditFermentationEntryScreen />);
+      const { getByText } = renderWithProviders(
+        <EditFermentationEntryScreen />
+      );
 
       // Should render title
       expect(getByText("Edit Fermentation Entry")).toBeTruthy();
@@ -312,7 +397,9 @@ describe("EditFermentationEntryScreen", () => {
         error: null,
       });
 
-      const { getByText } = render(<EditFermentationEntryScreen />);
+      const { getByText } = renderWithProviders(
+        <EditFermentationEntryScreen />
+      );
 
       // Should render without crashing with Celsius data
       expect(getByText("Edit Fermentation Entry")).toBeTruthy();
@@ -333,7 +420,9 @@ describe("EditFermentationEntryScreen", () => {
       });
 
       // Render the component
-      expect(() => render(<EditFermentationEntryScreen />)).not.toThrow();
+      expect(() =>
+        renderWithProviders(<EditFermentationEntryScreen />)
+      ).not.toThrow();
 
       // Should have router methods available
       expect(mockRouter.back).toBeDefined();
@@ -355,6 +444,7 @@ describe("EditFermentationEntryScreen", () => {
       mockUseQuery.mockReturnValue({
         data: {
           id: "test-session-id",
+          user_id: "test-user-id",
           name: "Test Batch",
           fermentation_data: [
             {
@@ -367,6 +457,7 @@ describe("EditFermentationEntryScreen", () => {
           ],
           temperature_unit: "F",
         },
+
         isLoading: false,
         error: null,
       });
@@ -378,18 +469,22 @@ describe("EditFermentationEntryScreen", () => {
         isPending: false,
       });
 
-      const { getByTestId } = render(<EditFermentationEntryScreen />);
+      const { getByTestId } = renderWithProviders(
+        <EditFermentationEntryScreen />
+      );
 
       // Change a field value
-      const gravityInput = getByTestId("gravity-input");
+      const gravityInput = getByTestId(TEST_IDS.patterns.inputField("gravity"));
       fireEvent.changeText(gravityInput, "1.045");
 
       // Press save button
-      const saveButton = getByTestId("save-button");
+      const saveButton = getByTestId(TEST_IDS.buttons.saveButton);
       fireEvent.press(saveButton);
 
       // Verify mutation was called
-      expect(mockMutate).toHaveBeenCalledWith(expect.any(Object));
+      await waitFor(() => {
+        expect(mockMutate).toHaveBeenCalledTimes(1);
+      });
     });
   });
 });

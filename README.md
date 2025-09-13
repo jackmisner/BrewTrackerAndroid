@@ -134,6 +134,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   ├── contexts/                                     # React contexts for global state
 │   │   ├── AuthContext.tsx                           # Authentication context with secure token storage
 │   │   ├── CalculatorsContext.tsx                    # Calculator state management and shared logic
+│   │   ├── NetworkContext.tsx                        # Network connectivity detection for offline functionality
 │   │   ├── ScreenDimensionsContext.tsx               # Screen dimensions management with support for foldable devices
 │   │   ├── ThemeContext.tsx                          # Theme management with light/dark mode support
 │   │   └── UnitContext.tsx                           # Unit system management (imperial/metric)
@@ -141,7 +142,8 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   ├── useBeerStyles.ts                          # Beer style data fetching and management
 │   │   ├── useDebounce.ts                            # Performance optimization for search inputs
 │   │   ├── useRecipeMetrics.ts                       # Real-time recipe calculations hook
-│   │   └── useStoragePermissions.ts                  # Storage permission management for file operations
+│   │   ├── useStoragePermissions.ts                  # Storage permission management for file operations
+│   │   └── useOfflineRecipes.ts                      # Offline-first recipe management with React Query integration
 │   ├── services/                                     # API services and business logic
 │   │   ├── api/                                      # API layer with React Query integration
 │   │   │   ├── apiService.ts                         # Hardened API service with validated base URL, timeout, error normalization, and retry logic
@@ -149,6 +151,8 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   └── idInterceptor.ts                      # MongoDB ObjectId to string normalization
 │   │   ├── beerxml/                                  # BeerXML processing services
 │   │   │   └── BeerXMLService.ts                     # BeerXML import/export with mobile file integration
+│   │   ├── offline/                                  # Offline functionality services
+│   │   │   └── OfflineRecipeService.ts               # Offline-first recipe CRUD with automatic synchronization
 │   │   ├── calculators/                              # Brewing calculation services
 │   │   │   ├── ABVCalculator.ts                      # Alcohol by Volume calculation logic
 │   │   │   ├── BoilTimerCalculator.ts                # Boil timer and hop addition scheduling
@@ -218,9 +222,10 @@ BrewTrackerAndroid/                                   # React Native Android app
 ### Key Technologies
 
 - **Expo Router**: File-based navigation with nested route groups and modal presentation
-- **React Query**: Server state management with caching and optimistic updates
+- **React Query**: Server state management with caching, optimistic updates, and offline persistence
 - **Expo Secure Store**: Secure JWT token storage for authentication
-- **AsyncStorage**: Local data persistence for user preferences
+- **AsyncStorage**: Local data persistence for user preferences and offline data
+- **NetInfo**: Network connectivity detection for offline functionality
 - **Axios**: HTTP client with request/response interceptors
 - **TypeScript**: Full type safety across the application
 - **oxlint**: Ultra-fast Rust-based linter (100x performance improvement over ESLint)
@@ -239,10 +244,12 @@ BrewTrackerAndroid/                                   # React Native Android app
 ### State Management
 
 - **Authentication**: React Context with Expo SecureStore for JWT tokens
+- **Network Connectivity**: React Context with NetInfo for offline detection
 - **Screen Dimensions**: React Context with support for foldable devices
 - **Theme Management**: React Context with AsyncStorage persistence
 - **Unit System**: React Context for imperial/metric conversion
-- **Server Data**: React Query for caching, background updates, and offline support
+- **Server Data**: React Query with AsyncStorage persistence for offline support
+- **Offline Data**: AsyncStorage with React Query integration for seamless offline/online experience
 - **Local State**: React hooks (useState, useReducer) for component-level state
 
 ### Styling Architecture
@@ -303,7 +310,7 @@ Configure in `.env`:
 - `EXPO_PUBLIC_DEBUG_MODE` - Enable debug logging (optional)
 - `EXPO_PUBLIC_LOG_LEVEL` - Set logging level (optional)
 - `EXPO_PUBLIC_ENABLE_GOOGLE_AUTH` - Enable Google authentication (optional)
-- `EXPO_PUBLIC_ENABLE_OFFLINE_MODE` - Enable offline features (optional)
+- `EXPO_PUBLIC_ENABLE_OFFLINE_MODE` - Enable offline features (enabled by default)
 - `EXPO_PUBLIC_ANALYTICS_ENABLED` - Enable analytics tracking (optional)
 
 ### Backend Integration
@@ -416,14 +423,87 @@ EXPO_PUBLIC_API_URL=https://api.brewtracker.com/v1  # Must be valid URL
 EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
 ```
 
+## 🌐 **Offline Functionality**
+
+### **Phase 2 Complete: Recipe Offline CRUD Operations** ✅
+
+BrewTrackerAndroid now supports comprehensive offline functionality for recipe management, ensuring brewers can continue working even without an internet connection.
+
+#### ✅ **Implemented Offline Features**
+
+**Offline Recipe Management:**
+
+- **Complete CRUD Operations**: Create, read, update, and delete recipes offline
+- **Automatic Fallback**: Seamlessly switches to offline storage when network unavailable
+- **Optimistic Updates**: Instant UI updates with rollback on sync failure
+- **Temporary ID Generation**: Offline-created recipes get unique temporary IDs until synced
+
+**Synchronization System:**
+
+- **Automatic Background Sync**: When network returns, pending changes sync automatically
+- **Manual Sync Trigger**: Users can manually trigger sync with visual feedback
+- **Conflict Resolution**: Last-write-wins strategy with timestamp-based merging
+- **Retry Logic**: Failed sync operations retry with exponential backoff (max 3 attempts)
+
+**Enhanced UI with Sync Status:**
+
+- **Sync Indicators**: Visual indicators show recipes pending sync and sync status
+- **Network Status**: Real-time network connectivity detection and user feedback
+- **Sync Progress**: Loading states and progress indicators during synchronization
+- **Error Handling**: Clear error messages and retry options for sync failures
+
+#### 🏗️ **Technical Architecture**
+
+**Offline Service Layer:**
+
+- `OfflineRecipeService.ts` - Comprehensive offline-first service with AsyncStorage persistence
+- `useOfflineRecipes.ts` - React Query hooks with offline integration and optimistic updates
+- Network detection with `@react-native-community/netinfo`
+- React Query persistence with AsyncStorage for seamless data access
+
+**Data Flow:**
+
+1. **Online**: Operations attempt server first, fallback to offline on failure
+2. **Offline**: Operations stored locally with pending sync queue
+3. **Network Return**: Automatic background sync with conflict resolution
+4. **UI Updates**: Real-time sync status with manual trigger options
+
+#### 📱 **User Experience**
+
+**Seamless Offline/Online Transition:**
+
+- No user intervention required for offline/online switching
+- Visual feedback for all sync operations and network status
+- Offline-created content clearly marked until successfully synced
+- Background sync preserves user focus without interruption
+
+**Reliability Features:**
+
+- **Data Persistence**: All offline data survives app restarts
+- ⚠️ Security: AsyncStorage is not encrypted; do not store secrets/PII. Tokens remain in SecureStore.
+- **Conflict Resolution**: Automatic handling of concurrent edits
+- **Sync Recovery**: Failed operations automatically retry when network improves
+- **User Control**: Manual sync triggers for immediate synchronization
+
+#### 🚀 **Next Phase: Ingredients & Calculations Offline**
+
+**Phase 3 Roadmap:**
+
+- **Ingredients Database Caching**: Cache ingredients database with background refresh
+- **Offline Calculations**: Ensure recipe metrics work without internet connection
+- **Enhanced Offline UI**: Additional sync status indicators and conflict resolution UI
+
+---
+
 ## 💡 **Development Achievements & Architecture**
 
-### **Phase 5 Completion Status: ~85% Feature Parity** ✅
+### **Phase 5 Completion Status: ~87% Feature Parity** ✅
 
 ### ✅ Core Features Complete
 
 - **Authentication**: Complete login/register flow with email verification and secure JWT token storage
 - **Recipe Management**: Full CRUD operations with 4-step creation wizard and real-time calculations
+- **Offline Recipe Management**: Complete offline-first recipe CRUD with automatic synchronization
 - **Recipe Cloning System**: Differentiated logic for private recipes (versioning) vs public recipes (attribution)
 - **Version History**: Complete timeline navigation with visual version tree and interactive browsing
 - **BeerXML Import/Export**: 3-screen mobile workflow with ingredient matching and file sharing
@@ -433,7 +513,10 @@ EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
 
 ### 🔧 Advanced Technical Features
 
-- **React Query Integration**: Optimistic updates, cache invalidation, and background sync
+- **Offline-First Architecture**: Complete recipe management works without internet connection
+- **React Query Integration**: Optimistic updates, cache invalidation, background sync, and offline persistence
+- **Automatic Synchronization**: Background sync when network becomes available with conflict resolution
+- **Network Detection**: Real-time connectivity monitoring with automatic fallback behavior
 - **Secure Storage**: JWT tokens in Expo SecureStore (not localStorage)
 - **Mobile-First Design**: 48dp touch targets, responsive layouts, foldable device support
 - **Network Resilience**: Hardened API service with retry logic and error normalization
@@ -445,6 +528,8 @@ EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
 
 #### High Priority Missing Features:
 
+- **Offline Ingredients Database**: Cache ingredients database with background refresh
+- **Offline Calculations**: Ensure recipe calculations work without internet
 - **AI Optimization Engine**: Recipe analysis and improvement suggestions
 - **Advanced Analytics**: Brewing dashboard and comprehensive reporting
 - **Enhanced Ingredient Database**: Advanced ingredient management and search

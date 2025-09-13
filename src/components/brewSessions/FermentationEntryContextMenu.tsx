@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import ApiService from "@services/api/apiService";
 import { FermentationEntry } from "@src/types";
+import { useUserValidation } from "@utils/userValidation";
 import {
   BaseContextMenu,
   BaseAction,
@@ -14,14 +15,24 @@ interface FermentationEntryContextMenuProps {
   entry: FermentationEntry | null;
   entryIndex: number | undefined;
   brewSessionId: string | undefined;
+  brewSessionUserId?: string;
   onClose: () => void;
   position?: { x: number; y: number };
 }
 
 export const FermentationEntryContextMenu: React.FC<
   FermentationEntryContextMenuProps
-> = ({ visible, entry, entryIndex, brewSessionId, onClose, position }) => {
+> = ({
+  visible,
+  entry,
+  entryIndex,
+  brewSessionId,
+  brewSessionUserId,
+  onClose,
+  position,
+}) => {
   const queryClient = useQueryClient();
+  const userValidation = useUserValidation();
 
   const deleteMutation = useMutation({
     mutationFn: async (contextData: {
@@ -58,7 +69,7 @@ export const FermentationEntryContextMenu: React.FC<
     return date.toLocaleDateString();
   };
 
-  const handleEdit = (contextData: {
+  const handleEdit = async (contextData: {
     entry: FermentationEntry;
     index: number;
     brewSessionId: string;
@@ -67,12 +78,40 @@ export const FermentationEntryContextMenu: React.FC<
     if (!sessionId || index === undefined) {
       return;
     }
+
+    // Validate user permissions for fermentation entry editing
+    if (brewSessionUserId) {
+      try {
+        const canModify = await userValidation.canUserModifyResource({
+          user_id: brewSessionUserId,
+        });
+
+        if (!canModify) {
+          Alert.alert(
+            "Access Denied",
+            "You don't have permission to edit fermentation entries for this brew session"
+          );
+          return;
+        }
+      } catch (error) {
+        console.error(
+          "❌ User validation error during fermentation entry edit:",
+          error
+        );
+        Alert.alert(
+          "Validation Error",
+          "Unable to verify permissions. Please try again."
+        );
+        return;
+      }
+    }
+
     router.push(
       `/(modals)/(brewSessions)/editFermentationEntry?brewSessionId=${sessionId}&entryIndex=${index}`
     );
   };
 
-  const handleDelete = (contextData: {
+  const handleDelete = async (contextData: {
     entry: FermentationEntry;
     index: number;
     brewSessionId: string;
@@ -85,6 +124,33 @@ export const FermentationEntryContextMenu: React.FC<
         [{ text: "OK" }]
       );
       return;
+    }
+
+    // Validate user permissions for fermentation entry deletion
+    if (brewSessionUserId) {
+      try {
+        const canModify = await userValidation.canUserModifyResource({
+          user_id: brewSessionUserId,
+        });
+
+        if (!canModify) {
+          Alert.alert(
+            "Access Denied",
+            "You don't have permission to delete fermentation entries for this brew session"
+          );
+          return;
+        }
+      } catch (error) {
+        console.error(
+          "❌ User validation error during fermentation entry deletion:",
+          error
+        );
+        Alert.alert(
+          "Validation Error",
+          "Unable to verify permissions. Please try again."
+        );
+        return;
+      }
     }
 
     deleteMutation.mutate({ brewSessionId: sessionId, index, entry });

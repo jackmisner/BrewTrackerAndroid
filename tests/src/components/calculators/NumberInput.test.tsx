@@ -5,7 +5,8 @@
  */
 
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
+import { fireEvent } from "@testing-library/react-native";
+import { renderWithProviders, testUtils } from "../../../testUtils";
 import { NumberInput } from "@src/components/calculators/NumberInput";
 import { TEST_IDS } from "@constants/testIDs";
 
@@ -19,6 +20,11 @@ jest.mock("react-native", () => ({
     create: (styles: any) => styles,
     flatten: (styles: any) => styles,
   },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
+  },
 }));
 
 // Mock MaterialIcons
@@ -26,21 +32,7 @@ jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: ({ name }: { name: string }) => name,
 }));
 
-// Mock dependencies
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: () => ({
-    colors: {
-      text: "#000000",
-      textSecondary: "#666666",
-      background: "#ffffff",
-      backgroundSecondary: "#f5f5f5",
-      borderLight: "#e0e0e0",
-      primary: "#007AFF",
-      primaryLight20: "#CCE5FF",
-      error: "#FF3B30",
-    },
-  }),
-}));
+// ThemeContext is provided by testUtils
 
 describe("NumberInput", () => {
   const defaultProps = {
@@ -51,11 +43,12 @@ describe("NumberInput", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    testUtils.resetCounters();
   });
 
   describe("basic rendering", () => {
     it("should render with label and value", () => {
-      const { getByText, getByDisplayValue } = render(
+      const { getByText, getByDisplayValue } = renderWithProviders(
         <NumberInput {...defaultProps} />
       );
 
@@ -64,7 +57,7 @@ describe("NumberInput", () => {
     });
 
     it("should render with placeholder", () => {
-      const { getByPlaceholderText } = render(
+      const { getByPlaceholderText } = renderWithProviders(
         <NumberInput {...defaultProps} value="" placeholder="Enter value" />
       );
 
@@ -72,7 +65,7 @@ describe("NumberInput", () => {
     });
 
     it("should render with unit", () => {
-      const { getByText } = render(
+      const { getByText } = renderWithProviders(
         <NumberInput {...defaultProps} unit="lbs" />
       );
 
@@ -80,7 +73,7 @@ describe("NumberInput", () => {
     });
 
     it("should render with custom testID", () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <NumberInput {...defaultProps} testID="custom-input" />
       );
 
@@ -88,7 +81,7 @@ describe("NumberInput", () => {
     });
 
     it("should render with helper text", () => {
-      const { getByText } = render(
+      const { getByText } = renderWithProviders(
         <NumberInput {...defaultProps} helperText="This is helpful" />
       );
 
@@ -96,7 +89,7 @@ describe("NumberInput", () => {
     });
 
     it("should render with error text", () => {
-      const { getByText } = render(
+      const { getByText } = renderWithProviders(
         <NumberInput {...defaultProps} error="This is an error" />
       );
 
@@ -104,7 +97,7 @@ describe("NumberInput", () => {
     });
 
     it("should prioritize error text over helper text", () => {
-      const { getByText, queryByText } = render(
+      const { getByText, queryByText } = renderWithProviders(
         <NumberInput
           {...defaultProps}
           helperText="This is helpful"
@@ -120,7 +113,7 @@ describe("NumberInput", () => {
   describe("text input handling", () => {
     it("should call onChangeText when text changes", () => {
       const onChangeText = jest.fn();
-      const { getByDisplayValue } = render(
+      const { getByDisplayValue } = renderWithProviders(
         <NumberInput {...defaultProps} onChangeText={onChangeText} />
       );
 
@@ -131,7 +124,7 @@ describe("NumberInput", () => {
 
     it("should clean non-numeric characters", () => {
       const onChangeText = jest.fn();
-      const { getByDisplayValue } = render(
+      const { getByDisplayValue } = renderWithProviders(
         <NumberInput {...defaultProps} onChangeText={onChangeText} />
       );
 
@@ -142,7 +135,7 @@ describe("NumberInput", () => {
 
     it("should allow decimal points", () => {
       const onChangeText = jest.fn();
-      const { getByDisplayValue } = render(
+      const { getByDisplayValue } = renderWithProviders(
         <NumberInput {...defaultProps} onChangeText={onChangeText} />
       );
 
@@ -153,7 +146,7 @@ describe("NumberInput", () => {
 
     it("should allow negative numbers", () => {
       const onChangeText = jest.fn();
-      const { getByDisplayValue } = render(
+      const { getByDisplayValue } = renderWithProviders(
         <NumberInput {...defaultProps} onChangeText={onChangeText} />
       );
 
@@ -164,7 +157,7 @@ describe("NumberInput", () => {
 
     it("should remove multiple decimal points", () => {
       const onChangeText = jest.fn();
-      const { getByDisplayValue } = render(
+      const { getByDisplayValue } = renderWithProviders(
         <NumberInput {...defaultProps} onChangeText={onChangeText} />
       );
 
@@ -175,7 +168,7 @@ describe("NumberInput", () => {
 
     it("should handle multiple minus signs", () => {
       const onChangeText = jest.fn();
-      const { getByDisplayValue } = render(
+      const { getByDisplayValue } = renderWithProviders(
         <NumberInput {...defaultProps} onChangeText={onChangeText} />
       );
 
@@ -186,7 +179,7 @@ describe("NumberInput", () => {
 
     it("should remove minus sign if not at beginning", () => {
       const onChangeText = jest.fn();
-      const { getByDisplayValue } = render(
+      const { getByDisplayValue } = renderWithProviders(
         <NumberInput {...defaultProps} onChangeText={onChangeText} />
       );
 
@@ -197,7 +190,7 @@ describe("NumberInput", () => {
 
     it("should enforce minimum bounds", () => {
       const onChangeText = jest.fn();
-      const { getByDisplayValue } = render(
+      const { getByDisplayValue } = renderWithProviders(
         <NumberInput {...defaultProps} onChangeText={onChangeText} min={5} />
       );
 
@@ -208,7 +201,7 @@ describe("NumberInput", () => {
 
     it("should enforce maximum bounds", () => {
       const onChangeText = jest.fn();
-      const { getByDisplayValue } = render(
+      const { getByDisplayValue } = renderWithProviders(
         <NumberInput {...defaultProps} onChangeText={onChangeText} max={20} />
       );
 
@@ -219,7 +212,7 @@ describe("NumberInput", () => {
 
     it("should allow partial input like minus sign only", () => {
       const onChangeText = jest.fn();
-      const { getByDisplayValue } = render(
+      const { getByDisplayValue } = renderWithProviders(
         <NumberInput {...defaultProps} onChangeText={onChangeText} />
       );
 
@@ -230,7 +223,7 @@ describe("NumberInput", () => {
 
     it("should allow partial input like decimal point only", () => {
       const onChangeText = jest.fn();
-      const { getByDisplayValue } = render(
+      const { getByDisplayValue } = renderWithProviders(
         <NumberInput {...defaultProps} onChangeText={onChangeText} />
       );
 
@@ -241,7 +234,7 @@ describe("NumberInput", () => {
 
     it("should not enforce bounds on partial input", () => {
       const onChangeText = jest.fn();
-      const { getByDisplayValue } = render(
+      const { getByDisplayValue } = renderWithProviders(
         <NumberInput {...defaultProps} onChangeText={onChangeText} min={10} />
       );
 
@@ -253,7 +246,7 @@ describe("NumberInput", () => {
 
   describe("step controls", () => {
     it("should render step buttons when min or max is provided", () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <NumberInput {...defaultProps} min={0} max={100} />
       );
 
@@ -267,7 +260,9 @@ describe("NumberInput", () => {
     });
 
     it("should not render step buttons when no min or max", () => {
-      const { queryByTestId } = render(<NumberInput {...defaultProps} />);
+      const { queryByTestId } = renderWithProviders(
+        <NumberInput {...defaultProps} />
+      );
 
       expect(
         queryByTestId(TEST_IDS.patterns.touchableOpacityAction("step-up"))
@@ -279,7 +274,7 @@ describe("NumberInput", () => {
 
     it("should step up by step amount", () => {
       const onChangeText = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <NumberInput
           {...defaultProps}
           onChangeText={onChangeText}
@@ -300,7 +295,7 @@ describe("NumberInput", () => {
 
     it("should step down by step amount", () => {
       const onChangeText = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <NumberInput
           {...defaultProps}
           onChangeText={onChangeText}
@@ -321,7 +316,7 @@ describe("NumberInput", () => {
 
     it("should respect precision in step operations", () => {
       const onChangeText = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <NumberInput
           {...defaultProps}
           value="10.5"
@@ -343,7 +338,7 @@ describe("NumberInput", () => {
 
     it("should not step above maximum", () => {
       const onChangeText = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <NumberInput
           {...defaultProps}
           value="99"
@@ -365,7 +360,7 @@ describe("NumberInput", () => {
 
     it("should not step below minimum", () => {
       const onChangeText = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <NumberInput
           {...defaultProps}
           value="2"
@@ -387,7 +382,7 @@ describe("NumberInput", () => {
 
     it("should handle invalid current value in step operations", () => {
       const onChangeText = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <NumberInput
           {...defaultProps}
           value=""
@@ -408,7 +403,7 @@ describe("NumberInput", () => {
     });
 
     it("should disable step buttons when at bounds", () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <NumberInput {...defaultProps} value="100" min={0} max={100} />
       );
 
@@ -421,7 +416,7 @@ describe("NumberInput", () => {
 
   describe("unit handling", () => {
     it("should render unit without press handler", () => {
-      const { getByText } = render(
+      const { getByText } = renderWithProviders(
         <NumberInput {...defaultProps} unit="gal" />
       );
 
@@ -430,7 +425,7 @@ describe("NumberInput", () => {
 
     it("should render unit with press handler and icon", () => {
       const onUnitPress = jest.fn();
-      const { getByText, getByTestId } = render(
+      const { getByText, getByTestId } = renderWithProviders(
         <NumberInput {...defaultProps} unit="gal" onUnitPress={onUnitPress} />
       );
 
@@ -442,7 +437,7 @@ describe("NumberInput", () => {
 
     it("should call onUnitPress when unit is pressed", () => {
       const onUnitPress = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <NumberInput {...defaultProps} unit="gal" onUnitPress={onUnitPress} />
       );
 
@@ -457,7 +452,7 @@ describe("NumberInput", () => {
 
   describe("disabled state", () => {
     it("should disable text input when disabled", () => {
-      const { getByDisplayValue } = render(
+      const { getByDisplayValue } = renderWithProviders(
         <NumberInput {...defaultProps} disabled={true} />
       );
 
@@ -466,7 +461,7 @@ describe("NumberInput", () => {
     });
 
     it("should disable step buttons when disabled", () => {
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <NumberInput {...defaultProps} disabled={true} min={0} max={100} />
       );
 
@@ -483,7 +478,7 @@ describe("NumberInput", () => {
 
     it("should disable unit button when disabled", () => {
       const onUnitPress = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <NumberInput
           {...defaultProps}
           disabled={true}
@@ -503,7 +498,7 @@ describe("NumberInput", () => {
   describe("edge cases", () => {
     it("should handle very large numbers", () => {
       const onChangeText = jest.fn();
-      const { getByDisplayValue } = render(
+      const { getByDisplayValue } = renderWithProviders(
         <NumberInput {...defaultProps} onChangeText={onChangeText} />
       );
 
@@ -514,7 +509,7 @@ describe("NumberInput", () => {
 
     it("should handle decimal precision edge cases", () => {
       const onChangeText = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <NumberInput
           {...defaultProps}
           value="0.99"
@@ -536,7 +531,7 @@ describe("NumberInput", () => {
 
     it("should handle step operations with default step", () => {
       const onChangeText = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <NumberInput
           {...defaultProps}
           value="5"

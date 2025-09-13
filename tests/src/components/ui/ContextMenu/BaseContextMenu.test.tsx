@@ -1,5 +1,6 @@
 import React from "react";
-import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
+import { fireEvent, waitFor, act } from "@testing-library/react-native";
+import { renderWithProviders, testUtils } from "../../../../testUtils";
 import { Alert, TouchableOpacity, Text } from "react-native";
 import * as Haptics from "expo-haptics";
 
@@ -24,6 +25,11 @@ jest.mock("react-native", () => ({
     create: (styles: any) => styles,
     flatten: (styles: any) => styles,
   },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
+  },
 }));
 
 // Mock MaterialIcons
@@ -31,17 +37,7 @@ jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: "MaterialIcons",
 }));
 
-// Mock dependencies
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: () => ({
-    colors: {
-      background: "#000000",
-      text: "#ffffff",
-      textMuted: "#888888",
-      error: "#ff0000",
-    },
-  }),
-}));
+// ThemeContext is provided by testUtils
 
 jest.mock("@styles/ui/baseContextMenuStyles", () => ({
   baseContextMenuStyles: () => ({
@@ -134,7 +130,7 @@ describe("BaseContextMenu", () => {
   describe("Visibility and Basic Rendering", () => {
     it("should not render when visible is false", () => {
       const actions = createMockActions();
-      const { queryByTestId } = render(
+      const { queryByTestId } = renderWithProviders(
         <BaseContextMenu
           visible={false}
           item={mockItem}
@@ -150,7 +146,7 @@ describe("BaseContextMenu", () => {
 
     it("should not render when item is null", () => {
       const actions = createMockActions();
-      const { queryByTestId } = render(
+      const { queryByTestId } = renderWithProviders(
         <BaseContextMenu
           visible={true}
           item={null}
@@ -166,7 +162,7 @@ describe("BaseContextMenu", () => {
 
     it("should render menu when visible and item provided", () => {
       const actions = createMockActions();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <BaseContextMenu
           visible={true}
           item={mockItem}
@@ -184,7 +180,7 @@ describe("BaseContextMenu", () => {
 
     it("should display title and subtitle correctly", () => {
       const actions = createMockActions();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <BaseContextMenu
           visible={true}
           item={mockItem}
@@ -207,7 +203,7 @@ describe("BaseContextMenu", () => {
   describe("Actions Filtering and Display", () => {
     it("should display visible actions and hide hidden ones", () => {
       const actions = createMockActions();
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = renderWithProviders(
         <BaseContextMenu
           visible={true}
           item={mockItem}
@@ -238,7 +234,7 @@ describe("BaseContextMenu", () => {
     it("should properly disable actions based on disabled condition", () => {
       const inactiveItem: TestItem = { ...mockItem, status: "inactive" };
       const actions = createMockActions();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <BaseContextMenu
           visible={true}
           item={inactiveItem}
@@ -269,7 +265,7 @@ describe("BaseContextMenu", () => {
       actions[0].onPress = mockOnPress; // view action
 
       const mockOnClose = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <BaseContextMenu
           visible={true}
           item={mockItem}
@@ -301,7 +297,7 @@ describe("BaseContextMenu", () => {
       actions[2].onPress = mockOnPress; // delete action
 
       const mockOnClose = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <BaseContextMenu
           visible={true}
           item={mockItem}
@@ -336,7 +332,7 @@ describe("BaseContextMenu", () => {
       const mockOnPress = jest.fn();
       actions[0].onPress = mockOnPress;
 
-      const component = render(
+      const component = renderWithProviders(
         <BaseContextMenu
           visible={true}
           item={mockItem}
@@ -368,7 +364,7 @@ describe("BaseContextMenu", () => {
     it("should close menu when cancel button is pressed", () => {
       const actions = createMockActions();
       const mockOnClose = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <BaseContextMenu
           visible={true}
           item={mockItem}
@@ -388,7 +384,7 @@ describe("BaseContextMenu", () => {
     it("should close menu when overlay is pressed", () => {
       const actions = createMockActions();
       const mockOnClose = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <BaseContextMenu
           visible={true}
           item={mockItem}
@@ -410,7 +406,7 @@ describe("BaseContextMenu", () => {
     it("should apply position styles when position is provided", () => {
       const actions = createMockActions();
       const position = { x: 100, y: 200 };
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <BaseContextMenu
           visible={true}
           item={mockItem}
@@ -466,7 +462,7 @@ describe("useContextMenu Hook", () => {
   };
 
   it("should initialize with correct default values", () => {
-    const { getByTestId } = render(<TestComponent />);
+    const { getByTestId } = renderWithProviders(<TestComponent />);
 
     expect(getByTestId("visible-state")).toHaveTextContent("false");
     expect(getByTestId("selected-item")).toHaveTextContent("none");
@@ -474,7 +470,7 @@ describe("useContextMenu Hook", () => {
   });
 
   it("should show menu with correct state", () => {
-    const { getByTestId } = render(<TestComponent />);
+    const { getByTestId } = renderWithProviders(<TestComponent />);
 
     fireEvent.press(getByTestId("show-menu-btn"));
 
@@ -484,7 +480,7 @@ describe("useContextMenu Hook", () => {
   });
 
   it("should hide menu and reset state", () => {
-    const { getByTestId } = render(<TestComponent />);
+    const { getByTestId } = renderWithProviders(<TestComponent />);
 
     // First show the menu
     fireEvent.press(getByTestId("show-menu-btn"));

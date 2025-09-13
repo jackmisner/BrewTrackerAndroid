@@ -228,32 +228,21 @@ describe("useBeerStyles", () => {
     expect(result.current.data).toEqual(expectedOrder);
   });
 
-  it("should handle API errors correctly", async () => {
+  it("should handle API errors by falling back to cached data", async () => {
     // Create a specific error that won't trigger retries based on the hook's retry logic
     const apiError = { status: 404, message: "Not found" };
     mockedApiService.beerStyles.getAll.mockRejectedValue(apiError);
 
-    // Create a query client that respects the hook's retry configuration
-    const errorQueryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          gcTime: 0,
-        },
-      },
-    });
-
-    const wrapper = createWrapper(errorQueryClient);
+    const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useBeerStyles(), { wrapper });
 
-    await waitFor(
-      () => {
-        expect(result.current.isError).toBe(true);
-      },
-      { timeout: 3000 }
-    );
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
 
-    expect(result.current.error).toEqual(apiError);
-    expect(result.current.data).toBeUndefined();
+    // Should have data from cached fallback
+    expect(result.current.data).toBeDefined();
+    expect(result.current.error).toBeNull();
     expect(result.current.isLoading).toBe(false);
   });
 
@@ -358,7 +347,7 @@ describe("useBeerStyles", () => {
     expect(mockedApiService.beerStyles.getAll).toHaveBeenCalledTimes(1);
 
     // Check that the query key is correct by verifying cache behavior
-    const cacheData = queryClient.getQueryData(["beerStyles"]);
+    const cacheData = queryClient.getQueryData(["beerStyles", "offline-aware"]);
     expect(cacheData).toBeDefined();
   });
 

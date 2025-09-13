@@ -6,7 +6,8 @@
  */
 
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
+import { fireEvent } from "@testing-library/react-native";
+import { renderWithProviders, testUtils } from "@/tests/testUtils";
 import HydrometerCorrectionCalculatorScreen from "../../../../app/(modals)/(calculators)/hydrometerCorrection";
 import { HydrometerCorrectionCalculator } from "@services/calculators/HydrometerCorrectionCalculator";
 
@@ -24,6 +25,11 @@ jest.mock("react-native", () => {
       create: (styles: any) => styles,
       flatten: (styles: any) => styles,
     },
+    Appearance: {
+      getColorScheme: jest.fn(() => "light"),
+      addChangeListener: jest.fn(),
+      removeChangeListener: jest.fn(),
+    },
   };
 });
 
@@ -32,41 +38,27 @@ jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: ({ name }: { name: string }) => name,
 }));
 
-// Mock theme context
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: () => ({
-    colors: {
-      text: "#000000",
-      textSecondary: "#666666",
-      primary: "#007AFF",
-      primaryText: "#FFFFFF",
-      background: "#FFFFFF",
-      backgroundSecondary: "#F8F9FA",
-      borderLight: "#E0E0E0",
-      cardBackground: "#FFFFFF",
-    },
-  }),
-}));
-
-// Mock calculators context
+// Mock CalculatorsContext with manageable state
 const mockDispatch = jest.fn();
 const mockState = {
   hydrometerCorrection: {
     measuredGravity: "",
     wortTemp: "",
-    calibrationTemp: "",
-    tempUnit: "f" as "f" | "c",
-    result: Number.NaN || null,
+    calibrationTemp: "68",
+    tempUnit: "f",
+    result: null as any,
   },
-  history: [],
 };
 
 jest.mock("@contexts/CalculatorsContext", () => ({
+  ...jest.requireActual("@contexts/CalculatorsContext"),
   useCalculators: () => ({
     state: mockState,
     dispatch: mockDispatch,
   }),
 }));
+
+// ThemeContext is provided by renderWithProviders
 
 // Mock calculator components
 jest.mock("@components/calculators/CalculatorCard", () => {
@@ -150,42 +142,44 @@ const mockHydrometerCalculator = HydrometerCorrectionCalculator as jest.Mocked<
 describe("HydrometerCorrectionCalculatorScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockState.hydrometerCorrection = {
-      measuredGravity: "",
-      wortTemp: "",
-      calibrationTemp: "",
-      tempUnit: "f" as const,
-      result: null,
-    };
+    testUtils.resetCounters();
   });
 
   describe("basic rendering", () => {
     it("should render without crashing", () => {
       expect(() =>
-        render(<HydrometerCorrectionCalculatorScreen />)
+        renderWithProviders(<HydrometerCorrectionCalculatorScreen />)
       ).not.toThrow();
     });
 
     it("should render header with correct title", () => {
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
       expect(getByTestId("calculator-header")).toBeTruthy();
     });
 
     it("should render settings section", () => {
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
       expect(getByTestId("calculator-card-settings")).toBeTruthy();
       expect(getByTestId("unit-toggle")).toBeTruthy();
     });
 
     it("should render gravity reading section", () => {
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
       expect(getByTestId("calculator-card-gravity-reading")).toBeTruthy();
       expect(getByTestId("hydrometer-measured-gravity")).toBeTruthy();
       expect(getByTestId("hydrometer-sample-temp")).toBeTruthy();
     });
 
     it("should render hydrometer calibration section", () => {
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
       expect(
         getByTestId("calculator-card-hydrometer-calibration")
       ).toBeTruthy();
@@ -193,7 +187,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
     });
 
     it("should not render result when no result available", () => {
-      const { queryByTestId } = render(
+      const { queryByTestId } = renderWithProviders(
         <HydrometerCorrectionCalculatorScreen />
       );
       expect(queryByTestId("single-result")).toBeNull();
@@ -202,7 +196,9 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
 
   describe("input handling", () => {
     it("should handle measured gravity input change", () => {
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
 
       const gravityInput = getByTestId("hydrometer-measured-gravity");
       fireEvent.press(gravityInput);
@@ -214,7 +210,9 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
     });
 
     it("should handle sample temperature input change", () => {
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
 
       const tempInput = getByTestId("hydrometer-sample-temp");
       fireEvent.press(tempInput);
@@ -226,7 +224,9 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
     });
 
     it("should handle calibration temperature input change", () => {
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
 
       const calibrationInput = getByTestId("hydrometer-calibration-temp");
       fireEvent.press(calibrationInput);
@@ -241,7 +241,9 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
       mockState.hydrometerCorrection.wortTemp = "75";
       mockState.hydrometerCorrection.calibrationTemp = "68";
 
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
 
       const unitToggle = getByTestId("unit-toggle");
       fireEvent.press(unitToggle);
@@ -267,7 +269,9 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         result: null,
       };
 
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
 
       const unitToggle = getByTestId("unit-toggle");
       fireEvent.press(unitToggle);
@@ -291,7 +295,9 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         result: null,
       };
 
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
 
       const unitToggle = getByTestId("unit-toggle");
       fireEvent.press(unitToggle);
@@ -315,7 +321,9 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         result: null,
       };
 
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
 
       const unitToggle = getByTestId("unit-toggle");
       fireEvent.press(unitToggle);
@@ -339,7 +347,9 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         result: null,
       };
 
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
 
       const unitToggle = getByTestId("unit-toggle");
       fireEvent.press(unitToggle);
@@ -365,7 +375,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         result: null,
       };
 
-      render(<HydrometerCorrectionCalculatorScreen />);
+      renderWithProviders(<HydrometerCorrectionCalculatorScreen />);
 
       expect(
         mockHydrometerCalculator.calculateCorrection
@@ -385,7 +395,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         result: null,
       };
 
-      render(<HydrometerCorrectionCalculatorScreen />);
+      renderWithProviders(<HydrometerCorrectionCalculatorScreen />);
 
       expect(
         mockHydrometerCalculator.calculateCorrection
@@ -408,7 +418,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
 
       mockHydrometerCalculator.calculateCorrection.mockReturnValue(mockResult);
 
-      render(<HydrometerCorrectionCalculatorScreen />);
+      renderWithProviders(<HydrometerCorrectionCalculatorScreen />);
 
       expect(mockHydrometerCalculator.calculateCorrection).toHaveBeenCalledWith(
         1.05,
@@ -439,7 +449,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
 
       mockHydrometerCalculator.calculateCorrection.mockReturnValue(mockResult);
 
-      render(<HydrometerCorrectionCalculatorScreen />);
+      renderWithProviders(<HydrometerCorrectionCalculatorScreen />);
 
       expect(mockDispatch).toHaveBeenCalledWith({
         type: "ADD_TO_HISTORY",
@@ -468,7 +478,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         result: null,
       };
 
-      render(<HydrometerCorrectionCalculatorScreen />);
+      renderWithProviders(<HydrometerCorrectionCalculatorScreen />);
 
       expect(
         mockHydrometerCalculator.calculateCorrection
@@ -494,7 +504,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
 
       const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
 
-      render(<HydrometerCorrectionCalculatorScreen />);
+      renderWithProviders(<HydrometerCorrectionCalculatorScreen />);
 
       expect(consoleSpy).toHaveBeenCalledWith(
         "Hydrometer correction error:",
@@ -520,7 +530,9 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         result: 1.048,
       };
 
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
 
       expect(getByTestId("single-result")).toBeTruthy();
     });
@@ -534,7 +546,9 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         result: 1.048,
       };
 
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
 
       // Verify the result is displayed
       const resultComponent = getByTestId("single-result");
@@ -547,21 +561,15 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
   describe("placeholder text and units", () => {
     it("should show Fahrenheit placeholders and units by default", () => {
       // Default tempUnit is 'f', so placeholders should be in Fahrenheit
-      render(<HydrometerCorrectionCalculatorScreen />);
+      renderWithProviders(<HydrometerCorrectionCalculatorScreen />);
       // This is indirectly tested through the NumberInput props
-      expect(() =>
-        render(<HydrometerCorrectionCalculatorScreen />)
-      ).not.toThrow();
     });
 
     it("should show Celsius placeholders and units when in Celsius mode", () => {
       mockState.hydrometerCorrection.tempUnit = "c";
 
-      render(<HydrometerCorrectionCalculatorScreen />);
+      renderWithProviders(<HydrometerCorrectionCalculatorScreen />);
       // This is indirectly tested through the NumberInput props
-      expect(() =>
-        render(<HydrometerCorrectionCalculatorScreen />)
-      ).not.toThrow();
     });
   });
 
@@ -575,7 +583,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         result: null,
       };
 
-      render(<HydrometerCorrectionCalculatorScreen />);
+      renderWithProviders(<HydrometerCorrectionCalculatorScreen />);
 
       expect(mockHydrometerCalculator.calculateCorrection).toHaveBeenCalledWith(
         0,
@@ -594,7 +602,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         result: null,
       };
 
-      render(<HydrometerCorrectionCalculatorScreen />);
+      renderWithProviders(<HydrometerCorrectionCalculatorScreen />);
 
       expect(mockHydrometerCalculator.calculateCorrection).toHaveBeenCalledWith(
         1.1,
@@ -613,7 +621,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         result: null,
       };
 
-      render(<HydrometerCorrectionCalculatorScreen />);
+      renderWithProviders(<HydrometerCorrectionCalculatorScreen />);
 
       expect(mockHydrometerCalculator.calculateCorrection).toHaveBeenCalledWith(
         1.15,
@@ -632,7 +640,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         result: null,
       };
 
-      render(<HydrometerCorrectionCalculatorScreen />);
+      renderWithProviders(<HydrometerCorrectionCalculatorScreen />);
 
       expect(mockHydrometerCalculator.calculateCorrection).toHaveBeenCalledWith(
         1.05,
@@ -645,7 +653,9 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
 
   describe("component integration", () => {
     it("should pass correct props to NumberInput components", () => {
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
 
       // All inputs should be present with correct test IDs
       expect(getByTestId("hydrometer-measured-gravity")).toBeTruthy();
@@ -654,7 +664,9 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
     });
 
     it("should pass correct props to UnitToggle", () => {
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
 
       expect(getByTestId("unit-toggle")).toBeTruthy();
     });
@@ -662,7 +674,9 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
     it("should pass correct props to SingleResult when result exists", () => {
       mockState.hydrometerCorrection.result = 1.048;
 
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
 
       expect(getByTestId("single-result")).toBeTruthy();
     });
@@ -670,7 +684,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
     it("should handle theme changes gracefully", () => {
       // Component should render without errors with theme applied
       expect(() =>
-        render(<HydrometerCorrectionCalculatorScreen />)
+        renderWithProviders(<HydrometerCorrectionCalculatorScreen />)
       ).not.toThrow();
     });
   });
@@ -678,11 +692,8 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
   describe("temperature unit options", () => {
     it("should have correct temperature unit options", () => {
       // TEMP_UNIT_OPTIONS should have Fahrenheit and Celsius options
-      render(<HydrometerCorrectionCalculatorScreen />);
+      renderWithProviders(<HydrometerCorrectionCalculatorScreen />);
       // This is indirectly tested through the UnitToggle props
-      expect(() =>
-        render(<HydrometerCorrectionCalculatorScreen />)
-      ).not.toThrow();
     });
 
     it("should handle same unit conversions", () => {
@@ -694,7 +705,9 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         result: null,
       };
 
-      const { getByTestId } = render(<HydrometerCorrectionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(
+        <HydrometerCorrectionCalculatorScreen />
+      );
 
       const unitToggle = getByTestId("unit-toggle");
       fireEvent.press(unitToggle);

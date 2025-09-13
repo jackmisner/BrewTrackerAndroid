@@ -260,7 +260,7 @@ describe("useRecipeMetrics - Essential Tests", () => {
     expect(() => result.current).not.toThrow();
   });
 
-  it("should handle API validation errors without retries", async () => {
+  it("should handle API validation errors by falling back to offline calculation", async () => {
     const mockRecipeData = createMockRecipeData();
     const validationError = {
       response: { status: 400 },
@@ -276,70 +276,44 @@ describe("useRecipeMetrics - Essential Tests", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.isError).toBe(true);
+      expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(result.current.error).toEqual(validationError);
-    expect(result.current.data).toBeUndefined();
+    // Should have data from offline calculation fallback
+    expect(result.current.data).toBeDefined();
+    expect(result.current.error).toBeNull();
     // Should only be called once (no retries for 400 errors)
     expect(
       mockedApiService.recipes.calculateMetricsPreview
     ).toHaveBeenCalledTimes(1);
   });
 
-  it("should retry network errors up to 2 times", async () => {
-    jest.useFakeTimers();
+  it("should handle network errors by falling back to offline calculation", async () => {
+    const mockRecipeData = createMockRecipeData();
+    const networkError = {
+      response: { status: 500 },
+      message: "Network error",
+    };
+    mockedApiService.recipes.calculateMetricsPreview.mockRejectedValue(
+      networkError
+    );
 
-    try {
-      const mockRecipeData = createMockRecipeData();
-      const networkError = {
-        response: { status: 500 },
-        message: "Network error",
-      };
-      mockedApiService.recipes.calculateMetricsPreview.mockRejectedValue(
-        networkError
-      );
+    const wrapper = createWrapper(queryClient);
+    const { result } = renderHook(() => useRecipeMetrics(mockRecipeData), {
+      wrapper,
+    });
 
-      const wrapper = createWrapper(queryClient);
-      renderHook(() => useRecipeMetrics(mockRecipeData), {
-        wrapper,
-      });
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
 
-      // Wait for initial query to complete
-      await act(async () => {
-        jest.runOnlyPendingTimers();
-      });
-
-      // Initial call should happen
-      expect(
-        mockedApiService.recipes.calculateMetricsPreview
-      ).toHaveBeenCalledTimes(1);
-
-      // Advance timers for first retry (1000ms delay)
-      await act(async () => {
-        jest.advanceTimersByTime(1000);
-      });
-
-      expect(
-        mockedApiService.recipes.calculateMetricsPreview
-      ).toHaveBeenCalledTimes(2);
-
-      // Advance timers for second retry (2000ms delay)
-      await act(async () => {
-        jest.advanceTimersByTime(2000);
-      });
-
-      expect(
-        mockedApiService.recipes.calculateMetricsPreview
-      ).toHaveBeenCalledTimes(3);
-
-      // Run remaining timers to complete retries
-      await act(async () => {
-        jest.runAllTimers();
-      });
-    } finally {
-      jest.useRealTimers();
-    }
+    // Should have data from offline calculation fallback
+    expect(result.current.data).toBeDefined();
+    expect(result.current.error).toBeNull();
+    // Should only be called once since query function catches the error and falls back
+    expect(
+      mockedApiService.recipes.calculateMetricsPreview
+    ).toHaveBeenCalledTimes(1);
   });
 
   it("should handle complex recipe data with all ingredient types", async () => {
@@ -482,8 +456,8 @@ describe("useRecipeMetrics - Essential Tests", () => {
     );
 
     expect(recipeMetricsQueries).toHaveLength(1);
-    expect(recipeMetricsQueries[0].queryKey[1]).toBe(5.5); // batch_size
-    expect(recipeMetricsQueries[0].queryKey[2]).toBe("gal"); // batch_size_unit
-    expect(recipeMetricsQueries[0].queryKey[3]).toBe(72); // efficiency
+    expect(recipeMetricsQueries[0].queryKey[3]).toBe(5.5); // batch_size
+    expect(recipeMetricsQueries[0].queryKey[4]).toBe("gal"); // batch_size_unit
+    expect(recipeMetricsQueries[0].queryKey[5]).toBe(72); // efficiency
   });
 });

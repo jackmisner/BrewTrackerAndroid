@@ -6,7 +6,8 @@
  */
 
 import React from "react";
-import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
+import { fireEvent, waitFor, act } from "@testing-library/react-native";
+import { renderWithProviders, testUtils } from "@/tests/testUtils";
 import { Alert, AppState } from "react-native";
 import BoilTimerCalculatorScreen from "../../../../app/(modals)/(calculators)/boilTimer";
 
@@ -30,6 +31,11 @@ jest.mock("react-native", () => ({
   AppState: {
     currentState: "active",
     addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+  },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
   },
 }));
 
@@ -68,27 +74,16 @@ const INITIAL_BOIL_TIMER_STATE = mockCalculatorsState.boilTimer;
 
 const mockDispatch = jest.fn();
 
-jest.mock("@contexts/CalculatorsContext", () => ({
-  useCalculators: () => ({
-    state: mockCalculatorsState,
-    dispatch: mockDispatch,
-  }),
-}));
+// CalculatorsContext and ThemeContext are provided by renderWithProviders
+// But we need to mock the specific calculators state for state manipulation
+const mockCalculatorsContext = {
+  state: mockCalculatorsState,
+  dispatch: mockDispatch,
+};
 
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: () => ({
-    colors: {
-      background: "#ffffff",
-      primary: "#f4511e",
-      text: "#000000",
-      textSecondary: "#666666",
-      backgroundSecondary: "#f5f5f5",
-      success: "#4caf50",
-      warning: "#ff9800",
-      error: "#f44336",
-      borderLight: "#e0e0e0",
-    },
-  }),
+jest.mock("@contexts/CalculatorsContext", () => ({
+  ...jest.requireActual("@contexts/CalculatorsContext"),
+  useCalculators: () => mockCalculatorsContext,
 }));
 
 // Mock services
@@ -158,6 +153,7 @@ jest.mock("@services/api/apiService", () => ({
 
 // Mock React Query
 jest.mock("@tanstack/react-query", () => ({
+  ...jest.requireActual("@tanstack/react-query"),
   useQuery: jest.fn(() => ({
     data: {
       data: {
@@ -272,6 +268,7 @@ jest.mock("@components/boilTimer/RecipeSelector", () => {
 describe("BoilTimerCalculatorScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    testUtils.resetCounters();
 
     // Reset state to defaults
     mockCalculatorsState.boilTimer = {
@@ -290,18 +287,10 @@ describe("BoilTimerCalculatorScreen", () => {
         boil_time: 60,
       },
     });
-
-    // Mock console methods to avoid noise
-    jest.spyOn(console, "log").mockImplementation(() => {});
-    jest.spyOn(console, "error").mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
   });
 
   it("should render boil timer screen", () => {
-    const component = render(<BoilTimerCalculatorScreen />);
+    const component = renderWithProviders(<BoilTimerCalculatorScreen />);
     expect(component).toBeTruthy();
   });
 
@@ -316,7 +305,7 @@ describe("BoilTimerCalculatorScreen", () => {
       persistedState
     );
 
-    render(<BoilTimerCalculatorScreen />);
+    renderWithProviders(<BoilTimerCalculatorScreen />);
 
     await waitFor(() => {
       expect(mockTimerPersistenceService.loadTimerState).toHaveBeenCalled();
@@ -337,7 +326,7 @@ describe("BoilTimerCalculatorScreen", () => {
       completedState
     );
 
-    render(<BoilTimerCalculatorScreen />);
+    renderWithProviders(<BoilTimerCalculatorScreen />);
 
     await waitFor(() => {
       expect(Alert.alert).toHaveBeenCalledWith(
@@ -356,7 +345,7 @@ describe("BoilTimerCalculatorScreen", () => {
       new Error("Load failed")
     );
 
-    render(<BoilTimerCalculatorScreen />);
+    renderWithProviders(<BoilTimerCalculatorScreen />);
 
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -369,7 +358,7 @@ describe("BoilTimerCalculatorScreen", () => {
   });
 
   it("should auto-load recipe from URL params", async () => {
-    const component = render(<BoilTimerCalculatorScreen />);
+    const component = renderWithProviders(<BoilTimerCalculatorScreen />);
 
     // With URL param recipeId set to "test-recipe-id", the component should attempt
     // to load recipe data. Since useQuery is mocked, we verify the component renders
@@ -402,7 +391,7 @@ describe("BoilTimerCalculatorScreen", () => {
       ],
     });
 
-    const component = render(<BoilTimerCalculatorScreen />);
+    const component = renderWithProviders(<BoilTimerCalculatorScreen />);
 
     // The recipe selection happens via RecipeSelector component
     // Since it's mocked as "CalculatorCard", we verify component renders
@@ -420,7 +409,7 @@ describe("BoilTimerCalculatorScreen", () => {
       throw new Error("Recipe load failed");
     });
 
-    render(<BoilTimerCalculatorScreen />);
+    renderWithProviders(<BoilTimerCalculatorScreen />);
 
     // The error will be caught when the component tries to load the recipe
     await waitFor(() => {
@@ -434,7 +423,7 @@ describe("BoilTimerCalculatorScreen", () => {
   });
 
   it("should handle manual mode selection", async () => {
-    const component = render(<BoilTimerCalculatorScreen />);
+    const component = renderWithProviders(<BoilTimerCalculatorScreen />);
 
     // Verify manual mode is the default (no recipe selected)
     // The component shows "Manual Timer" text when no recipe is selected
@@ -447,7 +436,7 @@ describe("BoilTimerCalculatorScreen", () => {
   it("should handle manual duration change", async () => {
     mockCalculatorsState.boilTimer.isRecipeMode = false;
 
-    const component = render(<BoilTimerCalculatorScreen />);
+    const component = renderWithProviders(<BoilTimerCalculatorScreen />);
 
     // The NumberInput component is mocked, so we verify it's available for interaction
     // In manual mode, the duration input should be rendered
@@ -458,7 +447,7 @@ describe("BoilTimerCalculatorScreen", () => {
   });
 
   it("should initialize notifications on mount", async () => {
-    render(<BoilTimerCalculatorScreen />);
+    renderWithProviders(<BoilTimerCalculatorScreen />);
 
     await waitFor(() => {
       expect(mockNotificationService.initialize).toHaveBeenCalled();
@@ -480,7 +469,7 @@ describe("BoilTimerCalculatorScreen", () => {
       remove: mockResponseRemove,
     });
 
-    const { unmount } = render(<BoilTimerCalculatorScreen />);
+    const { unmount } = renderWithProviders(<BoilTimerCalculatorScreen />);
 
     await waitFor(() => {
       expect(
@@ -497,7 +486,7 @@ describe("BoilTimerCalculatorScreen", () => {
   it("should format time correctly", () => {
     mockCalculatorsState.boilTimer.timeRemaining = 3665; // 61 minutes and 5 seconds
 
-    const { getByText } = render(<BoilTimerCalculatorScreen />);
+    const { getByText } = renderWithProviders(<BoilTimerCalculatorScreen />);
 
     // The formatted time "61:05" should be displayed in the timer
     expect(getByText("61:05")).toBeTruthy();
@@ -507,7 +496,7 @@ describe("BoilTimerCalculatorScreen", () => {
     mockCalculatorsState.boilTimer.duration = 60;
     mockCalculatorsState.boilTimer.timeRemaining = 1800; // 30 minutes remaining
 
-    const { getByTestId } = render(<BoilTimerCalculatorScreen />);
+    const { getByTestId } = renderWithProviders(<BoilTimerCalculatorScreen />);
 
     // Progress should be 50% (30 minutes of 60 minute boil complete)
     const progressBar = getByTestId("progress-bar");
@@ -530,7 +519,7 @@ describe("BoilTimerCalculatorScreen", () => {
       currentState: "active",
     };
 
-    render(<BoilTimerCalculatorScreen />);
+    renderWithProviders(<BoilTimerCalculatorScreen />);
 
     await waitFor(() => {
       expect(mockAddEventListener).toHaveBeenCalledWith(
@@ -566,7 +555,7 @@ describe("BoilTimerCalculatorScreen", () => {
       isRunning: true,
     });
 
-    render(<BoilTimerCalculatorScreen />);
+    renderWithProviders(<BoilTimerCalculatorScreen />);
 
     await act(async () => {
       mockAppStateListener("active");
@@ -596,7 +585,7 @@ describe("BoilTimerCalculatorScreen", () => {
       isRunning: false,
     });
 
-    render(<BoilTimerCalculatorScreen />);
+    renderWithProviders(<BoilTimerCalculatorScreen />);
 
     await act(async () => {
       mockAppStateListener("active");
@@ -615,7 +604,7 @@ describe("BoilTimerCalculatorScreen", () => {
     mockCalculatorsState.boilTimer.isRunning = true;
     mockCalculatorsState.boilTimer.isPaused = false;
 
-    render(<BoilTimerCalculatorScreen />);
+    renderWithProviders(<BoilTimerCalculatorScreen />);
 
     expect(mockTimerPersistenceService.startCheckpointing).toHaveBeenCalledWith(
       expect.any(Function)
@@ -625,7 +614,7 @@ describe("BoilTimerCalculatorScreen", () => {
   it("should stop checkpointing when timer stops", () => {
     mockCalculatorsState.boilTimer.isRunning = false;
 
-    render(<BoilTimerCalculatorScreen />);
+    renderWithProviders(<BoilTimerCalculatorScreen />);
 
     expect(mockTimerPersistenceService.stopCheckpointing).toHaveBeenCalled();
   });
@@ -633,7 +622,7 @@ describe("BoilTimerCalculatorScreen", () => {
   it("should save timer state when timer stops", () => {
     mockCalculatorsState.boilTimer.isRunning = false;
 
-    render(<BoilTimerCalculatorScreen />);
+    renderWithProviders(<BoilTimerCalculatorScreen />);
 
     expect(mockTimerPersistenceService.saveTimerState).toHaveBeenCalledWith(
       mockCalculatorsState.boilTimer
@@ -654,7 +643,7 @@ describe("BoilTimerCalculatorScreen", () => {
       },
     ];
 
-    const component = render(<BoilTimerCalculatorScreen />);
+    const component = renderWithProviders(<BoilTimerCalculatorScreen />);
 
     // We can't easily trigger the start button since it's mocked,
     // but we can verify the component renders properly with recipe mode
@@ -668,7 +657,9 @@ describe("BoilTimerCalculatorScreen", () => {
       { time: 30, name: "Centennial", amount: 1, unit: "oz" },
     ];
 
-    const { queryByTestId } = render(<BoilTimerCalculatorScreen />);
+    const { queryByTestId } = renderWithProviders(
+      <BoilTimerCalculatorScreen />
+    );
 
     // Use queryByTestId to check if the button exists before trying to use it
     const startButton = queryByTestId("start-timer-button");
@@ -705,7 +696,9 @@ describe("BoilTimerCalculatorScreen", () => {
   it("should handle timer pause", async () => {
     mockCalculatorsState.boilTimer.isRunning = true;
 
-    const { queryByTestId } = render(<BoilTimerCalculatorScreen />);
+    const { queryByTestId } = renderWithProviders(
+      <BoilTimerCalculatorScreen />
+    );
 
     const pauseButton = queryByTestId("pause-timer-button");
     expect(pauseButton).toBeTruthy();
@@ -731,7 +724,7 @@ describe("BoilTimerCalculatorScreen", () => {
   it("should handle timer stop with confirmation", async () => {
     mockCalculatorsState.boilTimer.isRunning = true;
 
-    const { getByTestId } = render(<BoilTimerCalculatorScreen />);
+    const { getByTestId } = renderWithProviders(<BoilTimerCalculatorScreen />);
 
     const stopButton = getByTestId("stop-timer-button");
 
@@ -765,7 +758,7 @@ describe("BoilTimerCalculatorScreen", () => {
       },
     ];
 
-    const { getByTestId } = render(<BoilTimerCalculatorScreen />);
+    const { getByTestId } = renderWithProviders(<BoilTimerCalculatorScreen />);
 
     const resetButton = getByTestId("reset-timer-button");
 
@@ -803,7 +796,9 @@ describe("BoilTimerCalculatorScreen", () => {
       ],
     };
 
-    const { queryByTestId } = render(<BoilTimerCalculatorScreen />);
+    const { queryByTestId } = renderWithProviders(
+      <BoilTimerCalculatorScreen />
+    );
 
     const hopButton = queryByTestId("hop-addition-0");
 
@@ -846,7 +841,9 @@ describe("BoilTimerCalculatorScreen", () => {
       ],
     };
 
-    const { getByText, getByTestId } = render(<BoilTimerCalculatorScreen />);
+    const { getByText, getByTestId } = renderWithProviders(
+      <BoilTimerCalculatorScreen />
+    );
 
     // Verify hop cards are rendered
     expect(getByText("Cascade")).toBeTruthy();
@@ -875,7 +872,7 @@ describe("BoilTimerCalculatorScreen", () => {
       ],
     };
 
-    const { getByText } = render(<BoilTimerCalculatorScreen />);
+    const { getByText } = renderWithProviders(<BoilTimerCalculatorScreen />);
 
     expect(getByText("1 hop addition scheduled")).toBeTruthy();
   });
@@ -904,7 +901,7 @@ describe("BoilTimerCalculatorScreen", () => {
       ],
     };
 
-    const { getByText } = render(<BoilTimerCalculatorScreen />);
+    const { getByText } = renderWithProviders(<BoilTimerCalculatorScreen />);
 
     expect(getByText("2 hop additions scheduled")).toBeTruthy();
   });
@@ -912,7 +909,9 @@ describe("BoilTimerCalculatorScreen", () => {
   it("should handle disabled state when timer has no time remaining", () => {
     mockCalculatorsState.boilTimer.timeRemaining = 0;
 
-    const { queryByTestId } = render(<BoilTimerCalculatorScreen />);
+    const { queryByTestId } = renderWithProviders(
+      <BoilTimerCalculatorScreen />
+    );
 
     const startButton = queryByTestId("start-timer-button");
     expect(startButton).toBeTruthy();
@@ -926,7 +925,9 @@ describe("BoilTimerCalculatorScreen", () => {
       isRunning: true,
     };
 
-    const { queryByTestId } = render(<BoilTimerCalculatorScreen />);
+    const { queryByTestId } = renderWithProviders(
+      <BoilTimerCalculatorScreen />
+    );
 
     const recipeSelector = queryByTestId("recipe-selector");
     expect(recipeSelector).toBeTruthy();
@@ -941,7 +942,9 @@ describe("BoilTimerCalculatorScreen", () => {
       isRecipeMode: false,
     };
 
-    const { queryByTestId } = render(<BoilTimerCalculatorScreen />);
+    const { queryByTestId } = renderWithProviders(
+      <BoilTimerCalculatorScreen />
+    );
 
     const durationInput = queryByTestId("boil-duration-input");
     expect(durationInput).toBeTruthy();
@@ -956,7 +959,7 @@ describe("BoilTimerCalculatorScreen", () => {
       boil_time: 60,
     };
 
-    const { getByText } = render(<BoilTimerCalculatorScreen />);
+    const { getByText } = renderWithProviders(<BoilTimerCalculatorScreen />);
 
     expect(getByText("IPA Recipe")).toBeTruthy();
   });
@@ -964,7 +967,7 @@ describe("BoilTimerCalculatorScreen", () => {
   it("should show manual timer label when no recipe is selected", () => {
     mockCalculatorsState.boilTimer.selectedRecipe = null;
 
-    const { getByText } = render(<BoilTimerCalculatorScreen />);
+    const { getByText } = renderWithProviders(<BoilTimerCalculatorScreen />);
 
     expect(getByText("Manual Timer")).toBeTruthy();
   });
@@ -973,7 +976,9 @@ describe("BoilTimerCalculatorScreen", () => {
     mockCalculatorsState.boilTimer.duration = 0;
     mockCalculatorsState.boilTimer.timeRemaining = 0;
 
-    const { getByText, queryByTestId } = render(<BoilTimerCalculatorScreen />);
+    const { getByText, queryByTestId } = renderWithProviders(
+      <BoilTimerCalculatorScreen />
+    );
 
     // Should display zero time correctly
     expect(getByText("00:00")).toBeTruthy();
@@ -985,7 +990,7 @@ describe("BoilTimerCalculatorScreen", () => {
   });
 
   it("should clean up intervals on unmount", () => {
-    const { unmount } = render(<BoilTimerCalculatorScreen />);
+    const { unmount } = renderWithProviders(<BoilTimerCalculatorScreen />);
 
     // Should clean up any running intervals
     unmount();

@@ -38,6 +38,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User, LoginRequest, RegisterRequest } from "@src/types";
 import ApiService from "@services/api/apiService";
 import { STORAGE_KEYS } from "@services/config";
+import { extractUserIdFromJWT } from "@utils/jwtUtils";
 
 /**
  * Authentication context interface defining all available state and actions
@@ -67,6 +68,9 @@ interface AuthContextValue {
   // Password reset
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
+
+  // JWT utilities
+  getUserId: () => Promise<string | null>;
 }
 
 /**
@@ -407,6 +411,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     setError(null);
   };
 
+  /**
+   * Extract user ID from the stored JWT token
+   * Useful for offline functionality where we need the user ID without making API calls
+   *
+   * @returns Promise resolving to user ID string or null if not available
+   */
+  const getUserId = async (): Promise<string | null> => {
+    try {
+      // First check if we have user data in state
+      if (user?.id) {
+        return user.id;
+      }
+
+      // Fallback to extracting from JWT token
+      const token = await ApiService.token.getToken();
+      if (!token) {
+        return null;
+      }
+
+      return extractUserIdFromJWT(token);
+    } catch (error) {
+      console.warn("Failed to extract user ID:", error);
+      return null;
+    }
+  };
+
   const contextValue: AuthContextValue = {
     // State
     user,
@@ -432,6 +462,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     // Password reset
     forgotPassword,
     resetPassword,
+
+    // JWT utilities
+    getUserId,
   };
 
   return (

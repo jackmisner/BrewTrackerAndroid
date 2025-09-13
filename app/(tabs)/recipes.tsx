@@ -36,6 +36,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import ApiService from "@services/api/apiService";
+import {
+  useOfflineRecipes,
+  useOfflineDeleteRecipe,
+  useOfflineSyncStatus,
+  useOfflineSync,
+} from "@src/hooks/useOfflineRecipes";
+import { useNetwork } from "@contexts/NetworkContext";
 import { Recipe } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import BeerXMLService from "@services/beerxml/BeerXMLService";
@@ -47,6 +54,7 @@ import {
 } from "@src/components/ui/ContextMenu/RecipeContextMenu";
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
+import { useUserValidation } from "@utils/userValidation";
 
 /**
  * Displays a tabbed interface for browsing and managing recipes, allowing users to view their own recipes or search public recipes.
@@ -66,6 +74,9 @@ export default function RecipesScreen() {
 
   // Context menu state
   const contextMenu = useContextMenu<Recipe>();
+
+  // User validation for security checks
+  const userValidation = useUserValidation();
 
   // Set active tab from URL parameters
   // Always respond to navigation with explicit activeTab parameters
@@ -97,21 +108,19 @@ export default function RecipesScreen() {
     }
   };
 
-  // Query for user's recipes
+  // Query for user's recipes with offline support
   const {
-    data: myRecipesData,
+    data: offlineRecipes,
     isLoading: isLoadingMyRecipes,
     error: myRecipesError,
     refetch: refetchMyRecipes,
-  } = useQuery({
-    queryKey: ["recipes", "my"],
-    queryFn: async () => {
-      const response = await ApiService.recipes.getAll(1, 20);
-      return response.data;
-    },
-    retry: 1,
-    staleTime: 1000 * 60 * 2, // Cache for 2 minutes
-  });
+  } = useOfflineRecipes();
+
+  // Transform offline recipes to match expected format
+  const myRecipesData = {
+    recipes: offlineRecipes || [],
+    total: (offlineRecipes || []).length,
+  };
 
   // Query for public recipes
   const {
@@ -131,38 +140,48 @@ export default function RecipesScreen() {
     staleTime: 1000 * 60 * 2, // Cache for 2 minutes
   });
 
-  // Delete mutation
+  // Delete mutation with offline support
   const queryClient = useQueryClient();
-  const deleteMutation = useMutation<void, unknown, string>({
-    mutationKey: ["recipes", "delete"],
-    mutationFn: async (recipeId: string) => {
-      await ApiService.recipes.delete(recipeId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      Alert.alert("Success", "Recipe deleted successfully");
-    },
-    onError: (error: unknown) => {
-      console.error("Failed to delete recipe:", error);
-      Alert.alert(
-        "Delete Failed",
-        "Failed to delete recipe. Please try again.",
-        [{ text: "OK" }]
-      );
-    },
-  });
+  const deleteMutation = useOfflineDeleteRecipe();
 
-  // Clone mutation
+  // Get sync status for UI
+  const { data: syncStatus } = useOfflineSyncStatus();
+  const syncMutation = useOfflineSync();
+  const { isConnected } = useNetwork();
+
+  // Clone mutation with enhanced validation
   const cloneMutation = useMutation({
     mutationKey: ["recipes", "clone"],
     mutationFn: async (recipe: Recipe) => {
+      // Log clone operation for security monitoring
+      console.log("🔄 Clone operation started:", {
+        recipeId: recipe.id,
+        recipeName: recipe.name,
+        isPublic: recipe.is_public,
+        hasUserId: !!recipe.user_id,
+      });
+
+      // Validate recipe data before cloning
+      if (!recipe.user_id) {
+        throw new Error("Recipe must have a valid user ID");
+      }
+
       if (recipe.is_public) {
         // Public recipe cloning
         const author = recipe.username || recipe.original_author || "Unknown";
         return ApiService.recipes.clonePublic(recipe.id, author);
       } else {
-        // Private recipe versioning
+        // Private recipe versioning - verify ownership
+        if (!recipe.user_id) {
+          throw new Error("Private recipe must have a user ID");
+        }
+        const canModify = await userValidation.canUserModifyResource({
+          user_id: recipe.user_id,
+          is_owner: recipe.is_owner,
+        });
+        if (!canModify) {
+          throw new Error("Insufficient permissions to version this recipe");
+        }
         return ApiService.recipes.clone(recipe.id);
       }
     },
@@ -368,15 +387,31 @@ export default function RecipesScreen() {
     },
   });
 
-  const renderRecipeItem = ({ item: recipe }: { item: Recipe }) => {
+  type OfflineRecipe = Recipe & {
+    tempId?: string;
+    isOffline?: boolean;
+    syncStatus?: "pending" | "conflict" | "failed" | "synced";
+    version?: number;
+  };
+  const renderRecipeItem = ({ item: recipe }: { item: OfflineRecipe }) => {
     // Add safety checks for recipe data
     if (!recipe || !recipe.name) {
       return null;
     }
 
+    // Check if this is an offline recipe
+    const isOfflineRecipe = recipe.isOffline || recipe.tempId;
+    const recipeSyncStatus = recipe.syncStatus || "synced";
+
     return (
       <TouchableOpacity
-        style={styles.recipeCard}
+        style={[
+          styles.recipeCard,
+          isOfflineRecipe && {
+            borderLeftWidth: 3,
+            borderLeftColor: theme.colors.primary,
+          },
+        ]}
         onPress={() => handleRecipePress(recipe)}
         onLongPress={event => handleRecipeLongPress(recipe, event)}
       >
@@ -385,11 +420,44 @@ export default function RecipesScreen() {
             <Text style={styles.recipeName} numberOfLines={1}>
               {recipe.name || "Unnamed Recipe"}
             </Text>
-            {recipe.version ? (
-              <View style={styles.versionBadge}>
-                <Text style={styles.versionText}>v{recipe.version}</Text>
-              </View>
-            ) : null}
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+            >
+              {/* Offline/Sync Status Indicator */}
+              {!isConnected && (
+                <MaterialIcons
+                  name="wifi-off"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                />
+              )}
+              {recipeSyncStatus === "pending" && (
+                <MaterialIcons
+                  name="sync"
+                  size={16}
+                  color={theme.colors.warning || "#ff9800"}
+                />
+              )}
+              {recipeSyncStatus === "conflict" && (
+                <MaterialIcons
+                  name="warning"
+                  size={16}
+                  color={theme.colors.error || "#f44336"}
+                />
+              )}
+              {recipeSyncStatus === "failed" && (
+                <MaterialIcons
+                  name="error"
+                  size={16}
+                  color={theme.colors.error || "#f44336"}
+                />
+              )}
+              {recipe.version ? (
+                <View style={styles.versionBadge}>
+                  <Text style={styles.versionText}>v{recipe.version}</Text>
+                </View>
+              ) : null}
+            </View>
           </View>
           <Text style={styles.recipeStyle}>
             {recipe.style || "Unknown Style"}
@@ -480,7 +548,7 @@ export default function RecipesScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header with tabs */}
+      {/* Header with tabs and sync status */}
       <View style={styles.header}>
         <View style={styles.tabContainer}>
           <TouchableOpacity
@@ -526,6 +594,49 @@ export default function RecipesScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Sync status and button for My Recipes */}
+        {activeTab === "my" && (syncStatus?.pendingSync || 0) > 0 && (
+          <View style={styles.syncStatusContainer}>
+            <View style={styles.syncInfo}>
+              <MaterialIcons
+                name={syncMutation.isPending ? "sync" : "cloud-upload"}
+                size={16}
+                color={theme.colors.primary}
+                style={
+                  syncMutation.isPending
+                    ? { transform: [{ rotate: "45deg" }] }
+                    : {}
+                }
+              />
+              <Text style={styles.syncText}>
+                {syncMutation.isPending
+                  ? "Syncing..."
+                  : syncMutation.isError
+                    ? "Sync failed - tap to retry"
+                    : `${syncStatus?.pendingSync || 0} recipe${(syncStatus?.pendingSync || 0) !== 1 ? "s" : ""} pending sync`}
+              </Text>
+            </View>
+            {isConnected && !syncMutation.isPending && (
+              <TouchableOpacity
+                onPress={() => {
+                  syncMutation.mutate(undefined, {
+                    onError: _error => {
+                      Alert.alert(
+                        "Sync Failed",
+                        "Unable to sync recipes. Please try again.",
+                        [{ text: "OK" }]
+                      );
+                    },
+                  });
+                }}
+                style={styles.syncButton}
+              >
+                <Text style={styles.syncButtonText}>Sync Now</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Search bar for public recipes */}
         {activeTab === "public" ? (

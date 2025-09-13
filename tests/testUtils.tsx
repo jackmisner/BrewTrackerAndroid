@@ -3,12 +3,26 @@ import { render, RenderOptions } from "@testing-library/react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@contexts/AuthContext";
 import { ThemeProvider } from "@contexts/ThemeContext";
+import { NetworkProvider } from "@contexts/NetworkContext";
+import { DeveloperProvider } from "@contexts/DeveloperContext";
+import { UnitProvider } from "@contexts/UnitContext";
+import { CalculatorsProvider } from "@contexts/CalculatorsContext";
+// Note: ScreenDimensionsProvider causes issues with react-native-safe-area-context in tests
+// import { ScreenDimensionsProvider } from "@contexts/ScreenDimensionsContext";
 
 interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
   queryClient?: QueryClient;
   initialAuthState?: {
     user?: any | null;
     error?: string | null;
+  };
+  networkState?: {
+    isConnected?: boolean;
+  };
+  unitSettings?: {
+    temperatureUnit?: "F" | "C";
+    volumeUnit?: "gal" | "L";
+    weightUnit?: "lb" | "kg";
   };
 }
 
@@ -27,6 +41,18 @@ export function renderWithProviders(
     // Initial auth state
     initialAuthState,
 
+    // Network state
+    networkState = { isConnected: true },
+
+    // Developer state is managed internally by DeveloperProvider
+
+    // Unit settings
+    unitSettings = {
+      temperatureUnit: "F",
+      volumeUnit: "gal",
+      weightUnit: "lb",
+    },
+
     // Other options
     ...renderOptions
   }: CustomRenderOptions = {}
@@ -34,11 +60,23 @@ export function renderWithProviders(
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <AuthProvider initialAuthState={initialAuthState}>
-            {children}
-          </AuthProvider>
-        </ThemeProvider>
+        <AuthProvider initialAuthState={initialAuthState}>
+          <ThemeProvider>
+            <UnitProvider
+              initialUnitSystem={
+                unitSettings?.temperatureUnit === "C" ? "metric" : "imperial"
+              }
+            >
+              <CalculatorsProvider>
+                <DeveloperProvider>
+                  <NetworkProvider initialState={networkState}>
+                    {children}
+                  </NetworkProvider>
+                </DeveloperProvider>
+              </CalculatorsProvider>
+            </UnitProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </QueryClientProvider>
     );
   }

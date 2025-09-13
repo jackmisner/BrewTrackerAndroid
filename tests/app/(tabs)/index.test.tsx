@@ -1,7 +1,7 @@
 import React from "react";
-import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
+import { fireEvent, waitFor, act } from "@testing-library/react-native";
+import { renderWithProviders, mockData, testUtils } from "../../testUtils";
 import DashboardScreen from "../../../app/(tabs)/index";
-import { mockData, testUtils } from "../../testUtils";
 
 // Comprehensive React Native mocking
 jest.mock("react-native", () => ({
@@ -14,9 +14,15 @@ jest.mock("react-native", () => ({
   Alert: {
     alert: jest.fn(),
   },
+  Platform: { OS: "ios" },
   StyleSheet: {
     create: (styles: any) => styles,
     flatten: (styles: any) => styles,
+  },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
   },
 }));
 
@@ -25,23 +31,21 @@ jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: "MaterialIcons",
 }));
 
-jest.mock("@tanstack/react-query", () => ({
-  useQuery: jest.fn(),
-  useMutation: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isLoading: false,
-    isSuccess: false,
-    isError: false,
-    reset: jest.fn(),
-  })),
-  useQueryClient: jest.fn(() => ({
+// Mock React Query
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query");
+  const queryClientMock = {
     invalidateQueries: jest.fn(),
-    refetchQueries: jest.fn(),
     setQueryData: jest.fn(),
     getQueryData: jest.fn(),
-  })),
-}));
+  };
+  return {
+    ...actual,
+    useQuery: jest.fn(),
+    useMutation: jest.fn(),
+    useQueryClient: jest.fn(() => queryClientMock),
+  };
+});
 
 jest.mock("expo-router", () => ({
   router: {
@@ -64,11 +68,14 @@ jest.mock("expo-haptics", () => ({
   },
 }));
 
+// Mock context hooks to return test data
 jest.mock("@contexts/AuthContext", () => ({
+  ...jest.requireActual("@contexts/AuthContext"),
   useAuth: jest.fn(),
 }));
 
 jest.mock("@contexts/ThemeContext", () => ({
+  ...jest.requireActual("@contexts/ThemeContext"),
   useTheme: jest.fn(),
 }));
 
@@ -140,6 +147,11 @@ jest.mock("@src/components/ui/ContextMenu/contextMenuUtils", () => ({
   getTouchPosition: jest.fn(() => ({ x: 0, y: 0 })),
 }));
 
+// Get the mocked functions from React Query
+const mockUseQuery = require("@tanstack/react-query").useQuery;
+const mockUseMutation = require("@tanstack/react-query").useMutation;
+const mockUseQueryClient = require("@tanstack/react-query").useQueryClient;
+
 const mockAuth = {
   user: mockData.user(),
   isAuthenticated: true,
@@ -153,17 +165,16 @@ const mockTheme = {
   },
 };
 
-const mockUseQuery = require("@tanstack/react-query").useQuery;
 const mockRouter = require("expo-router").router;
-
-// Setup mocks
-require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
-require("@contexts/ThemeContext").useTheme.mockReturnValue(mockTheme);
 
 describe("DashboardScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     testUtils.resetCounters();
+
+    // Setup context mocks for each test
+    require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
+    require("@contexts/ThemeContext").useTheme.mockReturnValue(mockTheme);
   });
 
   describe("loading state", () => {
@@ -175,7 +186,7 @@ describe("DashboardScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
 
       expect(getByText("Loading dashboard...")).toBeTruthy();
     });
@@ -190,7 +201,7 @@ describe("DashboardScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
 
       expect(getByText("Welcome back, testuser!")).toBeTruthy();
       expect(getByText("Ready to brew something amazing?")).toBeTruthy();
@@ -208,7 +219,7 @@ describe("DashboardScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { getAllByText } = render(<DashboardScreen />);
+      const { getAllByText } = renderWithProviders(<DashboardScreen />);
 
       // Should show 0 for all stats
       expect(getAllByText("0")).toHaveLength(3); // recipes, active brews, public
@@ -249,14 +260,14 @@ describe("DashboardScreen", () => {
     });
 
     it("should render welcome message with username", () => {
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
 
       expect(getByText("Welcome back, testuser!")).toBeTruthy();
       expect(getByText("Ready to brew something amazing?")).toBeTruthy();
     });
 
     it("should display correct stats", () => {
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
 
       expect(getByText("5")).toBeTruthy(); // total recipes
       expect(getByText("1")).toBeTruthy(); // active brews
@@ -267,7 +278,7 @@ describe("DashboardScreen", () => {
     });
 
     it("should display quick actions", () => {
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
 
       expect(getByText("Quick Actions")).toBeTruthy();
       expect(getByText("Create New Recipe")).toBeTruthy();
@@ -276,7 +287,7 @@ describe("DashboardScreen", () => {
     });
 
     it("should display recent recipes when available", () => {
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
 
       expect(getByText("Recent Recipes")).toBeTruthy();
       expect(getByText("IPA Recipe")).toBeTruthy();
@@ -284,7 +295,7 @@ describe("DashboardScreen", () => {
     });
 
     it("should display active brew sessions", () => {
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
 
       expect(getByText("Recent Brew Sessions")).toBeTruthy();
       expect(getByText("IPA Brew")).toBeTruthy();
@@ -292,7 +303,7 @@ describe("DashboardScreen", () => {
     });
 
     it("should display app version", () => {
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
 
       expect(getByText("BrewTracker Mobile v0.1.0")).toBeTruthy();
     });
@@ -320,7 +331,7 @@ describe("DashboardScreen", () => {
     });
 
     it("should navigate to create recipe when create recipe action is pressed", () => {
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
       const createRecipeButton = getByText("Create New Recipe");
 
       fireEvent.press(createRecipeButton);
@@ -332,7 +343,7 @@ describe("DashboardScreen", () => {
     });
 
     it("should navigate to recipes tab when recipes stat is pressed", () => {
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
       const recipesCard = getByText("Recipes");
 
       fireEvent.press(recipesCard);
@@ -344,7 +355,7 @@ describe("DashboardScreen", () => {
     });
 
     it("should navigate to brew sessions tab when active brews stat is pressed", () => {
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
       const activeBrewsCard = getByText("Active Brews");
 
       fireEvent.press(activeBrewsCard);
@@ -356,7 +367,7 @@ describe("DashboardScreen", () => {
     });
 
     it("should navigate to public recipes when public stat is pressed", () => {
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
       const publicCard = getByText("Public");
 
       fireEvent.press(publicCard);
@@ -368,7 +379,7 @@ describe("DashboardScreen", () => {
     });
 
     it("should navigate to browse public recipes when action is pressed", () => {
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
       const browsePublicButton = getByText("Browse Public Recipes");
 
       fireEvent.press(browsePublicButton);
@@ -404,7 +415,7 @@ describe("DashboardScreen", () => {
     });
 
     it("should navigate to view recipe when recipe is pressed", () => {
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
       const recipeCard = getByText("Test Recipe");
 
       fireEvent.press(recipeCard);
@@ -427,7 +438,7 @@ describe("DashboardScreen", () => {
         }
       );
 
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
       const recipeCard = getByText("Test Recipe");
 
       fireEvent(recipeCard, "longPress", {
@@ -467,7 +478,7 @@ describe("DashboardScreen", () => {
     });
 
     it("should navigate to view brew session when session is pressed", () => {
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
       const sessionCard = getByText("Test Brew");
 
       fireEvent.press(sessionCard);
@@ -496,7 +507,7 @@ describe("DashboardScreen", () => {
           hideMenu: jest.fn(),
         });
 
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
       const sessionCard = getByText("Test Brew");
 
       fireEvent(sessionCard, "longPress", {
@@ -532,7 +543,7 @@ describe("DashboardScreen", () => {
     });
 
     it("should show empty state for brew sessions when none exist", () => {
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
 
       expect(getByText("No brew sessions yet")).toBeTruthy();
       expect(
@@ -541,7 +552,7 @@ describe("DashboardScreen", () => {
     });
 
     it("should not show recent recipes section when no recipes exist", () => {
-      const { queryByText } = render(<DashboardScreen />);
+      const { queryByText } = renderWithProviders(<DashboardScreen />);
 
       expect(queryByText("Recent Recipes")).toBeNull();
     });
@@ -563,7 +574,7 @@ describe("DashboardScreen", () => {
         refetch: mockRefetch,
       });
 
-      render(<DashboardScreen />);
+      renderWithProviders(<DashboardScreen />);
 
       // Since we can't easily test RefreshControl directly due to mocking,
       // we'll test that the refetch function is available
@@ -588,7 +599,7 @@ describe("DashboardScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
       const startBrewButton = getByText("Start Brew Session");
 
       fireEvent.press(startBrewButton);
@@ -630,7 +641,7 @@ describe("DashboardScreen", () => {
     });
 
     it("should display correct status for fermenting sessions", () => {
-      const { getByText } = render(<DashboardScreen />);
+      const { getByText } = renderWithProviders(<DashboardScreen />);
 
       expect(getByText("Status: fermenting")).toBeTruthy();
     });

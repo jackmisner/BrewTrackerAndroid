@@ -1,6 +1,7 @@
 import React from "react";
-import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
+import { fireEvent, waitFor, act } from "@testing-library/react-native";
 import { Alert } from "react-native";
+import { renderWithProviders, testUtils } from "../../testUtils";
 import RegisterScreen from "../../../app/(auth)/register";
 import { TEST_IDS } from "../../../src/constants/testIDs";
 
@@ -16,17 +17,56 @@ jest.mock("react-native", () => ({
   ScrollView: "ScrollView",
   KeyboardAvoidingView: "KeyboardAvoidingView",
   ActivityIndicator: "ActivityIndicator",
+  Platform: { OS: "ios" },
   StyleSheet: {
     create: (styles: any) => styles,
     flatten: (styles: any) => styles,
+  },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
   },
 }));
 
 // Mock dependencies
 
+// Mock functions for authentication
+const mockRegister = jest.fn();
+const mockClearError = jest.fn();
+
+// Create a mockable useAuth implementation
+let mockAuthState = {
+  user: null as any,
+  isLoading: false,
+  isAuthenticated: false,
+  error: null as string | null,
+};
+
+// Mock the AuthContext hook to return our mock data
 jest.mock("@contexts/AuthContext", () => ({
-  useAuth: jest.fn(),
+  ...jest.requireActual("@contexts/AuthContext"),
+  useAuth: () => ({
+    ...mockAuthState,
+    login: jest.fn(),
+    register: mockRegister,
+    logout: jest.fn(),
+    refreshUser: jest.fn(),
+    clearError: mockClearError,
+    signInWithGoogle: jest.fn(),
+    verifyEmail: jest.fn(),
+    resendVerification: jest.fn(),
+    checkVerificationStatus: jest.fn(),
+    forgotPassword: jest.fn(),
+    resetPassword: jest.fn(),
+    getUserId: jest.fn(),
+  }),
 }));
+
+// Helper to override auth state for specific tests
+const setMockAuthState = (overrides: Partial<typeof mockAuthState>) => {
+  mockAuthState = { ...mockAuthState, ...overrides };
+};
 
 jest.mock("@styles/auth/registerStyles", () => ({
   registerStyles: {
@@ -51,26 +91,32 @@ jest.mock("@styles/auth/registerStyles", () => ({
 
 // Alert is now mocked in the react-native mock above
 
-const mockAuth = {
-  register: jest.fn(),
-  error: null as string | null,
-  clearError: jest.fn(),
-};
-
-// Setup mocks
-require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
-
 describe("RegisterScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAuth.error = null;
+    jest.useFakeTimers();
+    jest.clearAllTimers();
+    mockRegister.mockClear();
+    mockClearError.mockClear();
+    testUtils.resetCounters();
+
+    // Reset auth state to defaults
+    setMockAuthState({
+      user: null,
+      isLoading: false,
+      isAuthenticated: false,
+      error: null,
+    });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe("rendering", () => {
     it("should render all required elements", () => {
-      const { getByText, getByPlaceholderText, getAllByText } = render(
-        <RegisterScreen />
-      );
+      const { getByText, getByPlaceholderText, getAllByText } =
+        renderWithProviders(<RegisterScreen />);
 
       expect(getAllByText("Create Account")).toBeTruthy();
       expect(getByText("Join the BrewTracker community")).toBeTruthy();
@@ -83,16 +129,15 @@ describe("RegisterScreen", () => {
     });
 
     it("should display error message when error exists", () => {
-      mockAuth.error = "Username already exists";
-      require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
+      setMockAuthState({ error: "Username already exists" });
 
-      const { getByText } = render(<RegisterScreen />);
+      const { getByText } = renderWithProviders(<RegisterScreen />);
 
       expect(getByText("Username already exists")).toBeTruthy();
     });
 
     it("should not display error message when no error", () => {
-      const { queryByText } = render(<RegisterScreen />);
+      const { queryByText } = renderWithProviders(<RegisterScreen />);
 
       expect(queryByText("Username already exists")).toBeNull();
     });
@@ -100,7 +145,7 @@ describe("RegisterScreen", () => {
 
   describe("user input", () => {
     it("should update all form fields when typing", () => {
-      const { getByPlaceholderText } = render(<RegisterScreen />);
+      const { getByPlaceholderText } = renderWithProviders(<RegisterScreen />);
       const usernameInput = getByPlaceholderText("Username");
       const emailInput = getByPlaceholderText("Email");
       const passwordInput = getByPlaceholderText("Password");
@@ -118,7 +163,7 @@ describe("RegisterScreen", () => {
     });
 
     it("should have secure text entry for password fields", () => {
-      const { getByPlaceholderText } = render(<RegisterScreen />);
+      const { getByPlaceholderText } = renderWithProviders(<RegisterScreen />);
       const passwordInput = getByPlaceholderText("Password");
       const confirmPasswordInput = getByPlaceholderText("Confirm Password");
 
@@ -127,7 +172,7 @@ describe("RegisterScreen", () => {
     });
 
     it("should have correct input properties", () => {
-      const { getByPlaceholderText } = render(<RegisterScreen />);
+      const { getByPlaceholderText } = renderWithProviders(<RegisterScreen />);
       const usernameInput = getByPlaceholderText("Username");
       const emailInput = getByPlaceholderText("Email");
       const passwordInput = getByPlaceholderText("Password");
@@ -158,7 +203,9 @@ describe("RegisterScreen", () => {
     };
 
     it("should show alert when username is empty", () => {
-      const { getByTestId, getByPlaceholderText } = render(<RegisterScreen />);
+      const { getByTestId, getByPlaceholderText } = renderWithProviders(
+        <RegisterScreen />
+      );
       const registerButton = getByTestId(TEST_IDS.auth.registerButton);
 
       fireEvent.changeText(getByPlaceholderText("Email"), "test@example.com");
@@ -173,11 +220,13 @@ describe("RegisterScreen", () => {
         "Error",
         "Please fill in all fields"
       );
-      expect(mockAuth.register).not.toHaveBeenCalled();
+      expect(mockRegister).not.toHaveBeenCalled();
     });
 
     it("should show alert when email is empty", () => {
-      const { getByTestId, getByPlaceholderText } = render(<RegisterScreen />);
+      const { getByTestId, getByPlaceholderText } = renderWithProviders(
+        <RegisterScreen />
+      );
       const registerButton = getByTestId(TEST_IDS.auth.registerButton);
 
       fireEvent.changeText(getByPlaceholderText("Username"), "testuser");
@@ -192,11 +241,13 @@ describe("RegisterScreen", () => {
         "Error",
         "Please fill in all fields"
       );
-      expect(mockAuth.register).not.toHaveBeenCalled();
+      expect(mockRegister).not.toHaveBeenCalled();
     });
 
     it("should show alert when password is empty", () => {
-      const { getByTestId, getByPlaceholderText } = render(<RegisterScreen />);
+      const { getByTestId, getByPlaceholderText } = renderWithProviders(
+        <RegisterScreen />
+      );
       const registerButton = getByTestId(TEST_IDS.auth.registerButton);
 
       fireEvent.changeText(getByPlaceholderText("Username"), "testuser");
@@ -211,11 +262,13 @@ describe("RegisterScreen", () => {
         "Error",
         "Please fill in all fields"
       );
-      expect(mockAuth.register).not.toHaveBeenCalled();
+      expect(mockRegister).not.toHaveBeenCalled();
     });
 
     it("should show alert when confirm password is empty", () => {
-      const { getByTestId, getByPlaceholderText } = render(<RegisterScreen />);
+      const { getByTestId, getByPlaceholderText } = renderWithProviders(
+        <RegisterScreen />
+      );
       const registerButton = getByTestId(TEST_IDS.auth.registerButton);
 
       fireEvent.changeText(getByPlaceholderText("Username"), "testuser");
@@ -227,11 +280,13 @@ describe("RegisterScreen", () => {
         "Error",
         "Please fill in all fields"
       );
-      expect(mockAuth.register).not.toHaveBeenCalled();
+      expect(mockRegister).not.toHaveBeenCalled();
     });
 
     it("should show alert when passwords do not match", () => {
-      const { getByTestId, getByPlaceholderText } = render(<RegisterScreen />);
+      const { getByTestId, getByPlaceholderText } = renderWithProviders(
+        <RegisterScreen />
+      );
       const registerButton = getByTestId(TEST_IDS.auth.registerButton);
 
       fireEvent.changeText(getByPlaceholderText("Username"), "testuser");
@@ -247,11 +302,13 @@ describe("RegisterScreen", () => {
         "Error",
         "Passwords do not match"
       );
-      expect(mockAuth.register).not.toHaveBeenCalled();
+      expect(mockRegister).not.toHaveBeenCalled();
     });
 
     it("should show alert when password is too short", () => {
-      const { getByTestId, getByPlaceholderText } = render(<RegisterScreen />);
+      const { getByTestId, getByPlaceholderText } = renderWithProviders(
+        <RegisterScreen />
+      );
       const registerButton = getByTestId(TEST_IDS.auth.registerButton);
 
       fireEvent.changeText(getByPlaceholderText("Username"), "testuser");
@@ -264,11 +321,13 @@ describe("RegisterScreen", () => {
         "Error",
         "Password must be at least 6 characters"
       );
-      expect(mockAuth.register).not.toHaveBeenCalled();
+      expect(mockRegister).not.toHaveBeenCalled();
     });
 
     it("should show alert for invalid email format", () => {
-      const { getByTestId, getByPlaceholderText } = render(<RegisterScreen />);
+      const { getByTestId, getByPlaceholderText } = renderWithProviders(
+        <RegisterScreen />
+      );
       const registerButton = getByTestId(TEST_IDS.auth.registerButton);
 
       fireEvent.changeText(getByPlaceholderText("Username"), "testuser");
@@ -284,7 +343,7 @@ describe("RegisterScreen", () => {
         "Error",
         "Please enter a valid email address"
       );
-      expect(mockAuth.register).not.toHaveBeenCalled();
+      expect(mockRegister).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -293,9 +352,11 @@ describe("RegisterScreen", () => {
       "test123@test-domain.com",
       "a@b.co",
     ])("should accept valid email format: %s", async email => {
-      mockAuth.register.mockResolvedValue(undefined);
+      mockRegister.mockResolvedValue(undefined);
 
-      const { getByTestId, getByPlaceholderText } = render(<RegisterScreen />);
+      const { getByTestId, getByPlaceholderText } = renderWithProviders(
+        <RegisterScreen />
+      );
 
       fireEvent.changeText(getByPlaceholderText("Username"), "testuser");
       fireEvent.changeText(getByPlaceholderText("Email"), email);
@@ -316,9 +377,11 @@ describe("RegisterScreen", () => {
 
   describe("successful registration", () => {
     it("should call register function with correct data", async () => {
-      mockAuth.register.mockResolvedValue(undefined);
+      mockRegister.mockResolvedValue(undefined);
 
-      const { getByTestId, getByPlaceholderText } = render(<RegisterScreen />);
+      const { getByTestId, getByPlaceholderText } = renderWithProviders(
+        <RegisterScreen />
+      );
       const usernameInput = getByPlaceholderText("Username");
       const emailInput = getByPlaceholderText("Email");
       const passwordInput = getByPlaceholderText("Password");
@@ -334,8 +397,8 @@ describe("RegisterScreen", () => {
         fireEvent.press(registerButton);
       });
 
-      expect(mockAuth.clearError).toHaveBeenCalled();
-      expect(mockAuth.register).toHaveBeenCalledWith({
+      expect(mockClearError).toHaveBeenCalled();
+      expect(mockRegister).toHaveBeenCalledWith({
         username: "testuser",
         email: "test@example.com",
         password: "password123",
@@ -343,9 +406,11 @@ describe("RegisterScreen", () => {
     });
 
     it("should show success alert and navigate to login", async () => {
-      mockAuth.register.mockResolvedValue(undefined);
+      mockRegister.mockResolvedValue(undefined);
 
-      const { getByTestId, getByPlaceholderText } = render(<RegisterScreen />);
+      const { getByTestId, getByPlaceholderText } = renderWithProviders(
+        <RegisterScreen />
+      );
       const registerButton = getByTestId(TEST_IDS.auth.registerButton);
 
       fireEvent.changeText(getByPlaceholderText("Username"), "testuser");
@@ -392,11 +457,10 @@ describe("RegisterScreen", () => {
       const registerPromise = new Promise<void>(resolve => {
         resolveRegister = resolve;
       });
-      mockAuth.register.mockReturnValue(registerPromise);
+      mockRegister.mockReturnValue(registerPromise);
 
-      const { getByTestId, getByPlaceholderText, queryByText } = render(
-        <RegisterScreen />
-      );
+      const { getByTestId, getByPlaceholderText, queryByText } =
+        renderWithProviders(<RegisterScreen />);
 
       fireEvent.changeText(getByPlaceholderText("Username"), "testuser");
       fireEvent.changeText(getByPlaceholderText("Email"), "test@example.com");
@@ -425,9 +489,11 @@ describe("RegisterScreen", () => {
   describe("failed registration", () => {
     it("should show alert on registration failure with error message", async () => {
       const errorMessage = "Username already exists";
-      mockAuth.register.mockRejectedValue(new Error(errorMessage));
+      mockRegister.mockRejectedValue(new Error(errorMessage));
 
-      const { getByTestId, getByPlaceholderText } = render(<RegisterScreen />);
+      const { getByTestId, getByPlaceholderText } = renderWithProviders(
+        <RegisterScreen />
+      );
       const registerButton = getByTestId(TEST_IDS.auth.registerButton);
 
       fireEvent.changeText(getByPlaceholderText("Username"), "existinguser");
@@ -449,9 +515,11 @@ describe("RegisterScreen", () => {
     });
 
     it("should show default error message when no error message provided", async () => {
-      mockAuth.register.mockRejectedValue(new Error());
+      mockRegister.mockRejectedValue(new Error());
 
-      const { getByTestId, getByPlaceholderText } = render(<RegisterScreen />);
+      const { getByTestId, getByPlaceholderText } = renderWithProviders(
+        <RegisterScreen />
+      );
       const registerButton = getByTestId(TEST_IDS.auth.registerButton);
 
       fireEvent.changeText(getByPlaceholderText("Username"), "testuser");
@@ -473,11 +541,10 @@ describe("RegisterScreen", () => {
     });
 
     it("should hide loading indicator after failed registration", async () => {
-      mockAuth.register.mockRejectedValue(new Error("Registration failed"));
+      mockRegister.mockRejectedValue(new Error("Registration failed"));
 
-      const { getByText, getByTestId, getByPlaceholderText } = render(
-        <RegisterScreen />
-      );
+      const { getByText, getByTestId, getByPlaceholderText } =
+        renderWithProviders(<RegisterScreen />);
 
       fireEvent.changeText(getByPlaceholderText("Username"), "testuser");
       fireEvent.changeText(getByPlaceholderText("Email"), "test@example.com");
@@ -499,7 +566,7 @@ describe("RegisterScreen", () => {
 
   describe("navigation", () => {
     it("should navigate back to login when sign in is pressed", () => {
-      const { getByText } = render(<RegisterScreen />);
+      const { getByText } = renderWithProviders(<RegisterScreen />);
       const signInButton = getByText("Sign In");
 
       fireEvent.press(signInButton);
@@ -514,11 +581,10 @@ describe("RegisterScreen", () => {
       const registerPromise = new Promise<void>(resolve => {
         resolveRegister = resolve;
       });
-      mockAuth.register.mockReturnValue(registerPromise);
+      mockRegister.mockReturnValue(registerPromise);
 
-      const { getByTestId, getByPlaceholderText, queryByText } = render(
-        <RegisterScreen />
-      );
+      const { getByTestId, getByPlaceholderText, queryByText } =
+        renderWithProviders(<RegisterScreen />);
 
       fireEvent.changeText(getByPlaceholderText("Username"), "testuser");
       fireEvent.changeText(getByPlaceholderText("Email"), "test@example.com");

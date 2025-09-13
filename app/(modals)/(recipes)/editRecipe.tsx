@@ -14,7 +14,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
-import ApiService from "@services/api/apiService";
+import { OfflineRecipeService } from "@services/offline/OfflineRecipeService";
 import { RecipeFormData, RecipeIngredient, Recipe } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
@@ -176,8 +176,11 @@ export default function EditRecipeScreen() {
   } = useQuery<Recipe>({
     queryKey: ["recipe", recipe_id],
     queryFn: async () => {
-      const response = await ApiService.recipes.getById(recipe_id);
-      return response.data;
+      const recipe = await OfflineRecipeService.getById(recipe_id);
+      if (!recipe) {
+        throw new Error("Recipe not found");
+      }
+      return recipe;
     },
     enabled: !!recipe_id,
     retry: 1,
@@ -347,9 +350,12 @@ export default function EditRecipeScreen() {
         }),
       };
 
-      const response = await ApiService.recipes.update(recipe_id, updateData);
+      const updatedRecipe = await OfflineRecipeService.update(
+        recipe_id,
+        updateData
+      );
 
-      return response.data;
+      return updatedRecipe;
     },
     onSuccess: updatedRecipe => {
       // Update the original recipe to prevent unsaved changes warning
@@ -363,6 +369,7 @@ export default function EditRecipeScreen() {
       // Invalidate and refetch recipe queries
       queryClient.invalidateQueries({ queryKey: ["recipe", recipe_id] });
       queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      queryClient.invalidateQueries({ queryKey: ["offlineRecipes"] });
 
       // Navigate back to the updated recipe view
       router.back();

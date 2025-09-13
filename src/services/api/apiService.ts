@@ -27,6 +27,7 @@ import axios, {
   isAxiosError,
 } from "axios";
 import * as SecureStore from "expo-secure-store";
+import NetInfo from "@react-native-community/netinfo";
 import { STORAGE_KEYS, ENDPOINTS } from "@services/config";
 import { setupIDInterceptors } from "./idInterceptor";
 import {
@@ -276,14 +277,44 @@ function normalizeError(error: any): NormalizedApiError {
   return normalized;
 }
 
-function logApiError(normalizedError: NormalizedApiError, err: unknown) {
+async function logApiError(normalizedError: NormalizedApiError, err: unknown) {
+  // Check network status to avoid logging expected offline errors
+  let isOffline = false;
+  try {
+    const networkState = await Promise.race([
+      NetInfo.fetch(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("NetInfo timeout")), 1000)
+      ),
+    ]);
+    isOffline = !(networkState as { isConnected: boolean }).isConnected;
+  } catch {
+    // Assume online if we can't determine network state
+    isOffline = false;
+  }
+
+  // Suppress network errors when offline to improve UX
+  if (
+    isOffline &&
+    (normalizedError.isNetworkError || normalizedError.isTimeout)
+  ) {
+    console.debug("Suppressed offline network error:", {
+      message: normalizedError.message,
+      code: normalizedError.code,
+      status: normalizedError.status,
+    });
+    return;
+  }
+
   const base: any = {
     message: normalizedError.message,
     status: normalizedError.status,
     code: normalizedError.code,
     isNetworkError: normalizedError.isNetworkError,
     isTimeout: normalizedError.isTimeout,
+    networkStatus: isOffline ? "offline" : "online",
   };
+
   if (isAxiosError(err)) {
     const ax = err as AxiosError;
     const headers = (ax.config?.headers ?? {}) as Record<string, any>;
@@ -322,7 +353,8 @@ function logApiError(normalizedError: NormalizedApiError, err: unknown) {
       status: ax.response?.status,
     };
   }
-  // Single consolidated log
+
+  // Single consolidated log (only when not suppressed)
   console.error("API Error:", base);
 }
 
@@ -464,7 +496,7 @@ api.interceptors.response.use(
       (__DEV__ || process.env.EXPO_PUBLIC_DEBUG_MODE === "true") &&
       normalizedError.status !== 401
     ) {
-      logApiError(normalizedError, error);
+      await logApiError(normalizedError, error);
     }
 
     // Create enhanced error object that maintains compatibility while adding normalized data

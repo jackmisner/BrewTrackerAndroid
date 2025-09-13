@@ -38,7 +38,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
-import ApiService from "@services/api/apiService";
+import { OfflineRecipeService } from "@services/offline/OfflineRecipeService";
 import { RecipeFormData, RecipeIngredient } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
@@ -240,20 +240,24 @@ export default function CreateRecipeScreen() {
         ingredients: sanitizedIngredients,
       };
 
-      return ApiService.recipes.create(createData);
+      return OfflineRecipeService.create(createData);
     },
     onSuccess: response => {
       // Invalidate relevant recipe caches to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["userRecipes"] });
       queryClient.invalidateQueries({ queryKey: ["recipes"] }); // AllRecipes cache
+      queryClient.invalidateQueries({ queryKey: ["offlineRecipes"] }); // Offline recipes cache
+
       Alert.alert("Success", "Recipe created successfully!", [
         {
           text: "View Recipe",
           onPress: () => {
             // Replace current modal with ViewRecipe modal
+            // OfflineRecipeService returns recipe directly, not in response.data
+            const recipeId = response.id;
             router.replace({
               pathname: "/(modals)/(recipes)/viewRecipe",
-              params: { recipe_id: response.data.id },
+              params: { recipe_id: recipeId },
             });
           },
         },

@@ -2,6 +2,7 @@ import React from "react";
 import { Tabs } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
+import { NetworkStatusIndicator } from "@src/components/NetworkStatusBanner";
 
 export default function TabLayout() {
   const theme = useTheme();
@@ -26,6 +27,7 @@ export default function TabLayout() {
         headerTitleStyle: {
           fontWeight: "bold",
         },
+        headerRight: () => <NetworkStatusIndicator showText={false} />,
       }}
     >
       <Tabs.Screen

@@ -5,7 +5,8 @@
  */
 
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { fireEvent, waitFor } from "@testing-library/react-native";
+import { renderWithProviders, testUtils } from "@/tests/testUtils";
 import DilutionCalculatorScreen from "../../../../app/(modals)/(calculators)/dilution";
 import {
   DilutionCalculator,
@@ -20,6 +21,11 @@ jest.mock("react-native", () => ({
     create: (styles: any) => styles,
     flatten: (styles: any) => styles,
   },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
+  },
 }));
 
 // Mock MaterialIcons
@@ -27,40 +33,26 @@ jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: ({ name }: { name: string }) => name,
 }));
 
-// Mock theme context
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: () => ({
-    colors: {
-      text: "#000000",
-      textSecondary: "#666666",
-      primary: "#007AFF",
-      primaryText: "#FFFFFF",
-      background: "#FFFFFF",
-      backgroundSecondary: "#F8F9FA",
-      borderLight: "#E0E0E0",
-      cardBackground: "#FFFFFF",
-    },
-  }),
-}));
-
-// Mock calculators context
+// Mock CalculatorsContext with manageable state
 const mockDispatch = jest.fn();
-const mockState = {
+const createMockState = () => ({
   dilution: {
     currentGravity: "",
     targetGravity: "",
     currentVolume: "",
-    result: { waterToAdd: 0, finalVolume: 0 } as DilutionResult | null,
+    result: null as any,
   },
-  history: [],
-};
-
+});
+let mockState = createMockState();
 jest.mock("@contexts/CalculatorsContext", () => ({
+  ...jest.requireActual("@contexts/CalculatorsContext"),
   useCalculators: () => ({
     state: mockState,
     dispatch: mockDispatch,
   }),
 }));
+
+// ThemeContext is provided by testUtils
 
 // Mock calculator components
 jest.mock("@components/calculators/CalculatorCard", () => {
@@ -130,46 +122,46 @@ const mockDilutionCalculator = DilutionCalculator as jest.Mocked<
 describe("DilutionCalculatorScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockState.dilution = {
-      currentGravity: "",
-      targetGravity: "",
-      currentVolume: "",
-      result: null,
-    };
+    testUtils.resetCounters();
+    mockState = createMockState();
   });
 
   describe("basic rendering", () => {
     it("should render without crashing", () => {
-      expect(() => render(<DilutionCalculatorScreen />)).not.toThrow();
+      expect(() =>
+        renderWithProviders(<DilutionCalculatorScreen />)
+      ).not.toThrow();
     });
 
     it("should render header with correct title", () => {
-      const { getByTestId } = render(<DilutionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(<DilutionCalculatorScreen />);
       expect(getByTestId("calculator-header")).toBeTruthy();
     });
 
     it("should render current beer input section", () => {
-      const { getByTestId } = render(<DilutionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(<DilutionCalculatorScreen />);
       expect(getByTestId("calculator-card-current-beer")).toBeTruthy();
       expect(getByTestId("dilution-og-input")).toBeTruthy();
       expect(getByTestId("dilution-volume-input")).toBeTruthy();
     });
 
     it("should render target input section", () => {
-      const { getByTestId } = render(<DilutionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(<DilutionCalculatorScreen />);
       expect(getByTestId("calculator-card-target")).toBeTruthy();
       expect(getByTestId("dilution-target-input")).toBeTruthy();
     });
 
     it("should not render results when no result available", () => {
-      const { queryByTestId } = render(<DilutionCalculatorScreen />);
+      const { queryByTestId } = renderWithProviders(
+        <DilutionCalculatorScreen />
+      );
       expect(queryByTestId("result-display")).toBeNull();
     });
   });
 
   describe("input handling", () => {
     it("should handle original gravity input change", () => {
-      const { getByTestId } = render(<DilutionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(<DilutionCalculatorScreen />);
 
       const ogInput = getByTestId("dilution-og-input");
       fireEvent.press(ogInput);
@@ -181,7 +173,7 @@ describe("DilutionCalculatorScreen", () => {
     });
 
     it("should handle target gravity input change", () => {
-      const { getByTestId } = render(<DilutionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(<DilutionCalculatorScreen />);
 
       const targetInput = getByTestId("dilution-target-input");
       fireEvent.press(targetInput);
@@ -193,7 +185,7 @@ describe("DilutionCalculatorScreen", () => {
     });
 
     it("should handle volume input change", () => {
-      const { getByTestId } = render(<DilutionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(<DilutionCalculatorScreen />);
 
       const volumeInput = getByTestId("dilution-volume-input");
       fireEvent.press(volumeInput);
@@ -214,7 +206,7 @@ describe("DilutionCalculatorScreen", () => {
         result: null,
       };
 
-      render(<DilutionCalculatorScreen />);
+      renderWithProviders(<DilutionCalculatorScreen />);
 
       expect(mockDilutionCalculator.calculateDilution).not.toHaveBeenCalled();
       expect(mockDispatch).toHaveBeenCalledWith({
@@ -231,7 +223,7 @@ describe("DilutionCalculatorScreen", () => {
         result: null,
       };
 
-      render(<DilutionCalculatorScreen />);
+      renderWithProviders(<DilutionCalculatorScreen />);
 
       expect(mockDilutionCalculator.calculateDilution).not.toHaveBeenCalled();
     });
@@ -251,7 +243,7 @@ describe("DilutionCalculatorScreen", () => {
 
       mockDilutionCalculator.calculateDilution.mockReturnValue(mockResult);
 
-      render(<DilutionCalculatorScreen />);
+      renderWithProviders(<DilutionCalculatorScreen />);
 
       expect(mockDilutionCalculator.calculateDilution).toHaveBeenCalledWith(
         1.06,
@@ -280,7 +272,7 @@ describe("DilutionCalculatorScreen", () => {
 
       mockDilutionCalculator.calculateDilution.mockReturnValue(mockResult);
 
-      render(<DilutionCalculatorScreen />);
+      renderWithProviders(<DilutionCalculatorScreen />);
 
       expect(mockDispatch).toHaveBeenCalledWith({
         type: "ADD_TO_HISTORY",
@@ -307,7 +299,7 @@ describe("DilutionCalculatorScreen", () => {
         result: null,
       };
 
-      render(<DilutionCalculatorScreen />);
+      renderWithProviders(<DilutionCalculatorScreen />);
 
       expect(mockDilutionCalculator.calculateDilution).not.toHaveBeenCalled();
       expect(mockDispatch).toHaveBeenCalledWith({
@@ -330,7 +322,7 @@ describe("DilutionCalculatorScreen", () => {
 
       const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
 
-      render(<DilutionCalculatorScreen />);
+      renderWithProviders(<DilutionCalculatorScreen />);
 
       expect(consoleSpy).toHaveBeenCalledWith(
         "Dilution calculation error:",
@@ -358,7 +350,7 @@ describe("DilutionCalculatorScreen", () => {
         },
       };
 
-      const { getByTestId } = render(<DilutionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(<DilutionCalculatorScreen />);
 
       expect(getByTestId("result-display")).toBeTruthy();
       expect(getByTestId("result-0")).toBeTruthy(); // Water to Add
@@ -376,7 +368,7 @@ describe("DilutionCalculatorScreen", () => {
         },
       };
 
-      const { getByTestId } = render(<DilutionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(<DilutionCalculatorScreen />);
 
       // Verify result elements are present
       expect(getByTestId("result-0")).toBeTruthy(); // Water to Add
@@ -387,16 +379,14 @@ describe("DilutionCalculatorScreen", () => {
   describe("placeholder text", () => {
     it("should show appropriate placeholder for original gravity", () => {
       // The getPlaceholderText function returns "1.060" for original gravity
-      render(<DilutionCalculatorScreen />);
-      // This is indirectly tested through the NumberInput props
-      expect(() => render(<DilutionCalculatorScreen />)).not.toThrow();
+      const { getByTestId } = renderWithProviders(<DilutionCalculatorScreen />);
+      expect(getByTestId("dilution-og-input")).toBeTruthy();
     });
 
     it("should show appropriate placeholder for target gravity", () => {
       // The getPlaceholderText function returns "1.040" for target gravity
-      render(<DilutionCalculatorScreen />);
-      // This is indirectly tested through the NumberInput props
-      expect(() => render(<DilutionCalculatorScreen />)).not.toThrow();
+      const { getByTestId } = renderWithProviders(<DilutionCalculatorScreen />);
+      expect(getByTestId("dilution-target-input")).toBeTruthy();
     });
   });
 
@@ -409,7 +399,7 @@ describe("DilutionCalculatorScreen", () => {
         result: null,
       };
 
-      render(<DilutionCalculatorScreen />);
+      renderWithProviders(<DilutionCalculatorScreen />);
 
       expect(mockDilutionCalculator.calculateDilution).toHaveBeenCalledWith(
         0,
@@ -426,7 +416,7 @@ describe("DilutionCalculatorScreen", () => {
         result: null,
       };
 
-      render(<DilutionCalculatorScreen />);
+      renderWithProviders(<DilutionCalculatorScreen />);
 
       expect(mockDilutionCalculator.calculateDilution).toHaveBeenCalledWith(
         1.001,
@@ -443,7 +433,7 @@ describe("DilutionCalculatorScreen", () => {
         result: null,
       };
 
-      render(<DilutionCalculatorScreen />);
+      renderWithProviders(<DilutionCalculatorScreen />);
 
       expect(mockDilutionCalculator.calculateDilution).toHaveBeenCalledWith(
         1.15,
@@ -455,7 +445,7 @@ describe("DilutionCalculatorScreen", () => {
 
   describe("component integration", () => {
     it("should pass correct props to NumberInput components", () => {
-      const { getByTestId } = render(<DilutionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(<DilutionCalculatorScreen />);
 
       // All inputs should be present with correct test IDs
       expect(getByTestId("dilution-og-input")).toBeTruthy();
@@ -469,7 +459,7 @@ describe("DilutionCalculatorScreen", () => {
         finalVolume: 7.5,
       };
 
-      const { getByTestId } = render(<DilutionCalculatorScreen />);
+      const { getByTestId } = renderWithProviders(<DilutionCalculatorScreen />);
 
       expect(getByTestId("result-display")).toBeTruthy();
       // The title is passed but rendered differently in our mock
@@ -477,7 +467,9 @@ describe("DilutionCalculatorScreen", () => {
 
     it("should handle theme changes gracefully", () => {
       // Component should render without errors with theme applied
-      expect(() => render(<DilutionCalculatorScreen />)).not.toThrow();
+      expect(() =>
+        renderWithProviders(<DilutionCalculatorScreen />)
+      ).not.toThrow();
     });
   });
 });

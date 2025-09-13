@@ -15,6 +15,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import ApiService from "@services/api/apiService";
+import OfflineCacheService from "@services/offline/OfflineCacheService";
+import { useNetwork } from "@contexts/NetworkContext";
 
 // Final item shape returned by this hook
 export interface BeerStyleOption {
@@ -38,11 +40,38 @@ interface BeerStylesResponse {
  * @returns React Query result with beer styles data, loading state, and error
  */
 export function useBeerStyles() {
+  const { isConnected } = useNetwork();
+  const loadCachedStyles = async (): Promise<BeerStylesResponse> => {
+    const cachedStyles = await OfflineCacheService.getCachedBeerStyles();
+    return {
+      categories: {
+        cached: {
+          styles: cachedStyles.map(style => ({
+            name: style.name,
+            style_id: style.styleId,
+          })),
+        },
+      },
+    };
+  };
+
   return useQuery<BeerStylesResponse, unknown, BeerStyleOption[]>({
-    queryKey: ["beerStyles"],
+    queryKey: ["beerStyles", "offline-aware"],
     queryFn: async (): Promise<BeerStylesResponse> => {
-      const response = await ApiService.beerStyles.getAll();
-      return response.data;
+      // Try cached data first if offline or as fallback
+      if (!isConnected) {
+        return loadCachedStyles();
+      }
+
+      // Try API first when online
+      try {
+        const response = await ApiService.beerStyles.getAll();
+        return response.data;
+      } catch (error) {
+        // Fallback to cached data on API failure
+        console.warn("API failed, using cached beer styles:", error);
+        return loadCachedStyles();
+      }
     },
     staleTime: 24 * 60 * 60 * 1000, // 24 hours - styles don't change frequently
     gcTime: 7 * 24 * 60 * 60 * 1000, // 7 days - keep in cache for a week

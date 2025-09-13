@@ -56,6 +56,7 @@ import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
+import { NetworkStatusBanner } from "@src/components/NetworkStatusBanner";
 import ApiService from "@services/api/apiService";
 import BeerXMLService from "@services/beerxml/BeerXMLService";
 import { Recipe, BrewSession } from "@src/types";
@@ -671,6 +672,7 @@ export default function DashboardScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
+      <NetworkStatusBanner onRetry={onRefresh} />
       <View style={styles.header}>
         <Text style={styles.greeting}>Welcome back, {user?.username}!</Text>
         <Text style={styles.subtitle}>Ready to brew something amazing?</Text>

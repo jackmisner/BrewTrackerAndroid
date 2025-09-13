@@ -1,7 +1,5 @@
 /**
- * Tests for ABV Calculator Modal Component
- *
- * Tests the ABV calculator modal interface and functionality
+ * Tests for ABV Calculator Modal Component modal interface and functionality
  */
 
 import React from "react";

@@ -1,8 +1,6 @@
 import React from "react";
 import { renderHook, act } from "@testing-library/react-native";
 
-// Mock dependencies using a simpler approach
-
 jest.mock("@services/config", () => ({
   STORAGE_KEYS: {
     USER_DATA: "userData",
