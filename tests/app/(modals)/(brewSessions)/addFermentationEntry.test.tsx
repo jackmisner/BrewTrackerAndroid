@@ -124,7 +124,12 @@ jest.mock("@tanstack/react-query", () => {
   return {
     ...actual,
     useQuery: jest.fn(() => ({
-      data: null,
+      data: {
+        id: "session-123",
+        name: "Test Batch",
+        user_id: "user-123",
+        temperature_unit: "F",
+      },
       isLoading: false,
       error: null,
     })),
@@ -185,6 +190,7 @@ jest.mock("@contexts/ThemeContext", () => {
 jest.mock("@utils/userValidation", () => ({
   useUserValidation: () => ({
     validateUser: jest.fn().mockResolvedValue(true),
+    canUserModifyResource: jest.fn().mockResolvedValue(true),
     isValidating: false,
   }),
 }));
@@ -277,6 +283,19 @@ describe("AddFermentationEntryScreen", () => {
     mockMutate.mockClear();
     mockMutateAsync.mockClear().mockResolvedValue({});
     mockInvalidateQueries.mockClear();
+
+    // Reset useQuery mock to default state with user_id for permission checks
+    const mockUseQuery = require("@tanstack/react-query").useQuery;
+    mockUseQuery.mockReturnValue({
+      data: {
+        id: "session-123",
+        name: "Test Batch",
+        user_id: "user-123",
+        temperature_unit: "F",
+      },
+      isLoading: false,
+      error: null,
+    });
   });
   describe("Basic Rendering", () => {
     it("should render without crashing", () => {
@@ -325,6 +344,7 @@ describe("AddFermentationEntryScreen", () => {
         data: {
           id: "session-123",
           name: "Test Batch",
+          user_id: "user-123",
           temperature_unit: "F",
         },
         isLoading: false,
@@ -342,6 +362,7 @@ describe("AddFermentationEntryScreen", () => {
         data: {
           id: "session-123",
           name: "Test Batch",
+          user_id: "user-123",
           temperature_unit: "C",
         },
         isLoading: false,
@@ -359,6 +380,7 @@ describe("AddFermentationEntryScreen", () => {
         data: {
           id: "session-123",
           name: "Test Batch",
+          user_id: "user-123",
         },
         isLoading: false,
         error: null,
@@ -648,6 +670,7 @@ describe("AddFermentationEntryScreen", () => {
       mockUseQuery.mockReturnValue({
         data: {
           id: "session-123",
+          user_id: "user-123",
           temperature_unit: "F",
         },
         isLoading: false,
@@ -664,6 +687,7 @@ describe("AddFermentationEntryScreen", () => {
       mockUseQuery.mockReturnValue({
         data: {
           id: "session-123",
+          user_id: "user-123",
           temperature_unit: "C",
         },
         isLoading: false,

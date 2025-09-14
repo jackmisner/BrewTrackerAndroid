@@ -235,10 +235,20 @@ export class OfflineCacheService {
 
     reportProgress?.("save", "Saving cache...", 95);
 
-    // Save to AsyncStorage
-    await AsyncStorage.setItem(this.CACHE_KEY, dataString);
-
-    console.log(`Cache saved: ${cachedData.metadata.dataSize} bytes`);
+    // Save to AsyncStorage with error handling
+    try {
+      await AsyncStorage.setItem(this.CACHE_KEY, dataString);
+      console.log(`Cache saved: ${cachedData.metadata.dataSize} bytes`);
+    } catch (error) {
+      console.error("Failed to save cache to AsyncStorage:", {
+        error,
+        dataSize: cachedData.metadata.dataSize,
+        cacheKey: this.CACHE_KEY,
+      });
+      throw new Error(
+        `Cache save failed: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
   }
 
   /**

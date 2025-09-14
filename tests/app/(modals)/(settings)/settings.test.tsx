@@ -39,8 +39,9 @@ jest.mock("@contexts/ThemeContext", () => ({
 
 jest.mock("@contexts/DeveloperContext", () => ({
   useDeveloper: jest.fn(() => ({
-    isDeveloperModeEnabled: false,
-    toggleDeveloperMode: jest.fn(),
+    isDeveloperMode: false,
+    networkSimulationMode: false,
+    setNetworkSimulationMode: jest.fn(),
   })),
 }));
 

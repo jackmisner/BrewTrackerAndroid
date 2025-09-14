@@ -168,6 +168,7 @@ beforeEach(() => {
       data: {
         id: "session-123",
         name: "Test Session",
+        user_id: "user-123",
         status: "planned",
         notes: "Test notes",
         tasting_notes: "",
@@ -199,6 +200,7 @@ describe("EditBrewSessionScreen", () => {
     data: {
       id: "session-123",
       name: "Test Session",
+      user_id: "user-123",
       status: "planned",
       notes: "Test notes",
       tasting_notes: "",

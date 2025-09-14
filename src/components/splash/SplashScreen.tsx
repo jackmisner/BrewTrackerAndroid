@@ -29,7 +29,8 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
-import OfflineCacheService, {
+import {
+  OfflineCacheService,
   CacheProgress,
 } from "@services/offline/OfflineCacheService";
 

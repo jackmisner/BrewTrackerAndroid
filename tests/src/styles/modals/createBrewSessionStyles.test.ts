@@ -1,3 +1,4 @@
+import { StyleSheet } from "react-native";
 import { createBrewSessionStyles } from "../../../../src/styles/modals/createBrewSessionStyles";
 
 const mockTheme = {
@@ -22,41 +23,51 @@ const mockTheme = {
 describe("createBrewSessionStyles", () => {
   it("should create styles with theme colors", () => {
     const styles = createBrewSessionStyles(mockTheme);
+    const container = StyleSheet.flatten(styles.container);
+    const header = StyleSheet.flatten(styles.header);
+    const headerTitle = StyleSheet.flatten(styles.headerTitle);
+    const saveButton = StyleSheet.flatten(styles.saveButton);
 
-    expect(styles.container.backgroundColor).toBe(mockTheme.colors.background);
-    expect(styles.header.backgroundColor).toBe(mockTheme.colors.background);
-    expect(styles.headerTitle.color).toBe(mockTheme.colors.text);
-    expect(styles.saveButton.backgroundColor).toBe(mockTheme.colors.primary);
+    expect(container.backgroundColor).toBe(mockTheme.colors.background);
+    expect(header.backgroundColor).toBe(mockTheme.colors.background);
+    expect(headerTitle.color).toBe(mockTheme.colors.text);
+    expect(saveButton.backgroundColor).toBe(mockTheme.colors.primary);
   });
 
   it("should handle header styling with borders and shadows", () => {
     const styles = createBrewSessionStyles(mockTheme);
+    const header = StyleSheet.flatten(styles.header);
 
-    expect(styles.header.borderBottomColor).toBe(mockTheme.colors.border);
-    expect(styles.header.shadowColor).toBe(mockTheme.colors.shadow);
-    expect(styles.header.elevation).toBe(2);
+    expect(header.borderBottomColor).toBe(mockTheme.colors.border);
+    expect(header.shadowColor).toBe(mockTheme.colors.shadow);
+    expect(header.elevation).toBe(2);
   });
 
   it("should create unit button styles with selection state", () => {
     const styles = createBrewSessionStyles(mockTheme);
+    const unitButton = StyleSheet.flatten(styles.unitButton);
+    const unitButtonSelected = StyleSheet.flatten(styles.unitButtonSelected);
+    const unitButtonText = StyleSheet.flatten(styles.unitButtonText);
+    const unitButtonTextSelected = StyleSheet.flatten(
+      styles.unitButtonTextSelected
+    );
 
-    expect(styles.unitButton.backgroundColor).toBe(
+    expect(unitButton.backgroundColor).toBe(
       mockTheme.colors.backgroundSecondary
     );
-    expect(styles.unitButtonSelected.backgroundColor).toBe(
-      mockTheme.colors.primary
-    );
-    expect(styles.unitButtonText.color).toBe(mockTheme.colors.text);
-    expect(styles.unitButtonTextSelected.color).toBe(
-      mockTheme.colors.primaryText
-    );
+    expect(unitButtonSelected.backgroundColor).toBe(mockTheme.colors.primary);
+    expect(unitButtonText.color).toBe(mockTheme.colors.text);
+    expect(unitButtonTextSelected.color).toBe(mockTheme.colors.primaryText);
   });
 
   it("should handle error and loading states", () => {
     const styles = createBrewSessionStyles(mockTheme);
+    const errorText = StyleSheet.flatten(styles.errorText);
+    const loadingText = StyleSheet.flatten(styles.loadingText);
+    const retryButton = StyleSheet.flatten(styles.retryButton);
 
-    expect(styles.errorText.color).toBe(mockTheme.colors.error);
-    expect(styles.loadingText.color).toBe(mockTheme.colors.textSecondary);
-    expect(styles.retryButton.backgroundColor).toBe(mockTheme.colors.primary);
+    expect(errorText.color).toBe(mockTheme.colors.error);
+    expect(loadingText.color).toBe(mockTheme.colors.textSecondary);
+    expect(retryButton.backgroundColor).toBe(mockTheme.colors.primary);
   });
 });

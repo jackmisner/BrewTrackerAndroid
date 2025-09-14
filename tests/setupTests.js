@@ -138,8 +138,31 @@ jest.mock("expo-sharing", () => ({
 }));
 
 jest.mock("expo-file-system", () => ({
-  File: jest.fn().mockImplementation(path => ({
-    uri: typeof path === "string" ? path : path + "/mockfile.txt",
+  documentDirectory: "file://documents/",
+  cacheDirectory: "file://cache/",
+  bundleDirectory: "file://bundle/",
+  readAsStringAsync: jest.fn().mockResolvedValue("mock file content"),
+  writeAsStringAsync: jest.fn().mockResolvedValue(undefined),
+  getInfoAsync: jest.fn().mockResolvedValue({
+    exists: true,
+    isDirectory: false,
+    size: 1024,
+    modificationTime: Date.now(),
+  }),
+  deleteAsync: jest.fn().mockResolvedValue(undefined),
+  StorageAccessFramework: {
+    pickDirectoryAsync: jest.fn().mockResolvedValue({
+      uri: "content://mock-directory",
+      name: "MockDirectory",
+    }),
+  },
+  // Legacy API classes for compatibility
+  File: jest.fn().mockImplementation((path, filename) => ({
+    uri:
+      typeof path === "string"
+        ? `${path}/${filename || "mockfile.txt"}`
+        : `${path}/${filename || "mockfile.txt"}`,
+    exists: true,
     create: jest.fn().mockResolvedValue(undefined),
     write: jest.fn().mockResolvedValue(undefined),
     text: jest.fn().mockResolvedValue("mock file content"),

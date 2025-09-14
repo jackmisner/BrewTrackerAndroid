@@ -172,7 +172,7 @@ export class OfflineMetricsCalculator {
       .filter(ing => ing.type === "hop")
       .forEach(hop => {
         const amountGrams = this.convertHopToGrams(hop);
-        const alphaAcid = hop.alpha_acid || 5; // Default 5% AA
+        const alphaAcid = hop.alpha_acid !== undefined ? hop.alpha_acid : 5; // Default 5% AA, allow 0%
         const hopTime = hop.time || boilTime; // Use hop time or default to full boil
 
         // Skip dry hops
@@ -262,18 +262,35 @@ export class OfflineMetricsCalculator {
   private static convertIngredientToKg(ingredient: RecipeIngredient): number {
     const { amount = 0, unit = "lb" } = ingredient;
 
-    switch (unit.toLowerCase()) {
+    // Normalize unit string: trim, lowercase, remove trailing dots and whitespace
+    const normalizedUnit = unit.trim().toLowerCase().replace(/\.$/, "").trim();
+
+    // Map common aliases/plurals to canonical units
+    const unitAliases: { [key: string]: string } = {
+      lbs: "lb",
+      pounds: "lb",
+      pound: "lb",
+      ounces: "oz",
+      "oz.": "oz",
+      grams: "g",
+      "g.": "g",
+      gram: "g",
+      kilograms: "kg",
+      kgs: "kg",
+      "kg.": "kg",
+      kilogram: "kg",
+    };
+
+    const canonicalUnit = unitAliases[normalizedUnit] || normalizedUnit;
+
+    switch (canonicalUnit) {
       case "kg":
-      case "kilogram":
         return amount;
       case "lb":
-      case "pound":
         return amount * this.POUND_TO_KG;
       case "g":
-      case "gram":
         return amount / 1000;
       case "oz":
-      case "ounce":
         return (amount * this.OZ_TO_GRAM) / 1000;
       default:
         return amount * this.POUND_TO_KG; // Default to pounds
@@ -289,15 +306,20 @@ export class OfflineMetricsCalculator {
     switch (unit.toLowerCase()) {
       case "g":
       case "gram":
+      case "grams":
         return amount;
       case "oz":
       case "ounce":
+      case "ounces":
         return amount * this.OZ_TO_GRAM;
       case "kg":
       case "kilogram":
+      case "kilograms":
         return amount * 1000;
       case "lb":
+      case "lbs":
       case "pound":
+      case "pounds":
         return amount * this.POUND_TO_KG * 1000;
       default:
         return amount * this.OZ_TO_GRAM; // Default to ounces for hops

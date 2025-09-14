@@ -167,7 +167,7 @@ export default function CreateBrewSessionScreen() {
     }
 
     // Validate user permissions for recipe access
-    if (recipe.user_id && recipe.is_owner !== undefined) {
+    if (recipe.user_id) {
       try {
         const canAccess = await userValidation.canUserModifyResource({
           user_id: recipe.user_id,
@@ -179,9 +179,7 @@ export default function CreateBrewSessionScreen() {
         if (!canAccess && !recipe.is_public) {
           Alert.alert(
             "Access Denied",
-            recipe.is_public
-              ? "This public recipe doesn't allow brew session creation"
-              : "You don't have permission to create brew sessions for this private recipe"
+            "You don't have permission to create brew sessions for this recipe"
           );
           return;
         }

@@ -11,6 +11,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import ApiService from "@services/api/apiService";
+import OfflineRecipeService from "@services/offline/OfflineRecipeService";
 import { Recipe } from "@src/types";
 import {
   RecipeVersionHistoryResponse,
@@ -64,8 +65,12 @@ export default function ViewRecipeScreen() {
       if (!recipe_id) {
         throw new Error("No recipe ID provided");
       }
-      const response = await ApiService.recipes.getById(recipe_id);
-      return response.data;
+      // Use OfflineRecipeService to handle both real and temporary IDs
+      const recipe = await OfflineRecipeService.getById(recipe_id);
+      if (!recipe) {
+        throw new Error(`Recipe with ID ${recipe_id} not found`);
+      }
+      return recipe;
     },
     enabled: !!recipe_id, // Only run query if recipe_id exists
     retry: 1,

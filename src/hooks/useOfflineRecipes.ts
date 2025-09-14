@@ -131,9 +131,22 @@ export function useOfflineCreateRecipe() {
       queryClient.setQueryData<OfflineRecipe[]>(
         [...QUERY_KEYS.RECIPES, "offline"],
         old => {
-          const updated =
-            old?.filter(r => !r.id.startsWith("optimistic_")) || [];
-          return [data, ...updated];
+          if (!old) {
+            return [data];
+          }
+
+          // Find and replace the matching optimistic entry
+          const optimisticIndex = old.findIndex(r =>
+            r.id.startsWith("optimistic_")
+          );
+          if (optimisticIndex >= 0) {
+            const updated = [...old];
+            updated[optimisticIndex] = data;
+            return updated;
+          }
+
+          // If no optimistic entry found, prepend the new data
+          return [data, ...old];
         }
       );
     },

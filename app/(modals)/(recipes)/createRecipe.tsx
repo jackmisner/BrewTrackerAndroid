@@ -38,7 +38,9 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
-import { OfflineRecipeService } from "@services/offline/OfflineRecipeService";
+import OfflineRecipeService, {
+  OfflineRecipe,
+} from "@services/offline/OfflineRecipeService";
 import { RecipeFormData, RecipeIngredient } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
@@ -165,8 +167,12 @@ export default function CreateRecipeScreen() {
   } = useRecipeMetrics(recipeState);
 
   // Create recipe mutation
-  const createRecipeMutation = useMutation({
-    mutationFn: (recipeData: RecipeFormData) => {
+  const createRecipeMutation = useMutation<
+    OfflineRecipe,
+    Error,
+    RecipeFormData
+  >({
+    mutationFn: async (recipeData: RecipeFormData) => {
       // Sanitize ingredients to ensure all numeric fields are valid and add ID mapping
       // Note: Adding explicit ID mapping as fallback - the API interceptor should handle this but seems to have issues with nested ingredients
       const sanitizedIngredients = recipeData.ingredients.map(ingredient => {
@@ -240,7 +246,14 @@ export default function CreateRecipeScreen() {
         ingredients: sanitizedIngredients,
       };
 
-      return OfflineRecipeService.create(createData);
+      try {
+        return await OfflineRecipeService.create(createData);
+      } catch (error) {
+        console.error("❌ Failed to create recipe:", error);
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to create recipe";
+        throw new Error(`Recipe creation failed: ${errorMessage}`);
+      }
     },
     onSuccess: response => {
       // Invalidate relevant recipe caches to ensure fresh data

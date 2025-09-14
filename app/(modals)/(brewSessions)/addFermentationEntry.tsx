@@ -137,30 +137,36 @@ export default function AddFermentationEntryScreen() {
     setIsAuthorizing(true);
     try {
       // Validate user permissions for fermentation entry creation
-      if (brewSession?.user_id) {
-        try {
-          const canModify = await userValidation.canUserModifyResource({
-            user_id: brewSession.user_id,
-          });
+      if (!brewSession?.user_id) {
+        Alert.alert(
+          "Access Denied",
+          "You don't have permission to add fermentation entries to this brew session"
+        );
+        return;
+      }
 
-          if (!canModify) {
-            Alert.alert(
-              "Access Denied",
-              "You don't have permission to add fermentation entries to this brew session"
-            );
-            return;
-          }
-        } catch (error) {
-          console.error(
-            "❌ User validation error during fermentation entry creation:",
-            error
-          );
+      try {
+        const canModify = await userValidation.canUserModifyResource({
+          user_id: brewSession.user_id,
+        });
+
+        if (!canModify) {
           Alert.alert(
-            "Validation Error",
-            "Unable to verify permissions. Please try again."
+            "Access Denied",
+            "You don't have permission to add fermentation entries to this brew session"
           );
           return;
         }
+      } catch (error) {
+        console.error(
+          "❌ User validation error during fermentation entry creation:",
+          error
+        );
+        Alert.alert(
+          "Validation Error",
+          "Unable to verify permissions. Please try again."
+        );
+        return;
       }
 
       const entryData: CreateFermentationEntryRequest = {

@@ -105,6 +105,7 @@ export interface BrewSession {
 
   // User context
   user_id: ID;
+  is_owner?: boolean;
 }
 
 // Form data for creating brew sessions

@@ -50,7 +50,7 @@ jest.mock("react-native", () => ({
     const React = require("react");
     return React.createElement("KeyboardAvoidingView", props, children);
   },
-  Platform: { OS: "ios" },
+  Platform: { OS: "android" },
   ActivityIndicator: (props: any) => {
     const React = require("react");
     return React.createElement("ActivityIndicator", props);
@@ -86,7 +86,20 @@ jest.mock("@tanstack/react-query", () => {
   return {
     ...actual,
     useQuery: jest.fn(() => ({
-      data: null,
+      data: {
+        id: "session-123",
+        name: "Test Batch",
+        user_id: "user-123",
+        fermentation_entries: [
+          {
+            entry_date: "2024-01-01T00:00:00.000Z",
+            gravity: 1.04,
+            temperature: 68,
+            ph: 4.5,
+            notes: "Test entry",
+          },
+        ],
+      },
       isLoading: false,
       error: null,
     })),
@@ -443,12 +456,21 @@ describe("EditFermentationEntryScreen", () => {
       const mockUseQuery = require("@tanstack/react-query").useQuery;
       mockUseQuery.mockReturnValue({
         data: {
-          id: "test-session-id",
-          user_id: "test-user-id",
+          id: "session-123",
           name: "Test Batch",
+          user_id: "user-123",
           fermentation_data: [
             {
-              date: "2024-01-01T00:00:00Z",
+              entry_date: "2024-01-01T00:00:00Z",
+              gravity: 1.05,
+              temperature: 68,
+              ph: 4.2,
+              notes: "Initial entry",
+            },
+          ],
+          fermentation_entries: [
+            {
+              entry_date: "2024-01-01T00:00:00Z",
               gravity: 1.05,
               temperature: 68,
               ph: 4.2,
@@ -457,7 +479,6 @@ describe("EditFermentationEntryScreen", () => {
           ],
           temperature_unit: "F",
         },
-
         isLoading: false,
         error: null,
       });

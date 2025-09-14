@@ -68,9 +68,9 @@ export class OfflineRecipeService {
    * Generate temporary ID for offline-created recipes
    */
   private static generateTempId(): string {
-    // Use crypto.randomUUID() for better uniqueness guarantees
-    const uuid = crypto.randomUUID
-      ? crypto.randomUUID()
+    // Use crypto.randomUUID() for better uniqueness guarantees if available
+    const uuid = globalThis.crypto?.randomUUID
+      ? globalThis.crypto.randomUUID()
       : `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`;
     return `offline_${uuid}`;
   }

@@ -115,13 +115,31 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
       try {
         const storedMode = await AsyncStorage.getItem(NETWORK_SIMULATION_KEY);
         if (storedMode !== null) {
-          const mode = JSON.parse(storedMode) as NetworkSimulationMode;
-          if (["normal", "slow", "offline"].includes(mode)) {
+          let mode: NetworkSimulationMode | null = null;
+
+          // Try to parse as JSON, but handle legacy string "undefined" and other cases
+          try {
+            mode = JSON.parse(storedMode) as NetworkSimulationMode;
+          } catch {
+            // If JSON parsing fails, treat as raw string (legacy case)
+            if (typeof storedMode === "string" && storedMode !== "undefined") {
+              mode = storedMode as NetworkSimulationMode;
+            }
+          }
+
+          // Validate the mode value
+          if (mode && ["normal", "slow", "offline"].includes(mode)) {
             setNetworkSimulationModeState(mode);
+          } else {
+            // Self-heal by removing invalid value and setting safe default
+            await AsyncStorage.removeItem(NETWORK_SIMULATION_KEY);
+            setNetworkSimulationModeState("normal");
           }
         }
       } catch (error) {
         console.warn("Failed to load developer settings:", error);
+        // Self-heal on any error by ensuring we have a safe default
+        setNetworkSimulationModeState("normal");
       }
     };
 

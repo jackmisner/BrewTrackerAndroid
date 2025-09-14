@@ -163,35 +163,37 @@ export default function EditBrewSessionScreen() {
     }
 
     // Validate user permissions for brew session editing
-    if (!brewSession) {
-      Alert.alert("Error", "Brew session data is not available");
+    if (!brewSession || !brewSession.user_id) {
+      Alert.alert(
+        "Access Denied",
+        "You don't have permission to edit this brew session"
+      );
       return;
     }
 
-    if (brewSession.user_id) {
-      try {
-        const canModify = await userValidation.canUserModifyResource({
-          user_id: brewSession.user_id,
-        });
+    try {
+      const canModify = await userValidation.canUserModifyResource({
+        user_id: brewSession.user_id,
+        is_owner: brewSession.is_owner,
+      });
 
-        if (!canModify) {
-          Alert.alert(
-            "Access Denied",
-            "You don't have permission to edit this brew session"
-          );
-          return;
-        }
-      } catch (error) {
-        console.error(
-          "❌ User validation error during brew session edit:",
-          error
-        );
+      if (!canModify) {
         Alert.alert(
-          "Validation Error",
-          "Unable to verify permissions. Please try again."
+          "Access Denied",
+          "You don't have permission to edit this brew session"
         );
         return;
       }
+    } catch (error) {
+      console.error(
+        "❌ User validation error during brew session edit:",
+        error
+      );
+      Alert.alert(
+        "Validation Error",
+        "Unable to verify permissions. Please try again."
+      );
+      return;
     }
 
     // Prepare update data, converting string numbers back to numbers where needed

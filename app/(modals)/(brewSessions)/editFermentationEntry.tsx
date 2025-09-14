@@ -166,6 +166,7 @@ export default function EditFermentationEntryScreen() {
 
       const canModify = await userValidation.canUserModifyResource({
         user_id: brewSessionData.user_id,
+        is_owner: brewSessionData.is_owner,
       });
 
       if (!canModify) {
@@ -183,6 +184,19 @@ export default function EditFermentationEntryScreen() {
       Alert.alert(
         "Validation Error",
         "Unable to verify permissions. Please try again."
+      );
+      return;
+    }
+
+    // Validate entryIndex before proceeding with mutation
+    if (
+      !Number.isFinite(entryIndex) ||
+      entryIndex < 0 ||
+      entryIndex >= (brewSessionData?.fermentation_entries?.length || 0)
+    ) {
+      Alert.alert(
+        "Error",
+        "Invalid fermentation entry index. Please try again."
       );
       return;
     }
