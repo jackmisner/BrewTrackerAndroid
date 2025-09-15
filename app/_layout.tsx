@@ -35,14 +35,17 @@ import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { Stack } from "expo-router";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { AuthProvider } from "@contexts/AuthContext";
+import { AuthProvider, useAuth } from "@contexts/AuthContext";
 import { ThemeProvider, useTheme } from "@contexts/ThemeContext";
 import { UnitProvider } from "@contexts/UnitContext";
 import { ScreenDimensionsProvider } from "@contexts/ScreenDimensionsContext";
 import { CalculatorsProvider } from "@contexts/CalculatorsContext";
 import { NetworkProvider } from "@contexts/NetworkContext";
 import { DeveloperProvider } from "@contexts/DeveloperContext";
-import { queryClient, asyncStoragePersister } from "@services/api/queryClient";
+import {
+  queryClient,
+  createUserScopedPersister,
+} from "@services/api/queryClient";
 import Constants from "expo-constants";
 
 // Component to handle StatusBar with theme
@@ -51,12 +54,40 @@ const ThemedStatusBar = () => {
   return <StatusBar style={isDark ? "light" : "dark"} />;
 };
 
-export default function RootLayout() {
+// Component to handle dynamic persister based on auth state
+const DynamicPersistQueryClientProvider = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
+  const { user } = useAuth();
+  const [persister, setPersister] = React.useState(() =>
+    createUserScopedPersister(undefined)
+  );
+
+  // Track previous user ID to detect changes
+  const prevUserIdRef = React.useRef<string | undefined>(undefined);
+
+  React.useEffect(() => {
+    const userId = user?.id;
+    const prevUserId = prevUserIdRef.current;
+
+    // Clear cache when user ID actually changes (but not on initial mount)
+    if (prevUserId !== undefined && prevUserId !== userId) {
+      queryClient.clear();
+    }
+
+    // Update previous user ID and create new persister
+    prevUserIdRef.current = userId;
+    setPersister(createUserScopedPersister(userId));
+  }, [user?.id]);
+
   return (
     <PersistQueryClientProvider
+      key={user?.id || "anonymous"} // Force re-creation when user changes
       client={queryClient}
       persistOptions={{
-        persister: asyncStoragePersister,
+        persister,
         // Invalidate cache on new native build or when dev/version changes
         buster:
           Constants.nativeBuildVersion ||
@@ -64,12 +95,20 @@ export default function RootLayout() {
           "dev",
       }}
     >
-      <DeveloperProvider>
-        <NetworkProvider>
-          <ThemeProvider>
-            <ThemedStatusBar />
-            <ScreenDimensionsProvider>
-              <AuthProvider>
+      {children}
+    </PersistQueryClientProvider>
+  );
+};
+
+export default function RootLayout() {
+  return (
+    <DeveloperProvider>
+      <NetworkProvider>
+        <ThemeProvider>
+          <ThemedStatusBar />
+          <ScreenDimensionsProvider>
+            <AuthProvider>
+              <DynamicPersistQueryClientProvider>
                 <UnitProvider>
                   <CalculatorsProvider>
                     <Stack
@@ -112,11 +151,11 @@ export default function RootLayout() {
                     </Stack>
                   </CalculatorsProvider>
                 </UnitProvider>
-              </AuthProvider>
-            </ScreenDimensionsProvider>
-          </ThemeProvider>
-        </NetworkProvider>
-      </DeveloperProvider>
-    </PersistQueryClientProvider>
+              </DynamicPersistQueryClientProvider>
+            </AuthProvider>
+          </ScreenDimensionsProvider>
+        </ThemeProvider>
+      </NetworkProvider>
+    </DeveloperProvider>
   );
 }

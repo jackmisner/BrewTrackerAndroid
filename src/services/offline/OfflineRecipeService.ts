@@ -92,11 +92,16 @@ export class OfflineRecipeService {
       : `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`;
     return `offline_${uuid}`;
   }
+  private static async isNetworkAvailable(): Promise<boolean | null> {
+    return NetInfo.fetch().then(state => state.isConnected);
+  }
 
   /**
    * Load offline recipe state from storage
    */
-  private static async loadOfflineState(): Promise<OfflineRecipeState> {
+  private static async loadOfflineState(
+    _user_id?: string
+  ): Promise<OfflineRecipeState> {
     try {
       const { STORAGE_KEY, PENDING_OPERATIONS_KEY } =
         await this.getUserScopedKeys();
@@ -133,7 +138,8 @@ export class OfflineRecipeService {
    * Save offline recipe state to storage
    */
   private static async saveOfflineState(
-    state: OfflineRecipeState
+    state: OfflineRecipeState,
+    _userId?: string
   ): Promise<void> {
     try {
       const { STORAGE_KEY, PENDING_OPERATIONS_KEY } =

@@ -75,6 +75,11 @@ export interface RecipeMetrics {
   abv: number;
   ibu: number;
   srm: number;
+  estimated_og?: number; // optional for display purposes
+  estimated_fg?: number; // optional for display purposes
+  estimated_abv?: number; // optional for display purposes
+  estimated_ibu?: number; // optional for display purposes
+  estimated_srm?: number; // optional for display purposes
 }
 
 // Main recipe interface

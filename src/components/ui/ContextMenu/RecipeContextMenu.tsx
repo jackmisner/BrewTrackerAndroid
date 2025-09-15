@@ -169,31 +169,60 @@ export function useValidatedRecipeActions(recipe: Recipe | null) {
   const [canModify, setCanModify] = React.useState<boolean>(false);
   const [isValidating, setIsValidating] = React.useState<boolean>(false);
 
+  // Keep a stable reference to the validation function
+  const canUserModifyResourceRef = React.useRef(canUserModifyResource);
+  canUserModifyResourceRef.current = canUserModifyResource;
+
   React.useEffect(() => {
     if (!recipe) {
       setCanModify(false);
       return;
     }
 
+    // Use cancellation flag to prevent setState after unmount
+    let cancelled = false;
+
     setIsValidating(true);
-    canUserModifyResource({
-      ...recipe,
-      user_id: recipe.user_id || null, // Convert undefined to null for type compatibility
-    })
-      .then(setCanModify)
-      .catch(error => {
-        console.warn("Failed to validate recipe ownership:", error);
-        setCanModify(false);
+    canUserModifyResourceRef
+      .current({
+        ...recipe,
+        user_id: recipe.user_id ?? null, // Use nullish coalescing to preserve empty-string semantics
       })
-      .finally(() => setIsValidating(false));
-  }, [recipe, canUserModifyResource]);
+      .then(result => {
+        if (!cancelled) {
+          setCanModify(result);
+        }
+      })
+      .catch(error => {
+        if (!cancelled) {
+          console.warn("Failed to validate recipe ownership:", error);
+          setCanModify(false);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsValidating(false);
+        }
+      });
+
+    // Cleanup function to cancel async operations
+    return () => {
+      cancelled = true;
+    };
+  }, [recipe]); // Include recipe but it's memoized at call site to prevent unnecessary re-renders
+
+  // Memoize getFilteredActions to avoid downstream re-renders
+  const getFilteredActions = React.useCallback(
+    (actions: BaseAction<Recipe>[]) =>
+      recipe
+        ? filterRecipeActionsByOwnership(actions, recipe, canModify)
+        : actions,
+    [recipe, canModify]
+  );
 
   return {
     canModify,
     isValidating,
-    getFilteredActions: (actions: BaseAction<Recipe>[]) =>
-      recipe
-        ? filterRecipeActionsByOwnership(actions, recipe, canModify)
-        : actions,
+    getFilteredActions,
   };
 }

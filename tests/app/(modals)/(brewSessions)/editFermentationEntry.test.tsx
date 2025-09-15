@@ -97,34 +97,71 @@ jest.mock("@tanstack/react-query", () => {
       isLoading: false,
       error: null,
     })),
-    useMutation: jest.fn(() => ({
-      mutate: jest.fn((variables, options) => {
-        const context = options?.onMutate?.(variables);
-        try {
-          const result = { success: true, data: variables };
-          options?.onSuccess?.(result, variables, context);
-          options?.onSettled?.(result, null, variables, context);
-        } catch (err) {
-          options?.onError?.(err as unknown, variables, context);
-          options?.onSettled?.(undefined, err as unknown, variables, context);
-        }
-      }),
-      mutateAsync: jest.fn(async (variables, options) => {
-        const context = options?.onMutate?.(variables);
-        try {
-          const result = { success: true, data: variables };
-          options?.onSuccess?.(result, variables, context);
-          options?.onSettled?.(result, null, variables, context);
-          return result;
-        } catch (err) {
-          options?.onError?.(err as unknown, variables, context);
-          options?.onSettled?.(undefined, err as unknown, variables, context);
-          throw err;
-        }
-      }),
-      isPending: false,
-      error: null,
-    })),
+    useMutation: jest.fn(hookOptions => {
+      const mutationFn =
+        hookOptions?.mutationFn || (() => Promise.resolve({ success: true }));
+
+      return {
+        mutate: jest.fn(async (variables, callOptions) => {
+          // Merge hook-level and per-call options
+          const mergedOptions = {
+            ...hookOptions,
+            ...callOptions,
+            onMutate: callOptions?.onMutate || hookOptions?.onMutate,
+            onSuccess: callOptions?.onSuccess || hookOptions?.onSuccess,
+            onError: callOptions?.onError || hookOptions?.onError,
+            onSettled: callOptions?.onSettled || hookOptions?.onSettled,
+          };
+
+          try {
+            const context = await mergedOptions?.onMutate?.(variables);
+            // Actually execute the mutation function
+            const result = await mutationFn(variables);
+            mergedOptions?.onSuccess?.(result, variables, context);
+            mergedOptions?.onSettled?.(result, null, variables, context);
+          } catch (err) {
+            mergedOptions?.onError?.(err as unknown, variables, undefined);
+            mergedOptions?.onSettled?.(
+              undefined,
+              err as unknown,
+              variables,
+              undefined
+            );
+          }
+        }),
+        mutateAsync: jest.fn(async (variables, callOptions) => {
+          // Merge hook-level and per-call options
+          const mergedOptions = {
+            ...hookOptions,
+            ...callOptions,
+            onMutate: callOptions?.onMutate || hookOptions?.onMutate,
+            onSuccess: callOptions?.onSuccess || hookOptions?.onSuccess,
+            onError: callOptions?.onError || hookOptions?.onError,
+            onSettled: callOptions?.onSettled || hookOptions?.onSettled,
+          };
+
+          try {
+            const context = await mergedOptions?.onMutate?.(variables);
+            // Actually execute the mutation function
+            const result = await mutationFn(variables);
+            mergedOptions?.onSuccess?.(result, variables, context);
+            mergedOptions?.onSettled?.(result, null, variables, context);
+            return result;
+          } catch (err) {
+            mergedOptions?.onError?.(err as unknown, variables, undefined);
+            mergedOptions?.onSettled?.(
+              undefined,
+              err as unknown,
+              variables,
+              undefined
+            );
+            throw err;
+          }
+        }),
+        isPending: false,
+        error: null,
+      };
+    }),
     useQueryClient: jest.fn(() => ({
       invalidateQueries: jest.fn(),
     })),

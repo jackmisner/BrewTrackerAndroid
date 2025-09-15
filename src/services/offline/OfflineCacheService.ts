@@ -285,7 +285,7 @@ export class OfflineCacheService {
     }
 
     // Calculate data size
-    const dataString = JSON.stringify(cachedData);
+    let dataString = JSON.stringify(cachedData);
     cachedData.metadata.dataSize = dataString.length;
 
     // Check if data size exceeds reasonable limit (e.g., 10MB)
@@ -300,6 +300,7 @@ export class OfflineCacheService {
       // Recalculate data size
       const prunedDataString = JSON.stringify(cachedData);
       cachedData.metadata.dataSize = prunedDataString.length;
+      dataString = prunedDataString;
     }
 
     reportProgress?.("save", "Saving cache...", 95);

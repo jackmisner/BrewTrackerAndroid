@@ -93,8 +93,9 @@ function getSyncStatusMessage(
     return "Sync failed - tap to retry";
   }
 
-  const totalChanges =
-    (syncStatus?.pendingSync || 0) + (syncStatus?.needsSync || 0);
+  // Use needsSync as the authoritative count to avoid double-counting
+  // (pendingSync recipes also have needsSync: true, so they'd be counted twice)
+  const totalChanges = syncStatus?.needsSync || 0;
   const deletions = syncStatus?.pendingDeletions || 0;
   const modifications = totalChanges - deletions;
 
@@ -697,106 +698,104 @@ export default function RecipesScreen() {
         </View>
 
         {/* Sync status and button for My Recipes */}
-        {activeTab === "my" &&
-          ((syncStatus?.pendingSync || 0) > 0 ||
-            (syncStatus?.needsSync || 0) > 0) && (
-            <View style={styles.syncStatusContainer}>
-              <View style={styles.syncInfo}>
-                <MaterialIcons
-                  name={syncMutation.isPending ? "sync" : "cloud-upload"}
-                  size={16}
-                  color={theme.colors.primary}
-                  style={
-                    syncMutation.isPending
-                      ? { transform: [{ rotate: "45deg" }] }
-                      : {}
-                  }
-                />
-                <Text style={styles.syncText}>
-                  {getSyncStatusMessage(
-                    syncStatus,
-                    syncMutation,
-                    modifiedSyncMutation
-                  )}
-                </Text>
-              </View>
-              {isConnected &&
-                !syncMutation.isPending &&
-                !modifiedSyncMutation.isPending && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      // Use new flag-based sync approach only (legacy disabled to prevent duplicates)
-                      modifiedSyncMutation.mutate(undefined, {
-                        onSuccess: () => {
-                          // Legacy sync disabled: conflicts with tombstone system
-                          // if ((syncStatus?.pendingSync || 0) > 0) {
-                          //   syncMutation.mutate();
-                          // }
-                        },
-                        onError: _error => {
-                          Alert.alert(
-                            "Sync Failed",
-                            "Unable to sync modified recipes. Please try again.",
-                            [{ text: "OK" }]
-                          );
-                        },
-                      });
-                    }}
-                    style={styles.syncButton}
-                  >
-                    <Text style={styles.syncButtonText}>Sync Now</Text>
-                  </TouchableOpacity>
+        {activeTab === "my" && (syncStatus?.needsSync || 0) > 0 && (
+          <View style={styles.syncStatusContainer}>
+            <View style={styles.syncInfo}>
+              <MaterialIcons
+                name={syncMutation.isPending ? "sync" : "cloud-upload"}
+                size={16}
+                color={theme.colors.primary}
+                style={
+                  syncMutation.isPending
+                    ? { transform: [{ rotate: "45deg" }] }
+                    : {}
+                }
+              />
+              <Text style={styles.syncText}>
+                {getSyncStatusMessage(
+                  syncStatus,
+                  syncMutation,
+                  modifiedSyncMutation
                 )}
-
-              {/* DEV ONLY: Tombstone cleanup button */}
-              {isDeveloperMode && (
+              </Text>
+            </View>
+            {isConnected &&
+              !syncMutation.isPending &&
+              !modifiedSyncMutation.isPending && (
                 <TouchableOpacity
-                  onPress={async () => {
-                    try {
-                      const result = await cleanupTombstones();
-                      Alert.alert(
-                        "Tombstones Cleaned",
-                        `Removed ${result.removedTombstones} tombstones.${
-                          result.tombstoneNames.length > 0
-                            ? `\n\nCleaned: ${result.tombstoneNames.join(", ")}`
-                            : ""
-                        }`,
-                        [{ text: "OK" }]
-                      );
-                      // Refresh the recipes list to reflect changes
-                      queryClient.invalidateQueries({
-                        queryKey: [...QUERY_KEYS.RECIPES, "offline"],
-                      });
-                    } catch (error) {
-                      Alert.alert(
-                        "Cleanup Failed",
-                        "Unable to cleanup tombstones. Please try again.",
-                        [{ text: "OK" }]
-                      );
-                      console.error("Tombstone cleanup error:", error);
-                    }
+                  onPress={() => {
+                    // Use new flag-based sync approach only (legacy disabled to prevent duplicates)
+                    modifiedSyncMutation.mutate(undefined, {
+                      onSuccess: () => {
+                        // Legacy sync disabled: conflicts with tombstone system
+                        // if ((syncStatus?.pendingSync || 0) > 0) {
+                        //   syncMutation.mutate();
+                        // }
+                      },
+                      onError: _error => {
+                        Alert.alert(
+                          "Sync Failed",
+                          "Unable to sync modified recipes. Please try again.",
+                          [{ text: "OK" }]
+                        );
+                      },
+                    });
                   }}
-                  style={[
-                    styles.syncButton,
-                    {
-                      backgroundColor: theme.colors.warning || "#ff9800",
-                      marginLeft: 8,
-                    },
-                  ]}
+                  style={styles.syncButton}
                 >
-                  <MaterialIcons
-                    name="cleaning-services"
-                    size={16}
-                    color="#fff"
-                    style={{ marginRight: 4 }}
-                  />
-                  <Text style={[styles.syncButtonText, { fontSize: 12 }]}>
-                    Dev: Clean
-                  </Text>
+                  <Text style={styles.syncButtonText}>Sync Now</Text>
                 </TouchableOpacity>
               )}
-            </View>
-          )}
+
+            {/* DEV ONLY: Tombstone cleanup button */}
+            {isDeveloperMode && (
+              <TouchableOpacity
+                onPress={async () => {
+                  try {
+                    const result = await cleanupTombstones();
+                    Alert.alert(
+                      "Tombstones Cleaned",
+                      `Removed ${result.removedTombstones} tombstones.${
+                        result.tombstoneNames.length > 0
+                          ? `\n\nCleaned: ${result.tombstoneNames.join(", ")}`
+                          : ""
+                      }`,
+                      [{ text: "OK" }]
+                    );
+                    // Refresh the recipes list to reflect changes
+                    queryClient.invalidateQueries({
+                      queryKey: [...QUERY_KEYS.RECIPES, "offline"],
+                    });
+                  } catch (error) {
+                    Alert.alert(
+                      "Cleanup Failed",
+                      "Unable to cleanup tombstones. Please try again.",
+                      [{ text: "OK" }]
+                    );
+                    console.error("Tombstone cleanup error:", error);
+                  }
+                }}
+                style={[
+                  styles.syncButton,
+                  {
+                    backgroundColor: theme.colors.warning || "#ff9800",
+                    marginLeft: 8,
+                  },
+                ]}
+              >
+                <MaterialIcons
+                  name="cleaning-services"
+                  size={16}
+                  color="#fff"
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={[styles.syncButtonText, { fontSize: 12 }]}>
+                  Dev: Clean
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Search bar for public recipes */}
         {activeTab === "public" ? (

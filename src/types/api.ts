@@ -180,6 +180,11 @@ export interface RecipeMetricsResponse {
   avg_abv?: number;
   ibu?: number;
   srm?: number;
+  estimated_og?: number;
+  estimated_fg?: number;
+  estimated_abv?: number;
+  estimated_ibu?: number;
+  estimated_srm?: number;
 }
 
 export interface CalculateMetricsPreviewRequest {
