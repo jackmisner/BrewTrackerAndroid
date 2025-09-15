@@ -38,7 +38,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User, LoginRequest, RegisterRequest } from "@src/types";
 import ApiService from "@services/api/apiService";
 import { STORAGE_KEYS } from "@services/config";
-import { extractUserIdFromJWT } from "@utils/jwtUtils";
+import { extractUserIdFromJWT, debugJWTToken } from "@utils/jwtUtils";
+import { cacheUtils } from "@services/api/queryClient";
+import { OfflineRecipeService } from "@services/offline/OfflineRecipeService";
+import OfflineCacheService from "@services/offline/OfflineCacheService";
 
 /**
  * Authentication context interface defining all available state and actions
@@ -165,6 +168,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       ) {
         setUser(apiUser);
       }
+
+      // Cache ingredients since user is authenticated (don't block initialization)
+      OfflineCacheService.cacheIngredientsAfterAuth()
+        .then(() => {
+          // Log cache status for debugging
+          OfflineCacheService.logCacheStatus();
+        })
+        .catch(error => {
+          console.warn(
+            "Failed to cache ingredients during auth initialization:",
+            error
+          );
+        });
     } catch (error: any) {
       // Handle 401 by clearing token/storage (but don't log error - this is expected for fresh installs)
       if (error.response?.status === 401) {
@@ -197,6 +213,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       // Store token securely
       await ApiService.token.setToken(access_token);
 
+      // Debug JWT token structure (development only)
+      debugJWTToken(access_token);
+
       // Cache user data
       await AsyncStorage.setItem(
         STORAGE_KEYS.USER_DATA,
@@ -204,6 +223,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       );
 
       setUser(userData);
+
+      // Cache ingredients now that user is authenticated
+      OfflineCacheService.cacheIngredientsAfterAuth()
+        .then(() => {
+          // Log cache status for debugging
+          OfflineCacheService.logCacheStatus();
+        })
+        .catch(error => {
+          console.warn("Failed to cache ingredients after login:", error);
+          // Don't throw - this shouldn't block login success
+        });
     } catch (error: any) {
       console.error("Login failed:", error);
       setError(error.response?.data?.message || "Login failed");
@@ -265,6 +295,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     try {
       setIsLoading(true);
 
+      // Get current user ID before clearing state for cache cleanup
+      const userId = user?.id;
+
       // Clear secure storage
       await ApiService.token.removeToken();
 
@@ -272,16 +305,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       await AsyncStorage.multiRemove([
         STORAGE_KEYS.USER_DATA,
         STORAGE_KEYS.USER_SETTINGS,
-        STORAGE_KEYS.OFFLINE_RECIPES,
         STORAGE_KEYS.CACHED_INGREDIENTS,
       ]);
+
+      // Clear React Query cache and persisted storage
+      cacheUtils.clearAll();
+      await cacheUtils.clearUserPersistedCache(userId);
+
+      // Clear user-scoped offline data
+      await OfflineRecipeService.clearUserData(userId);
 
       setUser(null);
       setError(null);
     } catch (error: any) {
       console.error("Logout failed:", error);
-      // Even if logout fails, clear local state
+      // Even if logout fails, clear local state and cache
       setUser(null);
+      cacheUtils.clearAll();
+      // Clear persisted cache without user ID as fallback
+      await cacheUtils.clearAllPersistedCache();
+      // Clear all offline data as fallback
+      await OfflineRecipeService.clearUserData();
     } finally {
       setIsLoading(false);
     }

@@ -38,6 +38,9 @@ export interface OfflineRecipe extends Recipe {
   tempId?: string;
   lastModified: number;
   syncStatus: "pending" | "synced" | "conflict" | "failed";
+  needsSync?: boolean; // Flag indicating recipe has been modified and needs sync
+  isDeleted?: boolean; // Flag indicating recipe is deleted (tombstone)
+  deletedAt?: number; // Timestamp when recipe was deleted
   originalData?: Recipe; // For conflict resolution
 }
 
@@ -61,8 +64,23 @@ export interface OfflineRecipeState {
  * Offline-first Recipe Service
  */
 export class OfflineRecipeService {
+  // Legacy storage keys for backwards compatibility
   private static readonly STORAGE_KEY = STORAGE_KEYS.OFFLINE_RECIPES;
   private static readonly PENDING_OPERATIONS_KEY = `${STORAGE_KEYS.OFFLINE_RECIPES}_pending`;
+
+  /**
+   * Generate user-scoped storage keys
+   */
+  private static async getUserScopedKeys() {
+    const userId = await this.getCurrentUserId();
+    const baseKey = userId
+      ? `${STORAGE_KEYS.OFFLINE_RECIPES}_${userId}`
+      : STORAGE_KEYS.OFFLINE_RECIPES;
+    return {
+      STORAGE_KEY: baseKey,
+      PENDING_OPERATIONS_KEY: `${baseKey}_pending`,
+    };
+  }
 
   /**
    * Generate temporary ID for offline-created recipes
@@ -80,9 +98,11 @@ export class OfflineRecipeService {
    */
   private static async loadOfflineState(): Promise<OfflineRecipeState> {
     try {
+      const { STORAGE_KEY, PENDING_OPERATIONS_KEY } =
+        await this.getUserScopedKeys();
       const [recipesData, operationsData] = await Promise.all([
-        AsyncStorage.getItem(this.STORAGE_KEY),
-        AsyncStorage.getItem(this.PENDING_OPERATIONS_KEY),
+        AsyncStorage.getItem(STORAGE_KEY),
+        AsyncStorage.getItem(PENDING_OPERATIONS_KEY),
       ]);
 
       const recipes: OfflineRecipe[] = recipesData
@@ -116,10 +136,12 @@ export class OfflineRecipeService {
     state: OfflineRecipeState
   ): Promise<void> {
     try {
+      const { STORAGE_KEY, PENDING_OPERATIONS_KEY } =
+        await this.getUserScopedKeys();
       await Promise.all([
-        AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(state.recipes)),
+        AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state.recipes)),
         AsyncStorage.setItem(
-          this.PENDING_OPERATIONS_KEY,
+          PENDING_OPERATIONS_KEY,
           JSON.stringify(state.pendingOperations)
         ),
       ]);
@@ -161,8 +183,19 @@ export class OfflineRecipeService {
       if (!netState.isConnected) {
         return false;
       }
-      // Also check API availability
-      return await ApiService.checkConnection();
+      // Also check API availability, but catch simulated offline errors
+      try {
+        return await ApiService.checkConnection();
+      } catch (error) {
+        // Don't treat simulated offline mode as a real error
+        if (
+          error instanceof Error &&
+          error.message?.includes("Simulated offline")
+        ) {
+          return false;
+        }
+        throw error;
+      }
     } catch {
       return false;
     }
@@ -176,20 +209,141 @@ export class OfflineRecipeService {
     try {
       const token = await ApiService.token.getToken();
       if (!token) {
-        console.warn("No JWT token found for user ID extraction");
+        // No warning - this is expected when user is not authenticated
         return null;
       }
 
       const userId = extractUserIdFromJWT(token);
-      if (!userId) {
+      if (!userId && __DEV__) {
+        // Only warn in development mode and limit frequency
         console.warn("Failed to extract user ID from JWT token");
-        return null;
       }
 
       return userId;
     } catch (error) {
-      console.warn("Error extracting user ID from token:", error);
+      if (__DEV__) {
+        console.warn("Error extracting user ID from token:", error);
+      }
       return null;
+    }
+  }
+
+  /**
+   * Clean up stale or invalid recipe data from cache
+   * Removes recipes with invalid IDs, corrupted data, etc.
+   */
+  static async cleanupStaleData(): Promise<{
+    removed: number;
+    cleaned: string[];
+  }> {
+    try {
+      const state = await this.loadOfflineState();
+      const initialCount = state.recipes.length;
+      const removedRecipes: string[] = [];
+
+      // Filter out recipes with invalid data
+      state.recipes = state.recipes.filter(recipe => {
+        // CRITICAL: Never remove recipes that need syncing, regardless of data issues
+        if (recipe.needsSync) {
+          if (__DEV__) {
+            console.log(
+              `🔒 Preserving recipe that needs sync: ${recipe.name} (${recipe.id})`
+            );
+          }
+          return true;
+        }
+
+        // Check for basic required fields
+        if (!recipe.id || !recipe.name) {
+          removedRecipes.push(
+            `${recipe.name || recipe.id || "Unknown"} (missing required fields)`
+          );
+          return false;
+        }
+
+        // Check for invalid ID formats (valid ObjectId OR temp ID with offline_/optimistic_ prefix)
+        const isValidId =
+          this.isValidObjectId(recipe.id) ||
+          recipe.id.startsWith("optimistic_") ||
+          recipe.id.startsWith("offline_");
+        if (!isValidId) {
+          removedRecipes.push(
+            `${recipe.name} (invalid ID format: ${recipe.id})`
+          );
+          return false;
+        }
+
+        // Check for corrupted ingredients data
+        if (!Array.isArray(recipe.ingredients)) {
+          removedRecipes.push(`${recipe.name} (corrupted ingredients data)`);
+          return false;
+        }
+
+        return true;
+      });
+
+      // Clean up pending operations for recipes that were actually removed
+      // (Get removed IDs by comparing initial state with filtered state)
+      const currentRecipeIds = new Set(state.recipes.map(r => r.id));
+      const currentTempIds = new Set(
+        state.recipes.map(r => r.tempId).filter(Boolean)
+      );
+
+      state.pendingOperations = state.pendingOperations.filter(op => {
+        // Keep operations for recipes that still exist (by ID or tempId)
+        return (
+          currentRecipeIds.has(op.recipeId) || currentTempIds.has(op.recipeId)
+        );
+      });
+
+      // Save cleaned state
+      await this.saveOfflineState(state);
+
+      const removedCount = initialCount - state.recipes.length;
+
+      if (removedCount > 0) {
+        console.log(
+          `Cleaned up ${removedCount} stale recipes:`,
+          removedRecipes
+        );
+      }
+
+      return {
+        removed: removedCount,
+        cleaned: removedRecipes,
+      };
+    } catch (error) {
+      console.error("Failed to cleanup stale recipe data:", error);
+      return { removed: 0, cleaned: [] };
+    }
+  }
+
+  /**
+   * Clear all offline data for the current user
+   * Used during logout to prevent data leakage between users
+   */
+  static async clearUserData(userId?: string): Promise<void> {
+    try {
+      let keysToRemove: string[];
+
+      if (userId) {
+        // Clear specific user's data
+        const baseKey = `${STORAGE_KEYS.OFFLINE_RECIPES}_${userId}`;
+        keysToRemove = [baseKey, `${baseKey}_pending`];
+      } else {
+        // Clear all offline recipe keys
+        const allKeys = await AsyncStorage.getAllKeys();
+        keysToRemove = allKeys.filter(key =>
+          key.startsWith(STORAGE_KEYS.OFFLINE_RECIPES)
+        );
+      }
+
+      if (keysToRemove.length > 0) {
+        await AsyncStorage.multiRemove(keysToRemove);
+      }
+    } catch (error) {
+      console.error("Failed to clear offline recipe data:", error);
+      throw error;
     }
   }
 
@@ -197,6 +351,11 @@ export class OfflineRecipeService {
    * Get all recipes (combines online and offline)
    */
   static async getAll(): Promise<OfflineRecipe[]> {
+    // Only clean up stale data when online to avoid removing offline-created recipes
+    if (await this.isOnline()) {
+      await this.cleanupStaleData();
+    }
+
     const state = await this.loadOfflineState();
 
     // If online, try to fetch latest from server and merge with offline
@@ -219,6 +378,7 @@ export class OfflineRecipeService {
           isOffline: false,
           lastModified: Date.now(),
           syncStatus: "synced" as const,
+          needsSync: false, // Server recipes don't need sync
         }));
 
         // Merge with offline recipes (offline takes precedence for conflicts)
@@ -228,7 +388,16 @@ export class OfflineRecipeService {
         state.recipes = mergedRecipes;
         await this.saveOfflineState(state);
 
-        return mergedRecipes;
+        // Filter out deleted recipes before returning to UI (same as offline path)
+        const activeRecipes = mergedRecipes.filter(recipe => !recipe.isDeleted);
+
+        if (__DEV__) {
+          console.log(
+            `🔍 Online recipes filtered: ${activeRecipes.length} active (${mergedRecipes.length} total including ${mergedRecipes.length - activeRecipes.length} tombstones)`
+          );
+        }
+
+        return activeRecipes;
       } catch (error) {
         console.warn(
           "Failed to fetch online recipes, using offline cache:",
@@ -237,8 +406,18 @@ export class OfflineRecipeService {
       }
     }
 
-    // Return offline recipes
-    return state.recipes;
+    // Filter out deleted recipes before returning to UI
+    const activeRecipes = state.recipes.filter(recipe => !recipe.isDeleted);
+
+    if (__DEV__) {
+      console.log(
+        `🔍 Returning offline recipes: ${activeRecipes.length} active (${state.recipes.length} total including ${state.recipes.length - activeRecipes.length} tombstones)`
+      );
+      console.log(
+        `📋 Active recipe IDs: ${activeRecipes.map(r => `${r.name} (${r.id})`).join(", ")}`
+      );
+    }
+    return activeRecipes;
   }
 
   /**
@@ -251,6 +430,11 @@ export class OfflineRecipeService {
     const offlineRecipe = state.recipes.find(
       r => r.id === id || r.tempId === id
     );
+
+    // If found offline but it's deleted, return null (recipe no longer exists)
+    if (offlineRecipe && offlineRecipe.isDeleted) {
+      return null;
+    }
 
     // If found offline and it's newer or we're offline, return it
     if (
@@ -269,6 +453,7 @@ export class OfflineRecipeService {
           isOffline: false,
           lastModified: Date.now(),
           syncStatus: "synced",
+          needsSync: false, // Fresh from server
         };
 
         // Update cache
@@ -304,6 +489,7 @@ export class OfflineRecipeService {
           isOffline: false,
           lastModified: Date.now(),
           syncStatus: "synced",
+          needsSync: false, // Successfully created online
         };
 
         // Add to offline cache
@@ -332,6 +518,7 @@ export class OfflineRecipeService {
       isOffline: true,
       lastModified: Date.now(),
       syncStatus: "pending",
+      needsSync: true, // New recipe needs to be synced
       // Add required Recipe fields with defaults
       user_id: userId,
       is_public: false,
@@ -345,6 +532,13 @@ export class OfflineRecipeService {
     const state = await this.loadOfflineState();
     state.recipes.push(offlineRecipe);
     await this.saveOfflineState(state);
+
+    if (__DEV__) {
+      console.log(
+        `✅ Offline recipe created and saved: ${offlineRecipe.name} (${offlineRecipe.id})`
+      );
+      console.log(`📊 Total offline recipes now: ${state.recipes.length}`);
+    }
 
     // Add pending operation for later sync
     await this.addPendingOperation({
@@ -386,6 +580,7 @@ export class OfflineRecipeService {
           isOffline: false,
           lastModified: Date.now(),
           syncStatus: "synced",
+          needsSync: false, // Successfully updated online
         };
 
         // Update in cache
@@ -404,6 +599,7 @@ export class OfflineRecipeService {
       ...recipeData,
       lastModified: Date.now(),
       syncStatus: "pending",
+      needsSync: true, // Updated recipe needs to be synced
       updated_at: new Date().toISOString(),
     };
 
@@ -424,7 +620,15 @@ export class OfflineRecipeService {
   }
 
   /**
-   * Delete recipe (works offline)
+   * Validate if ID is a valid MongoDB ObjectId format
+   */
+  private static isValidObjectId(id: string): boolean {
+    // MongoDB ObjectId: 24-character hexadecimal string
+    return /^[0-9a-fA-F]{24}$/.test(id);
+  }
+
+  /**
+   * Delete recipe (works offline) - uses tombstone pattern
    */
   static async delete(id: string): Promise<void> {
     const state = await this.loadOfflineState();
@@ -439,44 +643,59 @@ export class OfflineRecipeService {
     const recipe = state.recipes[recipeIndex];
     const isOnline = await this.isOnline();
 
-    if (isOnline && !recipe.tempId) {
+    // Check if this is a valid server recipe that can be deleted online immediately
+    if (isOnline && !recipe.tempId && this.isValidObjectId(id)) {
       try {
-        // Try online deletion first (if recipe has real ID)
+        // Try online deletion first (if recipe has valid ID)
         await ApiService.recipes.delete(id);
 
-        // Remove from cache
+        // Remove from cache entirely - successful online deletion
         state.recipes.splice(recipeIndex, 1);
         await this.saveOfflineState(state);
 
+        if (__DEV__) {
+          console.log(`✅ Recipe deleted online immediately: ${recipe.name}`);
+        }
         return;
       } catch (error) {
-        console.warn(
-          "Online recipe deletion failed, marking for offline deletion:",
-          error
-        );
+        if (__DEV__) {
+          console.warn(
+            "Online recipe deletion failed, creating tombstone:",
+            error
+          );
+        }
       }
     }
 
-    // Handle offline deletion
-    if (recipe.tempId) {
-      // If it's a purely offline recipe, just remove it
+    // Handle offline deletion or failed online deletion with tombstones
+    if (recipe.tempId && recipe.id.startsWith("offline_")) {
+      // If it's a purely offline recipe (never been synced), just remove it entirely
       state.recipes.splice(recipeIndex, 1);
+
       // Also remove any pending operations for this recipe
       state.pendingOperations = state.pendingOperations.filter(
         op => op.recipeId !== recipe.tempId && op.recipeId !== recipe.id
       );
-    } else {
-      // Mark for deletion on server
-      recipe.syncStatus = "pending";
-      await this.addPendingOperation({
-        type: "delete",
-        recipeId: id,
-        timestamp: Date.now(),
-        retryCount: 0,
-      });
 
-      // Remove from local cache
-      state.recipes.splice(recipeIndex, 1);
+      if (__DEV__) {
+        console.log(`🗑️ Offline-only recipe removed: ${recipe.name}`);
+      }
+    } else {
+      // Create tombstone for server recipe or offline recipe that needs server deletion
+      const tombstone: OfflineRecipe = {
+        ...recipe,
+        isDeleted: true,
+        deletedAt: Date.now(),
+        needsSync: true,
+        syncStatus: "pending",
+        lastModified: Date.now(),
+      };
+
+      state.recipes[recipeIndex] = tombstone;
+
+      if (__DEV__) {
+        console.log(`🪦 Created deletion tombstone: ${recipe.name}`);
+      }
     }
 
     await this.saveOfflineState(state);
@@ -504,6 +723,29 @@ export class OfflineRecipeService {
     offlineRecipes.forEach(offlineRecipe => {
       const serverId = offlineRecipe.id;
       const serverRecipe = merged.get(serverId);
+
+      // Always preserve offline recipes with temp IDs (newly created offline recipes)
+      if (offlineRecipe.tempId || serverId.startsWith("offline_")) {
+        if (__DEV__) {
+          console.log(
+            `🔄 Preserving offline recipe with temp ID: ${offlineRecipe.name} (${serverId})`
+          );
+        }
+        merged.set(serverId, offlineRecipe);
+        return;
+      }
+
+      // CRITICAL: Tombstones (deleted recipes) always take precedence
+      // This prevents deleted recipes from reappearing when server still has them
+      if (offlineRecipe.isDeleted) {
+        if (__DEV__) {
+          console.log(
+            `🪦 Preserving tombstone for deleted recipe: ${offlineRecipe.name} (${serverId})`
+          );
+        }
+        merged.set(serverId, offlineRecipe);
+        return;
+      }
 
       if (
         !serverRecipe ||
@@ -536,7 +778,294 @@ export class OfflineRecipeService {
   }
 
   /**
-   * Sync pending operations when online
+   * Sync recipes flagged as needing sync (new approach)
+   */
+  static async syncModifiedRecipes(): Promise<{
+    success: number;
+    failed: number;
+    details: string[];
+  }> {
+    if (!(await this.isOnline())) {
+      return { success: 0, failed: 0, details: ["Device is offline"] };
+    }
+
+    const state = await this.loadOfflineState();
+    const recipesToSync = state.recipes.filter(recipe => recipe.needsSync);
+
+    if (recipesToSync.length === 0) {
+      return { success: 0, failed: 0, details: ["No recipes need syncing"] };
+    }
+
+    // Separate deleted recipes from regular recipes
+    const recipesToDelete = recipesToSync.filter(recipe => recipe.isDeleted);
+    const recipesToCreateOrUpdate = recipesToSync.filter(
+      recipe => !recipe.isDeleted
+    );
+
+    let successCount = 0;
+    let failedCount = 0;
+    const details: string[] = [];
+
+    // Handle deleted recipes first
+    for (const recipe of recipesToDelete) {
+      try {
+        // Only try to delete on server if it has a real server ID
+        if (!recipe.tempId && this.isValidObjectId(recipe.id)) {
+          await ApiService.recipes.delete(recipe.id);
+          details.push(`Deleted from server: ${recipe.name}`);
+        } else {
+          details.push(`Removed offline-only recipe: ${recipe.name}`);
+        }
+
+        // Remove tombstone entirely from storage after successful sync
+        const recipeIndex = state.recipes.findIndex(
+          r => r.id === recipe.id || r.tempId === recipe.tempId
+        );
+        if (recipeIndex >= 0) {
+          state.recipes.splice(recipeIndex, 1);
+          // CRITICAL: Save state immediately so other operations see updated state
+          await this.saveOfflineState(state);
+          if (__DEV__) {
+            console.log(
+              `💾 Immediately saved state after removing tombstone: ${recipe.name}`
+            );
+          }
+        }
+
+        successCount++;
+      } catch (error) {
+        // If recipe is already deleted on server (404), treat as successful
+        if ((error as any).response?.status === 404) {
+          details.push(`Already deleted on server: ${recipe.name}`);
+
+          // Remove tombstone entirely from storage since deletion succeeded
+          const recipeIndex = state.recipes.findIndex(
+            r => r.id === recipe.id || r.tempId === recipe.tempId
+          );
+          if (recipeIndex >= 0) {
+            state.recipes.splice(recipeIndex, 1);
+            // CRITICAL: Save state immediately so other operations see updated state
+            await this.saveOfflineState(state);
+            if (__DEV__) {
+              console.log(
+                `💾 Immediately saved state after removing tombstone: ${recipe.name}`
+              );
+            }
+          }
+
+          successCount++;
+        } else {
+          console.error(`Failed to delete recipe ${recipe.name}:`, error);
+
+          // Mark tombstone as failed sync but keep it for retry
+          const recipeIndex = state.recipes.findIndex(
+            r => r.id === recipe.id || r.tempId === recipe.tempId
+          );
+          if (recipeIndex >= 0) {
+            state.recipes[recipeIndex] = {
+              ...recipe,
+              syncStatus: "failed",
+              // Keep needsSync: true so it can be retried
+              // Keep isDeleted: true so it stays filtered from UI
+            };
+          }
+
+          details.push(
+            `Failed to delete: ${recipe.name} - ${error instanceof Error ? error.message : "Unknown error"}`
+          );
+          failedCount++;
+        }
+      }
+    }
+
+    // Handle regular recipe creation and updates
+    for (const recipe of recipesToCreateOrUpdate) {
+      try {
+        if (recipe.tempId || recipe.id.startsWith("offline_")) {
+          // This is a new offline recipe - create it on server
+          // Strip offline-specific fields before sending to server
+          const createData: CreateRecipeRequest = {
+            name: recipe.name,
+            style: recipe.style,
+            description: recipe.description || "",
+            batch_size: recipe.batch_size,
+            batch_size_unit: recipe.batch_size_unit,
+            unit_system: recipe.unit_system,
+            boil_time: recipe.boil_time,
+            efficiency: recipe.efficiency,
+            mash_temperature: recipe.mash_temperature,
+            mash_temp_unit: recipe.mash_temp_unit,
+            mash_time: recipe.mash_time,
+            is_public: recipe.is_public,
+            notes: recipe.notes,
+            ingredients: recipe.ingredients,
+          };
+
+          const response = await ApiService.recipes.create(createData);
+
+          // Replace the offline recipe with the server version
+          const recipeIndex = state.recipes.findIndex(
+            r => r.id === recipe.id || r.tempId === recipe.tempId
+          );
+          if (recipeIndex >= 0) {
+            // Preserve client-calculated metrics if server doesn't provide them
+            const offlineRecipe = state.recipes[recipeIndex];
+            const preservedMetrics = {
+              estimated_og:
+                response.data.estimated_og ?? offlineRecipe.estimated_og,
+              estimated_fg:
+                response.data.estimated_fg ?? offlineRecipe.estimated_fg,
+              estimated_abv:
+                response.data.estimated_abv ?? offlineRecipe.estimated_abv,
+              estimated_ibu:
+                response.data.estimated_ibu ?? offlineRecipe.estimated_ibu,
+              estimated_srm:
+                response.data.estimated_srm ?? offlineRecipe.estimated_srm,
+            };
+
+            state.recipes[recipeIndex] = {
+              ...response.data,
+              ...preservedMetrics, // Preserve client-calculated metrics
+              isOffline: false,
+              lastModified: Date.now(),
+              syncStatus: "synced",
+              needsSync: false,
+            };
+
+            if (
+              __DEV__ &&
+              (preservedMetrics.estimated_og ||
+                preservedMetrics.estimated_fg ||
+                preservedMetrics.estimated_abv ||
+                preservedMetrics.estimated_ibu ||
+                preservedMetrics.estimated_srm)
+            ) {
+              console.log(
+                `📊 Preserved client-calculated metrics for: ${recipe.name}`
+              );
+            }
+          }
+
+          details.push(`Created: ${recipe.name}`);
+          successCount++;
+        } else {
+          // This is an existing recipe - update it on server
+          // Strip offline-specific fields before sending to server
+          const updateData: UpdateRecipeRequest = {
+            name: recipe.name,
+            style: recipe.style,
+            description: recipe.description || "",
+            batch_size: recipe.batch_size,
+            batch_size_unit: recipe.batch_size_unit,
+            unit_system: recipe.unit_system,
+            boil_time: recipe.boil_time,
+            efficiency: recipe.efficiency,
+            mash_temperature: recipe.mash_temperature,
+            mash_temp_unit: recipe.mash_temp_unit,
+            mash_time: recipe.mash_time,
+            is_public: recipe.is_public,
+            notes: recipe.notes,
+            ingredients: recipe.ingredients,
+          };
+
+          const response = await ApiService.recipes.update(
+            recipe.id,
+            updateData
+          );
+
+          // Update the recipe with server response
+          const recipeIndex = state.recipes.findIndex(r => r.id === recipe.id);
+          if (recipeIndex >= 0) {
+            // Preserve client-calculated metrics if server doesn't provide them
+            const offlineRecipe = state.recipes[recipeIndex];
+            const preservedMetrics = {
+              estimated_og:
+                response.data.estimated_og ?? offlineRecipe.estimated_og,
+              estimated_fg:
+                response.data.estimated_fg ?? offlineRecipe.estimated_fg,
+              estimated_abv:
+                response.data.estimated_abv ?? offlineRecipe.estimated_abv,
+              estimated_ibu:
+                response.data.estimated_ibu ?? offlineRecipe.estimated_ibu,
+              estimated_srm:
+                response.data.estimated_srm ?? offlineRecipe.estimated_srm,
+            };
+
+            state.recipes[recipeIndex] = {
+              ...response.data,
+              ...preservedMetrics, // Preserve client-calculated metrics
+              isOffline: false,
+              lastModified: Date.now(),
+              syncStatus: "synced",
+              needsSync: false,
+            };
+
+            if (
+              __DEV__ &&
+              (preservedMetrics.estimated_og ||
+                preservedMetrics.estimated_fg ||
+                preservedMetrics.estimated_abv ||
+                preservedMetrics.estimated_ibu ||
+                preservedMetrics.estimated_srm)
+            ) {
+              console.log(
+                `📊 Preserved client-calculated metrics for updated: ${recipe.name}`
+              );
+            }
+          }
+
+          details.push(`Updated: ${recipe.name}`);
+          successCount++;
+        }
+      } catch (error) {
+        console.error(`Failed to sync recipe ${recipe.name}:`, error);
+
+        // Mark as failed sync but keep needsSync true for retry
+        const recipeIndex = state.recipes.findIndex(
+          r => r.id === recipe.id || r.tempId === recipe.tempId
+        );
+        if (recipeIndex >= 0) {
+          state.recipes[recipeIndex] = {
+            ...recipe,
+            syncStatus: "failed",
+            // Keep needsSync: true so it can be retried
+          };
+        }
+
+        details.push(
+          `Failed: ${recipe.name} - ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+        failedCount++;
+      }
+    }
+
+    // Save updated state
+    await this.saveOfflineState(state);
+
+    // Clean up old tombstones after successful sync
+    if (successCount > 0) {
+      try {
+        const cleanup = await this.cleanupTombstones();
+        if (cleanup.cleaned > 0) {
+          details.push(`Cleaned up ${cleanup.cleaned} old tombstones`);
+        }
+      } catch (error) {
+        console.warn("Failed to cleanup tombstones:", error);
+      }
+    }
+
+    if (__DEV__) {
+      console.log(
+        `🔄 Sync completed: ${successCount} successful, ${failedCount} failed`
+      );
+      details.forEach(detail => console.log(`  - ${detail}`));
+    }
+
+    return { success: successCount, failed: failedCount, details };
+  }
+
+  /**
+   * Sync pending operations when online (legacy - kept for compatibility)
    */
   static async syncPendingChanges(): Promise<{
     success: number;
@@ -685,15 +1214,23 @@ export class OfflineRecipeService {
    */
   static async getSyncStatus(): Promise<{
     totalRecipes: number;
+    activeRecipes: number; // Visible recipes (excludes deleted)
     pendingSync: number;
+    needsSync: number; // New field for recipes flagged for sync
+    pendingDeletions: number; // Number of recipes marked for deletion
     conflicts: number;
     failedSync: number;
     lastSync: number;
   }> {
     const state = await this.loadOfflineState();
 
+    const activeRecipes = state.recipes.filter(r => !r.isDeleted).length;
     const pendingSync = state.recipes.filter(
       r => r.syncStatus === "pending"
+    ).length;
+    const needsSync = state.recipes.filter(r => r.needsSync === true).length;
+    const pendingDeletions = state.recipes.filter(
+      r => r.isDeleted && r.needsSync
     ).length;
     const conflicts = state.recipes.filter(
       r => r.syncStatus === "conflict"
@@ -704,11 +1241,112 @@ export class OfflineRecipeService {
 
     return {
       totalRecipes: state.recipes.length,
+      activeRecipes, // Visible recipes count
       pendingSync,
+      needsSync, // Number of recipes that need syncing (includes deletions)
+      pendingDeletions, // Number of deletion tombstones pending sync
       conflicts,
       failedSync,
       lastSync: state.lastSync,
     };
+  }
+
+  /**
+   * Clean up old tombstones that have been successfully synced or are very old
+   */
+  static async cleanupTombstones(): Promise<{
+    cleaned: number;
+    details: string[];
+  }> {
+    const state = await this.loadOfflineState();
+    const initialCount = state.recipes.length;
+    const cleanupDetails: string[] = [];
+
+    // Remove tombstones older than 30 days or already synced
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
+    state.recipes = state.recipes.filter(recipe => {
+      // Keep non-tombstones
+      if (!recipe.isDeleted) {
+        return true;
+      }
+
+      // Remove old tombstones (30+ days old)
+      if (recipe.deletedAt && recipe.deletedAt < thirtyDaysAgo) {
+        cleanupDetails.push(
+          `Cleaned old tombstone: ${recipe.name} (deleted ${new Date(recipe.deletedAt).toLocaleDateString()})`
+        );
+        return false;
+      }
+
+      // Remove successfully synced tombstones
+      if (recipe.syncStatus === "synced" && !recipe.needsSync) {
+        cleanupDetails.push(`Cleaned synced tombstone: ${recipe.name}`);
+        return false;
+      }
+
+      // Keep tombstones that still need sync or are recent
+      return true;
+    });
+
+    const cleanedCount = initialCount - state.recipes.length;
+
+    if (cleanedCount > 0) {
+      await this.saveOfflineState(state);
+
+      if (__DEV__) {
+        console.log(`🧹 Cleaned up ${cleanedCount} tombstones`);
+        cleanupDetails.forEach(detail => console.log(`  - ${detail}`));
+      }
+    }
+
+    return {
+      cleaned: cleanedCount,
+      details: cleanupDetails,
+    };
+  }
+
+  /**
+   * DEV ONLY: Force cleanup all tombstones to get app back to clean state
+   * Use this during development when you've manually cleaned the database
+   */
+  static async devCleanupAllTombstones(): Promise<{
+    removedTombstones: number;
+    tombstoneNames: string[];
+  }> {
+    if (!__DEV__) {
+      throw new Error(
+        "devCleanupAllTombstones is only available in development mode"
+      );
+    }
+
+    const state = await this.loadOfflineState();
+
+    // Count and log tombstones before cleanup
+    const tombstones = state.recipes.filter(r => r.isDeleted);
+    const tombstoneNames = tombstones.map(t => t.name);
+    const tombstoneCount = tombstones.length;
+
+    if (tombstoneCount > 0) {
+      console.log(`🧹 DEV: Force removing ${tombstoneCount} tombstones:`);
+      tombstoneNames.forEach(name => console.log(`   - ${name}`));
+    } else {
+      console.log(`🧹 DEV: No tombstones found to clean up`);
+    }
+
+    // Remove ALL tombstones regardless of sync status
+    state.recipes = state.recipes.filter(r => !r.isDeleted);
+
+    // Save cleaned state
+    await this.saveOfflineState(state);
+
+    const result = {
+      removedTombstones: tombstoneCount,
+      tombstoneNames,
+    };
+
+    console.log(`🧹 DEV: Tombstone cleanup complete:`, result);
+    return result;
   }
 
   /**

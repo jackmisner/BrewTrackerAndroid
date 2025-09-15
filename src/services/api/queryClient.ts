@@ -29,16 +29,27 @@ import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persi
 
 /**
  * AsyncStorage persister for offline support
- * Enables data persistence across app sessions
+ * Enables data persistence across app sessions with user-scoped keys
  */
-export const asyncStoragePersister = createAsyncStoragePersister({
-  storage: AsyncStorage,
-  key: "BREWTRACKER_CACHE",
-  serialize: JSON.stringify,
-  deserialize: JSON.parse,
-  // Throttle writes to prevent excessive storage access
-  throttleTime: 1000,
-});
+export const createUserScopedPersister = (userId?: string) => {
+  const cacheKey = userId
+    ? `BREWTRACKER_CACHE_${userId}`
+    : "BREWTRACKER_CACHE_ANONYMOUS";
+
+  return createAsyncStoragePersister({
+    storage: AsyncStorage,
+    key: cacheKey,
+    serialize: JSON.stringify,
+    deserialize: JSON.parse,
+    // Throttle writes to prevent excessive storage access
+    throttleTime: 1000,
+  });
+};
+
+/**
+ * Default persister for anonymous/initial state
+ */
+export const asyncStoragePersister = createUserScopedPersister();
 
 /**
  * Main React Query client with mobile-optimized configuration
@@ -136,6 +147,31 @@ export const cacheUtils = {
   // Clear all cached data
   clearAll: () => {
     queryClient.clear();
+  },
+
+  // Clear user-scoped persisted cache from AsyncStorage
+  clearUserPersistedCache: async (userId?: string) => {
+    const cacheKey = userId
+      ? `BREWTRACKER_CACHE_${userId}`
+      : "BREWTRACKER_CACHE_ANONYMOUS";
+    try {
+      await AsyncStorage.removeItem(cacheKey);
+    } catch (error) {
+      console.warn("Failed to clear persisted cache:", error);
+    }
+  },
+
+  // Clear all persisted cache keys (for complete cleanup)
+  clearAllPersistedCache: async () => {
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const cacheKeys = keys.filter(key => key.startsWith("BREWTRACKER_CACHE"));
+      if (cacheKeys.length > 0) {
+        await AsyncStorage.multiRemove(cacheKeys);
+      }
+    } catch (error) {
+      console.warn("Failed to clear all persisted cache:", error);
+    }
   },
 
   // Remove cached data older than specified time

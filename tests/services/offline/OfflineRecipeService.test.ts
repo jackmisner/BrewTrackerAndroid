@@ -69,24 +69,26 @@ describe("OfflineRecipeService", () => {
     mockApiService.checkConnection = jest.fn().mockResolvedValue(true);
     mockApiService.recipes = {
       getAll: jest.fn().mockResolvedValue({
-        data: [
-          {
-            id: "recipe1",
-            name: "Test Recipe 1",
-            description: "Test description",
-            style: "American Pale Ale",
-            batch_size: 5,
-            batch_size_unit: "gallon",
-            efficiency: 75,
-            ingredients: [],
-            user_id: "user123",
-            is_public: false,
-            is_owner: true,
-            created_at: "2024-01-01T00:00:00Z",
-            updated_at: "2024-01-01T00:00:00Z",
-            version: 1,
-          },
-        ],
+        data: {
+          recipes: [
+            {
+              id: "recipe1",
+              name: "Test Recipe 1",
+              description: "Test description",
+              style: "American Pale Ale",
+              batch_size: 5,
+              batch_size_unit: "gallon",
+              efficiency: 75,
+              ingredients: [],
+              user_id: "user123",
+              is_public: false,
+              is_owner: true,
+              created_at: "2024-01-01T00:00:00Z",
+              updated_at: "2024-01-01T00:00:00Z",
+              version: 1,
+            },
+          ],
+        },
       }),
       getById: jest.fn().mockResolvedValue({
         data: {
@@ -353,6 +355,15 @@ describe("OfflineRecipeService", () => {
     it("should handle AsyncStorage errors", async () => {
       mockAsyncStorage.getItem.mockRejectedValue(new Error("Storage error"));
 
+      // Mock as offline so it doesn't fall back to API
+      (
+        NetInfo.fetch as jest.MockedFunction<typeof NetInfo.fetch>
+      ).mockResolvedValue({
+        isConnected: false,
+        isInternetReachable: false,
+        type: "none",
+      } as any);
+
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
 
       const result = await OfflineRecipeService.getAll();
@@ -392,6 +403,15 @@ describe("OfflineRecipeService", () => {
 
     it("should handle malformed offline state data", async () => {
       mockAsyncStorage.getItem.mockResolvedValue("invalid json");
+
+      // Mock as offline so it doesn't fall back to API
+      (
+        NetInfo.fetch as jest.MockedFunction<typeof NetInfo.fetch>
+      ).mockResolvedValue({
+        isConnected: false,
+        isInternetReachable: false,
+        type: "none",
+      } as any);
 
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
 

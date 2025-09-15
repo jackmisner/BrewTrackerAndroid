@@ -26,10 +26,21 @@ jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: "MaterialIcons",
 }));
 
-jest.mock("@tanstack/react-query", () => ({
-  useQuery: jest.fn(),
-  useQueryClient: jest.fn(() => ({ invalidateQueries: jest.fn() })),
-}));
+jest.mock("@tanstack/react-query", () => {
+  const React = require("react");
+  return {
+    useQuery: jest.fn(),
+    useMutation: jest.fn(),
+    useQueryClient: jest.fn(() => ({ invalidateQueries: jest.fn() })),
+    QueryClient: jest.fn().mockImplementation(() => ({
+      invalidateQueries: jest.fn(),
+      setQueryData: jest.fn(),
+      getQueryData: jest.fn(),
+    })),
+    QueryClientProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+  };
+});
 
 jest.mock("expo-router", () => ({
   router: {

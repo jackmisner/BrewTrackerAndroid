@@ -20,7 +20,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNetwork } from "@contexts/NetworkContext";
 import ApiService from "@services/api/apiService";
-import OfflineCacheService from "@services/offline/OfflineCacheService";
+import { OfflineCacheService } from "@services/offline/OfflineCacheService";
 import { IngredientType, RecipeIngredient } from "@src/types";
 
 /**

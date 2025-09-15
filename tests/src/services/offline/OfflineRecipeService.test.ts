@@ -665,10 +665,12 @@ describe("OfflineRecipeService", () => {
 
       await OfflineRecipeService.delete("recipe-1");
 
-      // Should mark recipe for deletion when online delete fails
+      // Should mark recipe for deletion using tombstone approach (isDeleted: true, needsSync: true)
       expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
-        expect.stringContaining("_pending"),
-        expect.stringContaining('"type":"delete"')
+        expect.stringContaining("offline_recipes_user-123"),
+        expect.stringMatching(
+          /"isDeleted":true.*"needsSync":true|"needsSync":true.*"isDeleted":true/
+        )
       );
     });
 
@@ -870,10 +872,10 @@ describe("OfflineRecipeService", () => {
 
       // Mock AsyncStorage to return the correct data structure
       mockAsyncStorage.getItem.mockImplementation(async key => {
-        if (key === "offline_recipes") {
+        if (key === "offline_recipes_user-123") {
           return JSON.stringify(mockRecipes);
         }
-        if (key === "offline_recipes_pending") {
+        if (key === "offline_recipes_user-123_pending") {
           return JSON.stringify([]); // No pending operations
         }
         return null;

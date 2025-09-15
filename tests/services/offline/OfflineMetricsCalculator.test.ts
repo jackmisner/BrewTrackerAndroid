@@ -11,7 +11,12 @@
  */
 
 import { OfflineMetricsCalculator } from "@services/offline/OfflineMetricsCalculator";
-import { RecipeIngredient, RecipeMetrics } from "@src/types";
+import {
+  RecipeIngredient,
+  RecipeMetrics,
+  IngredientType,
+  IngredientUnit,
+} from "@src/types";
 
 describe("OfflineMetricsCalculator", () => {
   describe("calculateMetrics", () => {
@@ -27,7 +32,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 10,
             unit: "lb",
-            potential: 1.037,
+            potential: 37, // PPG format
           },
           {
             name: "Cascade",
@@ -77,7 +82,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 4,
             unit: "kg",
-            potential: 1.037,
+            potential: 37, // PPG format
           },
           {
             name: "Hallertau",
@@ -107,7 +112,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 8,
             unit: "lb",
-            potential: 1.037,
+            potential: 37, // PPG format
           },
         ] as RecipeIngredient[],
       };
@@ -129,7 +134,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 8,
             unit: "lb",
-            potential: 1.037,
+            potential: 37, // PPG format
           },
         ] as RecipeIngredient[],
       };
@@ -153,7 +158,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 2.2, // Should be ~1kg
             unit: "lb",
-            potential: 1.037,
+            potential: 37, // PPG format
           },
         ] as RecipeIngredient[],
       };
@@ -174,7 +179,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 8,
             unit: "lbs", // Plural form
-            potential: 1.037,
+            potential: 37, // PPG format
           },
           {
             id: "2",
@@ -182,7 +187,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 16,
             unit: "ounces",
-            potential: 1.037,
+            potential: 37, // PPG format
           },
           {
             id: "3",
@@ -190,7 +195,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 500,
             unit: "grams",
-            potential: 1.034,
+            potential: 34, // PPG format
           },
         ] as unknown as RecipeIngredient[],
       };
@@ -211,7 +216,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 8,
             unit: " lbs. ", // With spaces and dots
-            potential: 1.037,
+            potential: 37, // PPG format
           },
         ] as unknown as RecipeIngredient[],
       };
@@ -233,7 +238,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 10,
             unit: "lb",
-            potential: 1.037,
+            potential: 37, // PPG format
           },
           {
             name: "Bittering Hops",
@@ -280,7 +285,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 10,
             unit: "lb",
-            potential: 1.037,
+            potential: 37, // PPG format
           },
           {
             name: "Dry Hops",
@@ -309,7 +314,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 10,
             unit: "lb",
-            potential: 1.037,
+            potential: 37, // PPG format
           },
           {
             name: "Unknown Hops",
@@ -338,7 +343,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 10,
             unit: "lb",
-            potential: 1.037,
+            potential: 37, // PPG format
           },
           {
             name: "Hops",
@@ -441,7 +446,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 10,
             unit: "lb",
-            potential: 1.037,
+            potential: 37, // PPG format
           },
           {
             name: "High Attenuation Yeast",
@@ -478,7 +483,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 10,
             unit: "lb",
-            potential: 1.037,
+            potential: 37, // PPG format
           },
           {
             name: "Unknown Yeast",
@@ -692,14 +697,14 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 8,
             unit: "lb",
-            potential: 1.037,
+            potential: 37, // PPG format
           },
           {
             name: "Honey",
             type: "other" as const,
             amount: 2,
             unit: "lb",
-            potential: 1.035, // Fermentable sugar
+            potential: 35, // PPG format - Fermentable sugar
           },
         ] as RecipeIngredient[],
       };
@@ -720,7 +725,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 10,
             unit: "lb",
-            potential: 1.037,
+            potential: 37, // PPG format
           },
           {
             name: "Aged Hops for Lambic",
@@ -750,7 +755,7 @@ describe("OfflineMetricsCalculator", () => {
             type: "grain" as const,
             amount: 1,
             unit: "lb",
-            potential: 1.037,
+            potential: 37, // PPG format
           },
         ] as RecipeIngredient[],
       };
@@ -759,6 +764,102 @@ describe("OfflineMetricsCalculator", () => {
 
       expect(result.og).toBeGreaterThan(1.0);
       expect(result.srm).toBeGreaterThan(0);
+    });
+
+    it("should handle invalid/edge inputs gracefully without throwing", () => {
+      const invalidInputs = [
+        // Negative efficiency
+        {
+          batch_size: 5,
+          batch_size_unit: "gallon",
+          efficiency: -10,
+          ingredients: [
+            {
+              name: "Pale Malt",
+              type: "grain" as const,
+              amount: 8,
+              unit: "lb",
+              potential: 37, // PPG format
+            },
+          ] as RecipeIngredient[],
+        },
+        // Zero batch size
+        {
+          batch_size: 0,
+          batch_size_unit: "gallon",
+          efficiency: 75,
+          ingredients: [
+            {
+              name: "Pale Malt",
+              type: "grain" as const,
+              amount: 8,
+              unit: "lb",
+              potential: 37, // PPG format
+            },
+          ] as RecipeIngredient[],
+        },
+        // Empty ingredients array
+        {
+          batch_size: 5,
+          batch_size_unit: "gallon",
+          efficiency: 75,
+          ingredients: [] as RecipeIngredient[],
+        },
+        // Invalid ingredient types and units
+        {
+          batch_size: 5,
+          batch_size_unit: "gallon",
+          efficiency: 75,
+          ingredients: [
+            {
+              id: "invalid-ingredient-id",
+              name: "Invalid Ingredient",
+              type: "grain" as IngredientType,
+              amount: 0,
+              unit: "lb" as IngredientUnit,
+              potential: undefined,
+            } as RecipeIngredient,
+          ],
+        },
+        // Missing required properties
+        {
+          batch_size: 5,
+          batch_size_unit: "gallon",
+          efficiency: 75,
+          ingredients: [
+            {
+              id: "missing-props-ingredient-id",
+              name: undefined as any,
+              type: undefined as any,
+              amount: undefined as any,
+              unit: undefined as any,
+            },
+          ] as RecipeIngredient[],
+        },
+      ];
+
+      invalidInputs.forEach((params, index) => {
+        let result!: RecipeMetrics;
+        expect(() => {
+          result = OfflineMetricsCalculator.calculateMetrics(params as any);
+        }).not.toThrow(`Invalid input case ${index + 1} threw unexpectedly`);
+
+        // Valid fallback structure and values
+        expect(result).toBeDefined();
+        expect(typeof result).toBe("object");
+        expect(result).toHaveProperty("og", 1.0);
+        expect(result).toHaveProperty("fg", 1.0);
+        expect(result).toHaveProperty("abv", 0.0);
+        expect(result).toHaveProperty("ibu", 0.0);
+        expect(result).toHaveProperty("srm", 0.0);
+
+        // Types
+        expect(typeof result.og).toBe("number");
+        expect(typeof result.fg).toBe("number");
+        expect(typeof result.abv).toBe("number");
+        expect(typeof result.ibu).toBe("number");
+        expect(typeof result.srm).toBe("number");
+      });
     });
   });
 });

@@ -156,6 +156,18 @@ jest.mock("@src/hooks/useOfflineRecipes", () => ({
     mutate: jest.fn(),
     isLoading: false,
   })),
+  useOfflineModifiedSync: jest.fn(() => ({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    isPending: false,
+    isLoading: false,
+  })),
+  useAutoOfflineModifiedSync: jest.fn(() => ({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    isPending: false,
+    isLoading: false,
+  })),
 }));
 
 jest.mock("expo-haptics", () => ({
@@ -274,6 +286,8 @@ const {
   useOfflineDeleteRecipe,
   useOfflineSyncStatus,
   useOfflineSync,
+  useOfflineModifiedSync,
+  useAutoOfflineModifiedSync,
 } = require("@src/hooks/useOfflineRecipes");
 
 beforeEach(() => {
@@ -332,6 +346,16 @@ beforeEach(() => {
   });
   useOfflineSync.mockReturnValue({
     mutate: jest.fn(),
+    isPending: false,
+  });
+  useOfflineModifiedSync.mockReturnValue({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    isPending: false,
+  });
+  useAutoOfflineModifiedSync.mockReturnValue({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
     isPending: false,
   });
 });
@@ -695,6 +719,20 @@ describe("RecipesScreen", () => {
       // Mock sync hook
       useOfflineSync.mockReturnValue({
         mutate: jest.fn(),
+        isPending: false,
+      });
+
+      // Mock modified sync hook
+      useOfflineModifiedSync.mockReturnValue({
+        mutate: jest.fn(),
+        mutateAsync: jest.fn(),
+        isPending: false,
+      });
+
+      // Mock auto modified sync hook
+      useAutoOfflineModifiedSync.mockReturnValue({
+        mutate: jest.fn(),
+        mutateAsync: jest.fn(),
         isPending: false,
       });
     });

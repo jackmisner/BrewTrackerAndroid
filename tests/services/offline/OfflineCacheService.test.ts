@@ -43,6 +43,12 @@ describe("OfflineCacheService", () => {
 
     // Mock API service methods
     mockApiService.checkConnection = jest.fn().mockResolvedValue(true);
+    if (!mockApiService.token) {
+      mockApiService.token = {} as any;
+    }
+    (mockApiService.token.getToken as jest.Mock) = jest
+      .fn()
+      .mockResolvedValue("mock-jwt-token");
     mockApiService.beerStyles = {
       getAll: jest.fn().mockResolvedValue({
         data: {
@@ -342,6 +348,12 @@ describe("OfflineCacheService", () => {
         lastUpdated: new Date(lastUpdated),
         dataSize: 100,
         version: 1,
+        ingredientCounts: {
+          grain: 0,
+          hop: 0,
+          other: 0,
+          yeast: 0,
+        },
       });
     });
 
@@ -355,6 +367,35 @@ describe("OfflineCacheService", () => {
         lastUpdated: null,
         dataSize: 0,
         version: 0,
+        ingredientCounts: {
+          grain: 0,
+          hop: 0,
+          other: 0,
+          yeast: 0,
+        },
+      });
+    });
+    it("should return correct ingredient counts", async () => {
+      const cachedData = {
+        ingredients: {
+          grain: [{ name: "Pale Malt" }, { name: "Munich Malt" }],
+          hop: [{ name: "Cascade" }],
+          yeast: [],
+          other: [{ name: "Irish Moss" }],
+        },
+        beerStyles: { styles: [] },
+        metadata: { version: 1, lastUpdated: Date.now(), dataSize: 100 },
+      };
+
+      mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedData));
+
+      const result = await OfflineCacheService.getCacheStatus();
+
+      expect(result.ingredientCounts).toEqual({
+        grain: 2,
+        hop: 1,
+        other: 1,
+        yeast: 0,
       });
     });
 

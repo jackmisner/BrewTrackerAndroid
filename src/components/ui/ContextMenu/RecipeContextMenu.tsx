@@ -18,6 +18,7 @@
 import React from "react";
 import { Recipe } from "@src/types";
 import { BaseContextMenu, BaseAction } from "./BaseContextMenu";
+import { useUserValidation } from "@utils/userValidation";
 
 interface RecipeContextMenuProps {
   visible: boolean;
@@ -85,7 +86,7 @@ export function createDefaultRecipeActions(handlers: {
       title: "Edit Recipe",
       icon: "edit",
       onPress: handlers.onEdit,
-      // Hide edit for public recipes that aren't owned by the user
+      // Hide edit action for public recipes that user doesn't own
       hidden: recipe => recipe.is_public && !recipe.is_owner,
     },
     {
@@ -120,8 +121,79 @@ export function createDefaultRecipeActions(handlers: {
       icon: "delete",
       onPress: handlers.onDelete,
       destructive: true,
-      // Hide delete for public recipes that aren't owned by the user
+      // Hide delete action for public recipes that user doesn't own
       hidden: recipe => recipe.is_public && !recipe.is_owner,
     },
   ];
+}
+
+/**
+ * Filter recipe actions based on user ownership validation
+ * Use this function to validate destructive actions before displaying the context menu
+ *
+ * @param actions - All possible actions
+ * @param recipe - Recipe to validate ownership for
+ * @param canUserModify - Result of canUserModifyResource validation
+ * @returns Filtered actions array with destructive actions removed if user lacks permission
+ */
+export function filterRecipeActionsByOwnership(
+  actions: BaseAction<Recipe>[],
+  recipe: Recipe,
+  canUserModify: boolean
+): BaseAction<Recipe>[] {
+  return actions.filter(action => {
+    // For public recipes that user doesn't own, hide edit and delete actions
+    if (recipe.is_public && !canUserModify) {
+      return !["edit", "delete"].includes(action.id);
+    }
+
+    // For private recipes, use the validated ownership check for destructive actions
+    if (["edit", "delete"].includes(action.id)) {
+      return canUserModify;
+    }
+
+    // Keep all non-destructive actions
+    return true;
+  });
+}
+
+/**
+ * React hook version for filtering actions with async validation
+ * Use this in components that can handle async operations
+ *
+ * @param recipe - Recipe to validate
+ * @returns Object with validated actions and loading state
+ */
+export function useValidatedRecipeActions(recipe: Recipe | null) {
+  const { canUserModifyResource } = useUserValidation();
+  const [canModify, setCanModify] = React.useState<boolean>(false);
+  const [isValidating, setIsValidating] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (!recipe) {
+      setCanModify(false);
+      return;
+    }
+
+    setIsValidating(true);
+    canUserModifyResource({
+      ...recipe,
+      user_id: recipe.user_id || null, // Convert undefined to null for type compatibility
+    })
+      .then(setCanModify)
+      .catch(error => {
+        console.warn("Failed to validate recipe ownership:", error);
+        setCanModify(false);
+      })
+      .finally(() => setIsValidating(false));
+  }, [recipe, canUserModifyResource]);
+
+  return {
+    canModify,
+    isValidating,
+    getFilteredActions: (actions: BaseAction<Recipe>[]) =>
+      recipe
+        ? filterRecipeActionsByOwnership(actions, recipe, canModify)
+        : actions,
+  };
 }

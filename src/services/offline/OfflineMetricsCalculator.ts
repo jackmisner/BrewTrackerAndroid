@@ -57,6 +57,19 @@ export class OfflineMetricsCalculator {
    * Calculate complete recipe metrics
    */
   static calculateMetrics(params: CalculationParams): RecipeMetrics {
+    // Validate input data first
+    const validation = this.validateRecipeData(params);
+    if (!validation.isValid) {
+      // Return fallback metrics for invalid recipes
+      if (__DEV__) {
+        console.warn(
+          "Invalid recipe data, returning fallback metrics:",
+          validation.errors
+        );
+      }
+      return this.getFallbackMetrics();
+    }
+
     const {
       batch_size,
       batch_size_unit,
@@ -106,20 +119,21 @@ export class OfflineMetricsCalculator {
         // Convert ingredient amount to kg
         const amountKg = this.convertIngredientToKg(ingredient);
 
-        // Get potential gravity (typically 1.030-1.045 for malts)
-        const potential = ingredient.potential || 1.037; // Default malt potential
-        const gravityPoints = (potential - 1) * 1000; // Convert to points (e.g., 1.037 = 37 points)
+        // Get potential gravity in PPG format (Points Per Gallon)
+        // Backend stores potential as PPG (e.g., 37 for base malt), not SG format
+        const potentialPPG = ingredient.potential || 37; // Default malt PPG
 
-        // Calculate contribution with efficiency (convert kg to lbs for PPG calculation)
+        // Calculate gravity contribution using PPG values directly (matches backend)
+        // Backend formula: total_points += weight_lb * ri.potential
         const amountLbs = amountKg / this.POUND_TO_KG;
-        const batchGallons = batchSizeLiters / this.GALLON_TO_LITER;
-        const contribution =
-          (amountLbs * gravityPoints * efficiency) / batchGallons;
-        totalPoints += contribution;
+        const grainPoints = amountLbs * potentialPPG;
+        totalPoints += grainPoints;
       });
 
-    // Convert points back to specific gravity
-    return 1 + totalPoints / 1000;
+    // Apply efficiency and batch size (matches backend formula exactly)
+    // Backend: og = 1.0 + (total_points * efficiency) / (batch_gal * 1000)
+    const batchGallons = batchSizeLiters / this.GALLON_TO_LITER;
+    return 1 + (totalPoints * efficiency) / (batchGallons * 1000);
   }
 
   /**
@@ -393,6 +407,50 @@ export class OfflineMetricsCalculator {
       ibu: 0.0,
       srm: 0.0,
     };
+  }
+
+  /**
+   * Debug method to log calculation details
+   */
+  static debugCalculation(params: CalculationParams): void {
+    if (!__DEV__) {
+      return;
+    }
+
+    console.log("=== Offline Metrics Debug ===");
+    console.log("Parameters:", {
+      batch_size: params.batch_size,
+      batch_size_unit: params.batch_size_unit,
+      efficiency: params.efficiency,
+    });
+
+    const batchSizeLiters = this.convertToLiters(
+      params.batch_size,
+      params.batch_size_unit
+    );
+    console.log("Batch size in liters:", batchSizeLiters);
+
+    console.log("Ingredients:");
+    params.ingredients.forEach((ing, index) => {
+      if (ing.type === "grain" || ing.type === "other") {
+        const amountKg = this.convertIngredientToKg(ing);
+        const potentialPPG = ing.potential || 37; // PPG format
+        const amountLbs = amountKg / this.POUND_TO_KG;
+        const grainPoints = amountLbs * potentialPPG;
+
+        console.log(`  [${index}] ${ing.name}:`, {
+          amount: `${ing.amount} ${ing.unit}`,
+          amountKg,
+          amountLbs,
+          potentialPPG,
+          grainPoints,
+        });
+      }
+    });
+
+    const result = this.calculateMetrics(params);
+    console.log("Final result:", result);
+    console.log("============================");
   }
 }
 

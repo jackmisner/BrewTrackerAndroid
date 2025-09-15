@@ -4,7 +4,7 @@
 
 import React from "react";
 import { fireEvent, waitFor } from "@testing-library/react-native";
-import { renderWithProviders, testUtils } from "@/tests/testUtils";
+import { renderWithProviders, testUtils, mockData } from "@/tests/testUtils";
 import EditFermentationEntryScreen from "../../../../app/(modals)/(brewSessions)/editFermentationEntry";
 import { TEST_IDS } from "@src/constants/testIDs";
 
@@ -90,22 +90,38 @@ jest.mock("@tanstack/react-query", () => {
         id: "session-123",
         name: "Test Batch",
         user_id: "user-123",
-        fermentation_entries: [
-          {
-            entry_date: "2024-01-01T00:00:00.000Z",
-            gravity: 1.04,
-            temperature: 68,
-            ph: 4.5,
-            notes: "Test entry",
-          },
-        ],
+        fermentation_entries: [],
+        fermentation_data: [],
+        temperature_unit: "F",
       },
       isLoading: false,
       error: null,
     })),
     useMutation: jest.fn(() => ({
-      mutate: jest.fn(),
-      mutateAsync: jest.fn(),
+      mutate: jest.fn((variables, options) => {
+        const context = options?.onMutate?.(variables);
+        try {
+          const result = { success: true, data: variables };
+          options?.onSuccess?.(result, variables, context);
+          options?.onSettled?.(result, null, variables, context);
+        } catch (err) {
+          options?.onError?.(err as unknown, variables, context);
+          options?.onSettled?.(undefined, err as unknown, variables, context);
+        }
+      }),
+      mutateAsync: jest.fn(async (variables, options) => {
+        const context = options?.onMutate?.(variables);
+        try {
+          const result = { success: true, data: variables };
+          options?.onSuccess?.(result, variables, context);
+          options?.onSettled?.(result, null, variables, context);
+          return result;
+        } catch (err) {
+          options?.onError?.(err as unknown, variables, context);
+          options?.onSettled?.(undefined, err as unknown, variables, context);
+          throw err;
+        }
+      }),
       isPending: false,
       error: null,
     })),
@@ -270,21 +286,23 @@ describe("EditFermentationEntryScreen", () => {
 
   describe("Basic Rendering", () => {
     it("should render without crashing", () => {
-      mockApiService.brewSessions.getById.mockResolvedValue({
-        data: {
-          id: "test-session-id",
-          name: "Test Batch",
-          fermentation_data: [
-            {
-              date: "2024-01-01T00:00:00Z",
-              gravity: 1.05,
-              temperature: 68,
-              ph: 4.2,
-              notes: "Initial entry",
-            },
-          ],
-          temperature_unit: "F",
-        },
+      const mockSession = mockData.brewSessionWithData({
+        fermentation_data: [
+          mockData.fermentationEntry({
+            date: "2024-01-01T00:00:00Z",
+            gravity: 1.05,
+            temperature: 68,
+            ph: 4.2,
+            notes: "Initial entry",
+          }),
+        ],
+      });
+
+      const mockUseQuery = require("@tanstack/react-query").useQuery;
+      mockUseQuery.mockReturnValue({
+        data: mockSession,
+        isLoading: false,
+        error: null,
       });
 
       expect(() =>
@@ -293,13 +311,15 @@ describe("EditFermentationEntryScreen", () => {
     });
 
     it("should render basic screen structure", () => {
-      mockApiService.brewSessions.getById.mockResolvedValue({
-        data: {
-          id: "test-session-id",
-          name: "Test Batch",
-          fermentation_data: [],
-          temperature_unit: "F",
-        },
+      const mockSession = mockData.brewSessionWithData({
+        fermentation_data: [],
+      });
+
+      const mockUseQuery = require("@tanstack/react-query").useQuery;
+      mockUseQuery.mockReturnValue({
+        data: mockSession,
+        isLoading: false,
+        error: null,
       });
 
       const { getByText } = renderWithProviders(
@@ -311,13 +331,15 @@ describe("EditFermentationEntryScreen", () => {
     });
 
     it("should handle missing fermentation entry", async () => {
-      mockApiService.brewSessions.getById.mockResolvedValue({
-        data: {
-          id: "test-session-id",
-          name: "Test Batch",
-          fermentation_data: [], // No entries at index 0
-          temperature_unit: "F",
-        },
+      const mockSession = mockData.brewSessionWithData({
+        fermentation_data: [], // No entries at index 0
+      });
+
+      const mockUseQuery = require("@tanstack/react-query").useQuery;
+      mockUseQuery.mockReturnValue({
+        data: mockSession,
+        isLoading: false,
+        error: null,
       });
 
       const { getByText } = renderWithProviders(
@@ -350,20 +372,17 @@ describe("EditFermentationEntryScreen", () => {
 
   describe("Component Behavior", () => {
     it("should handle successful data loading", async () => {
-      const mockBrewSession = {
-        id: "test-session-id",
-        name: "Test Batch",
+      const mockBrewSession = mockData.brewSessionWithData({
         fermentation_data: [
-          {
+          mockData.fermentationEntry({
             date: "2024-01-01T00:00:00Z",
             gravity: 1.05,
             temperature: 68,
             ph: 4.2,
             notes: "Initial entry",
-          },
+          }),
         ],
-        temperature_unit: "F",
-      };
+      });
 
       const mockUseQuery = require("@tanstack/react-query").useQuery;
       mockUseQuery.mockReturnValue({
@@ -388,20 +407,18 @@ describe("EditFermentationEntryScreen", () => {
     });
 
     it("should handle different temperature units", async () => {
-      const mockBrewSessionCelsius = {
-        id: "test-session-id",
-        name: "Test Batch",
+      const mockBrewSessionCelsius = mockData.brewSessionWithData({
         fermentation_data: [
-          {
+          mockData.fermentationEntry({
             date: "2024-01-01T00:00:00Z",
             gravity: 1.05,
             temperature: 20,
             ph: 4.2,
             notes: "Celsius entry",
-          },
+          }),
         ],
         temperature_unit: "C", // Celsius
-      };
+      });
 
       const mockUseQuery = require("@tanstack/react-query").useQuery;
       mockUseQuery.mockReturnValue({
@@ -423,13 +440,15 @@ describe("EditFermentationEntryScreen", () => {
     const mockRouter = require("expo-router").router;
 
     it("should handle navigation methods without crashing", () => {
-      mockApiService.brewSessions.getById.mockResolvedValue({
-        data: {
-          id: "test-session-id",
-          name: "Test Batch",
-          fermentation_data: [],
-          temperature_unit: "F",
-        },
+      const mockSession = mockData.brewSessionWithData({
+        fermentation_data: [],
+      });
+
+      const mockUseQuery = require("@tanstack/react-query").useQuery;
+      mockUseQuery.mockReturnValue({
+        data: mockSession,
+        isLoading: false,
+        error: null,
       });
 
       // Render the component
@@ -453,32 +472,32 @@ describe("EditFermentationEntryScreen", () => {
     });
 
     it("should call updateFermentationEntry when saving changes", async () => {
+      // Create a session with both formats for backward compatibility testing
+      const mockSession = mockData.brewSessionWithData({
+        fermentation_data: [
+          mockData.fermentationEntry({
+            entry_date: "2024-01-01T00:00:00Z",
+            gravity: 1.05,
+            temperature: 68,
+            ph: 4.2,
+            notes: "Initial entry",
+          }),
+        ],
+        // Also include legacy format for mixed API responses
+        fermentation_entries: [
+          mockData.fermentationEntry({
+            entry_date: "2024-01-01T00:00:00Z",
+            gravity: 1.05,
+            temperature: 68,
+            ph: 4.2,
+            notes: "Initial entry",
+          }),
+        ],
+      });
+
       const mockUseQuery = require("@tanstack/react-query").useQuery;
       mockUseQuery.mockReturnValue({
-        data: {
-          id: "session-123",
-          name: "Test Batch",
-          user_id: "user-123",
-          fermentation_data: [
-            {
-              entry_date: "2024-01-01T00:00:00Z",
-              gravity: 1.05,
-              temperature: 68,
-              ph: 4.2,
-              notes: "Initial entry",
-            },
-          ],
-          fermentation_entries: [
-            {
-              entry_date: "2024-01-01T00:00:00Z",
-              gravity: 1.05,
-              temperature: 68,
-              ph: 4.2,
-              notes: "Initial entry",
-            },
-          ],
-          temperature_unit: "F",
-        },
+        data: mockSession,
         isLoading: false,
         error: null,
       });

@@ -24,6 +24,7 @@
 import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNetwork } from "@contexts/NetworkContext";
+import { useAuth } from "@contexts/AuthContext";
 import {
   OfflineRecipeService,
   OfflineRecipe,
@@ -40,9 +41,9 @@ export function useOfflineRecipes() {
   return useQuery({
     queryKey: [...QUERY_KEYS.RECIPES, "offline"],
     queryFn: () => OfflineRecipeService.getAll(),
-    staleTime: isConnected ? 5 * 60 * 1000 : Infinity, // 5min online, never stale offline
+    staleTime: isConnected ? 5 * 60 * 1000 : 1000, // 5min online, 1sec offline (allow frequent refetch)
     gcTime: 24 * 60 * 60 * 1000, // Keep for 24 hours
-    refetchOnMount: isConnected ? "always" : false,
+    refetchOnMount: true, // Always refetch on mount to get latest offline data
     refetchOnReconnect: true,
     refetchOnWindowFocus: false,
   });
@@ -72,6 +73,7 @@ export function useOfflineRecipe(id: string) {
 export function useOfflineCreateRecipe() {
   const queryClient = useQueryClient();
   const { isConnected } = useNetwork();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: (recipeData: CreateRecipeRequest) =>
@@ -101,9 +103,9 @@ export function useOfflineCreateRecipe() {
         isOffline: !isConnected,
         lastModified: Date.now(),
         syncStatus: isConnected ? "synced" : "pending",
-        user_id: "current_user",
+        user_id: user?.id || "", // Use actual user ID or empty string
         is_public: false,
-        is_owner: true,
+        // Don't optimistically set is_owner - let server determine this
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         version: 1,
@@ -153,8 +155,20 @@ export function useOfflineCreateRecipe() {
 
     onSettled: () => {
       // Always refetch after error or success
+      if (__DEV__) {
+        console.log(
+          "🔄 Invalidating offline recipes and dashboard cache after recipe creation"
+        );
+      }
       queryClient.invalidateQueries({
         queryKey: [...QUERY_KEYS.RECIPES, "offline"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+      // Invalidate sync status for immediate banner updates
+      queryClient.invalidateQueries({
+        queryKey: ["offline", "sync-status"],
       });
     },
   });
@@ -247,6 +261,13 @@ export function useOfflineUpdateRecipe() {
       queryClient.invalidateQueries({
         queryKey: [...QUERY_KEYS.RECIPE(id), "offline"],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+      // Invalidate sync status for immediate banner updates
+      queryClient.invalidateQueries({
+        queryKey: ["offline", "sync-status"],
+      });
     },
   });
 }
@@ -291,8 +312,16 @@ export function useOfflineDeleteRecipe() {
     },
 
     onSettled: () => {
+      // Invalidate both recipe and dashboard queries since deletion affects both
       queryClient.invalidateQueries({
         queryKey: [...QUERY_KEYS.RECIPES, "offline"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+      // IMPORTANT: Invalidate sync status so banner updates immediately
+      queryClient.invalidateQueries({
+        queryKey: ["offline", "sync-status"],
       });
     },
   });
@@ -307,8 +336,10 @@ export function useOfflineSyncStatus() {
   return useQuery({
     queryKey: ["offline", "sync-status"],
     queryFn: () => OfflineRecipeService.getSyncStatus(),
-    refetchInterval: isConnected ? 30000 : false, // Refetch every 30s when online
-    staleTime: 10000, // Consider fresh for 10 seconds
+    refetchInterval: isConnected ? 5000 : false, // Refetch every 5s when online (faster detection)
+    staleTime: 1000, // Consider fresh for 1 second (more responsive)
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -345,6 +376,61 @@ export function useOfflineSync() {
 export function useAutoOfflineSync() {
   const { isConnected } = useNetwork();
   const syncMutation = useOfflineSync();
+  const { mutate } = syncMutation;
+  const lastSyncRef = useRef<number | null>(null);
+  const SYNC_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+
+  // Trigger sync when network becomes available
+  useEffect(() => {
+    if (!isConnected || syncMutation.isPending) {
+      return;
+    }
+    const now = Date.now();
+    const canSync =
+      lastSyncRef.current == null ||
+      now - lastSyncRef.current > SYNC_COOLDOWN_MS;
+    if (canSync) {
+      mutate();
+      lastSyncRef.current = now;
+    }
+  }, [isConnected, syncMutation.isPending, mutate, SYNC_COOLDOWN_MS]);
+  return syncMutation;
+}
+
+/**
+ * Hook for manually triggering sync using modified flags (new approach)
+ */
+export function useOfflineModifiedSync() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => OfflineRecipeService.syncModifiedRecipes(),
+    onSuccess: result => {
+      // Invalidate all recipe queries after successful sync
+      queryClient.invalidateQueries({
+        queryKey: [...QUERY_KEYS.RECIPES, "offline"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["offline", "sync-status"] });
+
+      if (__DEV__ && result.details.length > 0) {
+        console.log(
+          `📱 Modified sync completed: ${result.success} successful, ${result.failed} failed`
+        );
+        result.details.forEach(detail => console.log(`   ${detail}`));
+      }
+    },
+    onError: error => {
+      console.error("Modified sync failed:", error);
+    },
+  });
+}
+
+/**
+ * Hook that automatically syncs modified recipes when network becomes available
+ */
+export function useAutoOfflineModifiedSync() {
+  const { isConnected } = useNetwork();
+  const syncMutation = useOfflineModifiedSync();
   const { mutate } = syncMutation;
   const lastSyncRef = useRef<number | null>(null);
   const SYNC_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes

@@ -133,7 +133,7 @@ describe("jwtUtils", () => {
 
       expect(result).toBeNull();
       expect(console.warn).toHaveBeenCalledWith(
-        "JWT payload missing required user_id field"
+        "JWT payload missing user identification field"
       );
     });
 

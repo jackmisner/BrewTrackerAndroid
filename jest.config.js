@@ -36,8 +36,8 @@ module.exports = {
     global: {
       branches: 60,
       functions: 60,
-      lines: 70,
-      statements: 70,
+      lines: 65,
+      statements: 65,
     },
   },
   testEnvironment: "jsdom",

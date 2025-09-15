@@ -56,6 +56,8 @@ import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
+import { OfflineRecipeService } from "@services/offline/OfflineRecipeService";
+import OfflineCacheService from "@services/offline/OfflineCacheService";
 import { NetworkStatusBanner } from "@src/components/NetworkStatusBanner";
 import ApiService from "@services/api/apiService";
 import BeerXMLService from "@services/beerxml/BeerXMLService";
@@ -91,6 +93,23 @@ export default function DashboardScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
+      // Clean up stale cache data when online and refreshing
+      try {
+        const cleanup = await OfflineRecipeService.cleanupStaleData();
+        if (cleanup.removed > 0) {
+          console.log(
+            `Dashboard refresh cleaned up ${cleanup.removed} stale recipes`
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "Failed to cleanup stale data during dashboard refresh:",
+          error
+        );
+        // Don't let cleanup errors block the refresh
+      }
+
+      // Refresh dashboard data
       await refetch();
     } finally {
       setRefreshing(false);
@@ -107,7 +126,7 @@ export default function DashboardScreen() {
     queryKey: ["dashboard"],
     queryFn: async () => {
       try {
-        // Fetch data from multiple working endpoints - use same pattern as recipes tab
+        // Try to fetch fresh data first
         const [recipesResponse, brewSessionsResponse, publicRecipesResponse] =
           await Promise.all([
             ApiService.recipes.getAll(PAGE, RECENT_RECIPES_LIMIT),
@@ -115,13 +134,8 @@ export default function DashboardScreen() {
             ApiService.recipes.getPublic(PAGE, PUBLIC_PAGE_SIZE),
           ]);
 
-        // Transform the data to match expected dashboard format - use same pattern as recipes tab
-        // The recipes tab accesses response.data.recipes, brew sessions tab accesses response.data.brew_sessions
         const recipes = recipesResponse.data?.recipes || [];
         const brewSessions = brewSessionsResponse.data?.brew_sessions || [];
-
-        // Calculate user stats - use same status filtering as brew sessions tab
-
         const activeBrewSessions = brewSessions.filter(
           session => session.status !== "completed"
         );
@@ -132,19 +146,49 @@ export default function DashboardScreen() {
           public_recipes: publicRecipesResponse.data.pagination?.total || 0,
           total_brew_sessions:
             brewSessionsResponse.data.pagination?.total || brewSessions.length,
-
           active_brew_sessions: activeBrewSessions.length,
         };
 
+        const freshDashboardData = {
+          user_stats: userStats,
+          recent_recipes: recipes.slice(0, 3),
+          active_brew_sessions: activeBrewSessions.slice(0, 3),
+        };
+
+        // Cache the fresh data for offline use
+        OfflineCacheService.cacheDashboardData(freshDashboardData).catch(
+          error => {
+            console.warn("Failed to cache dashboard data:", error);
+          }
+        );
+
         return {
-          data: {
-            user_stats: userStats,
-            recent_recipes: recipes.slice(0, 3), // Show 3 most recent
-            active_brew_sessions: activeBrewSessions.slice(0, 3), // Show 3 most recent active sessions
-          },
+          data: freshDashboardData,
         };
       } catch (error) {
-        console.error("Dashboard data fetch error:", error);
+        // Only log non-simulated errors
+        if (
+          !(
+            error instanceof Error &&
+            error.message?.includes("Simulated offline")
+          )
+        ) {
+          console.error("Dashboard data fetch error:", error);
+        }
+
+        // Try to get cached data when API fails
+        try {
+          const cachedData = await OfflineCacheService.getCachedDashboardData();
+          if (cachedData) {
+            console.log("Using cached dashboard data due to API error");
+            return {
+              data: cachedData,
+            };
+          }
+        } catch (cacheError) {
+          console.warn("Failed to load cached dashboard data:", cacheError);
+        }
+
         throw error;
       }
     },

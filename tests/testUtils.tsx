@@ -138,6 +138,61 @@ export const mockData = {
     };
   },
 
+  // Session with fermentation_entries format (legacy)
+  brewSessionWithEntries: (overrides: Record<string, any> = {}) => {
+    mockData._sessionCounter++;
+    return {
+      id: `test-session-id-${mockData._sessionCounter}`,
+      session_id: `test-session-id-${mockData._sessionCounter}`,
+      name: `Test Brew Session ${mockData._sessionCounter}`,
+      recipe_id: `test-recipe-id-${mockData._sessionCounter}`,
+      user_id: "test-user-id",
+      status: "fermenting",
+      brew_date: "2024-01-15T00:00:00Z",
+      actual_og: 1.064,
+      actual_fg: null,
+      actual_abv: null,
+      notes: "Test brew session notes",
+      fermentation_entries: [],
+      target_fg: 1.012,
+      temperature_unit: "F",
+      ...overrides,
+    };
+  },
+
+  // Session with fermentation_data format (current)
+  brewSessionWithData: (overrides: Record<string, any> = {}) => {
+    mockData._sessionCounter++;
+    return {
+      id: `test-session-id-${mockData._sessionCounter}`,
+      session_id: `test-session-id-${mockData._sessionCounter}`,
+      name: `Test Brew Session ${mockData._sessionCounter}`,
+      recipe_id: `test-recipe-id-${mockData._sessionCounter}`,
+      user_id: "test-user-id",
+      status: "fermenting",
+      brew_date: "2024-01-15T00:00:00Z",
+      actual_og: 1.064,
+      actual_fg: null,
+      actual_abv: null,
+      notes: "Test brew session notes",
+      fermentation_data: [],
+      target_fg: 1.012,
+      temperature_unit: "F",
+      ...overrides,
+    };
+  },
+
+  // Fermentation entry factory
+  fermentationEntry: (overrides: Record<string, any> = {}) => ({
+    date: "2024-01-01T00:00:00Z",
+    entry_date: "2024-01-01T00:00:00Z", // Support both formats
+    gravity: 1.05,
+    temperature: 68,
+    ph: 4.2,
+    notes: "Test fermentation entry",
+    ...overrides,
+  }),
+
   ingredient: (type: string = "grain", overrides: Record<string, any> = {}) => {
     // Use deterministic counter for consistent test IDs
     mockData._ingredientCounter++;

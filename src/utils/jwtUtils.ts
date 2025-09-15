@@ -28,15 +28,18 @@
 export interface JWTPayload {
   // Standard JWT claims
   iss?: string; // Issuer
-  sub?: string; // Subject (usually user ID)
+  sub?: string; // Subject (primary user identifier in Flask-JWT-Extended)
   aud?: string; // Audience
   exp?: number; // Expiration time (Unix timestamp)
   nbf?: number; // Not before time
   iat?: number; // Issued at time
   jti?: string; // JWT ID
 
-  // BrewTracker-specific claims
-  user_id: string; // User ID (primary identifier)
+  // Alternative user ID fields (for compatibility)
+  user_id?: string; // Alternative user ID field
+  id?: string; // Common alternative
+  userId?: string; // CamelCase alternative
+  uid?: string; // Another common format
   email?: string; // User email
   username?: string; // Username
   email_verified?: boolean; // Email verification status
@@ -74,9 +77,22 @@ export function decodeJWTPayload(token: string): JWTPayload | null {
     const decoded = atob(base64);
     const parsed = JSON.parse(decoded) as JWTPayload;
 
-    // Validate that we have the required user_id field
-    if (!parsed.user_id) {
-      console.warn("JWT payload missing required user_id field");
+    // Validate that the payload contains at least one user identification field
+    const hasUserIdentification = [
+      "sub",
+      "user_id",
+      "id",
+      "userId",
+      "uid",
+    ].some(field => {
+      const value = (parsed as any)[field];
+      return (
+        value !== undefined && value !== null && String(value).trim() !== ""
+      );
+    });
+
+    if (!hasUserIdentification) {
+      console.warn("JWT payload missing user identification field");
       return null;
     }
 
@@ -89,13 +105,41 @@ export function decodeJWTPayload(token: string): JWTPayload | null {
 
 /**
  * Extracts the user ID from a JWT token
+ * Tries multiple common field names for user identification
  *
  * @param token - The JWT token
  * @returns User ID string or null if extraction fails
  */
 export function extractUserIdFromJWT(token: string): string | null {
-  const payload = decodeJWTPayload(token);
-  return payload?.user_id || null;
+  try {
+    const parsed = decodeJWTPayload(token);
+    if (!parsed) {
+      return null;
+    }
+
+    // Try multiple possible field names for user ID
+    // Priority order based on backend JWT implementation
+    const possibleUserIdFields = [
+      "sub", // JWT standard subject field (Flask-JWT-Extended uses this)
+      "user_id", // BrewTracker expected format
+      "id", // Common alternative
+      "userId", // CamelCase alternative
+      "uid", // Another common format
+    ];
+
+    for (const field of possibleUserIdFields) {
+      const v = (parsed as any)[field];
+      if (v !== undefined && v !== null && String(v).trim() !== "") {
+        return String(v).trim();
+      }
+    }
+
+    // No user ID found in any expected field
+    return null;
+  } catch {
+    // Silent failure - token is malformed but we don't want to spam logs
+    return null;
+  }
 }
 
 /**
@@ -189,4 +233,38 @@ export function validateJWTStructure(token: string): {
   }
 
   return { isValid: true, payload };
+}
+
+/**
+ * Debug function to inspect JWT token structure
+ * Only use in development for troubleshooting
+ */
+export function debugJWTToken(token: string): void {
+  if (!__DEV__) {
+    return;
+  }
+
+  try {
+    const parsed = decodeJWTPayload(token);
+    if (!parsed) {
+      console.log("JWT Debug: Invalid token format/payload");
+      return;
+    }
+
+    console.log("=== JWT Token Debug ===");
+    console.log("Full payload:", parsed);
+    console.log("Available user ID fields:");
+
+    const userIdFields = ["sub", "user_id", "id", "userId", "uid"] as const;
+    userIdFields.forEach(field => {
+      if (parsed[field]) {
+        console.log(`  ${field}: ${parsed[field]}`);
+      }
+    });
+
+    console.log("Extracted User ID:", extractUserIdFromJWT(token));
+    console.log("======================");
+  } catch (error) {
+    console.log("JWT Debug: Failed to decode token", error);
+  }
 }

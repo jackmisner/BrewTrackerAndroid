@@ -28,6 +28,7 @@ import axios, {
 } from "axios";
 import * as SecureStore from "expo-secure-store";
 import NetInfo from "@react-native-community/netinfo";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STORAGE_KEYS, ENDPOINTS } from "@services/config";
 import { setupIDInterceptors } from "./idInterceptor";
 import {
@@ -354,8 +355,17 @@ async function logApiError(normalizedError: NormalizedApiError, err: unknown) {
     };
   }
 
-  // Single consolidated log (only when not suppressed)
-  console.error("API Error:", base);
+  // Single consolidated log (only when not suppressed and not simulated offline)
+  if (
+    !base.message?.includes("Simulated offline") &&
+    !(
+      base.status === 404 &&
+      base.request?.method === "delete" &&
+      base.request?.url?.includes("/recipes/")
+    )
+  ) {
+    console.error("API Error:", base);
+  }
 }
 
 /**
@@ -461,11 +471,57 @@ class TokenManager {
   }
 }
 
+/**
+ * Developer mode utilities for API service
+ */
+class DeveloperModeManager {
+  private static readonly NETWORK_SIMULATION_KEY = `${STORAGE_KEYS.USER_SETTINGS}_network_simulation`;
+
+  /**
+   * Check if we're in simulated offline mode
+   */
+  static async isSimulatedOffline(): Promise<boolean> {
+    if (!__DEV__) {
+      return false; // Only available in development
+    }
+
+    try {
+      const storedMode = await AsyncStorage.getItem(
+        this.NETWORK_SIMULATION_KEY
+      );
+      if (storedMode) {
+        try {
+          const mode = JSON.parse(storedMode);
+          return mode === "offline";
+        } catch {
+          return storedMode === "offline";
+        }
+      }
+      return false;
+    } catch (error) {
+      console.warn("Failed to check simulated offline mode:", error);
+      return false;
+    }
+  }
+}
+
 // Request interceptor to add authentication token
 api.interceptors.request.use(
   async (
     config: InternalAxiosRequestConfig
   ): Promise<InternalAxiosRequestConfig> => {
+    // Check for simulated offline mode in development
+    if (__DEV__) {
+      const isOffline = await DeveloperModeManager.isSimulatedOffline();
+      if (isOffline) {
+        // Simulate network error to properly trigger offline behavior
+        const offlineError = new Error("Network request failed");
+        (offlineError as any).code = "NETWORK_ERROR";
+        (offlineError as any).message = "Simulated offline mode enabled";
+        throw offlineError;
+      }
+    }
+
     const token = await TokenManager.getToken();
     if (token && config.headers) {
       config.headers["Authorization"] = `Bearer ${token}`;

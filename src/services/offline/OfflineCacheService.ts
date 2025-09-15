@@ -27,7 +27,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STORAGE_KEYS } from "@services/config";
 import ApiService from "@services/api/apiService";
-import { IngredientType, RecipeIngredient } from "@src/types";
+import {
+  IngredientType,
+  RecipeIngredient,
+  Recipe,
+  BrewSession,
+} from "@src/types";
 import { BeerStyleOption } from "@src/hooks/useBeerStyles";
 
 // Cache metadata interface
@@ -57,9 +62,38 @@ interface CachedBeerStyles {
   styles: BeerStyleOption[];
 }
 
+// Dashboard data types
+export interface DashboardUserStats {
+  total_recipes: number;
+  public_recipes: number;
+  total_brew_sessions: number;
+  active_brew_sessions: number;
+}
+
+export interface CachedDashboardData {
+  user_stats: DashboardUserStats;
+  recent_recipes: Recipe[];
+  active_brew_sessions: BrewSession[];
+  timestamp: number;
+}
+
+// Recipe list data types
+interface CachedRecipeListData {
+  recipes: Recipe[];
+  pagination: {
+    page: number;
+    per_page: number;
+    total: number;
+    pages: number;
+  };
+  timestamp: number;
+}
+
 interface CachedData {
   ingredients: CachedIngredients;
   beerStyles: CachedBeerStyles;
+  dashboard?: CachedDashboardData;
+  recipeList?: CachedRecipeListData;
   metadata: CacheMetadata;
 }
 
@@ -169,6 +203,19 @@ export class OfflineCacheService {
   }
 
   /**
+   * Check if user is authenticated
+   */
+  private static async isAuthenticated(): Promise<boolean> {
+    try {
+      const token = await ApiService.token.getToken();
+      return !!token;
+    } catch (error) {
+      console.warn("Failed to check authentication status:", error);
+      return false;
+    }
+  }
+
+  /**
    * Fetch and cache all essential data
    */
   private static async fetchAndCacheData(
@@ -201,25 +248,42 @@ export class OfflineCacheService {
       cachedData.beerStyles.styles = this.getFallbackBeerStyles();
     }
 
-    // Fetch ingredients by type
+    // Fetch ingredients by type (only if authenticated)
     let progressStep = 40;
     const progressIncrement = 50 / this.INGREDIENT_TYPES.length;
 
-    for (const type of this.INGREDIENT_TYPES) {
-      reportProgress?.("ingredients", `Loading ${type}s...`, progressStep);
+    const isUserAuthenticated = await this.isAuthenticated();
 
-      try {
-        const response = await ApiService.ingredients.getAll(type);
-        cachedData.ingredients[type] = response.data || [];
-      } catch (error) {
-        console.warn(`Failed to fetch ${type}s:`, error);
+    if (!isUserAuthenticated) {
+      console.log(
+        "User not authenticated, skipping ingredient caching. Ingredients will be cached after login."
+      );
+      reportProgress?.(
+        "auth",
+        "Authentication required for ingredient data",
+        90
+      );
+      // Fill with empty arrays for now - will be populated after authentication
+      for (const type of this.INGREDIENT_TYPES) {
         cachedData.ingredients[type] = [];
       }
+    } else {
+      // User is authenticated, fetch ingredients
+      for (const type of this.INGREDIENT_TYPES) {
+        reportProgress?.("ingredients", `Loading ${type}s...`, progressStep);
 
-      progressStep += progressIncrement;
+        try {
+          const response = await ApiService.ingredients.getAll(type);
+          cachedData.ingredients[type] = response.data || [];
+        } catch (error) {
+          console.warn(`Failed to fetch ${type}s:`, error);
+          cachedData.ingredients[type] = [];
+        }
+
+        progressStep += progressIncrement;
+      }
     }
 
-    // Calculate data size
     // Calculate data size
     const dataString = JSON.stringify(cachedData);
     cachedData.metadata.dataSize = dataString.length;
@@ -230,7 +294,12 @@ export class OfflineCacheService {
       console.warn(
         `Cache size (${cachedData.metadata.dataSize} bytes) exceeds limit`
       );
-      // Consider implementing data pruning or compression
+      delete cachedData.dashboard;
+      delete cachedData.recipeList;
+
+      // Recalculate data size
+      const prunedDataString = JSON.stringify(cachedData);
+      cachedData.metadata.dataSize = prunedDataString.length;
     }
 
     reportProgress?.("save", "Saving cache...", 95);
@@ -396,11 +465,82 @@ export class OfflineCacheService {
         return;
       }
 
+      const isUserAuthenticated = await this.isAuthenticated();
+      if (!isUserAuthenticated) {
+        console.log(
+          "Skipping background cache refresh - user not authenticated"
+        );
+        return;
+      }
+
       console.log("Starting background cache refresh...");
       await this.fetchAndCacheData();
       console.log("Background cache refresh completed");
     } catch (error) {
       console.error("Background cache refresh failed:", error);
+    }
+  }
+
+  /**
+   * Fetch and cache ingredients after user authentication
+   * Call this after successful login to populate ingredient cache
+   */
+  static async cacheIngredientsAfterAuth(): Promise<boolean> {
+    try {
+      const isUserAuthenticated = await this.isAuthenticated();
+      if (!isUserAuthenticated) {
+        console.warn("Cannot cache ingredients - user not authenticated");
+        return false;
+      }
+
+      const isOnline = await this.isNetworkAvailable();
+      if (!isOnline) {
+        console.log("Cannot cache ingredients - network not available");
+        return false;
+      }
+
+      console.log("Caching ingredients after authentication...");
+
+      // Load existing cached data
+      let cachedData = await this.loadCachedData();
+      if (!cachedData) {
+        // If no cache exists, create empty structure
+        cachedData = {
+          ingredients: { grain: [], hop: [], yeast: [], other: [] },
+          beerStyles: { styles: this.getFallbackBeerStyles() },
+          metadata: {
+            version: this.CACHE_VERSION,
+            lastUpdated: Date.now(),
+            dataSize: 0,
+          },
+        };
+      }
+
+      // Fetch ingredients by type
+      for (const type of this.INGREDIENT_TYPES) {
+        try {
+          console.log(`Fetching ${type}s...`);
+          const response = await ApiService.ingredients.getAll(type);
+          cachedData.ingredients[type] = response.data || [];
+          console.log(`Cached ${cachedData.ingredients[type].length} ${type}s`);
+        } catch (error) {
+          console.warn(`Failed to fetch ${type}s:`, error);
+          // Keep existing cache or empty array
+        }
+      }
+
+      // Update metadata
+      cachedData.metadata.lastUpdated = Date.now();
+      const dataString = JSON.stringify(cachedData);
+      cachedData.metadata.dataSize = dataString.length;
+
+      // Save updated cache
+      await AsyncStorage.setItem(this.CACHE_KEY, dataString);
+      console.log("Ingredients cached successfully after authentication");
+      return true;
+    } catch (error) {
+      console.error("Failed to cache ingredients after authentication:", error);
+      return false;
     }
   }
 
@@ -412,9 +552,17 @@ export class OfflineCacheService {
     lastUpdated: Date | null;
     dataSize: number;
     version: number;
+    ingredientCounts: { [key in IngredientType]: number };
   }> {
     const cachedData = await this.loadCachedData();
     const isValid = await this.isCacheValid(cachedData);
+
+    const ingredientCounts: { [key in IngredientType]: number } = {
+      grain: cachedData?.ingredients.grain?.length || 0,
+      hop: cachedData?.ingredients.hop?.length || 0,
+      yeast: cachedData?.ingredients.yeast?.length || 0,
+      other: cachedData?.ingredients.other?.length || 0,
+    };
 
     return {
       isValid,
@@ -423,7 +571,25 @@ export class OfflineCacheService {
         : null,
       dataSize: cachedData?.metadata.dataSize || 0,
       version: cachedData?.metadata.version || 0,
+      ingredientCounts,
     };
+  }
+
+  /**
+   * Check if ingredients are available in cache
+   */
+  static async hasIngredients(): Promise<boolean> {
+    const cachedData = await this.loadCachedData();
+    if (!cachedData || !cachedData.ingredients) {
+      return false;
+    }
+
+    // Check if we have at least some ingredients of each type
+    const hasGrains = (cachedData.ingredients.grain?.length || 0) > 0;
+    const hasHops = (cachedData.ingredients.hop?.length || 0) > 0;
+
+    // We need at least grains and hops for basic recipe creation
+    return hasGrains && hasHops;
   }
 
   /**
@@ -431,6 +597,285 @@ export class OfflineCacheService {
    */
   static async clearCache(): Promise<void> {
     await AsyncStorage.removeItem(this.CACHE_KEY);
+  }
+
+  /**
+   * Log cache status for debugging
+   */
+  static async logCacheStatus(): Promise<void> {
+    try {
+      const status = await this.getCacheStatus();
+      const hasIngredientsAvailable = await this.hasIngredients();
+      const isAuthenticated = await this.isAuthenticated();
+
+      console.log("=== OfflineCacheService Status ===");
+      console.log(`User Authenticated: ${isAuthenticated}`);
+      console.log(`Cache Valid: ${status.isValid}`);
+      console.log(`Has Ingredients: ${hasIngredientsAvailable}`);
+      console.log(
+        `Last Updated: ${status.lastUpdated?.toISOString() || "Never"}`
+      );
+      console.log(`Cache Size: ${status.dataSize} bytes`);
+      console.log(`Version: ${status.version}`);
+      console.log("Ingredient Counts:");
+      for (const [type, count] of Object.entries(status.ingredientCounts)) {
+        console.log(`  ${type}: ${count}`);
+      }
+      console.log("================================");
+    } catch (error) {
+      console.error("Failed to get cache status:", error);
+    }
+  }
+
+  // ==============================
+  // DASHBOARD DATA METHODS
+  // ==============================
+
+  /**
+   * Cache dashboard data for offline viewing
+   */
+  static async cacheDashboardData(dashboardData: {
+    user_stats: DashboardUserStats;
+    recent_recipes: Recipe[];
+    active_brew_sessions: BrewSession[];
+  }): Promise<void> {
+    try {
+      const cachedData = await this.loadCachedData();
+      if (!cachedData) {
+        console.warn("Cannot cache dashboard data: no base cache exists");
+        return;
+      }
+
+      cachedData.dashboard = {
+        ...dashboardData,
+        timestamp: Date.now(),
+      };
+
+      // Update metadata
+      cachedData.metadata.lastUpdated = Date.now();
+      const dataString = JSON.stringify(cachedData);
+      cachedData.metadata.dataSize = dataString.length;
+
+      await AsyncStorage.setItem(this.CACHE_KEY, dataString);
+      console.log("Dashboard data cached successfully");
+    } catch (error) {
+      console.error("Failed to cache dashboard data:", error);
+    }
+  }
+
+  /**
+   * Get cached dashboard data
+   */
+  static async getCachedDashboardData(): Promise<CachedDashboardData | null> {
+    try {
+      const cachedData = await this.loadCachedData();
+      if (!cachedData?.dashboard) {
+        return null;
+      }
+
+      // Check if dashboard cache is still valid (24 hours)
+      const dashboardCacheExpiry = 24 * 60 * 60 * 1000; // 24 hours
+      const isExpired =
+        Date.now() - cachedData.dashboard.timestamp > dashboardCacheExpiry;
+
+      if (isExpired) {
+        console.log("Cached dashboard data is expired but returning anyway");
+      }
+
+      return cachedData.dashboard;
+    } catch (error) {
+      console.error("Failed to get cached dashboard data:", error);
+      return null;
+    }
+  }
+
+  // ==============================
+  // RECIPE LIST DATA METHODS
+  // ==============================
+
+  /**
+   * Cache recipe list data for offline viewing
+   */
+  static async cacheRecipeListData(
+    recipes: Recipe[],
+    pagination: {
+      page: number;
+      per_page: number;
+      total: number;
+      pages: number;
+    }
+  ): Promise<void> {
+    try {
+      const cachedData = await this.loadCachedData();
+      if (!cachedData) {
+        console.warn("Cannot cache recipe list data: no base cache exists");
+        return;
+      }
+
+      cachedData.recipeList = {
+        recipes,
+        pagination,
+        timestamp: Date.now(),
+      };
+
+      // Update metadata
+      cachedData.metadata.lastUpdated = Date.now();
+      const dataString = JSON.stringify(cachedData);
+      cachedData.metadata.dataSize = dataString.length;
+
+      await AsyncStorage.setItem(this.CACHE_KEY, dataString);
+      console.log("Recipe list data cached successfully");
+    } catch (error) {
+      console.error("Failed to cache recipe list data:", error);
+    }
+  }
+
+  /**
+   * Get cached recipe list data
+   */
+  static async getCachedRecipeListData(): Promise<CachedRecipeListData | null> {
+    try {
+      const cachedData = await this.loadCachedData();
+      if (!cachedData?.recipeList) {
+        return null;
+      }
+
+      // Check if recipe list cache is still valid (30 minutes)
+      const recipeListCacheExpiry = 30 * 60 * 1000; // 30 minutes
+      const isExpired =
+        Date.now() - cachedData.recipeList.timestamp > recipeListCacheExpiry;
+
+      if (isExpired) {
+        console.log("Cached recipe list data is expired but returning anyway");
+      }
+
+      return cachedData.recipeList;
+    } catch (error) {
+      console.error("Failed to get cached recipe list data:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Enhanced background refresh that includes dashboard and recipe list data
+   */
+  static async refreshAllCacheInBackground(): Promise<void> {
+    try {
+      const isOnline = await this.isNetworkAvailable();
+      if (!isOnline) {
+        return;
+      }
+
+      const isUserAuthenticated = await this.isAuthenticated();
+      if (!isUserAuthenticated) {
+        console.log(
+          "Skipping background cache refresh - user not authenticated"
+        );
+        return;
+      }
+
+      console.log("Starting comprehensive background cache refresh...");
+
+      // Refresh basic cache (ingredients, beer styles)
+      await this.fetchAndCacheData();
+
+      // Refresh dashboard data
+      try {
+        const dashboardData = await this.fetchDashboardData();
+        if (dashboardData) {
+          await this.cacheDashboardData(dashboardData);
+        }
+      } catch (error) {
+        console.warn("Failed to refresh dashboard data:", error);
+      }
+
+      // Refresh recipe list data
+      try {
+        const recipeListData = await this.fetchRecipeListData();
+        if (recipeListData) {
+          await this.cacheRecipeListData(
+            recipeListData.recipes,
+            recipeListData.pagination
+          );
+        }
+      } catch (error) {
+        console.warn("Failed to refresh recipe list data:", error);
+      }
+
+      console.log("Comprehensive background cache refresh completed");
+    } catch (error) {
+      console.error("Comprehensive background cache refresh failed:", error);
+    }
+  }
+
+  /**
+   * Fetch fresh dashboard data from API
+   */
+  private static async fetchDashboardData(): Promise<{
+    user_stats: DashboardUserStats;
+    recent_recipes: Recipe[];
+    active_brew_sessions: BrewSession[];
+  } | null> {
+    try {
+      const PAGE = 1;
+      const RECENT_RECIPES_LIMIT = 5;
+      const BREW_SESSIONS_LIMIT = 20;
+      const PUBLIC_PAGE_SIZE = 1;
+
+      const [recipesResponse, brewSessionsResponse, publicRecipesResponse] =
+        await Promise.all([
+          ApiService.recipes.getAll(PAGE, RECENT_RECIPES_LIMIT),
+          ApiService.brewSessions.getAll(PAGE, BREW_SESSIONS_LIMIT),
+          ApiService.recipes.getPublic(PAGE, PUBLIC_PAGE_SIZE),
+        ]);
+
+      const recipes = recipesResponse.data?.recipes || [];
+      const brewSessions = brewSessionsResponse.data?.brew_sessions || [];
+      const activeBrewSessions = brewSessions.filter(
+        session => session.status !== "completed"
+      );
+
+      const userStats: DashboardUserStats = {
+        total_recipes: recipesResponse.data.pagination?.total || recipes.length,
+        public_recipes: publicRecipesResponse.data.pagination?.total || 0,
+        total_brew_sessions:
+          brewSessionsResponse.data.pagination?.total || brewSessions.length,
+        active_brew_sessions: activeBrewSessions.length,
+      };
+
+      return {
+        user_stats: userStats,
+        recent_recipes: recipes.slice(0, 3),
+        active_brew_sessions: activeBrewSessions.slice(0, 3),
+      };
+    } catch (error) {
+      console.error("Failed to fetch dashboard data:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch fresh recipe list data from API
+   */
+  private static async fetchRecipeListData(): Promise<{
+    recipes: Recipe[];
+    pagination: any;
+  } | null> {
+    try {
+      const response = await ApiService.recipes.getAll(1, 20); // First page with 20 items
+      return {
+        recipes: response.data?.recipes || [],
+        pagination: response.data?.pagination || {
+          page: 1,
+          per_page: 20,
+          total: 0,
+          pages: 0,
+        },
+      };
+    } catch (error) {
+      console.error("Failed to fetch recipe list data:", error);
+      return null;
+    }
   }
 }
 

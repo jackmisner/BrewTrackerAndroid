@@ -30,6 +30,7 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STORAGE_KEYS } from "@services/config";
+import { OfflineRecipeService } from "@services/offline/OfflineRecipeService";
 
 /**
  * Network simulation modes for testing
@@ -52,6 +53,10 @@ interface DeveloperContextValue {
   setNetworkSimulationMode: (mode: NetworkSimulationMode) => Promise<void>;
   toggleSimulatedOffline: () => Promise<void>; // Keep for backwards compatibility
   resetDeveloperSettings: () => Promise<void>;
+  cleanupTombstones: () => Promise<{
+    removedTombstones: number;
+    tombstoneNames: string[];
+  }>;
 }
 
 /**
@@ -187,6 +192,29 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
     }
   };
 
+  /**
+   * Clean up all tombstones (dev only - for when database is manually cleaned)
+   */
+  const cleanupTombstones = async (): Promise<{
+    removedTombstones: number;
+    tombstoneNames: string[];
+  }> => {
+    if (!isDeveloperMode) {
+      throw new Error(
+        "cleanupTombstones is only available in development mode"
+      );
+    }
+
+    try {
+      const result = await OfflineRecipeService.devCleanupAllTombstones();
+      console.log("Developer: Tombstone cleanup completed", result);
+      return result;
+    } catch (error) {
+      console.error("Failed to cleanup tombstones:", error);
+      throw error;
+    }
+  };
+
   const contextValue: DeveloperContextValue = {
     isDeveloperMode,
     networkSimulationMode,
@@ -195,6 +223,7 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
     setNetworkSimulationMode,
     toggleSimulatedOffline,
     resetDeveloperSettings,
+    cleanupTombstones,
   };
 
   return (

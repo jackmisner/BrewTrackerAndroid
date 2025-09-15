@@ -105,6 +105,12 @@ export interface BrewSession {
 
   // User context
   user_id: ID;
+  /**
+   * Viewer-scoped UI hint indicating if the current user owns this brew session.
+   * WARNING: This is a client-side computed property that must NOT be persisted
+   * globally as it varies per user. Use server-validated permissions for
+   * destructive actions rather than relying on this cached value.
+   */
   is_owner?: boolean;
 }
 

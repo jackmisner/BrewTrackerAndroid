@@ -40,12 +40,16 @@ const mockNetInfoFetch = mockNetInfo.fetch;
 const mockOfflineCacheServiceDefault = (OfflineCacheService as any).default;
 const actualMockRefreshCacheInBackground =
   mockOfflineCacheServiceDefault.refreshCacheInBackground;
+const actualMockRefreshAllCacheInBackground =
+  mockOfflineCacheServiceDefault.refreshAllCacheInBackground;
 
 // Also ensure OfflineCacheService mock is properly accessible
 // Similar to NetInfo, the mock creates { default: { refreshCacheInBackground: ... } }
 // but the import expects OfflineCacheService.refreshCacheInBackground to work
 (OfflineCacheService as any).refreshCacheInBackground =
   actualMockRefreshCacheInBackground;
+(OfflineCacheService as any).refreshAllCacheInBackground =
+  actualMockRefreshAllCacheInBackground;
 const mockNetInfoAddEventListener = mockNetInfo.addEventListener;
 const mockUnsubscribe = jest.fn();
 
@@ -63,6 +67,7 @@ const mockOfflineCacheService = OfflineCacheService as jest.Mocked<
 jest.mock("@services/offline/OfflineCacheService", () => ({
   default: {
     refreshCacheInBackground: jest.fn(),
+    refreshAllCacheInBackground: jest.fn().mockResolvedValue(true),
   },
 }));
 

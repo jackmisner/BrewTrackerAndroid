@@ -227,8 +227,8 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
 
     if (shouldRefresh || shouldPeriodicRefresh) {
       lastCacheRefresh.current = Date.now();
-      // Trigger background cache refresh (non-blocking)
-      OfflineCacheService.refreshCacheInBackground().catch(error => {
+      // Trigger comprehensive background cache refresh (non-blocking)
+      OfflineCacheService.refreshAllCacheInBackground().catch(error => {
         console.warn("Background cache refresh failed:", error);
       });
     }

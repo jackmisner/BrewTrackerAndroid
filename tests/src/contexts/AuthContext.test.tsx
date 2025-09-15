@@ -521,6 +521,16 @@ describe("AuthContext", () => {
   describe("logout", () => {
     beforeEach(() => {
       jest.clearAllMocks();
+      // Add missing getAllKeys mock
+      mockAsyncStorage.getAllKeys = jest
+        .fn()
+        .mockResolvedValue([
+          "offlineRecipes_user-123",
+          "offlineRecipes_user-123_pending",
+          "userData",
+          "userSettings",
+          "cachedIngredients",
+        ]);
     });
 
     it("should successfully logout user", async () => {
@@ -533,11 +543,16 @@ describe("AuthContext", () => {
       });
 
       expect(mockApiService.token.removeToken).toHaveBeenCalled();
-      expect(mockAsyncStorage.multiRemove).toHaveBeenCalledWith([
+      // Expect two calls to multiRemove - first for basic keys, second for offline recipe keys
+      expect(mockAsyncStorage.multiRemove).toHaveBeenCalledTimes(2);
+      expect(mockAsyncStorage.multiRemove).toHaveBeenNthCalledWith(1, [
         "userData",
         "userSettings",
-        "offlineRecipes",
         "cachedIngredients",
+      ]);
+      expect(mockAsyncStorage.multiRemove).toHaveBeenNthCalledWith(2, [
+        "offlineRecipes_user-123",
+        "offlineRecipes_user-123_pending",
       ]);
       expect(result.current.user).toBeNull();
       expect(result.current.isAuthenticated).toBe(false);
