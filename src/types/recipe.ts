@@ -85,7 +85,6 @@ export interface RecipeMetrics {
 // Main recipe interface
 export interface Recipe {
   id: ID; // Normalized by API interceptors
-  recipe_id?: string; // Original ID from backend
   name: string;
   style: string;
   description: string;

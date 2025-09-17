@@ -19,56 +19,75 @@ const slugify = (s: string): string =>
     .replace(/-+/g, "-");
 
 /**
- * Generates a unique React key for recipe ingredients
- *
- * Handles cases where the same ingredient is used multiple times
- * in different contexts (different usage, timing, etc.)
+ * Generate a key for React ingredient items, preferring stable identifiers and only falling back to index when necessary
  *
  * @param ingredient - The recipe ingredient
- * @param index - The array index for this ingredient (always included for uniqueness)
+ * @param index - Array index (used as fallback when no stable identifier exists)
  * @param context - Context string for discriminating same ingredient in different roles
- * @returns Deterministic composite key, unique even when same ingredient appears multiple times
+ * @param dedupeKey - Optional stable per-instance identifier to prevent remounts on reorder
+ * @returns Deterministic composite key that remains stable during reordering when possible
  */
 export function generateIngredientKey(
   ingredient: RecipeIngredient,
   index: number,
-  context?: string
+  context?: string,
+  dedupeKey?: string | number
 ): string {
   const type = ingredient.type || "unknown";
-  const contextPrefix = context ? `${slugify(context)}-` : "";
+  const slugifiedContext = context ? slugify(context) : "";
+  const contextPrefix = slugifiedContext ? `${slugifiedContext}-` : "";
 
-  if (ingredient.id) {
-    // Always include index to handle cases where same ingredient (same ID) is used multiple times
-    return `${contextPrefix}${type}-${String(ingredient.id)}-${index}`;
+  // Prefer dedupeKey when provided (most stable)
+  if (dedupeKey !== undefined && dedupeKey !== null) {
+    return `${contextPrefix}${type}-${String(dedupeKey)}`;
   }
 
-  // Fallback for items without stable ID
-  const tempKey = ingredient.name ? slugify(ingredient.name) : "unknown";
+  // Then prefer ingredient.id if present
+  if (ingredient.id) {
+    return `${contextPrefix}${type}-${String(ingredient.id)}`;
+  }
 
-  return `${contextPrefix}${type}-temp-${tempKey}-${index}`;
+  // Then use ingredient.name if present
+  if (ingredient.name) {
+    return `${contextPrefix}${type}-name-${slugify(ingredient.name)}`;
+  }
+
+  // Only fall back to index when no stable identifier exists
+  return `${contextPrefix}${type}-index-${index}`;
 }
 
 /**
- * Generates a unique key for any list item with optional context
- *
- * @param item - Object with id and optional name properties
- * @param index - Array index (always included for uniqueness)
+ * Generate a key for React list items, preferring stable identifiers and only falling back to index when necessary
+ * @param item - Item with potential id/name fields
+ * @param index - Array index (used as fallback when no stable identifier exists)
  * @param context - Context string for discriminating same item in different roles
- * @returns Deterministic composite key, unique even when same item appears multiple times
+ * @param dedupeKey - Optional stable per-instance identifier to prevent remounts on reorder
+ * @returns Deterministic composite key that remains stable during reordering when possible
  */
 export function generateListItemKey(
   item: { id?: string; name?: string },
   index: number,
-  context?: string
+  context?: string,
+  dedupeKey?: string | number
 ): string {
-  const contextPrefix = context ? `${slugify(context)}-` : "";
+  const slugifiedContext = context ? slugify(context) : "";
+  const contextPrefix = slugifiedContext ? `${slugifiedContext}-` : "";
 
-  if (item.id) {
-    // Always include index to handle cases where same item (same ID) appears multiple times
-    return `${contextPrefix}${String(item.id)}-${index}`;
+  // Prefer dedupeKey when provided (most stable)
+  if (dedupeKey !== undefined && dedupeKey !== null) {
+    return `${contextPrefix}${String(dedupeKey)}`;
   }
 
-  // Fallback for items without stable ID
-  const tempKey = item.name ? slugify(item.name) : "unknown";
-  return `${contextPrefix}temp-${tempKey}-${index}`;
+  // Then prefer item.id if present
+  if (item.id) {
+    return `${contextPrefix}${String(item.id)}`;
+  }
+
+  // Then use item.name if present
+  if (item.name) {
+    return `${contextPrefix}name-${slugify(item.name)}`;
+  }
+
+  // Only fall back to index when no stable identifier exists
+  return `${contextPrefix}index-${index}`;
 }

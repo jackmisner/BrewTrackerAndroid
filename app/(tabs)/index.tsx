@@ -123,7 +123,7 @@ export default function DashboardScreen() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["dashboard"],
+    queryKey: ["dashboard", user?.id ?? "anonymous"],
     queryFn: async () => {
       try {
         // Try to fetch fresh data first

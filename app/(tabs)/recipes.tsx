@@ -215,7 +215,7 @@ export default function RecipesScreen() {
     error: publicRecipesError,
     refetch: refetchPublicRecipes,
   } = useQuery({
-    queryKey: ["recipes", "public", searchQuery],
+    queryKey: [...QUERY_KEYS.PUBLIC_RECIPES, searchQuery],
     queryFn: async () => {
       try {
         const response = await ApiService.recipes.getPublic(1, 20, {

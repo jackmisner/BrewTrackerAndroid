@@ -83,11 +83,43 @@ export class OfflineRecipeService {
    * Generate temporary ID for offline-created recipes
    */
   private static generateTempId(): string {
-    // Use crypto.randomUUID() for better uniqueness guarantees if available
-    const uuid = globalThis.crypto?.randomUUID
-      ? globalThis.crypto.randomUUID()
-      : `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`;
+    // Use crypto.randomUUID() when available; safe for RN/TS
+    const g: any = globalThis as any;
+    const uuid =
+      g?.crypto && typeof g.crypto.randomUUID === "function"
+        ? g.crypto.randomUUID()
+        : `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`;
     return `offline_${uuid}`;
+  }
+
+  /**
+   * Normalizes server timestamp to number (ms since epoch), falling back to Date.now()
+   */
+  private static normalizeServerTimestamp(responseData: any): number {
+    if (!responseData) {
+      return Date.now();
+    }
+
+    // Try to extract timestamp from common server fields
+    const serverTimestamp =
+      responseData.lastModified ||
+      responseData.updatedAt ||
+      responseData.updated_at ||
+      responseData.createdAt ||
+      responseData.created_at;
+
+    if (!serverTimestamp) {
+      return Date.now();
+    }
+
+    // Parse the timestamp
+    const parsed =
+      typeof serverTimestamp === "number"
+        ? serverTimestamp
+        : Date.parse(serverTimestamp);
+
+    // Return parsed timestamp if valid, otherwise fallback to current time
+    return parsed && !isNaN(parsed) ? parsed : Date.now();
   }
   private static async isNetworkAvailable(): Promise<boolean | null> {
     return NetInfo.fetch().then(state => state.isConnected);
@@ -175,18 +207,22 @@ export class OfflineRecipeService {
   private static async addPendingOperation(
     operation: Omit<OfflinePendingOperation, "id">
   ): Promise<void> {
-    // Queue operations to prevent race conditions
-    this.operationQueue = this.operationQueue.then(async () => {
-      const state = await this.loadOfflineState();
-
-      const newOperation: OfflinePendingOperation = {
-        ...operation,
-        id: this.generateTempId(),
-      };
-
-      state.pendingOperations.push(newOperation);
-      await this.saveOfflineState(state);
-    });
+    // Queue operations and keep the chain alive on failures
+    this.operationQueue = this.operationQueue
+      .catch(() => void 0)
+      .then(async () => {
+        try {
+          const state = await this.loadOfflineState();
+          const newOperation: OfflinePendingOperation = {
+            ...operation,
+            id: this.generateTempId(),
+          };
+          state.pendingOperations.push(newOperation);
+          await this.saveOfflineState(state);
+        } catch (err) {
+          console.error("addPendingOperation failed:", err);
+        }
+      });
 
     await this.operationQueue;
   }
@@ -413,13 +449,16 @@ export class OfflineRecipeService {
           hasMore = response.data.recipes.length === pageSize;
           page++;
         }
-        const serverRecipes: OfflineRecipe[] = allServerRecipes.map(recipe => ({
-          ...recipe,
-          isOffline: false,
-          lastModified: Date.now(),
-          syncStatus: "synced" as const,
-          needsSync: false, // Server recipes don't need sync
-        }));
+        const serverRecipes: OfflineRecipe[] = allServerRecipes.map(recipe => {
+          const lastModified = this.normalizeServerTimestamp(recipe);
+          return {
+            ...recipe,
+            isOffline: false,
+            lastModified: lastModified,
+            syncStatus: "synced" as const,
+            needsSync: false, // Server recipes don't need sync
+          };
+        });
 
         // Merge with offline recipes (offline takes precedence for conflicts)
         const mergedRecipes = this.mergeRecipes(serverRecipes, state.recipes);
@@ -512,10 +551,11 @@ export class OfflineRecipeService {
     if (await this.isOnline()) {
       try {
         const response = await ApiService.recipes.getById(id);
+        const serverTimestamp = this.normalizeServerTimestamp(response.data);
         const serverRecipe: OfflineRecipe = {
           ...response.data,
           isOffline: false,
-          lastModified: Date.now(),
+          lastModified: serverTimestamp,
           syncStatus: "synced",
           needsSync: false, // Fresh from server
         };
@@ -548,10 +588,11 @@ export class OfflineRecipeService {
       try {
         // Try online creation first
         const response = await ApiService.recipes.create(recipeData);
+        const serverTimestamp = this.normalizeServerTimestamp(response.data);
         const newRecipe: OfflineRecipe = {
           ...response.data,
           isOffline: false,
-          lastModified: Date.now(),
+          lastModified: serverTimestamp,
           syncStatus: "synced",
           needsSync: false, // Successfully created online
         };
@@ -639,10 +680,11 @@ export class OfflineRecipeService {
       try {
         // Try online update first (if recipe has real ID)
         const response = await ApiService.recipes.update(id, recipeData);
+        const serverTimestamp = this.normalizeServerTimestamp(response.data);
         const updatedRecipe: OfflineRecipe = {
           ...response.data,
           isOffline: false,
-          lastModified: Date.now(),
+          lastModified: serverTimestamp,
           syncStatus: "synced",
           needsSync: false, // Successfully updated online
         };
@@ -1008,11 +1050,14 @@ export class OfflineRecipeService {
                 response.data.estimated_srm ?? offlineRecipe.estimated_srm,
             };
 
+            const serverTimestamp = this.normalizeServerTimestamp(
+              response.data
+            );
             state.recipes[recipeIndex] = {
               ...response.data,
               ...preservedMetrics, // Preserve client-calculated metrics
               isOffline: false,
-              lastModified: Date.now(),
+              lastModified: serverTimestamp,
               syncStatus: "synced",
               needsSync: false,
             };
@@ -1076,11 +1121,14 @@ export class OfflineRecipeService {
                 response.data.estimated_srm ?? offlineRecipe.estimated_srm,
             };
 
+            const serverTimestamp = this.normalizeServerTimestamp(
+              response.data
+            );
             state.recipes[recipeIndex] = {
               ...response.data,
               ...preservedMetrics, // Preserve client-calculated metrics
               isOffline: false,
-              lastModified: Date.now(),
+              lastModified: serverTimestamp,
               syncStatus: "synced",
               needsSync: false,
             };
@@ -1125,6 +1173,7 @@ export class OfflineRecipeService {
     }
 
     // Save updated state
+    state.lastSync = Date.now();
     await this.saveOfflineState(state);
 
     // Clean up old tombstones after successful sync
@@ -1218,80 +1267,81 @@ export class OfflineRecipeService {
     state: OfflineRecipeState
   ): Promise<void> {
     switch (operation.type) {
-      case "create":
+      case "create": {
         if (operation.data) {
           const response = await ApiService.recipes.create(
             operation.data as CreateRecipeRequest
           );
-
-          // Update the offline recipe with real ID
-          const recipeIndex = state.recipes.findIndex(
+          const newId = (response.data as any).id;
+          const serverTimestamp = this.normalizeServerTimestamp(response.data);
+          const idx = state.recipes.findIndex(
             r => r.tempId === operation.recipeId
           );
-          if (recipeIndex >= 0) {
-            state.recipes[recipeIndex] = {
+          if (idx >= 0) {
+            state.recipes[idx] = {
               ...response.data,
               isOffline: false,
-              lastModified: Date.now(),
+              lastModified: serverTimestamp,
               syncStatus: "synced",
             };
           } else {
-            // Recipe was deleted locally but created on server - add it back
             state.recipes.push({
               ...response.data,
               isOffline: false,
-              lastModified: Date.now(),
+              lastModified: serverTimestamp,
               syncStatus: "synced",
             });
           }
+          // Remap subsequent ops from tempId -> real id
+          state.pendingOperations = state.pendingOperations.map(op =>
+            op !== operation && op.recipeId === operation.recipeId
+              ? { ...op, recipeId: newId }
+              : op
+          );
         }
         break;
+      }
 
-      case "update":
+      case "update": {
         if (operation.data) {
           const response = await ApiService.recipes.update(
             operation.recipeId,
             operation.data as UpdateRecipeRequest
           );
-
-          // Update the offline recipe
-          const recipeIndex = state.recipes.findIndex(
-            r => r.id === operation.recipeId
+          const serverTimestamp = this.normalizeServerTimestamp(response.data);
+          const idx = state.recipes.findIndex(
+            r => r.id === operation.recipeId || r.tempId === operation.recipeId
           );
-          if (recipeIndex >= 0) {
-            state.recipes[recipeIndex] = {
+          if (idx >= 0) {
+            state.recipes[idx] = {
               ...response.data,
               isOffline: false,
-              lastModified: Date.now(),
+              lastModified: serverTimestamp,
               syncStatus: "synced",
             };
           } else {
-            // Recipe was deleted locally but updated on server - log warning
             console.warn(
               `Recipe ${operation.recipeId} was updated on server but not found locally`
             );
           }
         }
         break;
+      }
 
-      case "delete":
+      case "delete": {
         try {
           await ApiService.recipes.delete(operation.recipeId);
         } catch (error) {
-          // If recipe is already deleted on server (404), consider it success
           if ((error as any).response?.status !== 404) {
             throw error;
           }
         }
-
-        // Remove from offline cache if still there
-        const recipeIndex = state.recipes.findIndex(
-          r => r.id === operation.recipeId
-        );
-        if (recipeIndex >= 0) {
-          state.recipes.splice(recipeIndex, 1);
+        const idx = state.recipes.findIndex(r => r.id === operation.recipeId);
+        if (idx >= 0) {
+          state.recipes.splice(idx, 1);
         }
         break;
+      }
     }
   }
 

@@ -155,19 +155,13 @@ export type CreateRecipeRequest = RecipeFormData;
 
 export type UpdateRecipeRequest = Partial<RecipeFormData>;
 
-export interface CloneRecipeResponse extends Recipe {
-  // The backend returns the cloned recipe object directly (not nested under 'recipe')
-  // This interface extends Recipe to match the actual response format
-}
+export type CloneRecipeResponse = Recipe;
 
 export interface ClonePublicRecipeRequest {
   originalAuthor: string;
 }
 
-export interface ClonePublicRecipeResponse extends Recipe {
-  // The backend returns the cloned recipe object directly (not nested under 'recipe')
-  // This interface extends Recipe to match the actual response format
-}
+export type ClonePublicRecipeResponse = Recipe;
 
 export interface RecipeMetricsResponse {
   og?: number;

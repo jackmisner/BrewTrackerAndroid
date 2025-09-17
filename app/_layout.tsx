@@ -62,7 +62,7 @@ const DynamicPersistQueryClientProvider = ({
 }) => {
   const { user } = useAuth();
   const [persister, setPersister] = React.useState(() =>
-    createUserScopedPersister(undefined)
+    createUserScopedPersister(user?.id ? String(user.id) : undefined)
   );
 
   // Track previous user ID to detect changes
