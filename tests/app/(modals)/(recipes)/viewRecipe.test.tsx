@@ -239,6 +239,7 @@ describe("ViewRecipeScreen", () => {
             color: 2,
             type: "grain",
             unit: "lb",
+            instance_id: "mock-uuid",
           },
           {
             name: "Munich Malt",
@@ -246,6 +247,7 @@ describe("ViewRecipeScreen", () => {
             color: 9,
             type: "grain",
             unit: "lb",
+            instance_id: "mock-uuid",
           },
         ],
       };
@@ -276,6 +278,7 @@ describe("ViewRecipeScreen", () => {
             alpha_acid: 5.5,
             type: "hop",
             unit: "oz",
+            instance_id: "mock-uuid",
           },
           {
             name: "Centennial",
@@ -285,6 +288,7 @@ describe("ViewRecipeScreen", () => {
             alpha_acid: 10.0,
             type: "hop",
             unit: "oz",
+            instance_id: "mock-uuid",
           },
         ],
       };
@@ -313,6 +317,7 @@ describe("ViewRecipeScreen", () => {
             attenuation: 81,
             amount: 1,
             unit: "packet",
+            instance_id: "mock-uuid",
           },
         ],
       };
@@ -334,7 +339,13 @@ describe("ViewRecipeScreen", () => {
       const recipeWithOther = {
         ...mockRecipe,
         ingredients: [
-          { name: "Gypsum", amount: 2.0, type: "other", unit: "g" },
+          {
+            name: "Gypsum",
+            amount: 2.0,
+            type: "other",
+            unit: "g",
+            instance_id: "mock-uuid",
+          },
         ],
       };
 
@@ -499,6 +510,7 @@ describe("ViewRecipeScreen", () => {
             alpha_acid: 5.5,
             type: "hop",
             unit: "oz",
+            instance_id: "mock-uuid",
           },
         ],
       };
