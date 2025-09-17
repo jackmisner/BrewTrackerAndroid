@@ -426,6 +426,7 @@ describe("API Types", () => {
               unit: "lb",
               potential: 1.036,
               color: 2,
+              instance_id: "mock-uuid",
             },
           ],
           mash_temperature: 152,

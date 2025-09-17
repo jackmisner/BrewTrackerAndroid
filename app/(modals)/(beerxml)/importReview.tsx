@@ -29,6 +29,7 @@ import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import ApiService from "@services/api/apiService";
 import { IngredientInput } from "@src/types";
 import { TEST_IDS } from "@src/constants/testIDs";
+import { generateUniqueId } from "@utils/keyUtils";
 
 function coerceIngredientTime(input: unknown): number | undefined {
   if (input == null) {
@@ -180,6 +181,7 @@ export default function ImportReviewScreen() {
               unit: ing.unit,
               use: ing.use,
               time: coerceIngredientTime(ing.time),
+              instance_id: generateUniqueId("ing"), // Generate unique instance ID for each imported ingredient
             })
           ),
       };

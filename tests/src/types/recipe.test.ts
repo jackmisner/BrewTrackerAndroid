@@ -116,6 +116,7 @@ describe("Recipe Types", () => {
       type: "grain",
       amount: 5,
       unit: "lb",
+      instance_id: "mock-uuid",
       ...overrides,
     });
 
@@ -349,6 +350,7 @@ describe("Recipe Types", () => {
             unit: "lb",
             potential: 1.036,
             color: 2,
+            instance_id: "mock-uuid",
           },
           {
             id: "hop-1",
@@ -359,6 +361,7 @@ describe("Recipe Types", () => {
             alpha_acid: 5.5,
             use: "boil",
             time: 60,
+            instance_id: "mock-uuid",
           },
         ],
       });
@@ -477,6 +480,7 @@ describe("Recipe Types", () => {
             unit: "lb",
             potential: 1.036,
             color: 2,
+            instance_id: "mock-uuid",
           },
         ],
         hop: [
@@ -489,6 +493,7 @@ describe("Recipe Types", () => {
             alpha_acid: 5.5,
             use: "boil",
             time: 60,
+            instance_id: "mock-uuid",
           },
         ],
         yeast: [
@@ -499,6 +504,7 @@ describe("Recipe Types", () => {
             amount: 1,
             unit: "pkg",
             attenuation: 75,
+            instance_id: "mock-uuid",
           },
         ],
         other: [],
@@ -721,6 +727,7 @@ describe("Recipe Types", () => {
             unit: "lb",
             potential: 1.036,
             color: 2,
+            instance_id: "mock-uuid",
           },
           {
             id: "hop-1" as ID,
@@ -731,6 +738,7 @@ describe("Recipe Types", () => {
             alpha_acid: 5.5,
             use: "boil",
             time: 60,
+            instance_id: "mock-uuid",
           },
         ],
         estimated_og: 1.055,

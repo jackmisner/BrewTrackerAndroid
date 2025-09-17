@@ -112,6 +112,7 @@ const mockIngredient = {
   amount: 1,
   unit: "oz" as const,
   notes: "",
+  instance_id: "mock-uuid",
 };
 
 const mockProps = {

@@ -41,6 +41,7 @@ export interface RecipeIngredient {
   type: IngredientType;
   amount: number;
   unit: IngredientUnit;
+  instance_id: string; // Unique instance identifier for React keys and duplicate ingredient handling
 
   // Grain-specific
   potential?: number;
@@ -221,4 +222,5 @@ export interface IngredientInput {
   unit: IngredientUnit;
   use?: string;
   time?: number;
+  instance_id: string; // Unique instance identifier for React keys and duplicate ingredient handling
 }

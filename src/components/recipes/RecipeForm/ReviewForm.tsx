@@ -174,21 +174,10 @@ export function ReviewForm({
               {TYPE_LABELS[type as keyof typeof TYPE_LABELS]} (
               {ingredients.length})
             </Text>
-            {ingredients.map((ingredient, index) => {
-              const additionalContext =
-                ingredient.type === "hop"
-                  ? `${ingredient.use || "unknown"}-${ingredient.time || 0}min`
-                  : ingredient.type === "grain"
-                    ? ingredient.grain_type || "unknown"
-                    : undefined;
-
+            {ingredients.map(ingredient => {
               return (
                 <View
-                  key={generateIngredientKey(
-                    ingredient,
-                    index,
-                    additionalContext
-                  )}
+                  key={generateIngredientKey(ingredient)}
                   style={styles.ingredientReviewItem}
                 >
                   <View style={styles.ingredientReviewInfo}>

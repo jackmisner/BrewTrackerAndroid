@@ -30,6 +30,7 @@ import { STORAGE_KEYS } from "@services/config";
 import { Recipe, CreateRecipeRequest, UpdateRecipeRequest } from "@src/types";
 import NetInfo from "@react-native-community/netinfo";
 import { extractUserIdFromJWT } from "@utils/jwtUtils";
+import { OfflineMetricsCalculator } from "./OfflineMetricsCalculator";
 
 // Offline-specific types
 export interface OfflineRecipe extends Recipe {
@@ -485,6 +486,11 @@ export class OfflineRecipeService {
         state.recipes = cleanedRecipes;
         await this.saveOfflineState(state);
 
+        // Run background metrics calculation for recipes missing metrics
+        this.calculateMissingMetrics().catch(error => {
+          console.warn("Background metrics calculation failed:", error);
+        });
+
         // Filter out deleted recipes before returning to UI (same as offline path)
         const activeRecipes = cleanedRecipes.filter(
           recipe => !recipe.isDeleted
@@ -579,6 +585,46 @@ export class OfflineRecipeService {
   }
 
   /**
+   * Calculate metrics for a recipe using offline calculator
+   */
+  private static calculateRecipeMetrics(recipe: Partial<Recipe>): {
+    estimated_og?: number;
+    estimated_fg?: number;
+    estimated_abv?: number;
+    estimated_ibu?: number;
+    estimated_srm?: number;
+  } {
+    if (!recipe.batch_size || !recipe.efficiency || !recipe.ingredients) {
+      return {};
+    }
+
+    try {
+      const metrics = OfflineMetricsCalculator.calculateMetrics({
+        batch_size: recipe.batch_size,
+        batch_size_unit: recipe.batch_size_unit || "gallon",
+        efficiency: recipe.efficiency,
+        boil_time: recipe.boil_time || 60,
+        ingredients: recipe.ingredients,
+        mash_temperature: recipe.mash_temperature,
+        mash_temp_unit: recipe.mash_temp_unit,
+      });
+
+      return {
+        estimated_og: metrics.og !== 1.0 ? metrics.og : undefined,
+        estimated_fg: metrics.fg !== 1.0 ? metrics.fg : undefined,
+        estimated_abv: metrics.abv !== 0.0 ? metrics.abv : undefined,
+        estimated_ibu: metrics.ibu !== 0.0 ? metrics.ibu : undefined,
+        estimated_srm: metrics.srm !== 0.0 ? metrics.srm : undefined,
+      };
+    } catch (error) {
+      if (__DEV__) {
+        console.warn("Failed to calculate offline metrics:", error);
+      }
+      return {};
+    }
+  }
+
+  /**
    * Create new recipe (works offline)
    */
   static async create(recipeData: CreateRecipeRequest): Promise<OfflineRecipe> {
@@ -616,10 +662,14 @@ export class OfflineRecipeService {
       throw new Error("Cannot create offline recipe: user not authenticated");
     }
 
+    // Calculate metrics for offline recipe
+    const calculatedMetrics = this.calculateRecipeMetrics(recipeData);
+
     const offlineRecipe: OfflineRecipe = {
       id: tempId,
       tempId,
       ...recipeData,
+      ...calculatedMetrics, // Include calculated metrics
       isOffline: true,
       lastModified: Date.now(),
       syncStatus: "pending",
@@ -643,6 +693,9 @@ export class OfflineRecipeService {
         `✅ Offline recipe created and saved: ${offlineRecipe.name} (${offlineRecipe.id})`
       );
       console.log(`📊 Total offline recipes now: ${state.recipes.length}`);
+      if (Object.keys(calculatedMetrics).length > 0) {
+        console.log(`📊 Calculated metrics saved:`, calculatedMetrics);
+      }
     }
 
     // Add pending operation for later sync
@@ -699,10 +752,15 @@ export class OfflineRecipeService {
       }
     }
 
+    // Calculate updated metrics for offline recipe
+    const updatedData = { ...existingRecipe, ...recipeData };
+    const calculatedMetrics = this.calculateRecipeMetrics(updatedData);
+
     // Update offline
     const updatedRecipe: OfflineRecipe = {
       ...existingRecipe,
       ...recipeData,
+      ...calculatedMetrics, // Include updated calculated metrics
       lastModified: Date.now(),
       syncStatus: "pending",
       needsSync: true, // Updated recipe needs to be synced
@@ -1176,6 +1234,18 @@ export class OfflineRecipeService {
     state.lastSync = Date.now();
     await this.saveOfflineState(state);
 
+    // Calculate missing metrics for any recipes that need them
+    try {
+      const metricsResult = await this.calculateMissingMetrics();
+      if (metricsResult.updated > 0) {
+        details.push(
+          `Calculated metrics for ${metricsResult.updated} recipes that were missing them`
+        );
+      }
+    } catch (error) {
+      console.warn("Failed to calculate missing metrics:", error);
+    }
+
     // Clean up old tombstones after successful sync
     if (successCount > 0) {
       try {
@@ -1483,6 +1553,125 @@ export class OfflineRecipeService {
 
     console.log(`🧹 DEV: Tombstone cleanup complete:`, result);
     return result;
+  }
+
+  /**
+   * Calculate and add missing metrics to recipes that don't have them
+   * This is called as a background process during sync or app startup
+   */
+  static async calculateMissingMetrics(): Promise<{
+    processed: number;
+    updated: number;
+    details: string[];
+  }> {
+    const state = await this.loadOfflineState();
+    let processedCount = 0;
+    let updatedCount = 0;
+    const details: string[] = [];
+
+    // Find recipes that lack metrics
+    const recipesNeedingMetrics = state.recipes.filter(recipe => {
+      // Skip deleted recipes
+      if (recipe.isDeleted) {
+        return false;
+      }
+
+      // Check if recipe has any calculated metrics
+      const hasMetrics = !!(
+        recipe.estimated_og ||
+        recipe.estimated_fg ||
+        recipe.estimated_abv ||
+        recipe.estimated_ibu ||
+        recipe.estimated_srm
+      );
+
+      // Only process recipes with valid data that lack metrics
+      const hasValidData = !!(
+        recipe.batch_size &&
+        recipe.efficiency &&
+        recipe.ingredients &&
+        recipe.ingredients.length > 0
+      );
+
+      return hasValidData && !hasMetrics;
+    });
+
+    if (recipesNeedingMetrics.length === 0) {
+      return {
+        processed: 0,
+        updated: 0,
+        details: ["No recipes found that need metrics calculation"],
+      };
+    }
+
+    if (__DEV__) {
+      console.log(
+        `📊 Found ${recipesNeedingMetrics.length} recipes needing metrics calculation`
+      );
+    }
+
+    // Calculate metrics for each recipe
+    for (const recipe of recipesNeedingMetrics) {
+      processedCount++;
+      try {
+        const calculatedMetrics = this.calculateRecipeMetrics(recipe);
+
+        if (Object.keys(calculatedMetrics).length > 0) {
+          // Find recipe index and update it
+          const recipeIndex = state.recipes.findIndex(
+            r => r.id === recipe.id || r.tempId === recipe.tempId
+          );
+
+          if (recipeIndex >= 0) {
+            state.recipes[recipeIndex] = {
+              ...recipe,
+              ...calculatedMetrics,
+              lastModified: Date.now(),
+              // Mark as needing sync if it's an offline recipe
+              needsSync: recipe.isOffline || recipe.needsSync,
+            };
+
+            updatedCount++;
+            details.push(
+              `Added metrics to: ${recipe.name} (OG: ${calculatedMetrics.estimated_og?.toFixed(3) || "—"}, ABV: ${calculatedMetrics.estimated_abv?.toFixed(1) || "—"}%)`
+            );
+
+            if (__DEV__) {
+              console.log(
+                `📊 Added metrics to "${recipe.name}":`,
+                calculatedMetrics
+              );
+            }
+          }
+        } else {
+          details.push(
+            `Skipped ${recipe.name}: insufficient data for calculation`
+          );
+        }
+      } catch (error) {
+        details.push(
+          `Failed to calculate metrics for ${recipe.name}: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+        console.warn(`Failed to calculate metrics for ${recipe.name}:`, error);
+      }
+    }
+
+    // Save updated state if any recipes were updated
+    if (updatedCount > 0) {
+      await this.saveOfflineState(state);
+
+      if (__DEV__) {
+        console.log(
+          `📊 Background metrics calculation completed: ${updatedCount}/${processedCount} recipes updated`
+        );
+      }
+    }
+
+    return {
+      processed: processedCount,
+      updated: updatedCount,
+      details,
+    };
   }
 
   /**

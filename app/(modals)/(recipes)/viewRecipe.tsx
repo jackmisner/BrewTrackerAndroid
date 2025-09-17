@@ -200,21 +200,10 @@ export default function ViewRecipeScreen() {
             <MaterialIcons name={icon as any} size={20} color="#f4511e" />
             <Text style={styles.ingredientGroupTitle}>{title}</Text>
           </View>
-          {ingredients.map((ingredient, index) => {
-            const additionalContext =
-              ingredient.type === "hop"
-                ? `${ingredient.use || "unknown"}-${ingredient.time || 0}min`
-                : ingredient.type === "grain"
-                  ? ingredient.grain_type || "unknown"
-                  : undefined;
-
+          {ingredients.map(ingredient => {
             return (
               <View
-                key={generateIngredientKey(
-                  ingredient,
-                  index,
-                  additionalContext
-                )}
+                key={generateIngredientKey(ingredient)}
                 style={styles.ingredientItem}
               >
                 <Text style={styles.ingredientName}>{ingredient.name}</Text>

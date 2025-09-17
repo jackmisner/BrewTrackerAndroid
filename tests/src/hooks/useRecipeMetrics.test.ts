@@ -1,3 +1,4 @@
+/* eslint-disable import/first */
 import { renderHook, waitFor, act } from "@testing-library/react-native";
 import React from "react";
 
@@ -41,8 +42,10 @@ const createTestQueryClient = () =>
   });
 
 const createWrapper = (queryClient: QueryClient) => {
-  return ({ children }: { children: React.ReactNode }) =>
+  const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     React.createElement(QueryClientProvider, { client: queryClient }, children);
+  Wrapper.displayName = "QueryClientProviderWrapper";
+  return Wrapper;
 };
 
 // Mock recipe ingredient factory
@@ -56,6 +59,7 @@ const createMockIngredient = (
   unit: "lb",
   potential: 1.036,
   color: 2,
+  instance_id: "mock-uuid",
   ...overrides,
 });
 
@@ -215,6 +219,7 @@ describe("useRecipeMetrics - Essential Tests", () => {
           type: "grain" as const,
           id: "",
           name: "",
+          instance_id: "mock-uuid",
         },
         {
           amount: 1,
@@ -222,6 +227,7 @@ describe("useRecipeMetrics - Essential Tests", () => {
           type: "hop" as const,
           id: "hop-1",
           name: "Cascade",
+          instance_id: "mock-uuid",
         },
         {
           amount: 3,
@@ -229,6 +235,7 @@ describe("useRecipeMetrics - Essential Tests", () => {
           type: "grain" as const,
           id: "",
           name: "",
+          instance_id: "mock-uuid",
         },
       ],
     };

@@ -19,41 +19,28 @@ const slugify = (s: string): string =>
     .replace(/-+/g, "-");
 
 /**
- * Generate a key for React ingredient items, preferring stable identifiers and only falling back to index when necessary
+ * Generate a stable, unique key for React ingredient items
  *
- * @param ingredient - The recipe ingredient
- * @param index - Array index (used as fallback when no stable identifier exists)
- * @param context - Context string for discriminating same ingredient in different roles
- * @param dedupeKey - Optional stable per-instance identifier to prevent remounts on reorder
- * @returns Deterministic composite key that remains stable during reordering when possible
+ * Uses format: {type}-{ingredientId}-{instanceId}
+ * - type: ingredient type (hop, grain, yeast, other)
+ * - ingredientId: database ingredient ID
+ * - instanceId: unique instance identifier that never changes
+ *
+ * @param ingredient - The recipe ingredient (must have instance_id)
+ * @returns Stable unique key that never changes once generated
  */
-export function generateIngredientKey(
-  ingredient: RecipeIngredient,
-  index: number,
-  context?: string,
-  dedupeKey?: string | number
-): string {
+export function generateIngredientKey(ingredient: RecipeIngredient): string {
   const type = ingredient.type || "unknown";
-  const slugifiedContext = context ? slugify(context) : "";
-  const contextPrefix = slugifiedContext ? `${slugifiedContext}-` : "";
-
-  // Prefer dedupeKey when provided (most stable)
-  if (dedupeKey !== undefined && dedupeKey !== null) {
-    return `${contextPrefix}${type}-${String(dedupeKey)}`;
+  const ingredientId = ingredient.id || "unknown";
+  const instanceId = ingredient.instance_id;
+  if (!instanceId) {
+    throw new Error(
+      `Ingredient is missing required instance_id for key generation: ${JSON.stringify(
+        ingredient
+      )}`
+    );
   }
-
-  // Then prefer ingredient.id if present
-  if (ingredient.id) {
-    return `${contextPrefix}${type}-${String(ingredient.id)}`;
-  }
-
-  // Then use ingredient.name if present
-  if (ingredient.name) {
-    return `${contextPrefix}${type}-name-${slugify(ingredient.name)}`;
-  }
-
-  // Only fall back to index when no stable identifier exists
-  return `${contextPrefix}${type}-index-${index}`;
+  return `${type}-${ingredientId}-${instanceId}`;
 }
 
 /**
@@ -91,3 +78,35 @@ export function generateListItemKey(
   // Only fall back to index when no stable identifier exists
   return `${contextPrefix}index-${index}`;
 }
+
+// Global counter to prevent collisions during rapid ID generation
+let globalCounter = 0;
+
+/**
+ * Generates a unique identifier that prevents collisions even during rapid creation
+ * Uses crypto.randomUUID() when available, falls back to timestamp + counter + random
+ */
+export const generateUniqueId = (prefix?: string): string => {
+  globalCounter += 1;
+
+  // Use crypto.randomUUID() when available (most secure and unique)
+  const g: any = globalThis as any;
+  if (g?.crypto && typeof g.crypto.randomUUID === "function") {
+    const uuid = g.crypto.randomUUID();
+    return prefix ? `${prefix}_${uuid}` : uuid;
+  }
+
+  // Fallback to timestamp + counter + random for maximum collision resistance
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substr(2, 9);
+  const id = `${timestamp}_${globalCounter}_${random}`;
+
+  return prefix ? `${prefix}_${id}` : id;
+};
+
+/**
+ * Generates a unique instance ID specifically for recipe ingredients
+ */
+export const generateIngredientInstanceId = (): string => {
+  return generateUniqueId("ing");
+};
