@@ -255,14 +255,6 @@ export default function RecipesScreen() {
   const cloneMutation = useMutation({
     mutationKey: ["recipes", "clone"],
     mutationFn: async (recipe: Recipe) => {
-      // Log clone operation for security monitoring
-      console.log("🔄 Clone operation started:", {
-        recipeId: recipe.id,
-        recipeName: recipe.name,
-        isPublic: recipe.is_public,
-        hasUserId: !!recipe.user_id,
-      });
-
       // Validate recipe data before cloning
       if (!recipe.user_id) {
         throw new Error("Recipe must have a valid user ID");
@@ -288,8 +280,11 @@ export default function RecipesScreen() {
       }
     },
     onSuccess: (response, recipe) => {
-      queryClient.invalidateQueries({ queryKey: ["recipes"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      // Add a small delay to ensure server has processed the clone before refreshing
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["recipes"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      }, 1000); // 1 second delay
       const cloneType = recipe.is_public ? "cloned" : "versioned";
       Alert.alert(
         "Recipe Cloned",
@@ -300,7 +295,7 @@ export default function RecipesScreen() {
             onPress: () => {
               router.push({
                 pathname: "/(modals)/(recipes)/viewRecipe",
-                params: { recipe_id: response.data.recipe_id },
+                params: { recipe_id: response.data.id },
               });
             },
           },

@@ -22,18 +22,18 @@ describe("keyUtils", () => {
 
     it("should generate stable key for ingredient with ID", () => {
       const result = generateIngredientKey(mockIngredient, 0);
-      expect(result).toBe("hop-123");
+      expect(result).toBe("hop-123-0");
     });
 
     it("should include context in key when provided", () => {
       const result = generateIngredientKey(mockIngredient, 0, "Boil Addition");
-      expect(result).toBe("boil-addition-hop-123");
+      expect(result).toBe("boil-addition-hop-123-0");
     });
 
     it("should handle ingredient without type", () => {
       const ingredientNoType = { ...mockIngredient, type: undefined as any };
       const result = generateIngredientKey(ingredientNoType, 0);
-      expect(result).toBe("unknown-123");
+      expect(result).toBe("unknown-123-0");
     });
 
     it("should handle ingredient without ID (fallback to name)", () => {
@@ -58,7 +58,7 @@ describe("keyUtils", () => {
         0,
         "Dry Hop @ Fermentation"
       );
-      expect(result).toBe("dry-hop-fermentation-hop-123");
+      expect(result).toBe("dry-hop-fermentation-hop-123-0");
     });
 
     it("should handle ingredient name with spaces and special characters", () => {
@@ -73,7 +73,7 @@ describe("keyUtils", () => {
 
     it("should slugify context with unicode characters", () => {
       const result = generateIngredientKey(mockIngredient, 0, "Côté français");
-      expect(result).toBe("cote-francais-hop-123");
+      expect(result).toBe("cote-francais-hop-123-0");
     });
   });
 
@@ -85,12 +85,12 @@ describe("keyUtils", () => {
 
     it("should generate stable key for item with ID", () => {
       const result = generateListItemKey(mockItem, 0);
-      expect(result).toBe("456");
+      expect(result).toBe("456-0");
     });
 
     it("should include context in key when provided", () => {
       const result = generateListItemKey(mockItem, 0, "Recipe List");
-      expect(result).toBe("recipe-list-456");
+      expect(result).toBe("recipe-list-456-0");
     });
 
     it("should handle item without ID (fallback to name)", () => {
@@ -107,7 +107,7 @@ describe("keyUtils", () => {
 
     it("should handle context with spaces and special characters", () => {
       const result = generateListItemKey(mockItem, 0, "Brew Session Items!");
-      expect(result).toBe("brew-session-items-456");
+      expect(result).toBe("brew-session-items-456-0");
     });
 
     it("should handle item name with spaces and special characters", () => {
@@ -127,7 +127,7 @@ describe("keyUtils", () => {
 
     it("should handle context with unicode characters", () => {
       const result = generateListItemKey(mockItem, 0, "Résumé français");
-      expect(result).toBe("resume-francais-456");
+      expect(result).toBe("resume-francais-456-0");
     });
 
     it("should handle multiple consecutive spaces in context", () => {
@@ -136,12 +136,12 @@ describe("keyUtils", () => {
         0,
         "Multiple   Spaces   Here"
       );
-      expect(result).toBe("multiple-spaces-here-456");
+      expect(result).toBe("multiple-spaces-here-456-0");
     });
 
     it("should handle multiple consecutive dashes in slugification", () => {
       const result = generateListItemKey(mockItem, 0, "Test---With---Dashes");
-      expect(result).toBe("test-with-dashes-456");
+      expect(result).toBe("test-with-dashes-456-0");
     });
   });
 
@@ -155,13 +155,13 @@ describe("keyUtils", () => {
         unit: "oz",
       };
       const result = generateIngredientKey(mockIngredient, 0, "");
-      expect(result).toBe("hop-123");
+      expect(result).toBe("hop-123-0");
     });
 
     it("should handle context with only special characters", () => {
       const mockItem = { id: "789", name: "Test" };
       const result = generateListItemKey(mockItem, 0, "!@#$%^&*()");
-      expect(result).toBe("-789"); // Context becomes empty dash after slugification
+      expect(result).toBe("-789-0"); // Context becomes empty dash after slugification
     });
 
     it("should handle very long ingredient name", () => {
@@ -176,6 +176,25 @@ describe("keyUtils", () => {
       expect(result).toBe(
         "grain-temp-this-is-a-very-long-ingredient-name-that-should-be-properly-slugified-and-handled-0"
       );
+    });
+
+    it("should generate unique keys for duplicate ingredients with same ID", () => {
+      // This tests the specific scenario that was failing: same grain added twice
+      const duplicateIngredient: RecipeIngredient = {
+        id: "687a59172023723cb876bab3",
+        name: "Grain Ingredient",
+        type: "grain",
+        amount: 1,
+        unit: "lb",
+      };
+
+      // Same ingredient at different indexes should have unique keys
+      const key1 = generateIngredientKey(duplicateIngredient, 0);
+      const key2 = generateIngredientKey(duplicateIngredient, 1);
+
+      expect(key1).toBe("grain-687a59172023723cb876bab3-0");
+      expect(key2).toBe("grain-687a59172023723cb876bab3-1");
+      expect(key1).not.toBe(key2); // Ensure they're actually different
     });
   });
 });

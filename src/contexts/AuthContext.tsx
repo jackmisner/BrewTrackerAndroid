@@ -298,6 +298,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       // Get current user ID before clearing state for cache cleanup
       const userId = user?.id;
 
+      // Clear user state FIRST so components can check isAuthenticated
+      // and avoid making API calls during cleanup
+      setUser(null);
+      setError(null);
+
       // Clear secure storage
       await ApiService.token.removeToken();
 
@@ -314,9 +319,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
       // Clear user-scoped offline data
       await OfflineRecipeService.clearUserData(userId);
-
-      setUser(null);
-      setError(null);
     } catch (error: any) {
       console.error("Logout failed:", error);
       // Even if logout fails, clear local state and cache

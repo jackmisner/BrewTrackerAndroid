@@ -192,6 +192,7 @@ export default function DashboardScreen() {
         throw error;
       }
     },
+    enabled: !!user, // Only run query when user is authenticated
     retry: 1, // Only retry once to avoid excessive API calls
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
@@ -300,7 +301,7 @@ export default function DashboardScreen() {
             onPress: () => {
               router.push({
                 pathname: "/(modals)/(recipes)/viewRecipe",
-                params: { recipe_id: response.data.recipe_id },
+                params: { recipe_id: response.data.id },
               });
             },
           },

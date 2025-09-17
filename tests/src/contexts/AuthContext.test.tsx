@@ -553,6 +553,8 @@ describe("AuthContext", () => {
       expect(mockAsyncStorage.multiRemove).toHaveBeenNthCalledWith(2, [
         "offlineRecipes_user-123",
         "offlineRecipes_user-123_pending",
+        "offlineRecipes_user-123_meta",
+        "offlineRecipes_user-123_pending_failed",
       ]);
       expect(result.current.user).toBeNull();
       expect(result.current.isAuthenticated).toBe(false);

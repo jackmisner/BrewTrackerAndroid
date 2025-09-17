@@ -64,12 +64,8 @@ export interface OfflineRecipeState {
  * Offline-first Recipe Service
  */
 export class OfflineRecipeService {
-  // Legacy storage keys for backwards compatibility
-  private static readonly STORAGE_KEY = STORAGE_KEYS.OFFLINE_RECIPES;
-  private static readonly PENDING_OPERATIONS_KEY = `${STORAGE_KEYS.OFFLINE_RECIPES}_pending`;
-
   /**
-   * Generate user-scoped storage keys
+   * Generate user-scoped storage keys and metadata key
    */
   private static async getUserScopedKeys() {
     const userId = await this.getCurrentUserId();
@@ -79,6 +75,7 @@ export class OfflineRecipeService {
     return {
       STORAGE_KEY: baseKey,
       PENDING_OPERATIONS_KEY: `${baseKey}_pending`,
+      METADATA_KEY: `${baseKey}_meta`,
     };
   }
 
@@ -103,11 +100,12 @@ export class OfflineRecipeService {
     _user_id?: string
   ): Promise<OfflineRecipeState> {
     try {
-      const { STORAGE_KEY, PENDING_OPERATIONS_KEY } =
+      const { STORAGE_KEY, PENDING_OPERATIONS_KEY, METADATA_KEY } =
         await this.getUserScopedKeys();
-      const [recipesData, operationsData] = await Promise.all([
+      const [recipesData, operationsData, metadataData] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEY),
         AsyncStorage.getItem(PENDING_OPERATIONS_KEY),
+        AsyncStorage.getItem(METADATA_KEY),
       ]);
 
       const recipes: OfflineRecipe[] = recipesData
@@ -117,11 +115,16 @@ export class OfflineRecipeService {
         ? JSON.parse(operationsData)
         : [];
 
+      // Load metadata if exists, otherwise use defaults
+      const metadata = metadataData
+        ? JSON.parse(metadataData)
+        : { lastSync: 0, version: 1 };
+
       return {
         recipes,
         pendingOperations,
-        lastSync: 0,
-        version: 1,
+        lastSync: metadata.lastSync || 0,
+        version: metadata.version || 1,
       };
     } catch (error) {
       console.error("Failed to load offline recipe state:", error);
@@ -142,14 +145,22 @@ export class OfflineRecipeService {
     _userId?: string
   ): Promise<void> {
     try {
-      const { STORAGE_KEY, PENDING_OPERATIONS_KEY } =
+      const { STORAGE_KEY, PENDING_OPERATIONS_KEY, METADATA_KEY } =
         await this.getUserScopedKeys();
+
+      // Prepare metadata for storage
+      const metadata = {
+        lastSync: state.lastSync,
+        version: state.version,
+      };
+
       await Promise.all([
         AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state.recipes)),
         AsyncStorage.setItem(
           PENDING_OPERATIONS_KEY,
           JSON.stringify(state.pendingOperations)
         ),
+        AsyncStorage.setItem(METADATA_KEY, JSON.stringify(metadata)),
       ]);
     } catch (error) {
       console.error("Failed to save offline recipe state:", error);
@@ -261,9 +272,23 @@ export class OfflineRecipeService {
 
         // Check for basic required fields
         if (!recipe.id || !recipe.name) {
+          const missingFields = [];
+          if (!recipe.id) {
+            missingFields.push("id");
+          }
+          if (!recipe.name) {
+            missingFields.push("name");
+          }
+
           removedRecipes.push(
-            `${recipe.name || recipe.id || "Unknown"} (missing required fields)`
+            `${recipe.name || recipe.id || "Unknown"} (missing required fields: ${missingFields.join(", ")})`
           );
+          console.warn(`🧹 CLEANUP: Recipe missing fields:`, {
+            recipeName: recipe.name,
+            recipeId: recipe.id,
+            missingFields,
+            recipeKeys: Object.keys(recipe),
+          });
           return false;
         }
 
@@ -307,7 +332,7 @@ export class OfflineRecipeService {
 
       const removedCount = initialCount - state.recipes.length;
 
-      if (removedCount > 0) {
+      if (removedCount > 0 && __DEV__) {
         console.log(
           `Cleaned up ${removedCount} stale recipes:`,
           removedRecipes
@@ -333,11 +358,16 @@ export class OfflineRecipeService {
       let keysToRemove: string[];
 
       if (userId) {
-        // Clear specific user's data
+        // Clear specific user's data including metadata and failed operations
         const baseKey = `${STORAGE_KEYS.OFFLINE_RECIPES}_${userId}`;
-        keysToRemove = [baseKey, `${baseKey}_pending`];
+        keysToRemove = [
+          baseKey,
+          `${baseKey}_pending`,
+          `${baseKey}_meta`,
+          `${baseKey}_pending_failed`, // Failed operations key
+        ];
       } else {
-        // Clear all offline recipe keys
+        // Clear all offline recipe keys (including metadata and failed operation keys)
         const allKeys = await AsyncStorage.getAllKeys();
         keysToRemove = allKeys.filter(key =>
           key.startsWith(STORAGE_KEYS.OFFLINE_RECIPES)
@@ -364,8 +394,12 @@ export class OfflineRecipeService {
 
     const state = await this.loadOfflineState();
 
-    // If online, try to fetch latest from server and merge with offline
-    if (await this.isOnline()) {
+    // Check if user is authenticated before making API calls
+    const userId = await this.getCurrentUserId();
+    const isAuthenticated = !!userId;
+
+    // If online and authenticated, try to fetch latest from server and merge with offline
+    if ((await this.isOnline()) && isAuthenticated) {
       try {
         // Fetch all recipes with pagination
         let allServerRecipes: Recipe[] = [];
@@ -390,16 +424,36 @@ export class OfflineRecipeService {
         // Merge with offline recipes (offline takes precedence for conflicts)
         const mergedRecipes = this.mergeRecipes(serverRecipes, state.recipes);
 
+        // Clean up defensive tombstones for recipes that are confirmed deleted on server
+        const serverRecipeIds = new Set(serverRecipes.map(r => r.id));
+        const cleanedRecipes = mergedRecipes.filter(recipe => {
+          // Remove defensive tombstones for recipes that are confirmed deleted on server
+          if (
+            recipe.isDeleted &&
+            recipe.syncStatus === "synced" &&
+            !recipe.needsSync &&
+            !serverRecipeIds.has(recipe.id)
+          ) {
+            console.log(
+              `🧹 DELETE: Cleaning up defensive tombstone for confirmed deleted recipe: ${recipe.name}`
+            );
+            return false; // Remove the tombstone
+          }
+          return true; // Keep the recipe
+        });
+
         // Update cached recipes
-        state.recipes = mergedRecipes;
+        state.recipes = cleanedRecipes;
         await this.saveOfflineState(state);
 
         // Filter out deleted recipes before returning to UI (same as offline path)
-        const activeRecipes = mergedRecipes.filter(recipe => !recipe.isDeleted);
+        const activeRecipes = cleanedRecipes.filter(
+          recipe => !recipe.isDeleted
+        );
 
         if (__DEV__) {
           console.log(
-            `🔍 Online recipes filtered: ${activeRecipes.length} active (${mergedRecipes.length} total including ${mergedRecipes.length - activeRecipes.length} tombstones)`
+            `🔍 Online recipes filtered: ${activeRecipes.length} active (${cleanedRecipes.length} total including ${cleanedRecipes.length - activeRecipes.length} tombstones)`
           );
         }
 
@@ -410,6 +464,10 @@ export class OfflineRecipeService {
           error
         );
       }
+    } else if ((await this.isOnline()) && !isAuthenticated) {
+      console.log(
+        "User not authenticated, skipping online recipe fetch and using offline cache only"
+      );
     }
 
     // Filter out deleted recipes before returning to UI
@@ -649,33 +707,57 @@ export class OfflineRecipeService {
     const recipe = state.recipes[recipeIndex];
     const isOnline = await this.isOnline();
 
+    console.log(`🗑️ DELETE: Starting deletion of "${recipe.name}" (ID: ${id})`);
+    console.log(
+      `🗑️ DELETE: Recipe details - tempId: ${recipe.tempId}, isValidId: ${this.isValidObjectId(id)}, isOnline: ${isOnline}`
+    );
+
     // Check if this is a valid server recipe that can be deleted online immediately
     if (isOnline && !recipe.tempId && this.isValidObjectId(id)) {
+      console.log(`🗑️ DELETE: Attempting immediate online deletion...`);
       try {
         // Try online deletion first (if recipe has valid ID)
         await ApiService.recipes.delete(id);
+        console.log(`🗑️ DELETE: Online deletion API call succeeded`);
 
-        // Remove from cache entirely - successful online deletion
-        state.recipes.splice(recipeIndex, 1);
+        // DEFENSIVE: Create a temporary tombstone even for "successful" deletions
+        // This prevents race conditions where server hasn't processed deletion yet
+        const defensiveTombstone: OfflineRecipe = {
+          ...recipe,
+          isDeleted: true,
+          deletedAt: Date.now(),
+          needsSync: false, // Already deleted on server
+          syncStatus: "synced", // Server deletion succeeded
+          lastModified: Date.now(),
+        };
+
+        state.recipes[recipeIndex] = defensiveTombstone;
         await this.saveOfflineState(state);
+        console.log(
+          `🗑️ DELETE: Created defensive tombstone to prevent race conditions`
+        );
 
-        if (__DEV__) {
-          console.log(`✅ Recipe deleted online immediately: ${recipe.name}`);
-        }
+        console.log(
+          `✅ Recipe deleted online with defensive tombstone: ${recipe.name}`
+        );
         return;
       } catch (error) {
-        if (__DEV__) {
-          console.warn(
-            "Online recipe deletion failed, creating tombstone:",
-            error
-          );
-        }
+        console.warn(
+          `🗑️ DELETE: Online deletion failed for "${recipe.name}":`,
+          error
+        );
+        console.log(`🗑️ DELETE: Will fall back to sync tombstone creation`);
       }
+    } else {
+      console.log(
+        `🗑️ DELETE: Skipping online deletion - offline: ${!isOnline}, tempId: ${!!recipe.tempId}, invalidId: ${!this.isValidObjectId(id)}`
+      );
     }
 
     // Handle offline deletion or failed online deletion with tombstones
     if (recipe.tempId && recipe.id.startsWith("offline_")) {
       // If it's a purely offline recipe (never been synced), just remove it entirely
+      console.log(`🗑️ DELETE: Removing offline-only recipe entirely`);
       state.recipes.splice(recipeIndex, 1);
 
       // Also remove any pending operations for this recipe
@@ -683,11 +765,10 @@ export class OfflineRecipeService {
         op => op.recipeId !== recipe.tempId && op.recipeId !== recipe.id
       );
 
-      if (__DEV__) {
-        console.log(`🗑️ Offline-only recipe removed: ${recipe.name}`);
-      }
+      console.log(`🗑️ Offline-only recipe removed: ${recipe.name}`);
     } else {
       // Create tombstone for server recipe or offline recipe that needs server deletion
+      console.log(`🗑️ DELETE: Creating tombstone for server recipe`);
       const tombstone: OfflineRecipe = {
         ...recipe,
         isDeleted: true,
@@ -698,13 +779,11 @@ export class OfflineRecipeService {
       };
 
       state.recipes[recipeIndex] = tombstone;
-
-      if (__DEV__) {
-        console.log(`🪦 Created deletion tombstone: ${recipe.name}`);
-      }
+      console.log(`🪦 Created deletion tombstone: ${recipe.name}`);
     }
 
     await this.saveOfflineState(state);
+    console.log(`🗑️ DELETE: Final state saved, deletion process complete`);
   }
 
   /**
@@ -1101,7 +1180,8 @@ export class OfflineRecipeService {
         } else {
           failedCount++;
           // Store failed operations separately for manual retry or user notification
-          const failedOpsKey = `${this.PENDING_OPERATIONS_KEY}_failed`;
+          const { PENDING_OPERATIONS_KEY } = await this.getUserScopedKeys();
+          const failedOpsKey = `${PENDING_OPERATIONS_KEY}_failed`;
           const existingFailed = await AsyncStorage.getItem(failedOpsKey);
           const failedOps = existingFailed ? JSON.parse(existingFailed) : [];
           failedOps.push({
@@ -1359,9 +1439,13 @@ export class OfflineRecipeService {
    * Clear all offline data (use with caution)
    */
   static async clearOfflineData(): Promise<void> {
+    const { STORAGE_KEY, PENDING_OPERATIONS_KEY, METADATA_KEY } =
+      await this.getUserScopedKeys();
     await AsyncStorage.multiRemove([
-      this.STORAGE_KEY,
-      this.PENDING_OPERATIONS_KEY,
+      STORAGE_KEY,
+      PENDING_OPERATIONS_KEY,
+      METADATA_KEY,
+      `${PENDING_OPERATIONS_KEY}_failed`, // Failed operations key
     ]);
   }
 }

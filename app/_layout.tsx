@@ -69,14 +69,14 @@ const DynamicPersistQueryClientProvider = ({
   const prevUserIdRef = React.useRef<string | undefined>(undefined);
 
   React.useEffect(() => {
-    const userId = user?.id;
+    const userId = user?.id ? String(user.id) : undefined;
     const prevUserId = prevUserIdRef.current;
-
-    // Clear cache when user ID actually changes (but not on initial mount)
-    if (prevUserId !== undefined && prevUserId !== userId) {
+    // Clear cache whenever identity changes (including anonymous ↔ user)
+    const prevKey = prevUserId ?? "anonymous";
+    const nextKey = userId ?? "anonymous";
+    if (prevKey !== nextKey) {
       queryClient.clear();
     }
-
     // Update previous user ID and create new persister
     prevUserIdRef.current = userId;
     setPersister(createUserScopedPersister(userId));

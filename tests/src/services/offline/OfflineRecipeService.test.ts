@@ -154,11 +154,14 @@ describe("OfflineRecipeService", () => {
 
       mockAsyncStorage.getItem
         .mockResolvedValueOnce(JSON.stringify(mockRecipes))
-        .mockResolvedValueOnce(JSON.stringify(mockOperations));
+        .mockResolvedValueOnce(JSON.stringify(mockOperations))
+        .mockResolvedValueOnce(
+          JSON.stringify({ lastSync: Date.now(), version: 1 })
+        );
 
       const recipes = await OfflineRecipeService.getAll();
 
-      expect(mockAsyncStorage.getItem).toHaveBeenCalledTimes(2);
+      expect(mockAsyncStorage.getItem).toHaveBeenCalledTimes(3);
       expect(recipes).toHaveLength(1);
       expect(recipes[0].name).toBe(mockRecipe.name);
     });
@@ -895,12 +898,12 @@ describe("OfflineRecipeService", () => {
     it("should clear all offline data from storage", async () => {
       await OfflineRecipeService.clearOfflineData();
 
-      expect(mockAsyncStorage.multiRemove).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.stringContaining("offline_recipes"),
-          expect.stringContaining("offline_recipes_pending"),
-        ])
-      );
+      expect(mockAsyncStorage.multiRemove).toHaveBeenCalledWith([
+        "offline_recipes_user-123",
+        "offline_recipes_user-123_pending",
+        "offline_recipes_user-123_meta",
+        "offline_recipes_user-123_pending_failed",
+      ]);
     });
   });
 

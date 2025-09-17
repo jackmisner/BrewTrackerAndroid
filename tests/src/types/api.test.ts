@@ -361,13 +361,10 @@ describe("API Types", () => {
     describe("CloneRecipeResponse", () => {
       it("should return cloned recipe data", () => {
         const response: CloneRecipeResponse = {
-          message: "Recipe cloned successfully",
-          recipe: mockRecipe,
+          ...mockRecipe,
           recipe_id: "cloned-recipe-456",
         };
 
-        expect(response.message).toContain("cloned");
-        expect(response.recipe).toEqual(mockRecipe);
         expect(response.recipe_id).toBe("cloned-recipe-456");
       });
     });

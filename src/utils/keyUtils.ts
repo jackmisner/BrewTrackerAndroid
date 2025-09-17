@@ -25,9 +25,9 @@ const slugify = (s: string): string =>
  * in different contexts (different usage, timing, etc.)
  *
  * @param ingredient - The recipe ingredient
- * @param index - The array index for this ingredient (fallback only)
+ * @param index - The array index for this ingredient (always included for uniqueness)
  * @param context - Context string for discriminating same ingredient in different roles
- * @returns Deterministic composite key, stable across reorders when ID exists
+ * @returns Deterministic composite key, unique even when same ingredient appears multiple times
  */
 export function generateIngredientKey(
   ingredient: RecipeIngredient,
@@ -38,8 +38,8 @@ export function generateIngredientKey(
   const contextPrefix = context ? `${slugify(context)}-` : "";
 
   if (ingredient.id) {
-    // Stable key: context + type + id (no index needed)
-    return `${contextPrefix}${type}-${String(ingredient.id)}`;
+    // Always include index to handle cases where same ingredient (same ID) is used multiple times
+    return `${contextPrefix}${type}-${String(ingredient.id)}-${index}`;
   }
 
   // Fallback for items without stable ID
@@ -52,9 +52,9 @@ export function generateIngredientKey(
  * Generates a unique key for any list item with optional context
  *
  * @param item - Object with id and optional name properties
- * @param index - Array index (fallback only)
+ * @param index - Array index (always included for uniqueness)
  * @param context - Context string for discriminating same item in different roles
- * @returns Deterministic composite key, stable across reorders when ID exists
+ * @returns Deterministic composite key, unique even when same item appears multiple times
  */
 export function generateListItemKey(
   item: { id?: string; name?: string },
@@ -64,8 +64,8 @@ export function generateListItemKey(
   const contextPrefix = context ? `${slugify(context)}-` : "";
 
   if (item.id) {
-    // Stable key: context + id (no index needed)
-    return `${contextPrefix}${String(item.id)}`;
+    // Always include index to handle cases where same item (same ID) appears multiple times
+    return `${contextPrefix}${String(item.id)}-${index}`;
   }
 
   // Fallback for items without stable ID

@@ -38,8 +38,14 @@ import { BeerStyleOption } from "@src/hooks/useBeerStyles";
 // Cache metadata interface
 interface CacheMetadata {
   version: number;
+  // Core cache (ingredients/beer styles)
   lastUpdated: number;
+  // Domain-specific freshness (do not influence core validity)
+  dashboardLastUpdated?: number;
+  recipeListLastUpdated?: number;
   dataSize: number;
+  // Optional: scope cache by user (prevents cross-account leakage)
+  userId?: string;
 }
 
 // Progress callback interface for splash screen
@@ -255,9 +261,6 @@ export class OfflineCacheService {
     const isUserAuthenticated = await this.isAuthenticated();
 
     if (!isUserAuthenticated) {
-      console.log(
-        "User not authenticated, skipping ingredient caching. Ingredients will be cached after login."
-      );
       reportProgress?.(
         "auth",
         "Authentication required for ingredient data",
@@ -308,7 +311,6 @@ export class OfflineCacheService {
     // Save to AsyncStorage with error handling
     try {
       await AsyncStorage.setItem(this.CACHE_KEY, dataString);
-      console.log(`Cache saved: ${cachedData.metadata.dataSize} bytes`);
     } catch (error) {
       console.error("Failed to save cache to AsyncStorage:", {
         error,
@@ -468,15 +470,10 @@ export class OfflineCacheService {
 
       const isUserAuthenticated = await this.isAuthenticated();
       if (!isUserAuthenticated) {
-        console.log(
-          "Skipping background cache refresh - user not authenticated"
-        );
         return;
       }
 
-      console.log("Starting background cache refresh...");
       await this.fetchAndCacheData();
-      console.log("Background cache refresh completed");
     } catch (error) {
       console.error("Background cache refresh failed:", error);
     }
@@ -496,11 +493,8 @@ export class OfflineCacheService {
 
       const isOnline = await this.isNetworkAvailable();
       if (!isOnline) {
-        console.log("Cannot cache ingredients - network not available");
         return false;
       }
-
-      console.log("Caching ingredients after authentication...");
 
       // Load existing cached data
       let cachedData = await this.loadCachedData();
@@ -520,10 +514,8 @@ export class OfflineCacheService {
       // Fetch ingredients by type
       for (const type of this.INGREDIENT_TYPES) {
         try {
-          console.log(`Fetching ${type}s...`);
           const response = await ApiService.ingredients.getAll(type);
           cachedData.ingredients[type] = response.data || [];
-          console.log(`Cached ${cachedData.ingredients[type].length} ${type}s`);
         } catch (error) {
           console.warn(`Failed to fetch ${type}s:`, error);
           // Keep existing cache or empty array
@@ -537,7 +529,7 @@ export class OfflineCacheService {
 
       // Save updated cache
       await AsyncStorage.setItem(this.CACHE_KEY, dataString);
-      console.log("Ingredients cached successfully after authentication");
+
       return true;
     } catch (error) {
       console.error("Failed to cache ingredients after authentication:", error);
@@ -605,24 +597,12 @@ export class OfflineCacheService {
    */
   static async logCacheStatus(): Promise<void> {
     try {
-      const status = await this.getCacheStatus();
-      const hasIngredientsAvailable = await this.hasIngredients();
-      const isAuthenticated = await this.isAuthenticated();
+      const _status = await this.getCacheStatus();
+      const _hasIngredientsAvailable = await this.hasIngredients();
+      const _isAuthenticated = await this.isAuthenticated();
 
-      console.log("=== OfflineCacheService Status ===");
-      console.log(`User Authenticated: ${isAuthenticated}`);
-      console.log(`Cache Valid: ${status.isValid}`);
-      console.log(`Has Ingredients: ${hasIngredientsAvailable}`);
-      console.log(
-        `Last Updated: ${status.lastUpdated?.toISOString() || "Never"}`
-      );
-      console.log(`Cache Size: ${status.dataSize} bytes`);
-      console.log(`Version: ${status.version}`);
-      console.log("Ingredient Counts:");
-      for (const [type, count] of Object.entries(status.ingredientCounts)) {
-        console.log(`  ${type}: ${count}`);
-      }
-      console.log("================================");
+      // Cache status logging disabled - too verbose
+      // Enable only when specifically debugging cache issues
     } catch (error) {
       console.error("Failed to get cache status:", error);
     }
@@ -658,7 +638,6 @@ export class OfflineCacheService {
       cachedData.metadata.dataSize = dataString.length;
 
       await AsyncStorage.setItem(this.CACHE_KEY, dataString);
-      console.log("Dashboard data cached successfully");
     } catch (error) {
       console.error("Failed to cache dashboard data:", error);
     }
@@ -719,13 +698,35 @@ export class OfflineCacheService {
         timestamp: Date.now(),
       };
 
-      // Update metadata
-      cachedData.metadata.lastUpdated = Date.now();
-      const dataString = JSON.stringify(cachedData);
+      // Update domain-specific timestamp
+      cachedData.metadata.recipeListLastUpdated = Date.now();
+      let dataString = JSON.stringify(cachedData);
       cachedData.metadata.dataSize = dataString.length;
-
-      await AsyncStorage.setItem(this.CACHE_KEY, dataString);
-      console.log("Recipe list data cached successfully");
+      // Optional: cap size by trimming recipes if too large
+      const MAX_CACHE_SIZE = 10 * 1024 * 1024;
+      if (
+        cachedData.metadata.dataSize > MAX_CACHE_SIZE &&
+        cachedData.recipeList
+      ) {
+        console.warn(
+          `Cache size (${cachedData.metadata.dataSize} bytes) exceeds limit after recipe list update; trimming list.`
+        );
+        cachedData.recipeList.recipes = cachedData.recipeList.recipes.slice(
+          0,
+          100
+        );
+        dataString = JSON.stringify(cachedData);
+        cachedData.metadata.dataSize = dataString.length;
+      }
+      try {
+        await AsyncStorage.setItem(this.CACHE_KEY, dataString);
+      } catch (error) {
+        console.error("Failed to cache recipe list data:", {
+          error,
+          dataSize: cachedData.metadata.dataSize,
+          cacheKey: this.CACHE_KEY,
+        });
+      }
     } catch (error) {
       console.error("Failed to cache recipe list data:", error);
     }
@@ -769,13 +770,8 @@ export class OfflineCacheService {
 
       const isUserAuthenticated = await this.isAuthenticated();
       if (!isUserAuthenticated) {
-        console.log(
-          "Skipping background cache refresh - user not authenticated"
-        );
         return;
       }
-
-      console.log("Starting comprehensive background cache refresh...");
 
       // Refresh basic cache (ingredients, beer styles)
       await this.fetchAndCacheData();
@@ -802,8 +798,6 @@ export class OfflineCacheService {
       } catch (error) {
         console.warn("Failed to refresh recipe list data:", error);
       }
-
-      console.log("Comprehensive background cache refresh completed");
     } catch (error) {
       console.error("Comprehensive background cache refresh failed:", error);
     }
@@ -818,6 +812,12 @@ export class OfflineCacheService {
     active_brew_sessions: BrewSession[];
   } | null> {
     try {
+      // Check authentication before making API calls
+      const isUserAuthenticated = await this.isAuthenticated();
+      if (!isUserAuthenticated) {
+        return null;
+      }
+
       const PAGE = 1;
       const RECENT_RECIPES_LIMIT = 5;
       const BREW_SESSIONS_LIMIT = 20;
@@ -863,6 +863,12 @@ export class OfflineCacheService {
     pagination: any;
   } | null> {
     try {
+      // Check authentication before making API calls
+      const isUserAuthenticated = await this.isAuthenticated();
+      if (!isUserAuthenticated) {
+        return null;
+      }
+
       const response = await ApiService.recipes.getAll(1, 20); // First page with 20 items
       return {
         recipes: response.data?.recipes || [],

@@ -37,10 +37,12 @@ import { CreateRecipeRequest, UpdateRecipeRequest } from "@src/types";
  */
 export function useOfflineRecipes() {
   const { isConnected } = useNetwork();
+  const { user } = useAuth();
 
   return useQuery({
     queryKey: [...QUERY_KEYS.RECIPES, "offline"],
     queryFn: () => OfflineRecipeService.getAll(),
+    enabled: !!user, // Only run when user is authenticated
     staleTime: isConnected ? 5 * 60 * 1000 : 1000, // 5min online, 1sec offline (allow frequent refetch)
     gcTime: 24 * 60 * 60 * 1000, // Keep for 24 hours
     refetchOnMount: true, // Always refetch on mount to get latest offline data

@@ -53,7 +53,15 @@ const createWrapper = (isConnected: boolean = true) => {
 
   const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      <AuthProvider
+        initialAuthState={{
+          user: {
+            id: "test-user",
+            username: "testuser",
+            email: "test@test.com",
+          } as any,
+        }}
+      >
         <NetworkProvider initialState={{ isConnected }}>
           {children}
         </NetworkProvider>

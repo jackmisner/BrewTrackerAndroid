@@ -85,6 +85,7 @@ export interface RecipeMetrics {
 // Main recipe interface
 export interface Recipe {
   id: ID; // Normalized by API interceptors
+  recipe_id?: string; // Original ID from backend
   name: string;
   style: string;
   description: string;
@@ -100,7 +101,6 @@ export interface Recipe {
   notes: string;
   ingredients: RecipeIngredient[];
 
-  // Calculated metrics (stored)
   estimated_og?: number;
   estimated_fg?: number;
   estimated_abv?: number;
