@@ -176,7 +176,7 @@ export default function EditRecipeScreen() {
     isLoading: loadingRecipe,
     error: loadError,
   } = useQuery<Recipe>({
-    queryKey: ["recipe", recipe_id],
+    queryKey: [...QUERY_KEYS.RECIPE(recipe_id)],
     queryFn: async () => {
       const recipe = await OfflineRecipeService.getById(recipe_id);
       if (!recipe) {
@@ -324,34 +324,27 @@ export default function EditRecipeScreen() {
         is_public: Boolean(formData.is_public),
         notes: formData.notes || "",
         ingredients: sanitizedIngredients,
-        // Include estimated metrics if available
-        ...(metricsData && {
-          estimated_og:
-            typeof metricsData.og === "number" &&
-            Number.isFinite(metricsData.og)
-              ? metricsData.og
-              : null,
-          estimated_fg:
-            typeof metricsData.fg === "number" &&
-            Number.isFinite(metricsData.fg)
-              ? metricsData.fg
-              : null,
-          estimated_abv:
-            typeof metricsData.abv === "number" &&
-            Number.isFinite(metricsData.abv)
-              ? metricsData.abv
-              : null,
-          estimated_ibu:
-            typeof metricsData.ibu === "number" &&
-            Number.isFinite(metricsData.ibu)
-              ? metricsData.ibu
-              : null,
-          estimated_srm:
-            typeof metricsData.srm === "number" &&
-            Number.isFinite(metricsData.srm)
-              ? metricsData.srm
-              : null,
-        }),
+        // Include estimated metrics only when finite
+        ...(metricsData &&
+          Number.isFinite(metricsData.og) && {
+            estimated_og: metricsData.og,
+          }),
+        ...(metricsData &&
+          Number.isFinite(metricsData.fg) && {
+            estimated_fg: metricsData.fg,
+          }),
+        ...(metricsData &&
+          Number.isFinite(metricsData.abv) && {
+            estimated_abv: metricsData.abv,
+          }),
+        ...(metricsData &&
+          Number.isFinite(metricsData.ibu) && {
+            estimated_ibu: metricsData.ibu,
+          }),
+        ...(metricsData &&
+          Number.isFinite(metricsData.srm) && {
+            estimated_srm: metricsData.srm,
+          }),
       };
 
       const updatedRecipe = await OfflineRecipeService.update(

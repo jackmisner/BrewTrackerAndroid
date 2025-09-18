@@ -122,14 +122,13 @@ export class OfflineRecipeService {
     // Parse the timestamp
     const parsed =
       typeof serverTimestamp === "number"
-        ? serverTimestamp
+        ? serverTimestamp < 1e12
+          ? serverTimestamp * 1000
+          : serverTimestamp
         : Date.parse(serverTimestamp);
 
     // Return parsed timestamp if valid, otherwise fallback to current time
     return parsed && !isNaN(parsed) ? parsed : Date.now();
-  }
-  private static async isNetworkAvailable(): Promise<boolean | null> {
-    return NetInfo.fetch().then(state => state.isConnected);
   }
 
   /**
@@ -335,16 +334,17 @@ export class OfflineRecipeService {
           return false;
         }
 
-        // Check for invalid ID formats (valid ObjectId OR temp ID with offline_/optimistic_ prefix)
-        const isValidId =
-          this.isValidObjectId(recipe.id) ||
-          recipe.id.startsWith("optimistic_") ||
-          recipe.id.startsWith("offline_");
-        if (!isValidId) {
-          removedRecipes.push(
-            `${recipe.name} (invalid ID format: ${recipe.id})`
+        // Accept any non-empty string ID (allow UUIDs, numerics, etc.). We already filtered missing IDs above.
+        // Keep recipe to avoid accidental data loss.
+        if (
+          __DEV__ &&
+          !this.isValidObjectId(recipe.id) &&
+          !recipe.id.startsWith("offline_") &&
+          !recipe.id.startsWith("temp")
+        ) {
+          console.warn(
+            `🔍 Non-standard recipe ID format detected: "${recipe.id}" for recipe "${recipe.name}"`
           );
-          return false;
         }
 
         // Check for corrupted ingredients data
@@ -430,8 +430,9 @@ export class OfflineRecipeService {
    * Get all recipes (combines online and offline)
    */
   static async getAll(): Promise<OfflineRecipe[]> {
+    const online = await this.isOnline();
     // Only clean up stale data when online to avoid removing offline-created recipes
-    if (await this.isOnline()) {
+    if (online) {
       await this.cleanupStaleData();
     }
 
@@ -442,7 +443,7 @@ export class OfflineRecipeService {
     const isAuthenticated = !!userId;
 
     // If online and authenticated, try to fetch latest from server and merge with offline
-    if ((await this.isOnline()) && isAuthenticated) {
+    if (online && isAuthenticated) {
       try {
         // Fetch all recipes with pagination
         let allServerRecipes: Recipe[] = [];
@@ -488,8 +489,11 @@ export class OfflineRecipeService {
           return true; // Keep the recipe
         });
 
-        // Update cached recipes
-        state.recipes = cleanedRecipes;
+        // Update cached recipes with stable instance_ids
+        const persisted = cleanedRecipes.map(
+          r => this.ensureIngredientsHaveInstanceId(r) as OfflineRecipe
+        );
+        state.recipes = persisted;
         await this.saveOfflineState(state);
 
         // Run background metrics calculation for recipes missing metrics
@@ -498,15 +502,9 @@ export class OfflineRecipeService {
         });
 
         // Filter out deleted recipes before returning to UI (same as offline path)
-        const activeRecipes = cleanedRecipes.filter(
-          recipe => !recipe.isDeleted
-        );
+        const activeRecipes = persisted.filter(recipe => !recipe.isDeleted);
 
-        // Ensure all ingredients have instance_id for stable React keys
-        const recipesWithInstanceIds = activeRecipes.map(
-          recipe =>
-            this.ensureIngredientsHaveInstanceId(recipe) as OfflineRecipe
-        );
+        const recipesWithInstanceIds = activeRecipes; // already ensured
 
         if (__DEV__) {
           console.log(
@@ -521,7 +519,7 @@ export class OfflineRecipeService {
           error
         );
       }
-    } else if ((await this.isOnline()) && !isAuthenticated) {
+    } else if (online && !isAuthenticated) {
       console.log(
         "User not authenticated, skipping online recipe fetch and using offline cache only"
       );
@@ -551,6 +549,7 @@ export class OfflineRecipeService {
    */
   static async getById(id: string): Promise<OfflineRecipe | null> {
     const state = await this.loadOfflineState();
+    const online = await this.isOnline();
 
     // Check offline cache first
     const offlineRecipe = state.recipes.find(
@@ -563,17 +562,14 @@ export class OfflineRecipeService {
     }
 
     // If found offline and it's newer or we're offline, return it
-    if (
-      offlineRecipe &&
-      (!(await this.isOnline()) || offlineRecipe.isOffline)
-    ) {
+    if (offlineRecipe && (!online || offlineRecipe.isOffline)) {
       return this.ensureIngredientsHaveInstanceId(
         offlineRecipe
       ) as OfflineRecipe;
     }
 
     // Try to fetch from server if online
-    if (await this.isOnline()) {
+    if (online) {
       try {
         const response = await ApiService.recipes.getById(id);
         const serverTimestamp = this.normalizeServerTimestamp(response.data);
@@ -585,18 +581,18 @@ export class OfflineRecipeService {
           needsSync: false, // Fresh from server
         };
 
-        // Update cache
-        const recipeIndex = state.recipes.findIndex(r => r.id === id);
-        if (recipeIndex >= 0) {
-          state.recipes[recipeIndex] = serverRecipe;
-        } else {
-          state.recipes.push(serverRecipe);
-        }
-        await this.saveOfflineState(state);
-
-        return this.ensureIngredientsHaveInstanceId(
+        // Update cache with ensured instance_ids
+        const toPersist = this.ensureIngredientsHaveInstanceId(
           serverRecipe
         ) as OfflineRecipe;
+        const recipeIndex = state.recipes.findIndex(r => r.id === id);
+        if (recipeIndex >= 0) {
+          state.recipes[recipeIndex] = toPersist;
+        } else {
+          state.recipes.push(toPersist);
+        }
+        await this.saveOfflineState(state);
+        return toPersist;
       } catch (error) {
         console.warn(`Failed to fetch recipe ${id} from server:`, error);
       }
@@ -676,61 +672,23 @@ export class OfflineRecipeService {
   }
 
   /**
-   * Sanitizes ingredient IDs to ensure they are valid MongoDB ObjectIds
+   * Prepares ingredients for API sync by mapping ingredient IDs to ingredient_id field
    *
-   * When editing recipes offline, ingredients may get temporary IDs like "1", "2", etc.
-   * which are not valid MongoDB ObjectIds. This function checks each ingredient ID
-   * and ensures they are valid ObjectIds before syncing to the backend.
+   * Preserves the original ingredient.id and maps it to ingredient_id for the API payload.
+   * This maintains referential integrity without fabricating new ObjectIds.
    */
-  private static sanitizeIngredientIds(
+  private static prepareIngredientsForSync(
     ingredients: RecipeIngredient[]
-  ): RecipeIngredient[] {
+  ): any[] {
     return ingredients.map(ingredient => {
-      // Check if the ID looks like a valid MongoDB ObjectId (24 hex characters)
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(ingredient.id);
-
-      if (isValidObjectId) {
-        // ID is already valid, keep it as is
-        return ingredient;
-      }
-
-      // ID is invalid (likely a temporary ID like "1", "2", etc.)
-      // For now, we'll generate a new ObjectId-like string
-      // In a more sophisticated implementation, we might try to:
-      // 1. Look up the ingredient by name in the ingredients database
-      // 2. Use a default "unknown ingredient" ObjectId
-      // 3. Create a mapping of temporary IDs to real ObjectIds
-
-      // Generate a valid ObjectId-like string (24 hex characters)
-      const validObjectId = this.generateValidObjectId();
-
-      if (__DEV__) {
-        console.warn(
-          `🔄 Ingredient "${ingredient.name}" has invalid ID "${ingredient.id}", replacing with valid ObjectId: ${validObjectId}`
-        );
-      }
+      // Create the payload object with ingredient_id set to the original id, and omit the id field
+      const { id, ...ingredientWithoutId } = ingredient;
 
       return {
-        ...ingredient,
-        id: validObjectId,
+        ...ingredientWithoutId,
+        ingredient_id: id,
       };
     });
-  }
-
-  /**
-   * Generates a valid MongoDB ObjectId-like string (24 hex characters)
-   */
-  private static generateValidObjectId(): string {
-    // Generate a 24-character hex string that looks like a MongoDB ObjectId
-    // This is a fallback for ingredients with invalid IDs
-    const timestamp = Math.floor(Date.now() / 1000)
-      .toString(16)
-      .padStart(8, "0");
-    const randomBytes = Array.from({ length: 16 }, () =>
-      Math.floor(Math.random() * 16).toString(16)
-    ).join("");
-
-    return (timestamp + randomBytes).substring(0, 24);
   }
 
   /**
@@ -1200,7 +1158,7 @@ export class OfflineRecipeService {
             mash_time: recipe.mash_time,
             is_public: recipe.is_public,
             notes: recipe.notes,
-            ingredients: this.sanitizeIngredientIds(recipe.ingredients),
+            ingredients: this.prepareIngredientsForSync(recipe.ingredients),
             // Include offline-calculated metrics so they're saved to database
             ...(recipe.estimated_og != null && {
               estimated_og: recipe.estimated_og,
@@ -1316,7 +1274,7 @@ export class OfflineRecipeService {
             mash_time: recipe.mash_time,
             is_public: recipe.is_public,
             notes: recipe.notes,
-            ingredients: this.sanitizeIngredientIds(recipe.ingredients),
+            ingredients: this.prepareIngredientsForSync(recipe.ingredients),
             // Include offline-calculated metrics so they're saved to database
             ...(recipe.estimated_og != null && {
               estimated_og: recipe.estimated_og,
