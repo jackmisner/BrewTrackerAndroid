@@ -27,8 +27,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@contexts/ThemeContext";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import BeerXMLService from "@services/beerxml/BeerXMLService";
-import { TEST_IDS } from "@src/constants/testIDs";
-import { generateUniqueId } from "@/src/utils/keyUtils";
+import { TEST_IDS } from "@constants/testIDs";
+import { generateUniqueId } from "@utils/keyUtils";
 
 interface MatchingState {
   step: "matching" | "reviewing" | "creating" | "finalizing";

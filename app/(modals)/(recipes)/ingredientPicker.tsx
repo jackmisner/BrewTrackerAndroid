@@ -47,7 +47,7 @@ import { ingredientPickerStyles } from "@styles/modals/ingredientPickerStyles";
 import { IngredientDetailEditor } from "@src/components/recipes/IngredientEditor/IngredientDetailEditor";
 import { HOP_USAGE_OPTIONS } from "@constants/hopConstants";
 import { formatIngredientDetails } from "@utils/formatUtils";
-import { generateUniqueId } from "@/src/utils/keyUtils";
+import { generateUniqueId } from "@utils/keyUtils";
 
 /**
  * Ingredient categories for filtering (matching backend grain_type values)

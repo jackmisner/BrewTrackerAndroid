@@ -746,7 +746,9 @@ export class OfflineRecipeService {
         const serverTimestamp = this.normalizeServerTimestamp(response.data);
         const newRecipe: OfflineRecipe = {
           ...response.data,
-          isOffline: false,
+          ...(typeof recipeData.is_public === "boolean"
+            ? { is_public: recipeData.is_public }
+            : {}),
           lastModified: serverTimestamp,
           syncStatus: "synced",
           needsSync: false, // Successfully created online
@@ -785,7 +787,7 @@ export class OfflineRecipeService {
       needsSync: true, // New recipe needs to be synced
       // Add required Recipe fields with defaults
       user_id: userId,
-      is_public: false,
+      is_public: recipeData.is_public ?? false,
       is_owner: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

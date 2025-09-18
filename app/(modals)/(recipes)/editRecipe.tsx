@@ -22,7 +22,8 @@ import { ParametersForm } from "@src/components/recipes/RecipeForm/ParametersFor
 import { IngredientsForm } from "@src/components/recipes/RecipeForm/IngredientsForm";
 import { ReviewForm } from "@src/components/recipes/RecipeForm/ReviewForm";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
-import { generateUniqueId } from "@/src/utils/keyUtils";
+import { generateUniqueId } from "@utils/keyUtils";
+import { QUERY_KEYS } from "@/src/services/api/queryClient";
 
 // Recipe builder steps
 enum RecipeStep {
@@ -370,9 +371,16 @@ export default function EditRecipeScreen() {
       setHasUnsavedChanges(false);
 
       // Invalidate and refetch recipe queries
-      queryClient.invalidateQueries({ queryKey: ["recipe", recipe_id] });
-      queryClient.invalidateQueries({ queryKey: ["recipes"] });
-      queryClient.invalidateQueries({ queryKey: ["offlineRecipes"] });
+      queryClient.invalidateQueries({
+        queryKey: [...QUERY_KEYS.RECIPE(recipe_id)],
+      });
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
+      queryClient.invalidateQueries({
+        queryKey: [...QUERY_KEYS.RECIPE(recipe_id), "offline"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [...QUERY_KEYS.RECIPES, "offline"],
+      });
 
       // Navigate back to the updated recipe view
       router.back();
