@@ -49,6 +49,7 @@ import { IngredientsForm } from "@src/components/recipes/RecipeForm/IngredientsF
 import { ReviewForm } from "@src/components/recipes/RecipeForm/ReviewForm";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 import { TEST_IDS } from "@src/constants/testIDs";
+import { generateUniqueId } from "@utils/keyUtils";
 
 /**
  * Recipe creation wizard steps
@@ -237,7 +238,9 @@ export default function CreateRecipeScreen() {
           sanitized.ingredient_id = sanitized.id;
           delete sanitized.id;
         }
-
+        if (!sanitized.instance_id) {
+          sanitized.instance_id = generateUniqueId("ing");
+        }
         return sanitized;
       });
 

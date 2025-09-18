@@ -47,6 +47,7 @@ import { ingredientPickerStyles } from "@styles/modals/ingredientPickerStyles";
 import { IngredientDetailEditor } from "@src/components/recipes/IngredientEditor/IngredientDetailEditor";
 import { HOP_USAGE_OPTIONS } from "@constants/hopConstants";
 import { formatIngredientDetails } from "@utils/formatUtils";
+import { generateUniqueId } from "@/src/utils/keyUtils";
 
 /**
  * Ingredient categories for filtering (matching backend grain_type values)
@@ -148,6 +149,7 @@ const createRecipeIngredientWithDefaults = (
     type: ingredientType, // Ensure the type is explicitly set
     amount: getDefaultAmount(ingredientType),
     unit: getDefaultUnit(ingredientType),
+    instance_id: baseIngredient.instance_id || generateUniqueId("ing"), // Ensure unique instance ID
   };
 
   // Add hop-specific defaults

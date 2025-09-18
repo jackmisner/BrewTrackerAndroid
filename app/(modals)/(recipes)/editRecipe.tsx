@@ -22,6 +22,7 @@ import { ParametersForm } from "@src/components/recipes/RecipeForm/ParametersFor
 import { IngredientsForm } from "@src/components/recipes/RecipeForm/IngredientsForm";
 import { ReviewForm } from "@src/components/recipes/RecipeForm/ReviewForm";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
+import { generateUniqueId } from "@/src/utils/keyUtils";
 
 // Recipe builder steps
 enum RecipeStep {
@@ -280,7 +281,9 @@ export default function EditRecipeScreen() {
           sanitized.ingredient_id = sanitized.id;
           delete sanitized.id;
         }
-
+        if (!sanitized.instance_id) {
+          sanitized.instance_id = generateUniqueId("ing");
+        }
         return sanitized;
       });
 

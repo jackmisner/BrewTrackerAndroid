@@ -78,10 +78,10 @@ export interface YeastPitchRateState {
 }
 
 export interface EfficiencyState {
-  grainBill: Array<{
+  grainBill: {
     weight: string;
     ppg: string;
-  }>;
+  }[];
   expectedOG: string;
   actualOG: string;
   batchSize: string;
@@ -96,11 +96,11 @@ export interface BoilTimerState {
   duration: number; // minutes
   isRunning: boolean;
   timeRemaining: number; // seconds
-  additions: Array<{
+  additions: {
     time: number;
     description: string;
     completed: boolean;
-  }>;
+  }[];
   recipeId?: string;
   selectedRecipe?: {
     id: string;
@@ -108,14 +108,14 @@ export interface BoilTimerState {
     style: string;
     boil_time: number;
   } | null;
-  hopAlerts: Array<{
+  hopAlerts: {
     time: number;
     name: string;
     amount: number;
     unit: string;
     added: boolean;
     alertScheduled: boolean;
-  }>;
+  }[];
   isRecipeMode: boolean;
   preTimerCountdown?: number; // seconds before timer starts
   isPaused: boolean;
@@ -129,12 +129,12 @@ export interface UserPreferences {
 }
 
 export interface CalculationHistory {
-  [calculatorType: string]: Array<{
+  [calculatorType: string]: {
     id: string;
     timestamp: number;
     inputs: any;
     result: any;
-  }>;
+  }[];
 }
 
 // Main calculator state

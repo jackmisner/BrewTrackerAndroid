@@ -91,15 +91,18 @@ export const generateUniqueId = (prefix?: string): string => {
   globalCounter += 1;
 
   // Use crypto.randomUUID() when available (most secure and unique)
-  const g: any = globalThis as any;
-  if (g?.crypto && typeof g.crypto.randomUUID === "function") {
-    const uuid = g.crypto.randomUUID();
+  if (
+    typeof globalThis !== "undefined" &&
+    globalThis.crypto &&
+    typeof globalThis.crypto.randomUUID === "function"
+  ) {
+    const uuid = globalThis.crypto.randomUUID();
     return prefix ? `${prefix}_${uuid}` : uuid;
   }
 
   // Fallback to timestamp + counter + random for maximum collision resistance
   const timestamp = Date.now();
-  const random = Math.random().toString(36).substr(2, 9);
+  const random = Math.random().toString(36).substring(2, 9);
   const id = `${timestamp}_${globalCounter}_${random}`;
 
   return prefix ? `${prefix}_${id}` : id;

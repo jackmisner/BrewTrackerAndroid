@@ -27,7 +27,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ApiService from "@services/api/apiService";
 import { STORAGE_KEYS } from "@services/config";
-import { Recipe, CreateRecipeRequest, UpdateRecipeRequest } from "@src/types";
+import {
+  Recipe,
+  CreateRecipeRequest,
+  UpdateRecipeRequest,
+  RecipeIngredient,
+} from "@src/types";
 import NetInfo from "@react-native-community/netinfo";
 import { extractUserIdFromJWT } from "@utils/jwtUtils";
 import { OfflineMetricsCalculator } from "./OfflineMetricsCalculator";
@@ -90,7 +95,7 @@ export class OfflineRecipeService {
     const uuid =
       g?.crypto && typeof g.crypto.randomUUID === "function"
         ? g.crypto.randomUUID()
-        : `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${Math.random().toString(36).substr(2, 9)}`;
+        : `${Date.now()}_${Math.random().toString(36).substring(2, 9)}_${Math.random().toString(36).substring(2, 9)}`;
     return `offline_${uuid}`;
   }
 
@@ -671,6 +676,64 @@ export class OfflineRecipeService {
   }
 
   /**
+   * Sanitizes ingredient IDs to ensure they are valid MongoDB ObjectIds
+   *
+   * When editing recipes offline, ingredients may get temporary IDs like "1", "2", etc.
+   * which are not valid MongoDB ObjectIds. This function checks each ingredient ID
+   * and ensures they are valid ObjectIds before syncing to the backend.
+   */
+  private static sanitizeIngredientIds(
+    ingredients: RecipeIngredient[]
+  ): RecipeIngredient[] {
+    return ingredients.map(ingredient => {
+      // Check if the ID looks like a valid MongoDB ObjectId (24 hex characters)
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(ingredient.id);
+
+      if (isValidObjectId) {
+        // ID is already valid, keep it as is
+        return ingredient;
+      }
+
+      // ID is invalid (likely a temporary ID like "1", "2", etc.)
+      // For now, we'll generate a new ObjectId-like string
+      // In a more sophisticated implementation, we might try to:
+      // 1. Look up the ingredient by name in the ingredients database
+      // 2. Use a default "unknown ingredient" ObjectId
+      // 3. Create a mapping of temporary IDs to real ObjectIds
+
+      // Generate a valid ObjectId-like string (24 hex characters)
+      const validObjectId = this.generateValidObjectId();
+
+      if (__DEV__) {
+        console.warn(
+          `🔄 Ingredient "${ingredient.name}" has invalid ID "${ingredient.id}", replacing with valid ObjectId: ${validObjectId}`
+        );
+      }
+
+      return {
+        ...ingredient,
+        id: validObjectId,
+      };
+    });
+  }
+
+  /**
+   * Generates a valid MongoDB ObjectId-like string (24 hex characters)
+   */
+  private static generateValidObjectId(): string {
+    // Generate a 24-character hex string that looks like a MongoDB ObjectId
+    // This is a fallback for ingredients with invalid IDs
+    const timestamp = Math.floor(Date.now() / 1000)
+      .toString(16)
+      .padStart(8, "0");
+    const randomBytes = Array.from({ length: 16 }, () =>
+      Math.floor(Math.random() * 16).toString(16)
+    ).join("");
+
+    return (timestamp + randomBytes).substring(0, 24);
+  }
+
+  /**
    * Create new recipe (works offline)
    */
   static async create(recipeData: CreateRecipeRequest): Promise<OfflineRecipe> {
@@ -1114,8 +1177,14 @@ export class OfflineRecipeService {
       try {
         if (recipe.tempId || recipe.id.startsWith("offline_")) {
           // This is a new offline recipe - create it on server
-          // Strip offline-specific fields before sending to server
-          const createData: CreateRecipeRequest = {
+          // Include offline-calculated metrics in the request so they get saved to the database
+          const createData: CreateRecipeRequest & {
+            estimated_og?: number;
+            estimated_fg?: number;
+            estimated_abv?: number;
+            estimated_ibu?: number;
+            estimated_srm?: number;
+          } = {
             name: recipe.name,
             style: recipe.style,
             description: recipe.description || "",
@@ -1129,8 +1198,38 @@ export class OfflineRecipeService {
             mash_time: recipe.mash_time,
             is_public: recipe.is_public,
             notes: recipe.notes,
-            ingredients: recipe.ingredients,
+            ingredients: this.sanitizeIngredientIds(recipe.ingredients),
+            // Include offline-calculated metrics so they're saved to database
+            ...(recipe.estimated_og != null && {
+              estimated_og: recipe.estimated_og,
+            }),
+            ...(recipe.estimated_fg != null && {
+              estimated_fg: recipe.estimated_fg,
+            }),
+            ...(recipe.estimated_abv != null && {
+              estimated_abv: recipe.estimated_abv,
+            }),
+            ...(recipe.estimated_ibu != null && {
+              estimated_ibu: recipe.estimated_ibu,
+            }),
+            ...(recipe.estimated_srm != null && {
+              estimated_srm: recipe.estimated_srm,
+            }),
           };
+
+          if (__DEV__) {
+            const includeMetrics = {
+              estimated_og: recipe.estimated_og,
+              estimated_fg: recipe.estimated_fg,
+              estimated_abv: recipe.estimated_abv,
+              estimated_ibu: recipe.estimated_ibu,
+              estimated_srm: recipe.estimated_srm,
+            };
+            console.log(
+              `🔄 Syncing offline recipe "${recipe.name}" with calculated metrics:`,
+              includeMetrics
+            );
+          }
 
           const response = await ApiService.recipes.create(createData);
 
@@ -1139,26 +1238,36 @@ export class OfflineRecipeService {
             r => r.id === recipe.id || r.tempId === recipe.tempId
           );
           if (recipeIndex >= 0) {
+            // Extract recipe data and metrics from server response
+            // Handle different response structures: direct recipe vs nested {recipe: ..., metrics: ...}
+            const responseData = response.data as any; // Cast to any to handle nested response structure
+            const serverRecipe = responseData.recipe || responseData;
+            const serverMetrics = {
+              estimated_og: responseData.estimated_og,
+              estimated_fg: responseData.estimated_fg,
+              estimated_abv: responseData.estimated_abv,
+              estimated_ibu: responseData.estimated_ibu,
+              estimated_srm: responseData.estimated_srm,
+            };
+
             // Preserve client-calculated metrics if server doesn't provide them
             const offlineRecipe = state.recipes[recipeIndex];
             const preservedMetrics = {
               estimated_og:
-                response.data.estimated_og ?? offlineRecipe.estimated_og,
+                serverMetrics.estimated_og ?? offlineRecipe.estimated_og,
               estimated_fg:
-                response.data.estimated_fg ?? offlineRecipe.estimated_fg,
+                serverMetrics.estimated_fg ?? offlineRecipe.estimated_fg,
               estimated_abv:
-                response.data.estimated_abv ?? offlineRecipe.estimated_abv,
+                serverMetrics.estimated_abv ?? offlineRecipe.estimated_abv,
               estimated_ibu:
-                response.data.estimated_ibu ?? offlineRecipe.estimated_ibu,
+                serverMetrics.estimated_ibu ?? offlineRecipe.estimated_ibu,
               estimated_srm:
-                response.data.estimated_srm ?? offlineRecipe.estimated_srm,
+                serverMetrics.estimated_srm ?? offlineRecipe.estimated_srm,
             };
 
-            const serverTimestamp = this.normalizeServerTimestamp(
-              response.data
-            );
+            const serverTimestamp = this.normalizeServerTimestamp(serverRecipe);
             state.recipes[recipeIndex] = {
-              ...response.data,
+              ...serverRecipe,
               ...preservedMetrics, // Preserve client-calculated metrics
               isOffline: false,
               lastModified: serverTimestamp,
@@ -1184,8 +1293,14 @@ export class OfflineRecipeService {
           successCount++;
         } else {
           // This is an existing recipe - update it on server
-          // Strip offline-specific fields before sending to server
-          const updateData: UpdateRecipeRequest = {
+          // Include offline-calculated metrics in the request so they get saved to the database
+          const updateData: UpdateRecipeRequest & {
+            estimated_og?: number;
+            estimated_fg?: number;
+            estimated_abv?: number;
+            estimated_ibu?: number;
+            estimated_srm?: number;
+          } = {
             name: recipe.name,
             style: recipe.style,
             description: recipe.description || "",
@@ -1199,7 +1314,23 @@ export class OfflineRecipeService {
             mash_time: recipe.mash_time,
             is_public: recipe.is_public,
             notes: recipe.notes,
-            ingredients: recipe.ingredients,
+            ingredients: this.sanitizeIngredientIds(recipe.ingredients),
+            // Include offline-calculated metrics so they're saved to database
+            ...(recipe.estimated_og != null && {
+              estimated_og: recipe.estimated_og,
+            }),
+            ...(recipe.estimated_fg != null && {
+              estimated_fg: recipe.estimated_fg,
+            }),
+            ...(recipe.estimated_abv != null && {
+              estimated_abv: recipe.estimated_abv,
+            }),
+            ...(recipe.estimated_ibu != null && {
+              estimated_ibu: recipe.estimated_ibu,
+            }),
+            ...(recipe.estimated_srm != null && {
+              estimated_srm: recipe.estimated_srm,
+            }),
           };
 
           const response = await ApiService.recipes.update(
@@ -1210,26 +1341,36 @@ export class OfflineRecipeService {
           // Update the recipe with server response
           const recipeIndex = state.recipes.findIndex(r => r.id === recipe.id);
           if (recipeIndex >= 0) {
+            // Extract recipe data and metrics from server response
+            // Handle different response structures: direct recipe vs nested {recipe: ..., metrics: ...}
+            const responseData = response.data as any; // Cast to any to handle nested response structure
+            const serverRecipe = responseData.recipe || responseData;
+            const serverMetrics = {
+              estimated_og: responseData.estimated_og,
+              estimated_fg: responseData.estimated_fg,
+              estimated_abv: responseData.estimated_abv,
+              estimated_ibu: responseData.estimated_ibu,
+              estimated_srm: responseData.estimated_srm,
+            };
+
             // Preserve client-calculated metrics if server doesn't provide them
             const offlineRecipe = state.recipes[recipeIndex];
             const preservedMetrics = {
               estimated_og:
-                response.data.estimated_og ?? offlineRecipe.estimated_og,
+                serverMetrics.estimated_og ?? offlineRecipe.estimated_og,
               estimated_fg:
-                response.data.estimated_fg ?? offlineRecipe.estimated_fg,
+                serverMetrics.estimated_fg ?? offlineRecipe.estimated_fg,
               estimated_abv:
-                response.data.estimated_abv ?? offlineRecipe.estimated_abv,
+                serverMetrics.estimated_abv ?? offlineRecipe.estimated_abv,
               estimated_ibu:
-                response.data.estimated_ibu ?? offlineRecipe.estimated_ibu,
+                serverMetrics.estimated_ibu ?? offlineRecipe.estimated_ibu,
               estimated_srm:
-                response.data.estimated_srm ?? offlineRecipe.estimated_srm,
+                serverMetrics.estimated_srm ?? offlineRecipe.estimated_srm,
             };
 
-            const serverTimestamp = this.normalizeServerTimestamp(
-              response.data
-            );
+            const serverTimestamp = this.normalizeServerTimestamp(serverRecipe);
             state.recipes[recipeIndex] = {
-              ...response.data,
+              ...serverRecipe,
               ...preservedMetrics, // Preserve client-calculated metrics
               isOffline: false,
               lastModified: serverTimestamp,
