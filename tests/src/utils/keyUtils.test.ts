@@ -106,7 +106,7 @@ describe("keyUtils (updated implementation)", () => {
       };
 
       const result = generateIngredientKey(edgeCaseIngredient);
-      expect(result).toBe("other-unknown-ing_edge_case");
+      expect(result).toBe("other--ing_edge_case");
     });
   });
 });

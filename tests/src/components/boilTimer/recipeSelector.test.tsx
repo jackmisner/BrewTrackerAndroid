@@ -92,7 +92,7 @@ jest.mock("@services/api/apiService", () => ({
 jest.mock("@constants/testIDs", () => ({
   TEST_IDS: {
     patterns: {
-      touchableOpacityAction: jest.fn((id: string) => `touchable-${id}`),
+      touchableOpacityAction: jest.fn((id: string) => `${id}-button`),
     },
   },
 }));
@@ -503,7 +503,7 @@ describe("RecipeSelector", () => {
       fireEvent.press(getByTestId("recipe-selector"));
 
       // Select a recipe
-      const recipeItem = getByTestId("touchable-recipe-select-1");
+      const recipeItem = getByTestId("recipe-select-1-button");
       fireEvent.press(recipeItem);
 
       await waitFor(() => {
@@ -530,7 +530,7 @@ describe("RecipeSelector", () => {
 
       fireEvent.press(getByTestId("recipe-selector"));
 
-      const manualModeButton = getByTestId("touchable-manual-mode");
+      const manualModeButton = getByTestId("manual-mode-button");
       fireEvent.press(manualModeButton);
 
       await waitFor(() => {
@@ -552,7 +552,7 @@ describe("RecipeSelector", () => {
       fireEvent.press(getByTestId("recipe-selector"));
       expect(getByText("Select Recipe for Timer")).toBeTruthy();
 
-      const recipeItem = getByTestId("touchable-recipe-select-1");
+      const recipeItem = getByTestId("recipe-select-1-button");
       fireEvent.press(recipeItem);
 
       await waitFor(() => {
@@ -575,7 +575,7 @@ describe("RecipeSelector", () => {
       const searchInput = getByDisplayValue("");
       fireEvent.changeText(searchInput, "IPA");
 
-      const recipeItem = getByTestId("touchable-recipe-select-1");
+      const recipeItem = getByTestId("recipe-select-1-button");
       fireEvent.press(recipeItem);
 
       // Reopen modal to check search is cleared
@@ -650,7 +650,7 @@ describe("RecipeSelector", () => {
       fireEvent.press(getByTestId("recipe-selector"));
 
       // Selected recipe should have different styling (this is handled by the component's style logic)
-      const selectedItem = getByTestId("touchable-recipe-select-1");
+      const selectedItem = getByTestId("recipe-select-1-button");
       expect(selectedItem).toBeTruthy();
     });
   });

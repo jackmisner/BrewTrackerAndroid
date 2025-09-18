@@ -31,7 +31,8 @@ const slugify = (s: string): string =>
  */
 export function generateIngredientKey(ingredient: RecipeIngredient): string {
   const type = ingredient.type || "unknown";
-  const ingredientId = ingredient.id || "unknown";
+  const ingredientId =
+    ingredient.id != null ? String(ingredient.id) : "unknown";
   const instanceId = ingredient.instance_id;
   if (!instanceId) {
     throw new Error(
@@ -66,12 +67,12 @@ export function generateListItemKey(
   }
 
   // Then prefer item.id if present
-  if (item.id) {
+  if (item.id != null) {
     return `${contextPrefix}${String(item.id)}`;
   }
 
   // Then use item.name if present
-  if (item.name) {
+  if (item.name != null && item.name !== "") {
     return `${contextPrefix}name-${slugify(item.name)}`;
   }
 

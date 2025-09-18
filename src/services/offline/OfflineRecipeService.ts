@@ -31,6 +31,7 @@ import { Recipe, CreateRecipeRequest, UpdateRecipeRequest } from "@src/types";
 import NetInfo from "@react-native-community/netinfo";
 import { extractUserIdFromJWT } from "@utils/jwtUtils";
 import { OfflineMetricsCalculator } from "./OfflineMetricsCalculator";
+import { generateUniqueId } from "@utils/keyUtils";
 
 // Offline-specific types
 export interface OfflineRecipe extends Recipe {
@@ -496,13 +497,19 @@ export class OfflineRecipeService {
           recipe => !recipe.isDeleted
         );
 
+        // Ensure all ingredients have instance_id for stable React keys
+        const recipesWithInstanceIds = activeRecipes.map(
+          recipe =>
+            this.ensureIngredientsHaveInstanceId(recipe) as OfflineRecipe
+        );
+
         if (__DEV__) {
           console.log(
-            `🔍 Online recipes filtered: ${activeRecipes.length} active (${cleanedRecipes.length} total including ${cleanedRecipes.length - activeRecipes.length} tombstones)`
+            `🔍 Online recipes filtered: ${recipesWithInstanceIds.length} active (${cleanedRecipes.length} total including ${cleanedRecipes.length - recipesWithInstanceIds.length} tombstones)`
           );
         }
 
-        return activeRecipes;
+        return recipesWithInstanceIds;
       } catch (error) {
         console.warn(
           "Failed to fetch online recipes, using offline cache:",
@@ -518,15 +525,20 @@ export class OfflineRecipeService {
     // Filter out deleted recipes before returning to UI
     const activeRecipes = state.recipes.filter(recipe => !recipe.isDeleted);
 
+    // Ensure all ingredients have instance_id for stable React keys
+    const recipesWithInstanceIds = activeRecipes.map(
+      recipe => this.ensureIngredientsHaveInstanceId(recipe) as OfflineRecipe
+    );
+
     if (__DEV__) {
       console.log(
-        `🔍 Returning offline recipes: ${activeRecipes.length} active (${state.recipes.length} total including ${state.recipes.length - activeRecipes.length} tombstones)`
+        `🔍 Returning offline recipes: ${recipesWithInstanceIds.length} active (${state.recipes.length} total including ${state.recipes.length - recipesWithInstanceIds.length} tombstones)`
       );
       console.log(
-        `📋 Active recipe IDs: ${activeRecipes.map(r => `${r.name} (${r.id})`).join(", ")}`
+        `📋 Active recipe IDs: ${recipesWithInstanceIds.map(r => `${r.name} (${r.id})`).join(", ")}`
       );
     }
-    return activeRecipes;
+    return recipesWithInstanceIds;
   }
 
   /**
@@ -550,7 +562,9 @@ export class OfflineRecipeService {
       offlineRecipe &&
       (!(await this.isOnline()) || offlineRecipe.isOffline)
     ) {
-      return offlineRecipe;
+      return this.ensureIngredientsHaveInstanceId(
+        offlineRecipe
+      ) as OfflineRecipe;
     }
 
     // Try to fetch from server if online
@@ -575,13 +589,45 @@ export class OfflineRecipeService {
         }
         await this.saveOfflineState(state);
 
-        return serverRecipe;
+        return this.ensureIngredientsHaveInstanceId(
+          serverRecipe
+        ) as OfflineRecipe;
       } catch (error) {
         console.warn(`Failed to fetch recipe ${id} from server:`, error);
       }
     }
 
-    return offlineRecipe || null;
+    return offlineRecipe
+      ? (this.ensureIngredientsHaveInstanceId(offlineRecipe) as OfflineRecipe)
+      : null;
+  }
+
+  /**
+   * Ensures all ingredients in a recipe have instance_id for stable React keys
+   */
+  private static ensureIngredientsHaveInstanceId(
+    recipe: Recipe | OfflineRecipe
+  ): Recipe | OfflineRecipe {
+    if (!recipe.ingredients || !Array.isArray(recipe.ingredients)) {
+      return recipe;
+    }
+
+    const ingredientsWithInstanceId = recipe.ingredients.map(ingredient => {
+      if (ingredient.instance_id) {
+        return ingredient; // Already has instance_id
+      }
+
+      // Generate stable instance_id for server-sourced ingredients
+      return {
+        ...ingredient,
+        instance_id: generateUniqueId("ing"),
+      };
+    });
+
+    return {
+      ...recipe,
+      ingredients: ingredientsWithInstanceId,
+    };
   }
 
   /**
@@ -812,8 +858,8 @@ export class OfflineRecipeService {
       `🗑️ DELETE: Recipe details - tempId: ${recipe.tempId}, isValidId: ${this.isValidObjectId(id)}, isOnline: ${isOnline}`
     );
 
-    // Check if this is a valid server recipe that can be deleted online immediately
-    if (isOnline && !recipe.tempId && this.isValidObjectId(id)) {
+    // Check if this is a server recipe that can be deleted online immediately
+    if (isOnline && !recipe.tempId) {
       console.log(`🗑️ DELETE: Attempting immediate online deletion...`);
       try {
         // Try online deletion first (if recipe has valid ID)
@@ -995,7 +1041,7 @@ export class OfflineRecipeService {
     for (const recipe of recipesToDelete) {
       try {
         // Only try to delete on server if it has a real server ID
-        if (!recipe.tempId && this.isValidObjectId(recipe.id)) {
+        if (!recipe.tempId) {
           await ApiService.recipes.delete(recipe.id);
           details.push(`Deleted from server: ${recipe.name}`);
         } else {

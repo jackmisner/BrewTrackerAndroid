@@ -131,11 +131,7 @@ export function IngredientsForm({
    */
   const handleUpdateIngredient = (updatedIngredient: RecipeIngredient) => {
     const ingredientIndex = safeIngredients.findIndex(
-      ing =>
-        (updatedIngredient.id != null && ing.id === updatedIngredient.id) ||
-        (updatedIngredient.id == null &&
-          ing.name === editingIngredient?.name &&
-          ing.type === editingIngredient?.type)
+      ing => ing.instance_id === updatedIngredient.instance_id
     );
 
     if (ingredientIndex !== -1) {
@@ -160,13 +156,7 @@ export function IngredientsForm({
    */
   const handleRemoveIngredient = (ingredientToRemove: RecipeIngredient) => {
     const globalIndex = safeIngredients.findIndex(
-      ing =>
-        (ingredientToRemove.id != null && ing.id === ingredientToRemove.id) ||
-        (ingredientToRemove.id == null &&
-          ing.name === ingredientToRemove.name &&
-          ing.type === ingredientToRemove.type &&
-          ing.amount === ingredientToRemove.amount &&
-          ing.unit === ingredientToRemove.unit)
+      ing => ing.instance_id === ingredientToRemove.instance_id
     );
 
     if (globalIndex !== -1) {
