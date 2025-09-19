@@ -17,6 +17,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import ApiService from "@services/api/apiService";
 import { UpdateBrewSessionRequest, BrewSessionStatus } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
+import { useUserValidation } from "@utils/userValidation";
 import { editBrewSessionStyles } from "@styles/modals/editBrewSessionStyles";
 
 /**
@@ -27,6 +28,7 @@ import { editBrewSessionStyles } from "@styles/modals/editBrewSessionStyles";
  */
 export default function EditBrewSessionScreen() {
   const theme = useTheme();
+  const userValidation = useUserValidation();
   const styles = editBrewSessionStyles(theme);
   const params = useLocalSearchParams();
   const queryClient = useQueryClient();
@@ -154,9 +156,43 @@ export default function EditBrewSessionScreen() {
     return !isNaN(value) && isFinite(value);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.name.trim()) {
       Alert.alert("Error", "Session name is required");
+      return;
+    }
+
+    // Validate user permissions for brew session editing
+    if (!brewSession || !brewSession.user_id) {
+      Alert.alert(
+        "Access Denied",
+        "You don't have permission to edit this brew session"
+      );
+      return;
+    }
+
+    try {
+      const canModify = await userValidation.canUserModifyResource({
+        user_id: brewSession.user_id,
+        is_owner: brewSession.is_owner,
+      });
+
+      if (!canModify) {
+        Alert.alert(
+          "Access Denied",
+          "You don't have permission to edit this brew session"
+        );
+        return;
+      }
+    } catch (error) {
+      console.error(
+        "❌ User validation error during brew session edit:",
+        error
+      );
+      Alert.alert(
+        "Validation Error",
+        "Unable to verify permissions. Please try again."
+      );
       return;
     }
 

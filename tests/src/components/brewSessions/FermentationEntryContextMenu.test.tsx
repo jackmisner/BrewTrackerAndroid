@@ -35,6 +35,14 @@ jest.mock("@services/api/apiService", () => ({
   },
 }));
 
+// Mock user validation
+jest.mock("@utils/userValidation", () => ({
+  useUserValidation: () => ({
+    canUserModifyResource: jest.fn().mockResolvedValue(true),
+    validateUserOwnership: jest.fn().mockResolvedValue({ isValid: true }),
+  }),
+}));
+
 jest.mock("@src/components/ui/ContextMenu/BaseContextMenu", () => {
   const React = require("react");
   const RN = require("react-native");

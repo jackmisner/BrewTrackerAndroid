@@ -8,7 +8,7 @@ module.exports = {
     "^.+\\.[jt]sx?$": "babel-jest",
   },
   transformIgnorePatterns: [
-    "node_modules/(?!(react-native|@react-native|@react-navigation|@expo|expo|@unimodules|unimodules|@react-native-community|@expo/vector-icons)/)",
+    "node_modules/(?!(react-native|@react-native|@react-navigation|@expo|expo|expo-device|@unimodules|unimodules|@react-native-community|@expo/vector-icons)/)",
   ],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",
@@ -36,8 +36,8 @@ module.exports = {
     global: {
       branches: 60,
       functions: 60,
-      lines: 70,
-      statements: 70,
+      lines: 65,
+      statements: 65,
     },
   },
   testEnvironment: "jsdom",

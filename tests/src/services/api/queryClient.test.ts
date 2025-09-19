@@ -1,3 +1,7 @@
+// Unmock React Query for this specific test
+jest.unmock("@tanstack/react-query");
+jest.unmock("@tanstack/query-async-storage-persister");
+
 import { QueryClient } from "@tanstack/react-query";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";

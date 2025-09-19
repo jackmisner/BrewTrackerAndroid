@@ -233,6 +233,7 @@ describe("useDocumentPicker", () => {
           name: "test.xml",
           size: 1024,
           mimeType: "application/xml",
+          lastModified: Date.now(),
         },
       ],
     };
@@ -277,12 +278,14 @@ describe("useDocumentPicker", () => {
           name: "test1.xml",
           size: 1024,
           mimeType: "application/xml",
+          lastModified: Date.now(),
         },
         {
           uri: "file://test2.xml",
           name: "test2.xml",
           size: 2048,
           mimeType: "application/xml",
+          lastModified: Date.now(),
         },
       ],
     };

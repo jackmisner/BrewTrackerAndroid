@@ -1,7 +1,8 @@
 import React from "react";
 import { fireEvent, waitFor, act } from "@testing-library/react-native";
+import { mockData, testUtils, renderWithProviders } from "@/tests/testUtils";
+
 import RecipesScreen from "../../../app/(tabs)/recipes";
-import { mockData, testUtils, renderWithProviders } from "../../testUtils";
 
 // Comprehensive React Native mocking
 jest.mock("react-native", () => ({
@@ -18,6 +19,11 @@ jest.mock("react-native", () => ({
   StyleSheet: {
     create: (styles: any) => styles,
     flatten: (styles: any) => styles,
+  },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
   },
 }));
 
@@ -48,6 +54,122 @@ jest.mock("expo-router", () => ({
   useLocalSearchParams: jest.fn(),
 }));
 
+// Mock NetworkContext with Pattern 4 approach
+jest.mock("@contexts/NetworkContext", () => {
+  const React = require("react");
+  return {
+    NetworkProvider: ({ children }: { children: React.ReactNode }) => children,
+    useNetwork: () => ({
+      isConnected: true,
+      isInternetReachable: true,
+      connectionType: "wifi",
+      connectionDetails: null,
+    }),
+  };
+});
+
+// Mock all context providers used by testUtils (Pattern 4)
+jest.mock("@contexts/ThemeContext", () => {
+  const React = require("react");
+  return {
+    useTheme: () => ({
+      colors: {
+        primary: "#007AFF",
+        background: "#FFFFFF",
+        surface: "#F2F2F7",
+        text: "#000000",
+        textSecondary: "#666666",
+        border: "#C7C7CC",
+        success: "#34C759",
+        warning: "#FF9500",
+        error: "#FF3B30",
+      },
+      fonts: {
+        regular: { fontSize: 16, fontWeight: "400" },
+        medium: { fontSize: 16, fontWeight: "500" },
+        bold: { fontSize: 16, fontWeight: "700" },
+      },
+    }),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+jest.mock("@contexts/AuthContext", () => {
+  const React = require("react");
+  return {
+    AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+    useAuth: () => ({
+      user: null,
+      isLoading: false,
+      isAuthenticated: false,
+      error: null,
+      login: jest.fn(),
+      register: jest.fn(),
+      logout: jest.fn(),
+    }),
+  };
+});
+
+jest.mock("@contexts/DeveloperContext", () => {
+  const React = require("react");
+  return {
+    DeveloperProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+    useDeveloper: () => ({ isDeveloperMode: false }),
+  };
+});
+
+jest.mock("@contexts/UnitContext", () => {
+  const React = require("react");
+  return {
+    UnitProvider: ({ children }: { children: React.ReactNode }) => children,
+    useUnit: () => ({ temperatureUnit: "F", weightUnit: "lb" }),
+  };
+});
+
+jest.mock("@contexts/CalculatorsContext", () => {
+  const React = require("react");
+  return {
+    CalculatorsProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+    useCalculators: () => ({ state: {}, dispatch: jest.fn() }),
+  };
+});
+
+// Additional offline hooks mock
+jest.mock("@src/hooks/useOfflineRecipes", () => ({
+  useOfflineRecipes: jest.fn(() => ({
+    data: [],
+    isLoading: false,
+    error: null,
+    refetch: jest.fn(),
+  })),
+  useOfflineDeleteRecipe: jest.fn(() => ({
+    mutate: jest.fn(),
+    isLoading: false,
+  })),
+  useOfflineSyncStatus: jest.fn(() => ({
+    data: { pendingCount: 0, lastSync: null },
+    isLoading: false,
+  })),
+  useOfflineSync: jest.fn(() => ({
+    mutate: jest.fn(),
+    isLoading: false,
+  })),
+  useOfflineModifiedSync: jest.fn(() => ({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    isPending: false,
+    isLoading: false,
+  })),
+  useAutoOfflineModifiedSync: jest.fn(() => ({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    isPending: false,
+    isLoading: false,
+  })),
+}));
+
 jest.mock("expo-haptics", () => ({
   impactAsync: jest.fn(),
   ImpactFeedbackStyle: {
@@ -64,18 +186,10 @@ jest.mock("@services/api/apiService", () => ({
   },
 }));
 
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: jest.fn(),
-  ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
-}));
-
-jest.mock("@contexts/AuthContext", () => ({
-  useAuth: jest.fn(),
-  AuthProvider: ({ children }: { children: React.ReactNode }) => children,
-}));
+// All context providers are now comprehensively mocked (Pattern 4)
 
 jest.mock("@styles/tabs/recipesStyles", () => ({
-  recipesStyles: jest.fn(() => ({
+  recipesStyles: (theme: any) => ({
     container: { flex: 1 },
     header: { padding: 16 },
     tabContainer: { flexDirection: "row" },
@@ -122,7 +236,7 @@ jest.mock("@styles/tabs/recipesStyles", () => ({
     },
     createButtonText: { color: "#fff", marginLeft: 8 },
     listContainer: { paddingHorizontal: 16 },
-  })),
+  }),
 }));
 
 jest.mock("@utils/formatUtils", () => ({
@@ -166,14 +280,86 @@ const mockUseMutation = require("@tanstack/react-query").useMutation;
 const mockRouter = require("expo-router").router;
 const mockUseLocalSearchParams = require("expo-router").useLocalSearchParams;
 
-// Setup mocks
-require("@contexts/ThemeContext").useTheme.mockReturnValue(mockTheme);
-require("@contexts/AuthContext").useAuth.mockReturnValue({
-  user: mockData.user(),
-  isAuthenticated: true,
-  error: null,
-  isLoading: false,
+// Get references to offline hook mocks
+const {
+  useOfflineRecipes,
+  useOfflineDeleteRecipe,
+  useOfflineSyncStatus,
+  useOfflineSync,
+  useOfflineModifiedSync,
+  useAutoOfflineModifiedSync,
+} = require("@src/hooks/useOfflineRecipes");
+
+beforeEach(() => {
+  // Reset all mock implementations between tests
+  jest.resetAllMocks();
+  testUtils.resetCounters();
+  mockUseLocalSearchParams.mockReturnValue({});
+
+  // Reset the useQuery mock to return default values for both queries
+  mockUseQuery.mockImplementation(() => ({
+    data: { recipes: [] },
+    isLoading: false,
+    error: null,
+    refetch: jest.fn(),
+  }));
+
+  // Set up default useMutation mock
+  mockUseMutation.mockImplementation(() => ({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn().mockResolvedValue(undefined),
+    isPending: false,
+    isError: false,
+    isSuccess: false,
+    status: "idle",
+    data: undefined,
+    error: null,
+    reset: jest.fn(),
+  }));
+
+  // Reset useContextMenu mock after jest.resetAllMocks()
+  const mockUseContextMenu =
+    require("@src/components/ui/ContextMenu/BaseContextMenu").useContextMenu;
+  mockUseContextMenu.mockReturnValue({
+    visible: false,
+    selectedItem: null,
+    position: { x: 0, y: 0 },
+    showMenu: jest.fn(),
+    hideMenu: jest.fn(),
+  });
+
+  // Safe defaults for offline hooks to avoid crashes in tests that don't override them
+  useOfflineRecipes.mockReturnValue({
+    data: [],
+    isLoading: false,
+    error: null,
+    refetch: jest.fn(),
+  });
+  useOfflineDeleteRecipe.mockReturnValue({
+    mutate: jest.fn(),
+    isPending: false,
+  });
+  useOfflineSyncStatus.mockReturnValue({
+    data: { pendingSync: 0, conflicts: 0, failedSync: 0 },
+    isLoading: false,
+    error: null,
+  });
+  useOfflineSync.mockReturnValue({
+    mutate: jest.fn(),
+    isPending: false,
+  });
+  useOfflineModifiedSync.mockReturnValue({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    isPending: false,
+  });
+  useAutoOfflineModifiedSync.mockReturnValue({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    isPending: false,
+  });
 });
+// Context providers are managed by renderWithProviders
 
 describe("RecipesScreen", () => {
   beforeEach(() => {
@@ -181,14 +367,7 @@ describe("RecipesScreen", () => {
     testUtils.resetCounters();
     mockUseLocalSearchParams.mockReturnValue({});
 
-    // Restore context mocks after clearAllMocks
-    require("@contexts/ThemeContext").useTheme.mockReturnValue(mockTheme);
-    require("@contexts/AuthContext").useAuth.mockReturnValue({
-      user: mockData.user(),
-      isAuthenticated: true,
-      error: null,
-      isLoading: false,
-    });
+    // Context providers are managed by renderWithProviders
 
     // Reset the useQuery mock to return default values for both queries
     mockUseQuery.mockImplementation(() => ({
@@ -324,26 +503,12 @@ describe("RecipesScreen", () => {
 
   describe("loading states", () => {
     it("should show loading indicator for my recipes", () => {
-      let callCount = 0;
-      mockUseQuery.mockImplementation(() => {
-        callCount++;
-        if (callCount === 1) {
-          // First query (my recipes) is loading
-          return {
-            data: undefined,
-            isLoading: true,
-            error: null,
-            refetch: jest.fn(),
-          };
-        } else {
-          // Second query (public recipes) is not loading
-          return {
-            data: { recipes: [] },
-            isLoading: false,
-            error: null,
-            refetch: jest.fn(),
-          };
-        }
+      // Mock offline recipes hook to return loading state
+      useOfflineRecipes.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        error: null,
+        refetch: jest.fn(),
       });
 
       const { getByText } = renderWithProviders(<RecipesScreen />, {
@@ -387,26 +552,12 @@ describe("RecipesScreen", () => {
 
   describe("error states", () => {
     it("should show error message when my recipes fail to load", () => {
-      let callCount = 0;
-      mockUseQuery.mockImplementation(() => {
-        callCount++;
-        if (callCount === 1) {
-          // First query (my recipes) has error
-          return {
-            data: undefined,
-            isLoading: false,
-            error: new Error("Network error"),
-            refetch: jest.fn(),
-          };
-        } else {
-          // Second query (public recipes) is ok
-          return {
-            data: { recipes: [] },
-            isLoading: false,
-            error: null,
-            refetch: jest.fn(),
-          };
-        }
+      // Mock offline recipes hook to return error state
+      useOfflineRecipes.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error("Network error"),
+        refetch: jest.fn(),
       });
 
       const { getByText } = renderWithProviders(<RecipesScreen />, {
@@ -423,26 +574,12 @@ describe("RecipesScreen", () => {
 
     it("should allow retry when error occurs", () => {
       const mockRefetch = jest.fn();
-      let callCount = 0;
-      mockUseQuery.mockImplementation(() => {
-        callCount++;
-        if (callCount === 1) {
-          // First query (my recipes) has error
-          return {
-            data: undefined,
-            isLoading: false,
-            error: new Error("Network error"),
-            refetch: mockRefetch,
-          };
-        } else {
-          // Second query (public recipes) is ok
-          return {
-            data: { recipes: [] },
-            isLoading: false,
-            error: null,
-            refetch: jest.fn(),
-          };
-        }
+      // Mock offline recipes hook to return error state
+      useOfflineRecipes.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error("Network error"),
+        refetch: mockRefetch,
       });
 
       const { getByText } = renderWithProviders(<RecipesScreen />, {
@@ -481,26 +618,25 @@ describe("RecipesScreen", () => {
     ];
 
     beforeEach(() => {
+      // Mock offline recipes hook to return mock data
+      useOfflineRecipes.mockReturnValue({
+        data: mockRecipes,
+        isLoading: false,
+        error: null,
+        refetch: jest.fn(),
+      });
+
+      // Mock public recipes query to return empty data
       let callCount = 0;
       mockUseQuery.mockImplementation(() => {
         callCount++;
-        if (callCount === 1) {
-          // First query (my recipes) has data
-          return {
-            data: { recipes: mockRecipes },
-            isLoading: false,
-            error: null,
-            refetch: jest.fn(),
-          };
-        } else {
-          // Second query (public recipes) is empty
-          return {
-            data: { recipes: [] },
-            isLoading: false,
-            error: null,
-            refetch: jest.fn(),
-          };
-        }
+        // This should be the public recipes query
+        return {
+          data: { recipes: [] },
+          isLoading: false,
+          error: null,
+          refetch: jest.fn(),
+        };
       });
     });
 
@@ -565,7 +701,40 @@ describe("RecipesScreen", () => {
 
   describe("empty states", () => {
     beforeEach(() => {
-      // Mock queries to return empty data (already set in main beforeEach)
+      // Mock offline recipes hook to return empty data
+      useOfflineRecipes.mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: null,
+        refetch: jest.fn(),
+      });
+
+      // Mock sync status hook to return no pending syncs
+      useOfflineSyncStatus.mockReturnValue({
+        data: { pendingSync: 0, conflicts: 0, failedSync: 0 },
+        isLoading: false,
+        error: null,
+      });
+
+      // Mock sync hook
+      useOfflineSync.mockReturnValue({
+        mutate: jest.fn(),
+        isPending: false,
+      });
+
+      // Mock modified sync hook
+      useOfflineModifiedSync.mockReturnValue({
+        mutate: jest.fn(),
+        mutateAsync: jest.fn(),
+        isPending: false,
+      });
+
+      // Mock auto modified sync hook
+      useAutoOfflineModifiedSync.mockReturnValue({
+        mutate: jest.fn(),
+        mutateAsync: jest.fn(),
+        isPending: false,
+      });
     });
 
     it("should show empty state for my recipes", () => {
@@ -592,6 +761,14 @@ describe("RecipesScreen", () => {
     });
 
     it("should navigate to create recipe from empty state", () => {
+      // Ensure empty state is shown by mocking proper data
+      useOfflineRecipes.mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: null,
+        refetch: jest.fn(),
+      });
+
       const { getByText } = renderWithProviders(<RecipesScreen />, {
         initialAuthState: testUtils.createAuthenticatedState(),
       });

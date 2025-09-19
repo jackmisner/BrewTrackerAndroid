@@ -2,12 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import ApiService from "@services/api/apiService";
 import { RecipeFormData, RecipeMetrics } from "@src/types";
 import { useDebounce } from "./useDebounce";
+import { useNetwork } from "@contexts/NetworkContext";
+import { OfflineMetricsCalculator } from "@services/offline/OfflineMetricsCalculator";
 
 /**
- * Hook for calculating recipe metrics in real-time with debouncing
+ * Hook for calculating recipe metrics with offline support
  *
- * Automatically recalculates metrics when recipe data changes, with proper
- * debouncing to prevent excessive API calls. Includes caching and error handling.
+ * Automatically recalculates metrics when recipe data changes with offline fallback.
+ * Tries API calculation when online, falls back to client-side calculation when offline.
+ * Includes proper debouncing to prevent excessive calculations and network calls.
  *
  * @param recipeData - Current recipe form data
  * @param enabled - Whether to enable the query (default: true when ingredients exist)
@@ -17,7 +20,9 @@ export function useRecipeMetrics(
   recipeData: RecipeFormData,
   enabled?: boolean
 ) {
-  // Debounce recipe data to prevent excessive API calls during rapid changes
+  const { isConnected } = useNetwork();
+
+  // Debounce recipe data to prevent excessive calculations during rapid changes
   const debouncedRecipeData = useDebounce(recipeData, 500);
 
   // Determine if query should be enabled
@@ -30,6 +35,8 @@ export function useRecipeMetrics(
   return useQuery<RecipeMetrics, unknown, Partial<RecipeMetrics>>({
     queryKey: [
       "recipeMetrics",
+      "offline-aware",
+      isConnected ? "online" : "offline",
       // Include relevant recipe parameters in query key for proper caching
       debouncedRecipeData.batch_size,
       debouncedRecipeData.batch_size_unit,
@@ -64,7 +71,8 @@ export function useRecipeMetrics(
       ),
     ],
     queryFn: async (): Promise<RecipeMetrics> => {
-      const response = await ApiService.recipes.calculateMetricsPreview({
+      // Validate recipe data first
+      const validationParams = {
         batch_size: debouncedRecipeData.batch_size,
         batch_size_unit: debouncedRecipeData.batch_size_unit,
         efficiency: debouncedRecipeData.efficiency,
@@ -72,30 +80,65 @@ export function useRecipeMetrics(
         ingredients: debouncedRecipeData.ingredients,
         mash_temperature: debouncedRecipeData.mash_temperature,
         mash_temp_unit: debouncedRecipeData.mash_temp_unit,
-      });
+      };
 
-      return response.data;
+      const validation =
+        OfflineMetricsCalculator.validateRecipeData(validationParams);
+      if (!validation.isValid) {
+        console.warn("Invalid recipe data:", validation.errors);
+        return OfflineMetricsCalculator.getFallbackMetrics();
+      }
+
+      // Try API calculation when online
+      if (isConnected) {
+        try {
+          const response = await ApiService.recipes.calculateMetricsPreview({
+            batch_size: debouncedRecipeData.batch_size,
+            batch_size_unit: debouncedRecipeData.batch_size_unit,
+            efficiency: debouncedRecipeData.efficiency,
+            boil_time: debouncedRecipeData.boil_time,
+            ingredients: debouncedRecipeData.ingredients,
+            mash_temperature: debouncedRecipeData.mash_temperature,
+            mash_temp_unit: debouncedRecipeData.mash_temp_unit,
+          });
+
+          return response.data;
+        } catch (error) {
+          // Fallback to offline calculation on API failure
+          console.warn(
+            "API metrics calculation failed, using offline calculation:",
+            error
+          );
+          return OfflineMetricsCalculator.calculateMetrics(validationParams);
+        }
+      }
+
+      // Use offline calculation when not connected
+      return OfflineMetricsCalculator.calculateMetrics(validationParams);
     },
+
     enabled: shouldEnable,
-    staleTime: 30000, // 30 seconds - metrics don't change frequently for same recipe
-    gcTime: 300000, // 5 minutes - keep in cache for quick access (renamed from cacheTime in v5)
+
+    // Cache configuration for offline support
+    staleTime: isConnected ? 30000 : Infinity, // 30s online, never stale offline
+    gcTime: 300000, // 5 minutes - keep in cache for quick access
+    refetchOnMount: isConnected ? "always" : false,
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: false,
+
+    // Retry configuration
     retry: (failureCount, error: any) => {
-      // Don't retry on validation errors (400), only on network/server errors
+      // Don't retry on validation errors (400)
       if (error?.response?.status === 400) {
         return false;
       }
-      return failureCount < 2; // Retry up to 2 times for other errors
+      // Only retry network errors when online
+      return isConnected && failureCount < 2;
     },
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 5000), // Exponential backoff
-    select: (
-      data
-    ): {
-      og?: number;
-      fg?: number;
-      abv?: number;
-      ibu?: number;
-      srm?: number;
-    } => {
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 5000),
+
+    // Data transformation
+    select: (data): Partial<RecipeMetrics> => {
       // Ensure we return valid numeric values with optional fields
       return {
         og:

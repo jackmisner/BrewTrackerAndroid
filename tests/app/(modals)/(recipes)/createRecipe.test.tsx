@@ -35,10 +35,21 @@ jest.mock("expo-router", () => ({
   useLocalSearchParams: jest.fn(),
 }));
 
-jest.mock("@tanstack/react-query", () => ({
-  useMutation: jest.fn(),
-  useQueryClient: jest.fn(),
-}));
+jest.mock("@tanstack/react-query", () => {
+  const React = require("react");
+  return {
+    useMutation: jest.fn(),
+    useQueryClient: jest.fn(),
+    useQuery: jest.fn(),
+    QueryClient: jest.fn().mockImplementation(() => ({
+      invalidateQueries: jest.fn(),
+      setQueryData: jest.fn(),
+      getQueryData: jest.fn(),
+    })),
+    QueryClientProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+  };
+});
 
 jest.mock("@contexts/ThemeContext", () => ({
   useTheme: jest.fn(),

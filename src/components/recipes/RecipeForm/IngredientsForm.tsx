@@ -10,7 +10,7 @@ import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/Br
 import { IngredientDetailEditor } from "@src/components/recipes/IngredientEditor/IngredientDetailEditor";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 import { formatHopTime } from "@src/utils/timeUtils";
-import { generateIngredientKey } from "@utils/keyUtils";
+import { generateIngredientKey, generateUniqueId } from "@utils/keyUtils";
 
 // Hop usage display mapping (database value -> display value)
 const HOP_USAGE_DISPLAY_MAPPING: Record<string, string> = {
@@ -99,7 +99,12 @@ export function IngredientsForm({
           decodeURIComponent(serialized)
         ) as RecipeIngredient;
       }
-      const newIngredients = [...safeIngredients, ingredient];
+      // Generate unique instance_id for this ingredient instance
+      const ingredientWithInstanceId = {
+        ...ingredient,
+        instance_id: generateUniqueId("ing"),
+      };
+      const newIngredients = [...safeIngredients, ingredientWithInstanceId];
       onUpdateField("ingredients", newIngredients);
       processedParamRef.current = serialized;
       // Clear the parameter to prevent re-adding
@@ -126,16 +131,18 @@ export function IngredientsForm({
    */
   const handleUpdateIngredient = (updatedIngredient: RecipeIngredient) => {
     const ingredientIndex = safeIngredients.findIndex(
-      ing =>
-        (updatedIngredient.id != null && ing.id === updatedIngredient.id) ||
-        (updatedIngredient.id == null &&
-          ing.name === editingIngredient?.name &&
-          ing.type === editingIngredient?.type)
+      ing => ing.instance_id === updatedIngredient.instance_id
     );
 
     if (ingredientIndex !== -1) {
       const newIngredients = [...safeIngredients];
-      newIngredients[ingredientIndex] = updatedIngredient;
+      const originalIngredient = safeIngredients[ingredientIndex];
+
+      // Preserve the original instance_id when updating ingredient
+      newIngredients[ingredientIndex] = {
+        ...updatedIngredient,
+        instance_id: originalIngredient.instance_id,
+      };
 
       onUpdateField("ingredients", newIngredients);
     }
@@ -149,13 +156,7 @@ export function IngredientsForm({
    */
   const handleRemoveIngredient = (ingredientToRemove: RecipeIngredient) => {
     const globalIndex = safeIngredients.findIndex(
-      ing =>
-        (ingredientToRemove.id != null && ing.id === ingredientToRemove.id) ||
-        (ingredientToRemove.id == null &&
-          ing.name === ingredientToRemove.name &&
-          ing.type === ingredientToRemove.type &&
-          ing.amount === ingredientToRemove.amount &&
-          ing.unit === ingredientToRemove.unit)
+      ing => ing.instance_id === ingredientToRemove.instance_id
     );
 
     if (globalIndex !== -1) {
@@ -204,21 +205,10 @@ export function IngredientsForm({
           </View>
         ) : (
           <View style={styles.ingredientsList}>
-            {ingredients.map((ingredient, index) => {
-              const additionalContext =
-                ingredient.type === "hop"
-                  ? `${ingredient.use || "unknown"}-${ingredient.time || 0}min`
-                  : ingredient.type === "grain"
-                    ? ingredient.grain_type || "unknown"
-                    : undefined;
-
+            {ingredients.map(ingredient => {
               return (
                 <TouchableOpacity
-                  key={generateIngredientKey(
-                    ingredient,
-                    index,
-                    additionalContext
-                  )}
+                  key={generateIngredientKey(ingredient)}
                   style={styles.ingredientItem}
                   onPress={() => handleEditIngredient(ingredient)}
                   activeOpacity={0.7}

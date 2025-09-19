@@ -32,10 +32,28 @@ import {
   GestureResponderEvent,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  UseMutationResult,
+} from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import ApiService from "@services/api/apiService";
+import {
+  useOfflineRecipes,
+  useOfflineDeleteRecipe,
+  useOfflineSyncStatus,
+  useOfflineSync,
+  useOfflineModifiedSync,
+  useAutoOfflineModifiedSync,
+} from "@src/hooks/useOfflineRecipes";
+import OfflineRecipeService from "@services/offline/OfflineRecipeService";
+
+import { QUERY_KEYS } from "@services/api/queryClient";
+import { useNetwork } from "@contexts/NetworkContext";
+import { useDeveloper } from "@contexts/DeveloperContext";
 import { Recipe } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import BeerXMLService from "@services/beerxml/BeerXMLService";
@@ -47,6 +65,56 @@ import {
 } from "@src/components/ui/ContextMenu/RecipeContextMenu";
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
+import { useUserValidation } from "@utils/userValidation";
+
+/**
+ * Pure helper function to generate sync status message
+ * @param syncStatus - The sync status object containing pending sync counts
+ * @param syncMutation - The mutation result for legacy sync operations
+ * @param modifiedSyncMutation - The mutation result for flag-based sync operations
+ * @returns The appropriate sync status message string
+ */
+function getSyncStatusMessage(
+  syncStatus:
+    | {
+        pendingSync?: number;
+        needsSync?: number;
+        pendingDeletions?: number;
+      }
+    | undefined,
+  syncMutation: UseMutationResult<any, Error, void, unknown>,
+  modifiedSyncMutation: UseMutationResult<any, Error, void, unknown>
+): string {
+  if (syncMutation.isPending || modifiedSyncMutation.isPending) {
+    return "Syncing...";
+  }
+
+  if (syncMutation.isError || modifiedSyncMutation.isError) {
+    return "Sync failed - tap to retry";
+  }
+
+  // Use needsSync as the authoritative count to avoid double-counting
+  // (pendingSync recipes also have needsSync: true, so they'd be counted twice)
+  const totalChanges = syncStatus?.needsSync || 0;
+  const deletions = syncStatus?.pendingDeletions || 0;
+  const modifications = totalChanges - deletions;
+
+  if (totalChanges === 0) {
+    return "All synced";
+  }
+
+  let message = "";
+  if (modifications > 0) {
+    message += `${modifications} recipe${modifications !== 1 ? "s" : ""}`;
+  }
+  if (deletions > 0) {
+    if (message) {
+      message += ", ";
+    }
+    message += `${deletions} deletion${deletions !== 1 ? "s" : ""}`;
+  }
+  return `${message} need sync`;
+}
 
 /**
  * Displays a tabbed interface for browsing and managing recipes, allowing users to view their own recipes or search public recipes.
@@ -66,6 +134,9 @@ export default function RecipesScreen() {
 
   // Context menu state
   const contextMenu = useContextMenu<Recipe>();
+
+  // User validation for security checks
+  const userValidation = useUserValidation();
 
   // Set active tab from URL parameters
   // Always respond to navigation with explicit activeTab parameters
@@ -87,6 +158,32 @@ export default function RecipesScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
+      // Clean up stale cache data when online and refreshing
+      try {
+        const cleanup = await OfflineRecipeService.cleanupStaleData();
+        if (cleanup.removed > 0) {
+          console.log(
+            `Pull-to-refresh cleaned up ${cleanup.removed} stale recipes`
+          );
+        }
+      } catch (error) {
+        console.warn("Failed to cleanup stale data during refresh:", error);
+        // Don't let cleanup errors block the refresh
+      }
+
+      // Trigger sync if online and there are pending changes
+      if (isConnected && (syncStatus?.needsSync || 0) > 0) {
+        try {
+          console.log("🔄 Pull-to-refresh triggering sync...");
+          await modifiedSyncMutation.mutateAsync();
+          console.log("✅ Pull-to-refresh sync completed");
+        } catch (error) {
+          console.warn("Pull-to-refresh sync failed:", error);
+          // Don't let sync errors block the refresh
+        }
+      }
+
+      // Refresh the appropriate tab data
       if (activeTab === "my") {
         await refetchMyRecipes();
       } else {
@@ -97,78 +194,106 @@ export default function RecipesScreen() {
     }
   };
 
-  // Query for user's recipes
+  // Query for user's recipes with offline support
   const {
-    data: myRecipesData,
+    data: offlineRecipes,
     isLoading: isLoadingMyRecipes,
     error: myRecipesError,
     refetch: refetchMyRecipes,
-  } = useQuery({
-    queryKey: ["recipes", "my"],
-    queryFn: async () => {
-      const response = await ApiService.recipes.getAll(1, 20);
-      return response.data;
-    },
-    retry: 1,
-    staleTime: 1000 * 60 * 2, // Cache for 2 minutes
-  });
+  } = useOfflineRecipes();
 
-  // Query for public recipes
+  // Transform offline recipes to match expected format
+  const myRecipesData = {
+    recipes: offlineRecipes || [],
+    total: (offlineRecipes || []).length,
+  };
+
+  // Query for public recipes with basic offline handling
   const {
     data: publicRecipesData,
     isLoading: isLoadingPublicRecipes,
     error: publicRecipesError,
     refetch: refetchPublicRecipes,
   } = useQuery({
-    queryKey: ["recipes", "public", searchQuery],
+    queryKey: [...QUERY_KEYS.PUBLIC_RECIPES, searchQuery],
     queryFn: async () => {
-      const response = await ApiService.recipes.getPublic(1, 20, {
-        search: searchQuery || undefined,
-      });
-      return response.data;
+      try {
+        const response = await ApiService.recipes.getPublic(1, 20, {
+          search: searchQuery || undefined,
+        });
+        return response.data;
+      } catch (error) {
+        // For public recipes, we don't have extensive offline caching
+        // but we can provide a more meaningful error
+        console.error("Failed to fetch public recipes:", error);
+        throw new Error(
+          "Unable to load public recipes. Please check your internet connection and try again."
+        );
+      }
     },
     retry: 1,
-    staleTime: 1000 * 60 * 2, // Cache for 2 minutes
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes (longer for public data)
+    enabled: activeTab === "public", // Only fetch when viewing public tab
   });
 
-  // Delete mutation
+  // Delete mutation with offline support
   const queryClient = useQueryClient();
-  const deleteMutation = useMutation<void, unknown, string>({
-    mutationKey: ["recipes", "delete"],
-    mutationFn: async (recipeId: string) => {
-      await ApiService.recipes.delete(recipeId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      Alert.alert("Success", "Recipe deleted successfully");
-    },
-    onError: (error: unknown) => {
-      console.error("Failed to delete recipe:", error);
-      Alert.alert(
-        "Delete Failed",
-        "Failed to delete recipe. Please try again.",
-        [{ text: "OK" }]
-      );
-    },
-  });
+  const deleteMutation = useOfflineDeleteRecipe();
 
-  // Clone mutation
+  // Get sync status for UI and enable auto-sync
+  const { data: syncStatus } = useOfflineSyncStatus();
+  const syncMutation = useOfflineSync();
+  const modifiedSyncMutation = useOfflineModifiedSync();
+
+  // Enable automatic syncing when network comes back online (new approach only)
+  // useAutoOfflineSync(); // DISABLED: Legacy approach conflicts with tombstone system
+  useAutoOfflineModifiedSync(); // New approach for modified flags
+  const { isConnected } = useNetwork();
+  const { isDeveloperMode, cleanupTombstones } = useDeveloper();
+
+  // Clone mutation with enhanced validation
   const cloneMutation = useMutation({
     mutationKey: ["recipes", "clone"],
     mutationFn: async (recipe: Recipe) => {
+      // Validate recipe data before cloning
+      if (!recipe.user_id) {
+        throw new Error("Recipe must have a valid user ID");
+      }
+
       if (recipe.is_public) {
         // Public recipe cloning
         const author = recipe.username || recipe.original_author || "Unknown";
         return ApiService.recipes.clonePublic(recipe.id, author);
       } else {
-        // Private recipe versioning
+        // Private recipe versioning - verify ownership
+        if (!recipe.user_id) {
+          throw new Error("Private recipe must have a user ID");
+        }
+        const canModify = await userValidation.canUserModifyResource({
+          user_id: recipe.user_id,
+          is_owner: recipe.is_owner,
+        });
+        if (!canModify) {
+          throw new Error("Insufficient permissions to version this recipe");
+        }
         return ApiService.recipes.clone(recipe.id);
       }
     },
     onSuccess: (response, recipe) => {
-      queryClient.invalidateQueries({ queryKey: ["recipes"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      // Add a small delay to ensure server has processed the clone before refreshing
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
+        queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.DASHBOARD] });
+        // Ensure offline lists reflect the new clone
+        queryClient.invalidateQueries({
+          queryKey: [...QUERY_KEYS.RECIPES, "offline"],
+        });
+        if (response?.data?.id) {
+          queryClient.invalidateQueries({
+            queryKey: [...QUERY_KEYS.RECIPE(response.data.id), "offline"],
+          });
+        }
+      }, 1000); // 1 second delay
       const cloneType = recipe.is_public ? "cloned" : "versioned";
       Alert.alert(
         "Recipe Cloned",
@@ -179,7 +304,7 @@ export default function RecipesScreen() {
             onPress: () => {
               router.push({
                 pathname: "/(modals)/(recipes)/viewRecipe",
-                params: { recipe_id: response.data.recipe_id },
+                params: { recipe_id: response.data.id },
               });
             },
           },
@@ -368,15 +493,31 @@ export default function RecipesScreen() {
     },
   });
 
-  const renderRecipeItem = ({ item: recipe }: { item: Recipe }) => {
+  type OfflineRecipe = Recipe & {
+    tempId?: string;
+    isOffline?: boolean;
+    syncStatus?: "pending" | "conflict" | "failed" | "synced";
+    version?: number;
+  };
+  const renderRecipeItem = ({ item: recipe }: { item: OfflineRecipe }) => {
     // Add safety checks for recipe data
     if (!recipe || !recipe.name) {
       return null;
     }
 
+    // Check if this is an offline recipe
+    const isOfflineRecipe = recipe.isOffline || recipe.tempId;
+    const recipeSyncStatus = recipe.syncStatus || "synced";
+
     return (
       <TouchableOpacity
-        style={styles.recipeCard}
+        style={[
+          styles.recipeCard,
+          isOfflineRecipe && {
+            borderLeftWidth: 3,
+            borderLeftColor: theme.colors.primary,
+          },
+        ]}
         onPress={() => handleRecipePress(recipe)}
         onLongPress={event => handleRecipeLongPress(recipe, event)}
       >
@@ -385,11 +526,44 @@ export default function RecipesScreen() {
             <Text style={styles.recipeName} numberOfLines={1}>
               {recipe.name || "Unnamed Recipe"}
             </Text>
-            {recipe.version ? (
-              <View style={styles.versionBadge}>
-                <Text style={styles.versionText}>v{recipe.version}</Text>
-              </View>
-            ) : null}
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+            >
+              {/* Offline/Sync Status Indicator */}
+              {!isConnected && (
+                <MaterialIcons
+                  name="wifi-off"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                />
+              )}
+              {recipeSyncStatus === "pending" && (
+                <MaterialIcons
+                  name="sync"
+                  size={16}
+                  color={theme.colors.warning || "#ff9800"}
+                />
+              )}
+              {recipeSyncStatus === "conflict" && (
+                <MaterialIcons
+                  name="warning"
+                  size={16}
+                  color={theme.colors.error || "#f44336"}
+                />
+              )}
+              {recipeSyncStatus === "failed" && (
+                <MaterialIcons
+                  name="error"
+                  size={16}
+                  color={theme.colors.error || "#f44336"}
+                />
+              )}
+              {recipe.version ? (
+                <View style={styles.versionBadge}>
+                  <Text style={styles.versionText}>v{recipe.version}</Text>
+                </View>
+              ) : null}
+            </View>
           </View>
           <Text style={styles.recipeStyle}>
             {recipe.style || "Unknown Style"}
@@ -480,7 +654,7 @@ export default function RecipesScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header with tabs */}
+      {/* Header with tabs and sync status */}
       <View style={styles.header}>
         <View style={styles.tabContainer}>
           <TouchableOpacity
@@ -526,6 +700,106 @@ export default function RecipesScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Sync status and button for My Recipes */}
+        {activeTab === "my" && (syncStatus?.needsSync || 0) > 0 && (
+          <View style={styles.syncStatusContainer}>
+            <View style={styles.syncInfo}>
+              <MaterialIcons
+                name={syncMutation.isPending ? "sync" : "cloud-upload"}
+                size={16}
+                color={theme.colors.primary}
+                style={
+                  syncMutation.isPending
+                    ? { transform: [{ rotate: "45deg" }] }
+                    : {}
+                }
+              />
+              <Text style={styles.syncText}>
+                {getSyncStatusMessage(
+                  syncStatus,
+                  syncMutation,
+                  modifiedSyncMutation
+                )}
+              </Text>
+            </View>
+            {isConnected &&
+              !syncMutation.isPending &&
+              !modifiedSyncMutation.isPending && (
+                <TouchableOpacity
+                  onPress={() => {
+                    // Use new flag-based sync approach only (legacy disabled to prevent duplicates)
+                    modifiedSyncMutation.mutate(undefined, {
+                      onSuccess: () => {
+                        // Legacy sync disabled: conflicts with tombstone system
+                        // if ((syncStatus?.pendingSync || 0) > 0) {
+                        //   syncMutation.mutate();
+                        // }
+                      },
+                      onError: _error => {
+                        Alert.alert(
+                          "Sync Failed",
+                          "Unable to sync modified recipes. Please try again.",
+                          [{ text: "OK" }]
+                        );
+                      },
+                    });
+                  }}
+                  style={styles.syncButton}
+                >
+                  <Text style={styles.syncButtonText}>Sync Now</Text>
+                </TouchableOpacity>
+              )}
+
+            {/* DEV ONLY: Tombstone cleanup button */}
+            {isDeveloperMode && (
+              <TouchableOpacity
+                onPress={async () => {
+                  try {
+                    const result = await cleanupTombstones();
+                    Alert.alert(
+                      "Tombstones Cleaned",
+                      `Removed ${result.removedTombstones} tombstones.${
+                        result.tombstoneNames.length > 0
+                          ? `\n\nCleaned: ${result.tombstoneNames.join(", ")}`
+                          : ""
+                      }`,
+                      [{ text: "OK" }]
+                    );
+                    // Refresh the recipes list to reflect changes
+                    queryClient.invalidateQueries({
+                      queryKey: [...QUERY_KEYS.RECIPES, "offline"],
+                    });
+                  } catch (error) {
+                    Alert.alert(
+                      "Cleanup Failed",
+                      "Unable to cleanup tombstones. Please try again.",
+                      [{ text: "OK" }]
+                    );
+                    console.error("Tombstone cleanup error:", error);
+                  }
+                }}
+                style={[
+                  styles.syncButton,
+                  {
+                    backgroundColor: theme.colors.warning || "#ff9800",
+                    marginLeft: 8,
+                  },
+                ]}
+              >
+                <MaterialIcons
+                  name="cleaning-services"
+                  size={16}
+                  color="#fff"
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={[styles.syncButtonText, { fontSize: 12 }]}>
+                  Dev: Clean
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Search bar for public recipes */}
         {activeTab === "public" ? (

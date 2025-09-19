@@ -3,8 +3,10 @@
  */
 
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { fireEvent, waitFor } from "@testing-library/react-native";
+import { renderWithProviders, testUtils, mockData } from "@/tests/testUtils";
 import EditFermentationEntryScreen from "../../../../app/(modals)/(brewSessions)/editFermentationEntry";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 // Mock React Native components
 jest.mock("react-native", () => ({
@@ -48,7 +50,7 @@ jest.mock("react-native", () => ({
     const React = require("react");
     return React.createElement("KeyboardAvoidingView", props, children);
   },
-  Platform: { OS: "ios" },
+  Platform: { OS: "android" },
   ActivityIndicator: (props: any) => {
     const React = require("react");
     return React.createElement("ActivityIndicator", props);
@@ -58,6 +60,11 @@ jest.mock("react-native", () => ({
     create: (styles: any) => styles,
     flatten: (styles: any) =>
       Array.isArray(styles) ? Object.assign({}, ...styles) : styles,
+  },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
   },
 }));
 
@@ -74,22 +81,92 @@ jest.mock("@expo/vector-icons", () => ({
 }));
 
 // Mock external dependencies
-jest.mock("@tanstack/react-query", () => ({
-  useQuery: jest.fn(() => ({
-    data: null,
-    isLoading: false,
-    error: null,
-  })),
-  useMutation: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
-    error: null,
-  })),
-  useQueryClient: jest.fn(() => ({
-    invalidateQueries: jest.fn(),
-  })),
-}));
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query");
+  return {
+    ...actual,
+    useQuery: jest.fn(() => ({
+      data: {
+        id: "session-123",
+        name: "Test Batch",
+        user_id: "user-123",
+        fermentation_entries: [],
+        fermentation_data: [],
+        temperature_unit: "F",
+      },
+      isLoading: false,
+      error: null,
+    })),
+    useMutation: jest.fn(hookOptions => {
+      const mutationFn =
+        hookOptions?.mutationFn || (() => Promise.resolve({ success: true }));
+
+      return {
+        mutate: jest.fn(async (variables, callOptions) => {
+          // Merge hook-level and per-call options
+          const mergedOptions = {
+            ...hookOptions,
+            ...callOptions,
+            onMutate: callOptions?.onMutate || hookOptions?.onMutate,
+            onSuccess: callOptions?.onSuccess || hookOptions?.onSuccess,
+            onError: callOptions?.onError || hookOptions?.onError,
+            onSettled: callOptions?.onSettled || hookOptions?.onSettled,
+          };
+
+          try {
+            const context = await mergedOptions?.onMutate?.(variables);
+            // Actually execute the mutation function
+            const result = await mutationFn(variables);
+            mergedOptions?.onSuccess?.(result, variables, context);
+            mergedOptions?.onSettled?.(result, null, variables, context);
+          } catch (err) {
+            mergedOptions?.onError?.(err as unknown, variables, undefined);
+            mergedOptions?.onSettled?.(
+              undefined,
+              err as unknown,
+              variables,
+              undefined
+            );
+          }
+        }),
+        mutateAsync: jest.fn(async (variables, callOptions) => {
+          // Merge hook-level and per-call options
+          const mergedOptions = {
+            ...hookOptions,
+            ...callOptions,
+            onMutate: callOptions?.onMutate || hookOptions?.onMutate,
+            onSuccess: callOptions?.onSuccess || hookOptions?.onSuccess,
+            onError: callOptions?.onError || hookOptions?.onError,
+            onSettled: callOptions?.onSettled || hookOptions?.onSettled,
+          };
+
+          try {
+            const context = await mergedOptions?.onMutate?.(variables);
+            // Actually execute the mutation function
+            const result = await mutationFn(variables);
+            mergedOptions?.onSuccess?.(result, variables, context);
+            mergedOptions?.onSettled?.(result, null, variables, context);
+            return result;
+          } catch (err) {
+            mergedOptions?.onError?.(err as unknown, variables, undefined);
+            mergedOptions?.onSettled?.(
+              undefined,
+              err as unknown,
+              variables,
+              undefined
+            );
+            throw err;
+          }
+        }),
+        isPending: false,
+        error: null,
+      };
+    }),
+    useQueryClient: jest.fn(() => ({
+      invalidateQueries: jest.fn(),
+    })),
+  };
+});
 
 jest.mock("expo-router", () => ({
   router: {
@@ -109,24 +186,87 @@ jest.mock("@react-native-community/datetimepicker", () => {
   return MockDateTimePicker;
 });
 
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: () => ({
-    colors: {
-      primary: "#007AFF",
-      background: "#FFFFFF",
-      surface: "#F2F2F7",
-      text: "#000000",
-      textSecondary: "#666666",
-      border: "#C7C7CC",
-      success: "#34C759",
-      warning: "#FF9500",
-      error: "#FF3B30",
-    },
-    fonts: {
-      regular: { fontSize: 16, fontWeight: "400" },
-      medium: { fontSize: 16, fontWeight: "500" },
-      bold: { fontSize: 16, fontWeight: "700" },
-    },
+jest.mock("@contexts/ThemeContext", () => {
+  const React = require("react");
+  return {
+    useTheme: () => ({
+      colors: {
+        primary: "#007AFF",
+        background: "#FFFFFF",
+        surface: "#F2F2F7",
+        text: "#000000",
+        textSecondary: "#666666",
+        border: "#C7C7CC",
+        success: "#34C759",
+        warning: "#FF9500",
+        error: "#FF3B30",
+      },
+      fonts: {
+        regular: { fontSize: 16, fontWeight: "400" },
+        medium: { fontSize: 16, fontWeight: "500" },
+        bold: { fontSize: 16, fontWeight: "700" },
+      },
+    }),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+// Mock context providers for testUtils
+jest.mock("@contexts/NetworkContext", () => {
+  const React = require("react");
+  return {
+    NetworkProvider: ({ children }: { children: React.ReactNode }) => children,
+    useNetwork: () => ({ isConnected: true }),
+  };
+});
+
+jest.mock("@contexts/DeveloperContext", () => {
+  const React = require("react");
+  return {
+    DeveloperProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+    useDeveloper: () => ({ isDeveloperMode: false }),
+  };
+});
+
+jest.mock("@contexts/UnitContext", () => {
+  const React = require("react");
+  return {
+    UnitProvider: ({ children }: { children: React.ReactNode }) => children,
+    useUnit: () => ({ temperatureUnit: "F", weightUnit: "lb" }),
+  };
+});
+
+jest.mock("@contexts/CalculatorsContext", () => {
+  const React = require("react");
+  return {
+    CalculatorsProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+    useCalculators: () => ({ state: {}, dispatch: jest.fn() }),
+  };
+});
+
+jest.mock("@contexts/AuthContext", () => {
+  const React = require("react");
+  return {
+    AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+    useAuth: () => ({
+      user: null,
+      isLoading: false,
+      isAuthenticated: false,
+      error: null,
+      login: jest.fn(),
+      register: jest.fn(),
+      logout: jest.fn(),
+    }),
+  };
+});
+
+jest.mock("@utils/userValidation", () => ({
+  useUserValidation: () => ({
+    validateUser: jest.fn().mockResolvedValue(true),
+    canUserModifyResource: jest.fn().mockResolvedValue(true),
+    isValidating: false,
   }),
 }));
 
@@ -178,57 +318,70 @@ const mockApiService = require("@services/api/apiService").default;
 describe("EditFermentationEntryScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    testUtils.resetCounters();
   });
 
   describe("Basic Rendering", () => {
     it("should render without crashing", () => {
-      mockApiService.brewSessions.getById.mockResolvedValue({
-        data: {
-          id: "test-session-id",
-          name: "Test Batch",
-          fermentation_data: [
-            {
-              date: "2024-01-01T00:00:00Z",
-              gravity: 1.05,
-              temperature: 68,
-              ph: 4.2,
-              notes: "Initial entry",
-            },
-          ],
-          temperature_unit: "F",
-        },
+      const mockSession = mockData.brewSessionWithData({
+        fermentation_data: [
+          mockData.fermentationEntry({
+            date: "2024-01-01T00:00:00Z",
+            gravity: 1.05,
+            temperature: 68,
+            ph: 4.2,
+            notes: "Initial entry",
+          }),
+        ],
       });
 
-      expect(() => render(<EditFermentationEntryScreen />)).not.toThrow();
+      const mockUseQuery = require("@tanstack/react-query").useQuery;
+      mockUseQuery.mockReturnValue({
+        data: mockSession,
+        isLoading: false,
+        error: null,
+      });
+
+      expect(() =>
+        renderWithProviders(<EditFermentationEntryScreen />)
+      ).not.toThrow();
     });
 
     it("should render basic screen structure", () => {
-      mockApiService.brewSessions.getById.mockResolvedValue({
-        data: {
-          id: "test-session-id",
-          name: "Test Batch",
-          fermentation_data: [],
-          temperature_unit: "F",
-        },
+      const mockSession = mockData.brewSessionWithData({
+        fermentation_data: [],
       });
 
-      const { getByText } = render(<EditFermentationEntryScreen />);
+      const mockUseQuery = require("@tanstack/react-query").useQuery;
+      mockUseQuery.mockReturnValue({
+        data: mockSession,
+        isLoading: false,
+        error: null,
+      });
+
+      const { getByText } = renderWithProviders(
+        <EditFermentationEntryScreen />
+      );
 
       // Should render the screen title
       expect(getByText("Edit Fermentation Entry")).toBeTruthy();
     });
 
     it("should handle missing fermentation entry", async () => {
-      mockApiService.brewSessions.getById.mockResolvedValue({
-        data: {
-          id: "test-session-id",
-          name: "Test Batch",
-          fermentation_data: [], // No entries at index 0
-          temperature_unit: "F",
-        },
+      const mockSession = mockData.brewSessionWithData({
+        fermentation_data: [], // No entries at index 0
       });
 
-      const { getByText } = render(<EditFermentationEntryScreen />);
+      const mockUseQuery = require("@tanstack/react-query").useQuery;
+      mockUseQuery.mockReturnValue({
+        data: mockSession,
+        isLoading: false,
+        error: null,
+      });
+
+      const { getByText } = renderWithProviders(
+        <EditFermentationEntryScreen />
+      );
 
       await waitFor(() => {
         expect(getByText("Entry Not Found")).toBeTruthy();
@@ -242,7 +395,9 @@ describe("EditFermentationEntryScreen", () => {
         isLoading: false,
         error: new Error("Failed to fetch session"),
       });
-      const { getByText } = render(<EditFermentationEntryScreen />);
+      const { getByText } = renderWithProviders(
+        <EditFermentationEntryScreen />
+      );
       await waitFor(() => {
         // Title still renders in error state header
         expect(getByText("Edit Fermentation Entry")).toBeTruthy();
@@ -254,20 +409,17 @@ describe("EditFermentationEntryScreen", () => {
 
   describe("Component Behavior", () => {
     it("should handle successful data loading", async () => {
-      const mockBrewSession = {
-        id: "test-session-id",
-        name: "Test Batch",
+      const mockBrewSession = mockData.brewSessionWithData({
         fermentation_data: [
-          {
+          mockData.fermentationEntry({
             date: "2024-01-01T00:00:00Z",
             gravity: 1.05,
             temperature: 68,
             ph: 4.2,
             notes: "Initial entry",
-          },
+          }),
         ],
-        temperature_unit: "F",
-      };
+      });
 
       const mockUseQuery = require("@tanstack/react-query").useQuery;
       mockUseQuery.mockReturnValue({
@@ -276,7 +428,9 @@ describe("EditFermentationEntryScreen", () => {
         error: null,
       });
 
-      const { getByText } = render(<EditFermentationEntryScreen />);
+      const { getByText } = renderWithProviders(
+        <EditFermentationEntryScreen />
+      );
 
       // Should render title
       expect(getByText("Edit Fermentation Entry")).toBeTruthy();
@@ -290,20 +444,18 @@ describe("EditFermentationEntryScreen", () => {
     });
 
     it("should handle different temperature units", async () => {
-      const mockBrewSessionCelsius = {
-        id: "test-session-id",
-        name: "Test Batch",
+      const mockBrewSessionCelsius = mockData.brewSessionWithData({
         fermentation_data: [
-          {
+          mockData.fermentationEntry({
             date: "2024-01-01T00:00:00Z",
             gravity: 1.05,
             temperature: 20,
             ph: 4.2,
             notes: "Celsius entry",
-          },
+          }),
         ],
         temperature_unit: "C", // Celsius
-      };
+      });
 
       const mockUseQuery = require("@tanstack/react-query").useQuery;
       mockUseQuery.mockReturnValue({
@@ -312,7 +464,9 @@ describe("EditFermentationEntryScreen", () => {
         error: null,
       });
 
-      const { getByText } = render(<EditFermentationEntryScreen />);
+      const { getByText } = renderWithProviders(
+        <EditFermentationEntryScreen />
+      );
 
       // Should render without crashing with Celsius data
       expect(getByText("Edit Fermentation Entry")).toBeTruthy();
@@ -323,17 +477,21 @@ describe("EditFermentationEntryScreen", () => {
     const mockRouter = require("expo-router").router;
 
     it("should handle navigation methods without crashing", () => {
-      mockApiService.brewSessions.getById.mockResolvedValue({
-        data: {
-          id: "test-session-id",
-          name: "Test Batch",
-          fermentation_data: [],
-          temperature_unit: "F",
-        },
+      const mockSession = mockData.brewSessionWithData({
+        fermentation_data: [],
+      });
+
+      const mockUseQuery = require("@tanstack/react-query").useQuery;
+      mockUseQuery.mockReturnValue({
+        data: mockSession,
+        isLoading: false,
+        error: null,
       });
 
       // Render the component
-      expect(() => render(<EditFermentationEntryScreen />)).not.toThrow();
+      expect(() =>
+        renderWithProviders(<EditFermentationEntryScreen />)
+      ).not.toThrow();
 
       // Should have router methods available
       expect(mockRouter.back).toBeDefined();
@@ -351,22 +509,32 @@ describe("EditFermentationEntryScreen", () => {
     });
 
     it("should call updateFermentationEntry when saving changes", async () => {
+      // Create a session with both formats for backward compatibility testing
+      const mockSession = mockData.brewSessionWithData({
+        fermentation_data: [
+          mockData.fermentationEntry({
+            entry_date: "2024-01-01T00:00:00Z",
+            gravity: 1.05,
+            temperature: 68,
+            ph: 4.2,
+            notes: "Initial entry",
+          }),
+        ],
+        // Also include legacy format for mixed API responses
+        fermentation_entries: [
+          mockData.fermentationEntry({
+            entry_date: "2024-01-01T00:00:00Z",
+            gravity: 1.05,
+            temperature: 68,
+            ph: 4.2,
+            notes: "Initial entry",
+          }),
+        ],
+      });
+
       const mockUseQuery = require("@tanstack/react-query").useQuery;
       mockUseQuery.mockReturnValue({
-        data: {
-          id: "test-session-id",
-          name: "Test Batch",
-          fermentation_data: [
-            {
-              date: "2024-01-01T00:00:00Z",
-              gravity: 1.05,
-              temperature: 68,
-              ph: 4.2,
-              notes: "Initial entry",
-            },
-          ],
-          temperature_unit: "F",
-        },
+        data: mockSession,
         isLoading: false,
         error: null,
       });
@@ -378,18 +546,22 @@ describe("EditFermentationEntryScreen", () => {
         isPending: false,
       });
 
-      const { getByTestId } = render(<EditFermentationEntryScreen />);
+      const { getByTestId } = renderWithProviders(
+        <EditFermentationEntryScreen />
+      );
 
       // Change a field value
-      const gravityInput = getByTestId("gravity-input");
+      const gravityInput = getByTestId(TEST_IDS.patterns.inputField("gravity"));
       fireEvent.changeText(gravityInput, "1.045");
 
       // Press save button
-      const saveButton = getByTestId("save-button");
+      const saveButton = getByTestId(TEST_IDS.buttons.saveButton);
       fireEvent.press(saveButton);
 
       // Verify mutation was called
-      expect(mockMutate).toHaveBeenCalledWith(expect.any(Object));
+      await waitFor(() => {
+        expect(mockMutate).toHaveBeenCalledTimes(1);
+      });
     });
   });
 });

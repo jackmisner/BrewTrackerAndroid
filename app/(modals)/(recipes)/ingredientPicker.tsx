@@ -38,17 +38,16 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
-
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
-import ApiService from "@services/api/apiService";
 import { useDebounce } from "@src/hooks/useDebounce";
+import { useOfflineIngredients } from "@src/hooks/useOfflineIngredients";
 import { RecipeIngredient, IngredientType, IngredientUnit } from "@src/types";
 import { ingredientPickerStyles } from "@styles/modals/ingredientPickerStyles";
 import { IngredientDetailEditor } from "@src/components/recipes/IngredientEditor/IngredientDetailEditor";
 import { HOP_USAGE_OPTIONS } from "@constants/hopConstants";
 import { formatIngredientDetails } from "@utils/formatUtils";
+import { generateUniqueId } from "@utils/keyUtils";
 
 /**
  * Ingredient categories for filtering (matching backend grain_type values)
@@ -150,6 +149,7 @@ const createRecipeIngredientWithDefaults = (
     type: ingredientType, // Ensure the type is explicitly set
     amount: getDefaultAmount(ingredientType),
     unit: getDefaultUnit(ingredientType),
+    instance_id: baseIngredient.instance_id || generateUniqueId("ing"), // Ensure unique instance ID
   };
 
   // Add hop-specific defaults
@@ -189,38 +189,17 @@ export default function IngredientPickerScreen() {
 
   const ingredientType = (params.type as IngredientType) || "grain";
 
-  // Fetch ingredients based on type and search
+  // Fetch ingredients with offline support
   const {
     data: ingredients = [],
     isLoading,
     error,
     refetch,
-  } = useQuery({
-    queryKey: ["ingredients", ingredientType, debouncedQuery, selectedCategory],
-    queryFn: async () => {
-      // API service now handles response transformation and error handling
-      const response = await ApiService.ingredients.getAll(
-        ingredientType,
-        debouncedQuery || undefined,
-        selectedCategory || undefined
-      );
-
-      return response;
-    },
-    select: response => {
-      const selectedData = response?.data || [];
-      return selectedData;
-    },
-    retry: (failureCount, error: any) => {
-      // Only retry network errors, not auth errors
-      if (error?.response?.status === 401) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  } = useOfflineIngredients(
+    ingredientType,
+    debouncedQuery || undefined,
+    selectedCategory || undefined
+  );
 
   // Legacy useEffect for setting default units/amounts removed - IngredientDetailEditor handles defaults
 

@@ -17,6 +17,7 @@ import ApiService from "@services/api/apiService";
 import { CreateBrewSessionRequest } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
+import { useUserValidation } from "@utils/userValidation";
 import { createBrewSessionStyles } from "@styles/modals/createBrewSessionStyles";
 import {
   formatGravity,
@@ -25,6 +26,7 @@ import {
   formatSRM,
 } from "@utils/formatUtils";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 function toLocalISODateString(d: Date) {
   const year = d.getFullYear();
@@ -42,6 +44,7 @@ function toLocalISODateString(d: Date) {
 export default function CreateBrewSessionScreen() {
   const theme = useTheme();
   const units = useUnits();
+  const userValidation = useUserValidation();
   const styles = createBrewSessionStyles(theme);
   const params = useLocalSearchParams();
   const queryClient = useQueryClient();
@@ -152,7 +155,7 @@ export default function CreateBrewSessionScreen() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!recipe) {
       Alert.alert("Error", "Recipe data is required to create a brew session");
       return;
@@ -161,6 +164,35 @@ export default function CreateBrewSessionScreen() {
     if (!formData.name.trim()) {
       Alert.alert("Error", "Session name is required");
       return;
+    }
+
+    // Validate user permissions for recipe access
+    if (recipe.user_id) {
+      try {
+        const canAccess = await userValidation.canUserModifyResource({
+          user_id: recipe.user_id,
+          is_owner: recipe.is_owner,
+        });
+
+        // Only allow brew session creation if user has access OR recipe is explicitly public
+        // This prevents unauthorized users from creating sessions for private recipes
+        if (!canAccess && !recipe.is_public) {
+          Alert.alert(
+            "Access Denied",
+            "You don't have permission to create brew sessions for this recipe"
+          );
+          return;
+        }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        console.error("❌ User validation error:", errorMessage, error);
+        Alert.alert(
+          "Validation Error",
+          `Unable to verify permissions: ${errorMessage}. Please try again later.`
+        );
+        return;
+      }
     }
 
     const brewSessionData: CreateBrewSessionRequest = {
@@ -173,6 +205,15 @@ export default function CreateBrewSessionScreen() {
         selectedTemperatureUnit || (units.unitSystem === "metric" ? "C" : "F"),
     };
 
+    // Dev-only diagnostics (avoid PII in production)
+    if (__DEV__) {
+      console.log("🍺 Creating brew session:", {
+        recipeId: recipe.id,
+        isPublicRecipe: recipe.is_public,
+        hasRecipeUserId: !!recipe.user_id,
+        // omit names in production logs
+      });
+    }
     createBrewSessionMutation.mutate(brewSessionData);
   };
 
@@ -217,7 +258,11 @@ export default function CreateBrewSessionScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerButton} onPress={handleCancel}>
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={handleCancel}
+          testID={TEST_IDS.components.closeButton}
+        >
           <MaterialIcons name="close" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Start Brew Session</Text>
@@ -229,6 +274,7 @@ export default function CreateBrewSessionScreen() {
           ]}
           onPress={handleSubmit}
           disabled={createBrewSessionMutation.isPending}
+          testID={TEST_IDS.buttons.saveButton}
         >
           {createBrewSessionMutation.isPending ? (
             <ActivityIndicator size={20} color="#fff" />
@@ -395,6 +441,7 @@ export default function CreateBrewSessionScreen() {
               placeholder="Enter session name"
               placeholderTextColor={theme.colors.textSecondary}
               returnKeyType="next"
+              testID={TEST_IDS.patterns.inputField("session-name")}
             />
           </View>
 
@@ -404,6 +451,7 @@ export default function CreateBrewSessionScreen() {
             <TouchableOpacity
               style={styles.datePickerButton}
               onPress={() => setShowDatePicker(true)}
+              testID={TEST_IDS.patterns.touchableOpacityAction("date-picker")}
             >
               <Text style={styles.datePickerText}>
                 {new Date(formData.brew_date).toLocaleDateString()}
@@ -452,6 +500,7 @@ export default function CreateBrewSessionScreen() {
               multiline
               numberOfLines={4}
               textAlignVertical="top"
+              testID={TEST_IDS.patterns.inputField("notes")}
             />
           </View>
         </View>

@@ -4,7 +4,6 @@ import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm"
 import type { RecipeFormData } from "@src/types";
 import { TEST_IDS } from "@src/constants/testIDs";
 
-// Comprehensive React Native mocking to avoid ES6 module issues
 jest.mock("react-native", () => ({
   View: "View",
   Text: "Text",

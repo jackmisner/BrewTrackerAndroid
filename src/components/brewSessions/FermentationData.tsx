@@ -20,6 +20,7 @@ interface FermentationDataProps {
   actualOG: number | undefined;
   temperatureUnit: string | undefined;
   brewSessionId?: string;
+  brewSessionUserId?: string;
 }
 
 export const FermentationData: React.FC<FermentationDataProps> = ({
@@ -28,6 +29,7 @@ export const FermentationData: React.FC<FermentationDataProps> = ({
   actualOG: _actualOG,
   temperatureUnit,
   brewSessionId,
+  brewSessionUserId,
 }) => {
   const theme = useTheme();
   const {
@@ -240,6 +242,7 @@ export const FermentationData: React.FC<FermentationDataProps> = ({
         entry={selectedEntry?.entry || null}
         entryIndex={selectedEntry?.index}
         brewSessionId={selectedEntry?.brewSessionId || brewSessionId}
+        brewSessionUserId={brewSessionUserId}
         onClose={hideContextMenu}
         position={contextMenuPosition}
       />

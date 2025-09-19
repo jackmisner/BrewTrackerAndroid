@@ -17,11 +17,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import ApiService from "@services/api/apiService";
 import { CreateFermentationEntryRequest, BrewSession } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
+import { useUserValidation } from "@utils/userValidation";
 import { editBrewSessionStyles } from "@styles/modals/editBrewSessionStyles";
 import { TEST_IDS } from "@src/constants/testIDs";
 
 export default function AddFermentationEntryScreen() {
   const theme = useTheme();
+  const userValidation = useUserValidation();
   const styles = editBrewSessionStyles(theme);
   const params = useLocalSearchParams();
   const queryClient = useQueryClient();
@@ -38,6 +40,7 @@ export default function AddFermentationEntryScreen() {
   const [entryDate, setEntryDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [isAuthorizing, setIsAuthorizing] = useState(false);
 
   // Fetch brew session data to get temperature unit
   const { data: brewSession } = useQuery<BrewSession>({
@@ -122,22 +125,76 @@ export default function AddFermentationEntryScreen() {
     return errors.length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateForm()) {
       return;
     }
 
-    const entryData: CreateFermentationEntryRequest = {
-      entry_date: entryDate.toISOString(),
-      gravity: parseFloat(formData.gravity),
-      ...(formData.temperature.trim() && {
-        temperature: parseFloat(formData.temperature),
-      }),
-      ...(formData.ph.trim() && { ph: parseFloat(formData.ph) }),
-      ...(formData.notes.trim() && { notes: formData.notes.trim() }),
-    };
+    // Block re-entrancy during auth check or in-flight mutation
+    if (isAuthorizing || addEntryMutation.isPending) {
+      return;
+    }
+    setIsAuthorizing(true);
+    try {
+      // Validate user permissions for fermentation entry creation
+      if (!brewSession?.user_id) {
+        Alert.alert(
+          "Access Denied",
+          "You don't have permission to add fermentation entries to this brew session"
+        );
+        return;
+      }
 
-    addEntryMutation.mutate(entryData);
+      try {
+        const canModify = await userValidation.canUserModifyResource({
+          user_id: brewSession.user_id,
+        });
+
+        if (!canModify) {
+          Alert.alert(
+            "Access Denied",
+            "You don't have permission to add fermentation entries to this brew session"
+          );
+          return;
+        }
+      } catch (error) {
+        console.error(
+          "❌ User validation error during fermentation entry creation:",
+          error
+        );
+        Alert.alert(
+          "Validation Error",
+          "Unable to verify permissions. Please try again."
+        );
+        return;
+      }
+
+      const entryData: CreateFermentationEntryRequest = {
+        entry_date: entryDate.toISOString(),
+        gravity: parseFloat(formData.gravity),
+        ...(formData.temperature.trim() && {
+          temperature: parseFloat(formData.temperature),
+        }),
+        ...(formData.ph.trim() && { ph: parseFloat(formData.ph) }),
+        ...(formData.notes.trim() && { notes: formData.notes.trim() }),
+      };
+
+      // Log fermentation entry creation for security monitoring
+      console.log("📊 Adding fermentation entry:", {
+        brewSessionId,
+        brewSessionName: brewSession?.name,
+        hasBrewSessionUserId: !!brewSession?.user_id,
+        entryDate: entryData.entry_date,
+      });
+
+      try {
+        await addEntryMutation.mutateAsync(entryData);
+      } catch {
+        // Handled by onError in the mutation options
+      }
+    } finally {
+      setIsAuthorizing(false);
+    }
   };
 
   const handleCancel = () => {
@@ -175,7 +232,7 @@ export default function AddFermentationEntryScreen() {
             addEntryMutation.isPending && styles.saveButtonDisabled,
           ]}
           onPress={handleSave}
-          disabled={addEntryMutation.isPending}
+          disabled={addEntryMutation.isPending || isAuthorizing}
           testID={TEST_IDS.buttons.saveButton}
         >
           {addEntryMutation.isPending ? (
@@ -205,8 +262,11 @@ export default function AddFermentationEntryScreen() {
           <TouchableOpacity
             style={styles.datePickerButton}
             onPress={() => setShowDatePicker(true)}
+            testID={TEST_IDS.patterns.touchableOpacityAction("date-picker")}
           >
-            <Text style={styles.datePickerText}>{formatDate(entryDate)}</Text>
+            <Text style={styles.datePickerText} testID="date-display-text">
+              {formatDate(entryDate)}
+            </Text>
             <MaterialIcons
               name="event"
               size={20}
@@ -219,6 +279,7 @@ export default function AddFermentationEntryScreen() {
               mode="date"
               display="default"
               onChange={handleDateChange}
+              testID="date-time-picker"
             />
           ) : null}
         </View>

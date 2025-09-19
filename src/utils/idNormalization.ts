@@ -209,10 +209,21 @@ export function normalizeResponseData(data: any, entityType: EntityType): any {
 
   // Handle wrapped array response (e.g., { ingredients: [...], unit_system: "..." })
   if (data.ingredients && Array.isArray(data.ingredients)) {
-    return {
+    // First normalize the ingredients array
+    const normalizedData = {
       ...data,
       ingredients: normalizeEntityIds(data.ingredients, "ingredient"),
     };
+
+    // Then check if this is also a recipe entity that needs ID normalization
+    if (
+      entityType === "recipe" &&
+      extractEntityId(normalizedData, entityType)
+    ) {
+      return normalizeEntityId(normalizedData, entityType);
+    }
+
+    return normalizedData;
   }
 
   // Handle wrapped recipe response (e.g., { recipes: [...], total: 10, page: 1 })
@@ -244,7 +255,8 @@ export function normalizeResponseData(data: any, entityType: EntityType): any {
     // Check if it looks like an entity (has ID-like fields)
     const hasIdField = extractEntityId(data, entityType);
     if (hasIdField) {
-      return normalizeEntityId(data, entityType);
+      const normalized = normalizeEntityId(data, entityType);
+      return normalized;
     }
   }
 

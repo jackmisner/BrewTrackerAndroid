@@ -41,6 +41,7 @@ export interface RecipeIngredient {
   type: IngredientType;
   amount: number;
   unit: IngredientUnit;
+  instance_id: string; // Unique instance identifier for React keys and duplicate ingredient handling
 
   // Grain-specific
   potential?: number;
@@ -75,6 +76,11 @@ export interface RecipeMetrics {
   abv: number;
   ibu: number;
   srm: number;
+  estimated_og?: number; // optional for display purposes
+  estimated_fg?: number; // optional for display purposes
+  estimated_abv?: number; // optional for display purposes
+  estimated_ibu?: number; // optional for display purposes
+  estimated_srm?: number; // optional for display purposes
 }
 
 // Main recipe interface
@@ -95,7 +101,6 @@ export interface Recipe {
   notes: string;
   ingredients: RecipeIngredient[];
 
-  // Calculated metrics (stored)
   estimated_og?: number;
   estimated_fg?: number;
   estimated_abv?: number;
@@ -217,4 +222,5 @@ export interface IngredientInput {
   unit: IngredientUnit;
   use?: string;
   time?: number;
+  instance_id: string; // Unique instance identifier for React keys and duplicate ingredient handling
 }

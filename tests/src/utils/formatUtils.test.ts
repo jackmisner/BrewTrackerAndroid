@@ -332,6 +332,7 @@ describe("formatUtils", () => {
         name: "Test Hop",
         amount: 1,
         unit: "oz" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(hopIngredient);
@@ -347,6 +348,7 @@ describe("formatUtils", () => {
         name: "Test Hop",
         amount: 1,
         unit: "oz" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(hopIngredient);
@@ -362,6 +364,7 @@ describe("formatUtils", () => {
         name: "Test Grain",
         amount: 10,
         unit: "lb" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(grainIngredient);
@@ -377,6 +380,7 @@ describe("formatUtils", () => {
         name: "Test Yeast",
         amount: 1,
         unit: "pkg" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(yeastIngredient);
@@ -390,6 +394,7 @@ describe("formatUtils", () => {
         name: "Test Ingredient",
         amount: 1,
         unit: "tsp" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(ingredient);
@@ -405,6 +410,7 @@ describe("formatUtils", () => {
         name: "Test Grain",
         amount: 10,
         unit: "lb" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(grainIngredient);
@@ -421,6 +427,7 @@ describe("formatUtils", () => {
         name: "Test Hop",
         amount: 1,
         unit: "oz" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(hopIngredient);
@@ -438,6 +445,7 @@ describe("formatUtils", () => {
         name: "Test Hop",
         amount: 1,
         unit: "oz" as const,
+        instance_id: "mock-uuid",
       };
 
       const hopWithUndefinedTime = {
@@ -449,6 +457,7 @@ describe("formatUtils", () => {
         name: "Test Hop",
         amount: 1,
         unit: "oz" as const,
+        instance_id: "mock-uuid",
       };
 
       const resultNull = formatIngredientDetails(hopWithNullTime);
@@ -469,6 +478,7 @@ describe("formatUtils", () => {
         name: "Test Hop",
         amount: 1,
         unit: "oz" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(hopIngredient);
@@ -485,6 +495,7 @@ describe("formatUtils", () => {
         name: "Test Grain",
         amount: 10,
         unit: "lb" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(grainIngredient);
@@ -501,6 +512,7 @@ describe("formatUtils", () => {
         name: "Test Yeast",
         amount: 1,
         unit: "pkg" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(yeastIngredient);
@@ -517,6 +529,7 @@ describe("formatUtils", () => {
         name: "Test Yeast",
         amount: 1,
         unit: "pkg" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(yeastIngredient);
@@ -532,6 +545,7 @@ describe("formatUtils", () => {
         name: "Empty Hop",
         amount: 1,
         unit: "oz" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(emptyHopIngredient);
@@ -547,6 +561,7 @@ describe("formatUtils", () => {
         name: "Empty Grain",
         amount: 1,
         unit: "lb" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(emptyGrainIngredient);
@@ -562,6 +577,7 @@ describe("formatUtils", () => {
         name: "Empty Yeast",
         amount: 1,
         unit: "pkg" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(emptyYeastIngredient);
@@ -579,6 +595,7 @@ describe("formatUtils", () => {
         name: "Test Hop",
         amount: 1,
         unit: "oz" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(hopIngredient);
@@ -595,6 +612,7 @@ describe("formatUtils", () => {
         name: "Test Yeast",
         amount: 1,
         unit: "pkg" as const,
+        instance_id: "mock-uuid",
       };
 
       const result = formatIngredientDetails(yeastIngredient);

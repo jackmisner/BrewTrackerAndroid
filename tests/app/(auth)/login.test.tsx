@@ -1,6 +1,7 @@
 import React from "react";
-import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
+import { fireEvent, waitFor, act } from "@testing-library/react-native";
 import { Alert } from "react-native";
+import { renderWithProviders, testUtils, mockData } from "../../testUtils";
 import LoginScreen from "../../../app/(auth)/login";
 
 // Comprehensive React Native mocking to avoid ES6 module issues
@@ -15,17 +16,56 @@ jest.mock("react-native", () => ({
   ScrollView: "ScrollView",
   KeyboardAvoidingView: "KeyboardAvoidingView",
   ActivityIndicator: "ActivityIndicator",
+  Platform: { OS: "ios" },
   StyleSheet: {
     create: (styles: any) => styles,
     flatten: (styles: any) => styles,
+  },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
   },
 }));
 
 // Mock dependencies
 
+// Mock functions for authentication
+const mockLogin = jest.fn();
+const mockClearError = jest.fn();
+
+// Create a mockable useAuth implementation
+let mockAuthState = {
+  user: null as any,
+  isLoading: false,
+  isAuthenticated: false,
+  error: null as string | null,
+};
+
+// Mock the AuthContext hook to return our mock data
 jest.mock("@contexts/AuthContext", () => ({
-  useAuth: jest.fn(),
+  ...jest.requireActual("@contexts/AuthContext"),
+  useAuth: () => ({
+    ...mockAuthState,
+    login: mockLogin,
+    register: jest.fn(),
+    logout: jest.fn(),
+    refreshUser: jest.fn(),
+    clearError: mockClearError,
+    signInWithGoogle: jest.fn(),
+    verifyEmail: jest.fn(),
+    resendVerification: jest.fn(),
+    checkVerificationStatus: jest.fn(),
+    forgotPassword: jest.fn(),
+    resetPassword: jest.fn(),
+    getUserId: jest.fn(),
+  }),
 }));
+
+// Helper to override auth state for specific tests
+const setMockAuthState = (overrides: Partial<typeof mockAuthState>) => {
+  mockAuthState = { ...mockAuthState, ...overrides };
+};
 
 jest.mock("@styles/auth/loginStyles", () => ({
   loginStyles: {
@@ -52,21 +92,22 @@ jest.mock("@styles/auth/loginStyles", () => ({
 
 // Alert is now mocked in the react-native mock above
 
-const mockAuth = {
-  login: jest.fn(),
-  error: null as string | null,
-  clearError: jest.fn(),
-};
-
-// Setup mocks
-require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
-
 describe("LoginScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.clearAllTimers();
     jest.useFakeTimers();
-    mockAuth.error = null;
+    jest.clearAllTimers();
+    mockLogin.mockClear();
+    mockClearError.mockClear();
+    testUtils.resetCounters();
+
+    // Reset auth state to defaults
+    setMockAuthState({
+      user: null,
+      isLoading: false,
+      isAuthenticated: false,
+      error: null,
+    });
   });
 
   afterEach(() => {
@@ -75,7 +116,9 @@ describe("LoginScreen", () => {
 
   describe("rendering", () => {
     it("should render all required elements", () => {
-      const { getByText, getByPlaceholderText } = render(<LoginScreen />);
+      const { getByText, getByPlaceholderText } = renderWithProviders(
+        <LoginScreen />
+      );
 
       expect(getByText("BrewTracker")).toBeTruthy();
       expect(getByText("Sign in to your account")).toBeTruthy();
@@ -88,16 +131,15 @@ describe("LoginScreen", () => {
     });
 
     it("should display error message when error exists", () => {
-      mockAuth.error = "Invalid credentials";
-      require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
+      setMockAuthState({ error: "Invalid credentials" });
 
-      const { getByText } = render(<LoginScreen />);
+      const { getByText } = renderWithProviders(<LoginScreen />);
 
       expect(getByText("Invalid credentials")).toBeTruthy();
     });
 
     it("should not display error message when no error", () => {
-      const { queryByText } = render(<LoginScreen />);
+      const { queryByText } = renderWithProviders(<LoginScreen />);
 
       expect(queryByText("Invalid credentials")).toBeNull();
     });
@@ -105,7 +147,7 @@ describe("LoginScreen", () => {
 
   describe("user input", () => {
     it("should update username when typing", () => {
-      const { getByPlaceholderText } = render(<LoginScreen />);
+      const { getByPlaceholderText } = renderWithProviders(<LoginScreen />);
       const usernameInput = getByPlaceholderText("Username or Email");
 
       fireEvent.changeText(usernameInput, "testuser");
@@ -114,7 +156,7 @@ describe("LoginScreen", () => {
     });
 
     it("should update password when typing", () => {
-      const { getByPlaceholderText } = render(<LoginScreen />);
+      const { getByPlaceholderText } = renderWithProviders(<LoginScreen />);
       const passwordInput = getByPlaceholderText("Password");
 
       fireEvent.changeText(passwordInput, "password123");
@@ -123,14 +165,14 @@ describe("LoginScreen", () => {
     });
 
     it("should have secure text entry for password field", () => {
-      const { getByPlaceholderText } = render(<LoginScreen />);
+      const { getByPlaceholderText } = renderWithProviders(<LoginScreen />);
       const passwordInput = getByPlaceholderText("Password");
 
       expect(passwordInput.props.secureTextEntry).toBe(true);
     });
 
     it("should have correct autocomplete and text content types", () => {
-      const { getByPlaceholderText } = render(<LoginScreen />);
+      const { getByPlaceholderText } = renderWithProviders(<LoginScreen />);
       const usernameInput = getByPlaceholderText("Username or Email");
       const passwordInput = getByPlaceholderText("Password");
 
@@ -145,7 +187,9 @@ describe("LoginScreen", () => {
 
   describe("form validation", () => {
     it("should show alert when username is empty", async () => {
-      const { getByText, getByPlaceholderText } = render(<LoginScreen />);
+      const { getByText, getByPlaceholderText } = renderWithProviders(
+        <LoginScreen />
+      );
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
 
@@ -156,11 +200,13 @@ describe("LoginScreen", () => {
         "Error",
         "Please fill in all fields"
       );
-      expect(mockAuth.login).not.toHaveBeenCalled();
+      expect(mockLogin).not.toHaveBeenCalled();
     });
 
     it("should show alert when password is empty", async () => {
-      const { getByText, getByPlaceholderText } = render(<LoginScreen />);
+      const { getByText, getByPlaceholderText } = renderWithProviders(
+        <LoginScreen />
+      );
       const usernameInput = getByPlaceholderText("Username or Email");
       const loginButton = getByText("Sign In");
 
@@ -171,11 +217,11 @@ describe("LoginScreen", () => {
         "Error",
         "Please fill in all fields"
       );
-      expect(mockAuth.login).not.toHaveBeenCalled();
+      expect(mockLogin).not.toHaveBeenCalled();
     });
 
     it("should show alert when both fields are empty", async () => {
-      const { getByText } = render(<LoginScreen />);
+      const { getByText } = renderWithProviders(<LoginScreen />);
       const loginButton = getByText("Sign In");
 
       fireEvent.press(loginButton);
@@ -184,15 +230,17 @@ describe("LoginScreen", () => {
         "Error",
         "Please fill in all fields"
       );
-      expect(mockAuth.login).not.toHaveBeenCalled();
+      expect(mockLogin).not.toHaveBeenCalled();
     });
   });
 
   describe("successful login", () => {
     it("should call login function with correct credentials", async () => {
-      mockAuth.login.mockResolvedValue(undefined);
+      mockLogin.mockResolvedValue(undefined);
 
-      const { getByText, getByPlaceholderText } = render(<LoginScreen />);
+      const { getByText, getByPlaceholderText } = renderWithProviders(
+        <LoginScreen />
+      );
       const usernameInput = getByPlaceholderText("Username or Email");
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
@@ -204,8 +252,8 @@ describe("LoginScreen", () => {
         fireEvent.press(loginButton);
       });
 
-      expect(mockAuth.clearError).toHaveBeenCalled();
-      expect(mockAuth.login).toHaveBeenCalledWith({
+      expect(mockClearError).toHaveBeenCalled();
+      expect(mockLogin).toHaveBeenCalledWith({
         username: "testuser",
         password: "password123",
       });
@@ -216,11 +264,10 @@ describe("LoginScreen", () => {
       const loginPromise = new Promise<void>(resolve => {
         resolveLogin = resolve;
       });
-      mockAuth.login.mockReturnValue(loginPromise);
+      mockLogin.mockReturnValue(loginPromise);
 
-      const { getByText, getByPlaceholderText, queryByText } = render(
-        <LoginScreen />
-      );
+      const { getByText, getByPlaceholderText, queryByText } =
+        renderWithProviders(<LoginScreen />);
       const usernameInput = getByPlaceholderText("Username or Email");
       const passwordInput = getByPlaceholderText("Password");
 
@@ -237,15 +284,17 @@ describe("LoginScreen", () => {
 
       // Resolve the login
       await act(async () => {
-        resolveLogin();
+        resolveLogin!();
         await loginPromise;
       });
     });
 
     it("should navigate to home screen after successful login", async () => {
-      mockAuth.login.mockResolvedValue(undefined);
+      mockLogin.mockResolvedValue(undefined);
 
-      const { getByText, getByPlaceholderText } = render(<LoginScreen />);
+      const { getByText, getByPlaceholderText } = renderWithProviders(
+        <LoginScreen />
+      );
       const usernameInput = getByPlaceholderText("Username or Email");
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
@@ -270,11 +319,10 @@ describe("LoginScreen", () => {
       const loginPromise = new Promise<void>(resolve => {
         resolveLogin = resolve;
       });
-      mockAuth.login.mockReturnValue(loginPromise);
+      mockLogin.mockReturnValue(loginPromise);
 
-      const { getByText, getByPlaceholderText, queryByText } = render(
-        <LoginScreen />
-      );
+      const { getByText, getByPlaceholderText, queryByText } =
+        renderWithProviders(<LoginScreen />);
       const usernameInput = getByPlaceholderText("Username or Email");
       const passwordInput = getByPlaceholderText("Password");
 
@@ -291,7 +339,7 @@ describe("LoginScreen", () => {
 
       // Resolve the login
       await act(async () => {
-        resolveLogin();
+        resolveLogin!();
         await loginPromise;
       });
     });
@@ -300,9 +348,11 @@ describe("LoginScreen", () => {
   describe("failed login", () => {
     it("should show alert on login failure with error message", async () => {
       const errorMessage = "Invalid credentials";
-      mockAuth.login.mockRejectedValue(new Error(errorMessage));
+      mockLogin.mockRejectedValue(new Error(errorMessage));
 
-      const { getByText, getByPlaceholderText } = render(<LoginScreen />);
+      const { getByText, getByPlaceholderText } = renderWithProviders(
+        <LoginScreen />
+      );
       const usernameInput = getByPlaceholderText("Username or Email");
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
@@ -321,9 +371,11 @@ describe("LoginScreen", () => {
     });
 
     it("should show default error message when no error message provided", async () => {
-      mockAuth.login.mockRejectedValue(new Error());
+      mockLogin.mockRejectedValue(new Error());
 
-      const { getByText, getByPlaceholderText } = render(<LoginScreen />);
+      const { getByText, getByPlaceholderText } = renderWithProviders(
+        <LoginScreen />
+      );
       const usernameInput = getByPlaceholderText("Username or Email");
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
@@ -342,9 +394,11 @@ describe("LoginScreen", () => {
     });
 
     it("should hide loading indicator after failed login", async () => {
-      mockAuth.login.mockRejectedValue(new Error("Login failed"));
+      mockLogin.mockRejectedValue(new Error("Login failed"));
 
-      const { getByText, getByPlaceholderText } = render(<LoginScreen />);
+      const { getByText, getByPlaceholderText } = renderWithProviders(
+        <LoginScreen />
+      );
       const usernameInput = getByPlaceholderText("Username or Email");
       const passwordInput = getByPlaceholderText("Password");
 
@@ -363,7 +417,7 @@ describe("LoginScreen", () => {
 
   describe("navigation", () => {
     it("should navigate to register screen when create account is pressed", () => {
-      const { getByText } = render(<LoginScreen />);
+      const { getByText } = renderWithProviders(<LoginScreen />);
       const createAccountButton = getByText("Create Account");
 
       fireEvent.press(createAccountButton);
@@ -372,30 +426,32 @@ describe("LoginScreen", () => {
     });
 
     it("should navigate to forgot password screen", () => {
-      const { getByText } = render(<LoginScreen />);
+      const { getByText } = renderWithProviders(<LoginScreen />);
       const forgotPasswordLink = getByText("Forgot your password?");
 
       fireEvent.press(forgotPasswordLink);
 
-      expect(mockAuth.clearError).toHaveBeenCalled();
+      expect(mockClearError).toHaveBeenCalled();
       // Navigation happens via globally mocked expo-router
     });
   });
 
   describe("error handling", () => {
     it("should clear errors when navigating to forgot password", () => {
-      const { getByText } = render(<LoginScreen />);
+      const { getByText } = renderWithProviders(<LoginScreen />);
       const forgotPasswordLink = getByText("Forgot your password?");
 
       fireEvent.press(forgotPasswordLink);
 
-      expect(mockAuth.clearError).toHaveBeenCalled();
+      expect(mockClearError).toHaveBeenCalled();
     });
 
     it("should clear errors before attempting login", async () => {
-      mockAuth.login.mockResolvedValue(undefined);
+      mockLogin.mockResolvedValue(undefined);
 
-      const { getByText, getByPlaceholderText } = render(<LoginScreen />);
+      const { getByText, getByPlaceholderText } = renderWithProviders(
+        <LoginScreen />
+      );
       const usernameInput = getByPlaceholderText("Username or Email");
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
@@ -407,13 +463,13 @@ describe("LoginScreen", () => {
         fireEvent.press(loginButton);
       });
 
-      expect(mockAuth.clearError).toHaveBeenCalled();
+      expect(mockClearError).toHaveBeenCalled();
     });
   });
 
   describe("accessibility", () => {
     it("should have appropriate input types and properties", () => {
-      const { getByPlaceholderText } = render(<LoginScreen />);
+      const { getByPlaceholderText } = renderWithProviders(<LoginScreen />);
       const usernameInput = getByPlaceholderText("Username or Email");
       const passwordInput = getByPlaceholderText("Password");
 

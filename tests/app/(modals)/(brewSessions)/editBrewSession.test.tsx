@@ -4,7 +4,6 @@
 
 import React from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
-// QueryClient and QueryClientProvider imported but not used in this test file
 import EditBrewSessionScreen from "../../../../app/(modals)/(brewSessions)/editBrewSession";
 
 // Mock React Native components
@@ -113,6 +112,14 @@ jest.mock("@contexts/ThemeContext", () => ({
   }),
 }));
 
+// Mock user validation
+jest.mock("@utils/userValidation", () => ({
+  useUserValidation: () => ({
+    canUserModifyResource: jest.fn().mockResolvedValue(true),
+    validateUserOwnership: jest.fn().mockResolvedValue({ isValid: true }),
+  }),
+}));
+
 jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: ({ name, size, color, ...props }: any) => {
     const React = require("react");
@@ -161,6 +168,7 @@ beforeEach(() => {
       data: {
         id: "session-123",
         name: "Test Session",
+        user_id: "user-123",
         status: "planned",
         notes: "Test notes",
         tasting_notes: "",
@@ -192,6 +200,7 @@ describe("EditBrewSessionScreen", () => {
     data: {
       id: "session-123",
       name: "Test Session",
+      user_id: "user-123",
       status: "planned",
       notes: "Test notes",
       tasting_notes: "",

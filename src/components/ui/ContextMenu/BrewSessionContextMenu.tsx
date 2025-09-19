@@ -100,20 +100,38 @@ export function createDefaultBrewSessionActions(handlers: {
       title: "Edit Session",
       icon: "edit",
       onPress: handlers.onEdit,
-      // Hide edit for completed/archived sessions
-      hidden: brewSession =>
-        brewSession.status === "completed" || brewSession.status === "archived",
+      // Enhanced security: Hide edit if user doesn't own session or session is completed/archived
+      hidden: brewSession => {
+        if (
+          brewSession.status === "completed" ||
+          brewSession.status === "archived"
+        ) {
+          return true;
+        }
+        if (!brewSession.user_id) {
+          return true;
+        }
+        // Use basic ownership check - async validation handled in onPress
+        return false;
+      },
     },
     {
       id: "add-fermentation",
       title: "Add Fermentation Entry",
       icon: "addchart",
       onPress: handlers.onAddFermentationEntry,
-      // Only show for active/fermenting sessions
-      hidden: brewSession =>
-        brewSession.status !== "active" &&
-        brewSession.status !== "fermenting" &&
-        brewSession.status !== "in-progress",
+      // Enhanced security: Check ownership and only show for active/fermenting sessions
+      hidden: brewSession => {
+        const allowed = ["active", "fermenting", "in-progress"];
+        if (!allowed.includes(brewSession.status)) {
+          return true;
+        }
+        if (!brewSession.user_id) {
+          return true;
+        }
+        // Use basic ownership check - async validation handled in onPress
+        return false;
+      },
     },
     {
       id: "export",
@@ -130,8 +148,17 @@ export function createDefaultBrewSessionActions(handlers: {
       title: "Archive Session",
       icon: "archive",
       onPress: handlers.onArchive,
-      // Only show for completed sessions (archived is a separate status)
-      hidden: brewSession => brewSession.status !== "completed",
+      // Enhanced security: Check ownership and only show for completed sessions
+      hidden: brewSession => {
+        if (brewSession.status !== "completed") {
+          return true;
+        }
+        if (!brewSession.user_id) {
+          return true;
+        }
+        // Use basic ownership check - async validation handled in onPress
+        return false;
+      },
     },
     {
       id: "delete",
@@ -139,7 +166,14 @@ export function createDefaultBrewSessionActions(handlers: {
       icon: "delete",
       onPress: handlers.onDelete,
       destructive: true,
-      // Can only delete if session is not active
+      // Enhanced security: Check ownership and only allow deletion if session is not active
+      hidden: brewSession => {
+        if (!brewSession.user_id) {
+          return true;
+        }
+        // Use basic ownership check - async validation handled in onPress
+        return false;
+      },
       disabled: brewSession =>
         brewSession.status === "active" || brewSession.status === "fermenting",
     },

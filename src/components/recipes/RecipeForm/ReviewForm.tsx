@@ -30,7 +30,7 @@ import { RecipeFormData } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
 import { formatHopTime } from "@src/utils/timeUtils";
-import { generateIngredientKey } from "@utils/keyUtils";
+import { generateIngredientKey, generateListItemKey } from "@utils/keyUtils";
 
 // Hop usage display mapping (database value -> display value)
 const HOP_USAGE_DISPLAY_MAPPING: Record<string, string> = {
@@ -80,6 +80,28 @@ export function ReviewForm({
 }: ReviewFormProps) {
   const theme = useTheme();
   const styles = createRecipeStyles(theme);
+
+  /**
+   * Generate a safe key for ingredients, falling back to generateListItemKey when instance_id is missing
+   */
+  const generateSafeIngredientKey = (
+    ingredient: any,
+    index: number
+  ): string => {
+    try {
+      if (ingredient.instance_id) {
+        return generateIngredientKey(ingredient);
+      } else {
+        // Fallback to generateListItemKey when instance_id is missing (server-loaded/edit flow)
+        return generateListItemKey(ingredient, index, "review-ingredient");
+      }
+    } catch (error) {
+      console.error("Error generating ingredient key:", error);
+      // Log the error and return a fallback key
+      // Additional safety net - fallback to generateListItemKey if generateIngredientKey throws
+      return generateListItemKey(ingredient, index, "review-ingredient");
+    }
+  };
 
   const ingredientsByType = {
     grain: recipeData.ingredients.filter(ing => ing.type === "grain"),
@@ -175,20 +197,9 @@ export function ReviewForm({
               {ingredients.length})
             </Text>
             {ingredients.map((ingredient, index) => {
-              const additionalContext =
-                ingredient.type === "hop"
-                  ? `${ingredient.use || "unknown"}-${ingredient.time || 0}min`
-                  : ingredient.type === "grain"
-                    ? ingredient.grain_type || "unknown"
-                    : undefined;
-
               return (
                 <View
-                  key={generateIngredientKey(
-                    ingredient,
-                    index,
-                    additionalContext
-                  )}
+                  key={generateSafeIngredientKey(ingredient, index)}
                   style={styles.ingredientReviewItem}
                 >
                   <View style={styles.ingredientReviewInfo}>

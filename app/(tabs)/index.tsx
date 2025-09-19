@@ -39,7 +39,7 @@
  * @testing_notes
  * - Covered by integration tests for data loading states (loading, error, success) and menu actions
  */
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -56,6 +56,9 @@ import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
+import OfflineRecipeService from "@services/offline/OfflineRecipeService";
+import OfflineCacheService from "@services/offline/OfflineCacheService";
+import { NetworkStatusBanner } from "@src/components/NetworkStatusBanner";
 import ApiService from "@services/api/apiService";
 import BeerXMLService from "@services/beerxml/BeerXMLService";
 import { Recipe, BrewSession } from "@src/types";
@@ -70,6 +73,7 @@ import {
 } from "@src/components/ui/ContextMenu/BrewSessionContextMenu";
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
+import { QUERY_KEYS } from "@services/api/queryClient";
 export default function DashboardScreen() {
   const { user } = useAuth();
   const theme = useTheme();
@@ -86,10 +90,37 @@ export default function DashboardScreen() {
   const recipeContextMenu = useContextMenu<Recipe>();
   const brewSessionContextMenu = useContextMenu<BrewSession>();
 
+  // Cleanup cooldown tracking
+  const CLEANUP_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+  const lastCleanupTimeRef = useRef(0);
+
   // Handle pull to refresh
   const onRefresh = async () => {
     setRefreshing(true);
     try {
+      // Clean up stale cache data when online and refreshing
+      try {
+        const now = Date.now();
+        if (now - lastCleanupTimeRef.current < CLEANUP_COOLDOWN_MS) {
+          console.log("Skipping cleanup due to cooldown");
+        } else {
+          const cleanup = await OfflineRecipeService.cleanupStaleData();
+          if (cleanup.removed > 0) {
+            console.log(
+              `Dashboard refresh cleaned up ${cleanup.removed} stale recipes`
+            );
+          }
+          lastCleanupTimeRef.current = now;
+        }
+      } catch (error) {
+        console.warn(
+          "Failed to cleanup stale data during dashboard refresh:",
+          error
+        );
+        // Don't let cleanup errors block the refresh
+      }
+
+      // Refresh dashboard data
       await refetch();
     } finally {
       setRefreshing(false);
@@ -103,10 +134,10 @@ export default function DashboardScreen() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["dashboard"],
+    queryKey: [...QUERY_KEYS.DASHBOARD, user?.id ?? "anonymous"],
     queryFn: async () => {
       try {
-        // Fetch data from multiple working endpoints - use same pattern as recipes tab
+        // Try to fetch fresh data first
         const [recipesResponse, brewSessionsResponse, publicRecipesResponse] =
           await Promise.all([
             ApiService.recipes.getAll(PAGE, RECENT_RECIPES_LIMIT),
@@ -114,13 +145,8 @@ export default function DashboardScreen() {
             ApiService.recipes.getPublic(PAGE, PUBLIC_PAGE_SIZE),
           ]);
 
-        // Transform the data to match expected dashboard format - use same pattern as recipes tab
-        // The recipes tab accesses response.data.recipes, brew sessions tab accesses response.data.brew_sessions
         const recipes = recipesResponse.data?.recipes || [];
         const brewSessions = brewSessionsResponse.data?.brew_sessions || [];
-
-        // Calculate user stats - use same status filtering as brew sessions tab
-
         const activeBrewSessions = brewSessions.filter(
           session => session.status !== "completed"
         );
@@ -131,22 +157,64 @@ export default function DashboardScreen() {
           public_recipes: publicRecipesResponse.data.pagination?.total || 0,
           total_brew_sessions:
             brewSessionsResponse.data.pagination?.total || brewSessions.length,
-
           active_brew_sessions: activeBrewSessions.length,
         };
 
+        const freshDashboardData = {
+          user_stats: userStats,
+          recent_recipes: recipes.slice(0, 3),
+          active_brew_sessions: activeBrewSessions.slice(0, 3),
+        };
+
+        // Cache the fresh data for offline use
+        if (!user?.id) {
+          console.warn("Cannot cache dashboard data without user ID");
+        } else {
+          OfflineCacheService.cacheDashboardData(
+            freshDashboardData,
+            user.id
+          ).catch(error => {
+            console.warn("Failed to cache dashboard data:", error);
+          });
+        }
+
         return {
-          data: {
-            user_stats: userStats,
-            recent_recipes: recipes.slice(0, 3), // Show 3 most recent
-            active_brew_sessions: activeBrewSessions.slice(0, 3), // Show 3 most recent active sessions
-          },
+          data: freshDashboardData,
         };
       } catch (error) {
-        console.error("Dashboard data fetch error:", error);
+        // Only log non-simulated errors
+        if (
+          !(
+            error instanceof Error &&
+            error.message?.includes("Simulated offline")
+          )
+        ) {
+          console.error("Dashboard data fetch error:", error);
+        }
+
+        // Try to get cached data when API fails
+        try {
+          if (!user?.id) {
+            console.warn("Cannot load cached dashboard data without user ID");
+            throw error; // Rethrow original error
+          }
+          const cachedData = await OfflineCacheService.getCachedDashboardData(
+            user?.id
+          );
+          if (cachedData) {
+            console.log("Using cached dashboard data due to API error");
+            return {
+              data: cachedData,
+            };
+          }
+        } catch (cacheError) {
+          console.warn("Failed to load cached dashboard data:", cacheError);
+        }
+
         throw error;
       }
     },
+    enabled: !!user, // Only run query when user is authenticated
     retry: 1, // Only retry once to avoid excessive API calls
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
@@ -216,8 +284,8 @@ export default function DashboardScreen() {
       await ApiService.recipes.delete(recipeId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.DASHBOARD] });
     },
     onError: (error: unknown) => {
       console.error("Failed to delete recipe:", error);
@@ -243,8 +311,8 @@ export default function DashboardScreen() {
       }
     },
     onSuccess: (response, recipe) => {
-      queryClient.invalidateQueries({ queryKey: ["recipes"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.DASHBOARD] });
       const cloneType = recipe.is_public ? "cloned" : "versioned";
       Alert.alert(
         "Recipe Cloned",
@@ -255,7 +323,7 @@ export default function DashboardScreen() {
             onPress: () => {
               router.push({
                 pathname: "/(modals)/(recipes)/viewRecipe",
-                params: { recipe_id: response.data.recipe_id },
+                params: { recipe_id: response.data.id },
               });
             },
           },
@@ -671,6 +739,7 @@ export default function DashboardScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
+      <NetworkStatusBanner onRetry={onRefresh} />
       <View style={styles.header}>
         <Text style={styles.greeting}>Welcome back, {user?.username}!</Text>
         <Text style={styles.subtitle}>Ready to brew something amazing?</Text>

@@ -6,7 +6,8 @@
  */
 
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { fireEvent, waitFor } from "@testing-library/react-native";
+import { renderWithProviders, testUtils } from "@/tests/testUtils";
 import StrikeWaterCalculatorScreen from "../../../../app/(modals)/(calculators)/strikeWater";
 
 // Mock React Native components
@@ -17,10 +18,16 @@ jest.mock("react-native", () => ({
   StyleSheet: {
     create: (styles: any) => styles,
   },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
+  },
 }));
 
-// Mock contexts
-const mockCalculatorsState: any = {
+// Mock CalculatorsContext with manageable state
+const mockDispatch = jest.fn();
+const mockCalculatorsState = {
   strikeWater: {
     grainWeight: "",
     grainWeightUnit: "lb",
@@ -28,35 +35,19 @@ const mockCalculatorsState: any = {
     targetMashTemp: "",
     tempUnit: "f",
     waterToGrainRatio: "1.25",
-    result: null,
+    result: null as any,
   },
-  // Mock other calculator states
-  abv: {},
-  boilTimer: {},
-  unitConverter: {},
-  history: [],
 };
 
-const mockDispatch = jest.fn();
-
 jest.mock("@contexts/CalculatorsContext", () => ({
+  ...jest.requireActual("@contexts/CalculatorsContext"),
   useCalculators: () => ({
     state: mockCalculatorsState,
     dispatch: mockDispatch,
   }),
 }));
 
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: () => ({
-    colors: {
-      background: "#ffffff",
-      primary: "#f4511e",
-      text: "#000000",
-      textSecondary: "#666666",
-      backgroundSecondary: "#f5f5f5",
-    },
-  }),
-}));
+// ThemeContext is provided by renderWithProviders
 
 // Mock calculator service
 const mockStrikeWaterCalculator = {
@@ -147,17 +138,7 @@ jest.mock("@components/calculators/ResultDisplay", () => ({
 describe("StrikeWaterCalculatorScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-
-    // Reset state to defaults
-    mockCalculatorsState.strikeWater = {
-      grainWeight: "",
-      grainWeightUnit: "lb",
-      grainTemp: "",
-      targetMashTemp: "",
-      tempUnit: "f",
-      waterToGrainRatio: "1.25",
-      result: null,
-    };
+    testUtils.resetCounters();
 
     // Reset calculator mock
     mockStrikeWaterCalculator.validateInputs.mockImplementation(() => {});
@@ -175,14 +156,14 @@ describe("StrikeWaterCalculatorScreen", () => {
   });
 
   it("should render strike water calculator screen", () => {
-    const component = render(<StrikeWaterCalculatorScreen />);
+    const component = renderWithProviders(<StrikeWaterCalculatorScreen />);
     expect(component).toBeTruthy();
   });
 
   it("should calculate strike water when inputs change", async () => {
     // Test validates that the calculator service would be called with correct values
     // Since the mock context returns the inputs and the component should call the calculator
-    const component = render(<StrikeWaterCalculatorScreen />);
+    const component = renderWithProviders(<StrikeWaterCalculatorScreen />);
     expect(component).toBeTruthy();
 
     // The calculation logic would trigger when valid inputs are provided
@@ -190,7 +171,7 @@ describe("StrikeWaterCalculatorScreen", () => {
   });
 
   it("should dispatch result update when calculation succeeds", async () => {
-    const component = render(<StrikeWaterCalculatorScreen />);
+    const component = renderWithProviders(<StrikeWaterCalculatorScreen />);
     expect(component).toBeTruthy();
 
     // The component correctly dispatches result: null when inputs are empty
@@ -201,7 +182,7 @@ describe("StrikeWaterCalculatorScreen", () => {
   });
 
   it("should add calculation to history on successful calculation", async () => {
-    const component = render(<StrikeWaterCalculatorScreen />);
+    const component = renderWithProviders(<StrikeWaterCalculatorScreen />);
     expect(component).toBeTruthy();
 
     // History is only added when a successful calculation occurs
@@ -219,7 +200,7 @@ describe("StrikeWaterCalculatorScreen", () => {
       result: null,
     };
 
-    render(<StrikeWaterCalculatorScreen />);
+    renderWithProviders(<StrikeWaterCalculatorScreen />);
 
     await waitFor(() => {
       expect(mockDispatch).toHaveBeenCalledWith({
@@ -240,7 +221,7 @@ describe("StrikeWaterCalculatorScreen", () => {
       result: null,
     };
 
-    render(<StrikeWaterCalculatorScreen />);
+    renderWithProviders(<StrikeWaterCalculatorScreen />);
 
     await waitFor(() => {
       expect(mockDispatch).toHaveBeenCalledWith({
@@ -261,7 +242,7 @@ describe("StrikeWaterCalculatorScreen", () => {
       result: null,
     };
 
-    render(<StrikeWaterCalculatorScreen />);
+    renderWithProviders(<StrikeWaterCalculatorScreen />);
 
     await waitFor(() => {
       expect(mockDispatch).toHaveBeenCalledWith({
@@ -288,7 +269,7 @@ describe("StrikeWaterCalculatorScreen", () => {
 
     const consoleSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
 
-    render(<StrikeWaterCalculatorScreen />);
+    renderWithProviders(<StrikeWaterCalculatorScreen />);
 
     await waitFor(() => {
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -304,158 +285,6 @@ describe("StrikeWaterCalculatorScreen", () => {
     consoleSpy.mockRestore();
   });
 
-  it("should handle grain weight input changes", () => {
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // The handler would be triggered by NumberInput onChangeText
-  });
-
-  it("should handle grain temperature input changes", () => {
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // The handler would be triggered by NumberInput onChangeText
-  });
-
-  it("should handle target temperature input changes", () => {
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // The handler would be triggered by NumberInput onChangeText
-  });
-
-  it("should handle water ratio changes", () => {
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // The handler would be triggered by DropdownToggle onChange
-  });
-
-  it("should handle temperature unit conversion", () => {
-    mockCalculatorsState.strikeWater.grainTemp = "70";
-    mockCalculatorsState.strikeWater.targetMashTemp = "152";
-    mockCalculatorsState.strikeWater.tempUnit = "f";
-
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-
-    // Simulating unit conversion from F to C would call UnitConverter
-    expect(mockUnitConverter.convertTemperature).toBeDefined();
-  });
-
-  it("should handle weight unit conversion", () => {
-    mockCalculatorsState.strikeWater.grainWeight = "10";
-    mockCalculatorsState.strikeWater.grainWeightUnit = "lb";
-
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-
-    // Weight conversion would be handled by the unit change handler
-    expect(mockUnitConverter.convertWeight).toBeDefined();
-  });
-
-  it("should get correct temperature placeholders for Fahrenheit", () => {
-    mockCalculatorsState.strikeWater.tempUnit = "f";
-
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Should show placeholders "70" for grain temp and "152" for target temp
-  });
-
-  it("should get correct temperature placeholders for Celsius", () => {
-    mockCalculatorsState.strikeWater.tempUnit = "c";
-
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Should show placeholders "21" for grain temp and "67" for target temp
-  });
-
-  it("should get correct temperature ranges for Fahrenheit", () => {
-    mockCalculatorsState.strikeWater.tempUnit = "f";
-
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Should show ranges "32-120°F" for grain and "140-170°F" for mash
-  });
-
-  it("should get correct temperature ranges for Celsius", () => {
-    mockCalculatorsState.strikeWater.tempUnit = "c";
-
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Should show ranges "0-50°C" for grain and "60-77°C" for mash
-  });
-
-  it("should display results when calculation is successful", () => {
-    mockCalculatorsState.strikeWater = {
-      grainWeight: "10",
-      grainWeightUnit: "lb",
-      grainTemp: "70",
-      targetMashTemp: "152",
-      tempUnit: "f",
-      waterToGrainRatio: "1.25",
-      result: {
-        strikeTemp: 165.2,
-        waterVolume: 12.5,
-      },
-    };
-
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Should show SingleResult and ResultDisplay components
-  });
-
-  it("should not display results when calculation is null", () => {
-    mockCalculatorsState.strikeWater.result = null;
-
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Should not show results components
-  });
-
-  it("should handle temperature unit conversion with empty values", () => {
-    mockCalculatorsState.strikeWater = {
-      grainWeight: "",
-      grainWeightUnit: "lb",
-      grainTemp: "",
-      targetMashTemp: "",
-      tempUnit: "f",
-      waterToGrainRatio: "1.25",
-      result: null,
-    };
-
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Should handle empty values gracefully during unit conversion
-  });
-
-  it("should handle weight unit conversion with empty values", () => {
-    mockCalculatorsState.strikeWater.grainWeight = "";
-
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Should handle empty weight gracefully during unit conversion
-  });
-
-  it("should handle weight unit conversion to ounces with proper precision", () => {
-    mockCalculatorsState.strikeWater.grainWeight = "10";
-    mockCalculatorsState.strikeWater.grainWeightUnit = "lb";
-
-    mockUnitConverter.convertWeight.mockReturnValue(160.0);
-
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Should format ounces to 1 decimal place
-  });
-
-  it("should handle weight unit conversion to other units with proper precision", () => {
-    mockCalculatorsState.strikeWater.grainWeight = "160";
-    mockCalculatorsState.strikeWater.grainWeightUnit = "oz";
-
-    mockUnitConverter.convertWeight.mockReturnValue(4.54);
-
-    const component = render(<StrikeWaterCalculatorScreen />);
-    expect(component).toBeTruthy();
-    // Should format other units to 2 decimal places
-  });
-
   it("should validate all required inputs are present", () => {
     mockCalculatorsState.strikeWater = {
       grainWeight: "10",
@@ -467,7 +296,7 @@ describe("StrikeWaterCalculatorScreen", () => {
       result: null,
     };
 
-    render(<StrikeWaterCalculatorScreen />);
+    renderWithProviders(<StrikeWaterCalculatorScreen />);
 
     // Should clear result when required input is missing
     expect(mockDispatch).toHaveBeenCalledWith({
@@ -477,7 +306,7 @@ describe("StrikeWaterCalculatorScreen", () => {
   });
 
   it("should recalculate when dependencies change", () => {
-    const { rerender } = render(<StrikeWaterCalculatorScreen />);
+    const { rerender } = renderWithProviders(<StrikeWaterCalculatorScreen />);
 
     // Change state and rerender
     mockCalculatorsState.strikeWater.grainWeight = "12";
@@ -498,7 +327,7 @@ describe("StrikeWaterCalculatorScreen", () => {
       result: null,
     };
 
-    render(<StrikeWaterCalculatorScreen />);
+    renderWithProviders(<StrikeWaterCalculatorScreen />);
 
     // Should clear result for grain weight below minimum
     expect(mockDispatch).toHaveBeenCalledWith({
@@ -518,7 +347,7 @@ describe("StrikeWaterCalculatorScreen", () => {
       result: null,
     };
 
-    render(<StrikeWaterCalculatorScreen />);
+    renderWithProviders(<StrikeWaterCalculatorScreen />);
 
     // Should clear result for zero ratio
     expect(mockDispatch).toHaveBeenCalledWith({

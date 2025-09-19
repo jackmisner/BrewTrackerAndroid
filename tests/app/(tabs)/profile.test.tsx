@@ -1,8 +1,8 @@
 import React from "react";
-import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
+import { fireEvent, waitFor, act } from "@testing-library/react-native";
 import { Alert, Linking, type AlertButton } from "react-native";
+import { renderWithProviders, mockData, testUtils } from "../../testUtils";
 import ProfileScreen from "../../../app/(tabs)/profile";
-import { mockData, testUtils } from "../../testUtils";
 
 // Shared style mock constant
 const styleMock = {
@@ -53,6 +53,12 @@ jest.mock("react-native", () => ({
   },
 }));
 
+jest.mock("react-native/Libraries/Utilities/Appearance", () => ({
+  getColorScheme: jest.fn(() => "light"),
+  addChangeListener: jest.fn(),
+  removeChangeListener: jest.fn(),
+}));
+
 // Mock dependencies
 jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: "MaterialIcons",
@@ -74,13 +80,59 @@ jest.mock("expo-web-browser", () => ({
   openBrowserAsync: jest.fn(),
 }));
 
-jest.mock("@contexts/AuthContext", () => ({
-  useAuth: jest.fn(),
-}));
+// Mock AuthContext hook
+// Mock contexts with comprehensive provider support
+jest.mock("@contexts/AuthContext", () => {
+  const React = require("react");
+  return {
+    ...jest.requireActual("@contexts/AuthContext"),
+    useAuth: jest.fn(),
+    AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
 
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: jest.fn(),
-}));
+jest.mock("@contexts/ThemeContext", () => {
+  const React = require("react");
+  return {
+    useTheme: jest.fn(),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+// Mock additional context providers for testUtils
+jest.mock("@contexts/NetworkContext", () => {
+  const React = require("react");
+  return {
+    NetworkProvider: ({ children }: { children: React.ReactNode }) => children,
+    useNetwork: () => ({ isConnected: true }),
+  };
+});
+
+jest.mock("@contexts/DeveloperContext", () => {
+  const React = require("react");
+  return {
+    DeveloperProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+    useDeveloper: () => ({ isDeveloperMode: false }),
+  };
+});
+
+jest.mock("@contexts/UnitContext", () => {
+  const React = require("react");
+  return {
+    UnitProvider: ({ children }: { children: React.ReactNode }) => children,
+    useUnit: () => ({ temperatureUnit: "F", weightUnit: "lb" }),
+  };
+});
+
+jest.mock("@contexts/CalculatorsContext", () => {
+  const React = require("react");
+  return {
+    CalculatorsProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+    useCalculators: () => ({ state: {}, dispatch: jest.fn() }),
+  };
+});
 
 jest.mock("@styles/tabs/profileStyles", () => ({
   profileStyles: jest.fn(() => styleMock),
@@ -125,7 +177,7 @@ describe("ProfileScreen", () => {
 
   describe("user information display", () => {
     it("should display user information correctly", () => {
-      const { getByText } = render(<ProfileScreen />);
+      const { getByText } = renderWithProviders(<ProfileScreen />);
 
       expect(getByText("testuser")).toBeTruthy();
       expect(getByText("test@example.com")).toBeTruthy();
@@ -138,7 +190,7 @@ describe("ProfileScreen", () => {
         user: unverifiedUser,
       });
 
-      const { getByText } = render(<ProfileScreen />);
+      const { getByText } = renderWithProviders(<ProfileScreen />);
 
       expect(getByText("Email not verified")).toBeTruthy();
     });
@@ -150,7 +202,7 @@ describe("ProfileScreen", () => {
         user: verifiedUser,
       });
 
-      const { queryByText } = render(<ProfileScreen />);
+      const { queryByText } = renderWithProviders(<ProfileScreen />);
 
       expect(queryByText("Email not verified")).toBeNull();
     });
@@ -158,7 +210,7 @@ describe("ProfileScreen", () => {
 
   describe("menu navigation", () => {
     it("should navigate to settings when settings is pressed", () => {
-      const { getByText } = render(<ProfileScreen />);
+      const { getByText } = renderWithProviders(<ProfileScreen />);
       const settingsItem = getByText("Settings");
 
       fireEvent.press(settingsItem);
@@ -169,13 +221,13 @@ describe("ProfileScreen", () => {
     });
 
     it("should render help & support menu item", () => {
-      const { getByText } = render(<ProfileScreen />);
+      const { getByText } = renderWithProviders(<ProfileScreen />);
 
       expect(getByText("Help & Support")).toBeTruthy();
     });
 
     it("should render about menu item", () => {
-      const { getByText } = render(<ProfileScreen />);
+      const { getByText } = renderWithProviders(<ProfileScreen />);
 
       expect(getByText("About")).toBeTruthy();
     });
@@ -186,7 +238,7 @@ describe("ProfileScreen", () => {
       const mockOpenBrowserAsync = require("expo-web-browser").openBrowserAsync;
       mockOpenBrowserAsync.mockResolvedValue({});
 
-      const { getByText } = render(<ProfileScreen />);
+      const { getByText } = renderWithProviders(<ProfileScreen />);
       const donateButton = getByText("Buy me a Beer!");
 
       await act(async () => {
@@ -205,7 +257,7 @@ describe("ProfileScreen", () => {
       mockOpenBrowserAsync.mockRejectedValue(new Error("Browser failed"));
       mockLinkingOpenURL.mockResolvedValue(true);
 
-      const { getByText } = render(<ProfileScreen />);
+      const { getByText } = renderWithProviders(<ProfileScreen />);
       const donateButton = getByText("Buy me a Beer!");
 
       await act(async () => {
@@ -228,7 +280,7 @@ describe("ProfileScreen", () => {
       mockOpenBrowserAsync.mockRejectedValue(new Error("Browser failed"));
       mockLinkingOpenURL.mockRejectedValue(new Error("Linking failed"));
 
-      const { getByText } = render(<ProfileScreen />);
+      const { getByText } = renderWithProviders(<ProfileScreen />);
       const donateButton = getByText("Buy me a Beer!");
 
       await act(async () => {
@@ -250,7 +302,7 @@ describe("ProfileScreen", () => {
 
   describe("logout functionality", () => {
     it("should show confirmation alert when logout is pressed", () => {
-      const { getByText } = render(<ProfileScreen />);
+      const { getByText } = renderWithProviders(<ProfileScreen />);
       const logoutButton = getByText("Sign Out");
 
       fireEvent.press(logoutButton);
@@ -285,7 +337,7 @@ describe("ProfileScreen", () => {
         }
       );
 
-      const { getByText } = render(<ProfileScreen />);
+      const { getByText } = renderWithProviders(<ProfileScreen />);
       const logoutButton = getByText("Sign Out");
 
       await act(async () => {
@@ -306,7 +358,7 @@ describe("ProfileScreen", () => {
         // Cancel button typically has no onPress handler or it's undefined
       });
 
-      const { getByText } = render(<ProfileScreen />);
+      const { getByText } = renderWithProviders(<ProfileScreen />);
       const logoutButton = getByText("Sign Out");
 
       fireEvent.press(logoutButton);
@@ -318,7 +370,7 @@ describe("ProfileScreen", () => {
 
   describe("pull to refresh", () => {
     it("should handle refresh action", async () => {
-      const { queryByText } = render(<ProfileScreen />);
+      const { queryByText } = renderWithProviders(<ProfileScreen />);
 
       // Verify component renders with refresh functionality available
       expect(queryByText("testuser")).toBeTruthy();
@@ -326,7 +378,7 @@ describe("ProfileScreen", () => {
     });
 
     it("should show refreshing state during refresh", async () => {
-      const { queryByText } = render(<ProfileScreen />);
+      const { queryByText } = renderWithProviders(<ProfileScreen />);
 
       // Verify component handles refreshing state correctly
       expect(queryByText("testuser")).toBeTruthy();
@@ -336,7 +388,7 @@ describe("ProfileScreen", () => {
 
   describe("app version display", () => {
     it("should display app version correctly", () => {
-      const { getByText } = render(<ProfileScreen />);
+      const { getByText } = renderWithProviders(<ProfileScreen />);
 
       expect(getByText("BrewTracker v0.1.0")).toBeTruthy();
       expect(getByText("© 2025 BrewTracker")).toBeTruthy();
@@ -349,7 +401,7 @@ describe("ProfileScreen", () => {
       // Mock Constants.expoConfig to be null
       Constants.default.expoConfig = null;
 
-      const { getByText } = render(<ProfileScreen />);
+      const { getByText } = renderWithProviders(<ProfileScreen />);
 
       expect(getByText("BrewTracker v0.1.0")).toBeTruthy();
 
@@ -360,7 +412,7 @@ describe("ProfileScreen", () => {
 
   describe("accessibility and UI", () => {
     it("should render all menu sections", () => {
-      const { getByText } = render(<ProfileScreen />);
+      const { getByText } = renderWithProviders(<ProfileScreen />);
 
       // Main menu items
       expect(getByText("Settings")).toBeTruthy();
@@ -375,9 +427,9 @@ describe("ProfileScreen", () => {
     });
 
     it("should render user avatar placeholder", () => {
-      render(<ProfileScreen />);
+      renderWithProviders(<ProfileScreen />);
 
-      const { queryByText } = render(<ProfileScreen />);
+      const { queryByText } = renderWithProviders(<ProfileScreen />);
 
       // Verify component renders with avatar functionality
       expect(queryByText("testuser")).toBeTruthy();
@@ -392,7 +444,7 @@ describe("ProfileScreen", () => {
         logout: jest.fn(),
       });
 
-      const { queryByText } = render(<ProfileScreen />);
+      const { queryByText } = renderWithProviders(<ProfileScreen />);
 
       // Should not crash when user is null
       expect(queryByText("Settings")).toBeTruthy();
@@ -405,7 +457,7 @@ describe("ProfileScreen", () => {
         logout: jest.fn(),
       });
 
-      const { queryByText } = render(<ProfileScreen />);
+      const { queryByText } = renderWithProviders(<ProfileScreen />);
 
       // Should not crash when username is undefined and render other content
       expect(queryByText("Settings")).toBeTruthy();
@@ -419,7 +471,7 @@ describe("ProfileScreen", () => {
         logout: jest.fn(),
       });
 
-      const { queryByText } = render(<ProfileScreen />);
+      const { queryByText } = renderWithProviders(<ProfileScreen />);
 
       // Should not crash when email is undefined and render other content
       expect(queryByText("Settings")).toBeTruthy();
@@ -429,7 +481,7 @@ describe("ProfileScreen", () => {
 
   describe("theme integration", () => {
     it("should use theme colors correctly", () => {
-      render(<ProfileScreen />);
+      renderWithProviders(<ProfileScreen />);
 
       // Verify that theme colors are passed to styles
       expect(

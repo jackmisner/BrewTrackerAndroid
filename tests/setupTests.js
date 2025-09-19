@@ -28,6 +28,11 @@ jest.mock("react-native", () => {
     StatusBar: {
       currentHeight: 24,
     },
+    Appearance: {
+      getColorScheme: jest.fn(() => "light"),
+      addChangeListener: jest.fn(_listener => ({ remove: jest.fn() })),
+      removeChangeListener: jest.fn(_listener => {}),
+    },
   };
 });
 
@@ -38,12 +43,78 @@ jest.mock("expo-secure-store", () => ({
   deleteItemAsync: jest.fn(),
 }));
 
+jest.mock("expo-device", () => ({
+  osInternalBuildId: "dfyt4uf",
+  getDeviceId: jest.fn().mockResolvedValue("dfyt4uf"),
+}));
+
 jest.mock("@react-native-async-storage/async-storage", () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
   removeItem: jest.fn(),
   clear: jest.fn(),
   multiRemove: jest.fn(),
+}));
+
+// Mock NetInfo
+jest.mock("@react-native-community/netinfo", () => ({
+  default: {
+    fetch: jest.fn(() =>
+      Promise.resolve({
+        type: "wifi",
+        isConnected: true,
+        isInternetReachable: true,
+        details: {
+          ipAddress: "192.168.1.1",
+          subnet: "255.255.255.0",
+          ssid: "MockWiFi",
+          bssid: "00:00:00:00:00:00",
+          strength: -50,
+          frequency: 2450,
+        },
+      })
+    ),
+    addEventListener: jest.fn(listener => {
+      // Immediately call listener with connected state
+      listener({
+        type: "wifi",
+        isConnected: true,
+        isInternetReachable: true,
+        details: {
+          ipAddress: "192.168.1.1",
+          subnet: "255.255.255.0",
+          ssid: "MockWiFi",
+          bssid: "00:00:00:00:00:00",
+          strength: -50,
+          frequency: 2450,
+        },
+      });
+      // Return unsubscribe function
+      return jest.fn();
+    }),
+    useNetInfo: jest.fn(() => ({
+      type: "wifi",
+      isConnected: true,
+      isInternetReachable: true,
+      details: {
+        ipAddress: "192.168.1.1",
+        subnet: "255.255.255.0",
+        ssid: "MockWiFi",
+        bssid: "00:00:00:00:00:00",
+        strength: -50,
+        frequency: 2450,
+      },
+    })),
+  },
+  NetInfoStateType: {
+    wifi: "wifi",
+    cellular: "cellular",
+    ethernet: "ethernet",
+    bluetooth: "bluetooth",
+    other: "other",
+    unknown: "unknown",
+    none: "none",
+  },
 }));
 
 // Mock new storage modules
@@ -72,13 +143,46 @@ jest.mock("expo-sharing", () => ({
 }));
 
 jest.mock("expo-file-system", () => ({
-  writeAsStringAsync: jest.fn(),
-  readAsStringAsync: jest.fn(),
+  documentDirectory: "file://documents/",
   cacheDirectory: "file://cache/",
+  bundleDirectory: "file://bundle/",
+  readAsStringAsync: jest.fn().mockResolvedValue("mock file content"),
+  writeAsStringAsync: jest.fn().mockResolvedValue(undefined),
+  getInfoAsync: jest.fn().mockResolvedValue({
+    exists: true,
+    isDirectory: false,
+    size: 1024,
+    modificationTime: Date.now(),
+  }),
+  deleteAsync: jest.fn().mockResolvedValue(undefined),
   StorageAccessFramework: {
-    requestDirectoryPermissionsAsync: jest.fn(),
-    createFileAsync: jest.fn(),
-    writeAsStringAsync: jest.fn(),
+    pickDirectoryAsync: jest.fn().mockResolvedValue({
+      uri: "content://mock-directory",
+      name: "MockDirectory",
+    }),
+  },
+  // Legacy API classes for compatibility
+  File: jest.fn().mockImplementation((path, filename) => ({
+    uri:
+      typeof path === "string"
+        ? `${path}/${filename || "mockfile.txt"}`
+        : `${path}/${filename || "mockfile.txt"}`,
+    exists: true,
+    create: jest.fn().mockResolvedValue(undefined),
+    write: jest.fn().mockResolvedValue(undefined),
+    text: jest.fn().mockResolvedValue("mock file content"),
+    delete: jest.fn().mockResolvedValue(undefined),
+  })),
+  Directory: {
+    pickDirectoryAsync: jest.fn().mockResolvedValue({
+      uri: "content://mock-directory",
+      name: "MockDirectory",
+    }),
+  },
+  Paths: {
+    cache: "file://cache/",
+    document: "file://documents/",
+    bundle: "file://bundle/",
   },
 }));
 
@@ -155,8 +259,96 @@ jest.mock("@tanstack/react-query", () => {
       getQueryData: jest.fn(),
     })),
     QueryClientProvider: ({ children }) => children,
+    QueryClient: jest.fn().mockImplementation(() => {
+      // Create mock storage for query data
+      const queryData = new Map();
+      const queryCache = {
+        queries: [],
+        getAll: jest.fn(() => queryCache.queries),
+        find: jest.fn(({ queryKey }) => {
+          const query = queryCache.queries.find(
+            q => JSON.stringify(q.queryKey) === JSON.stringify(queryKey)
+          );
+          return query;
+        }),
+      };
+
+      const mockClient = {
+        invalidateQueries: jest.fn(),
+        setQueryData: jest.fn((queryKey, data) => {
+          const keyString = JSON.stringify(queryKey);
+          queryData.set(keyString, data);
+
+          // Update or create query in cache
+          const existingQueryIndex = queryCache.queries.findIndex(
+            q => JSON.stringify(q.queryKey) === keyString
+          );
+
+          if (existingQueryIndex >= 0) {
+            queryCache.queries[existingQueryIndex].data = data;
+          } else {
+            queryCache.queries.push({
+              queryKey,
+              data,
+              state: { dataUpdatedAt: Date.now() },
+              isStale: jest.fn(() => false),
+              getObserversCount: jest.fn(() => 1),
+            });
+          }
+
+          return data;
+        }),
+        getQueryData: jest.fn(queryKey => {
+          const keyString = JSON.stringify(queryKey);
+          return queryData.get(keyString);
+        }),
+        clear: jest.fn(() => {
+          queryData.clear();
+          queryCache.queries = [];
+        }),
+        removeQueries: jest.fn(({ queryKey }) => {
+          if (queryKey) {
+            const keyString = JSON.stringify(queryKey);
+            queryData.delete(keyString);
+            queryCache.queries = queryCache.queries.filter(
+              q => JSON.stringify(q.queryKey) !== keyString
+            );
+          }
+        }),
+        getQueryCache: jest.fn(() => queryCache),
+        getDefaultOptions: jest.fn(() => ({
+          queries: {
+            staleTime: 5 * 60 * 1000,
+            gcTime: 10 * 60 * 1000,
+            retry: 2,
+            refetchOnWindowFocus: false,
+            refetchOnReconnect: true,
+            refetchOnMount: "always",
+          },
+          mutations: {
+            retry: 1,
+          },
+        })),
+      };
+
+      return mockClient;
+    }),
   };
 });
+
+// Mock React Query persist client
+jest.mock("@tanstack/react-query-persist-client", () => ({
+  PersistQueryClientProvider: ({ children }) => children,
+}));
+
+// Mock React Query AsyncStorage persister
+jest.mock("@tanstack/query-async-storage-persister", () => ({
+  createAsyncStoragePersister: jest.fn(() => ({
+    persistClient: jest.fn(),
+    removeClient: jest.fn(),
+    restoreClient: jest.fn(),
+  })),
+}));
 
 // Create mock storage
 const createStorageMock = () => {
@@ -309,6 +501,90 @@ jest.mock("react-native-gifted-charts", () => ({
   BarChart: "BarChart",
 }));
 
+// Mock NetworkContext
+jest.mock("../src/contexts/NetworkContext", () => ({
+  NetworkProvider: ({ children }) => children,
+  useNetwork: jest.fn(() => ({
+    isConnected: true,
+    isOffline: false,
+    connectionType: "wifi",
+    isInternetReachable: true,
+    networkDetails: {
+      strength: -50,
+      ssid: "MockWiFi",
+      bssid: "00:00:00:00:00:00",
+      frequency: 2450,
+      ipAddress: "192.168.1.1",
+      subnet: "255.255.255.0",
+    },
+    refreshNetworkState: jest.fn(),
+  })),
+}));
+
+// Mock NetworkStatusBanner components
+jest.mock("../src/components/NetworkStatusBanner", () => ({
+  NetworkStatusBanner: ({ onRetry }) => null, // Don't render anything in tests
+  NetworkStatusIndicator: ({ showText, onPress }) => null, // Don't render anything in tests
+  default: ({ onRetry }) => null,
+}));
+
+// Mock offline recipe hooks
+jest.mock("../src/hooks/useOfflineRecipes", () => ({
+  useOfflineRecipes: jest.fn(() => ({
+    data: [],
+    isLoading: false,
+    error: null,
+    refetch: jest.fn(),
+  })),
+  useOfflineRecipe: jest.fn(() => ({
+    data: null,
+    isLoading: false,
+    error: null,
+    refetch: jest.fn(),
+  })),
+  useOfflineCreateRecipe: jest.fn(() => ({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    isPending: false,
+    error: null,
+  })),
+  useOfflineUpdateRecipe: jest.fn(() => ({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    isPending: false,
+    error: null,
+  })),
+  useOfflineDeleteRecipe: jest.fn(() => ({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    isPending: false,
+    error: null,
+  })),
+  useOfflineSyncStatus: jest.fn(() => ({
+    data: {
+      totalRecipes: 0,
+      pendingSync: 0,
+      conflicts: 0,
+      failedSync: 0,
+      lastSync: 0,
+    },
+    isLoading: false,
+    error: null,
+  })),
+  useOfflineSync: jest.fn(() => ({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    isPending: false,
+    error: null,
+  })),
+  useAutoOfflineSync: jest.fn(() => ({
+    mutate: jest.fn(),
+    mutateAsync: jest.fn(),
+    isPending: false,
+    error: null,
+  })),
+}));
+
 // Handle unhandled promise rejections from test mocks
 const originalUnhandledRejection = process.listeners("unhandledRejection");
 let testRejectionHandler;
@@ -419,6 +695,12 @@ const SUPPRESSED_ERROR_PATTERNS = [
   /TokenManager\.error/,
   /at TokenManager\./,
   /at Object\.<anonymous>.*apiService\.test\.ts/,
+  // NetworkContext test-related errors
+  /Failed to initialize network monitoring:/,
+  /Failed to refresh network state:/,
+  /Failed to cache network state:/,
+  /Failed to load cached network state:/,
+  /useNetwork must be used within a NetworkProvider/,
   /at Generator\./,
   /asyncGeneratorStep/,
   /Promise\.then\.completed/,

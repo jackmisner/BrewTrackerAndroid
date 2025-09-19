@@ -38,7 +38,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
-import ApiService from "@services/api/apiService";
+import OfflineRecipeService from "@services/offline/OfflineRecipeService";
+import { OfflineRecipe } from "@src/types/offline";
 import { RecipeFormData, RecipeIngredient } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
@@ -47,6 +48,8 @@ import { IngredientsForm } from "@src/components/recipes/RecipeForm/IngredientsF
 import { ReviewForm } from "@src/components/recipes/RecipeForm/ReviewForm";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 import { TEST_IDS } from "@src/constants/testIDs";
+import { generateUniqueId } from "@utils/keyUtils";
+import { QUERY_KEYS } from "@services/api/queryClient";
 
 /**
  * Recipe creation wizard steps
@@ -165,8 +168,12 @@ export default function CreateRecipeScreen() {
   } = useRecipeMetrics(recipeState);
 
   // Create recipe mutation
-  const createRecipeMutation = useMutation({
-    mutationFn: (recipeData: RecipeFormData) => {
+  const createRecipeMutation = useMutation<
+    OfflineRecipe,
+    Error,
+    RecipeFormData
+  >({
+    mutationFn: async (recipeData: RecipeFormData) => {
       // Sanitize ingredients to ensure all numeric fields are valid and add ID mapping
       // Note: Adding explicit ID mapping as fallback - the API interceptor should handle this but seems to have issues with nested ingredients
       const sanitizedIngredients = recipeData.ingredients.map(ingredient => {
@@ -229,9 +236,10 @@ export default function CreateRecipeScreen() {
         // Explicit ID mapping as fallback (API interceptor should handle this but has issues with nested ingredients)
         if (sanitized.id && !sanitized.ingredient_id) {
           sanitized.ingredient_id = sanitized.id;
-          delete sanitized.id;
         }
-
+        if (!sanitized.instance_id) {
+          sanitized.instance_id = generateUniqueId("ing");
+        }
         return sanitized;
       });
 
@@ -240,20 +248,34 @@ export default function CreateRecipeScreen() {
         ingredients: sanitizedIngredients,
       };
 
-      return ApiService.recipes.create(createData);
+      try {
+        return await OfflineRecipeService.create(createData);
+      } catch (error) {
+        console.error("❌ Failed to create recipe:", error);
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to create recipe";
+        throw new Error(`Recipe creation failed: ${errorMessage}`);
+      }
     },
     onSuccess: response => {
       // Invalidate relevant recipe caches to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["userRecipes"] });
-      queryClient.invalidateQueries({ queryKey: ["recipes"] }); // AllRecipes cache
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.RECIPES }); // AllRecipes cache
+      queryClient.invalidateQueries({
+        queryKey: [...QUERY_KEYS.RECIPES, "offline"],
+      }); // Offline recipes cache
+      // Prime the detail cache for immediate access
+      queryClient.setQueryData(QUERY_KEYS.RECIPE(response.id), response);
       Alert.alert("Success", "Recipe created successfully!", [
         {
           text: "View Recipe",
           onPress: () => {
             // Replace current modal with ViewRecipe modal
+            // OfflineRecipeService returns recipe directly, not in response.data
+            const recipeId = response.id;
             router.replace({
               pathname: "/(modals)/(recipes)/viewRecipe",
-              params: { recipe_id: response.data.id },
+              params: { recipe_id: recipeId },
             });
           },
         },

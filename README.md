@@ -73,8 +73,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── _layout.tsx                           # Recipe modals layout
 │   │   │   ├── viewRecipe.tsx                        # Individual recipe detail view with ingredients and metrics
 │   │   │   ├── createRecipe.tsx                      # Multi-step recipe creation wizard
-│   │   │   ├── editRecipe/                           # Recipe editing interfaces
-│   │   │   │   └── [id].tsx                          # Individual recipe editing with ID routing
+│   │   │   ├── editRecipe.tsx                        # Recipe editing interface
 │   │   │   ├── versionHistory.tsx                    # Recipe version history timeline navigation (358 lines)
 │   │   │   └── ingredientPicker.tsx                  # Full-screen ingredient selection with search and filtering
 │   │   ├── (beerxml)/                                # BeerXML import/export workflow screens
@@ -85,11 +84,9 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── _layout.tsx                           # Brew session modals layout
 │   │   │   ├── viewBrewSession.tsx                   # Individual brew session detail view with metrics and status
 │   │   │   ├── createBrewSession.tsx                 # Multi-step brew session creation wizard
-│   │   │   ├── editBrewSession/                      # Brew session editing interfaces
-│   │   │   │   └── [id].tsx                          # Individual brew session editing with ID routing
+│   │   │   ├── editBrewSession.tsx                   # Brew session editing interface
 │   │   │   ├── addFermentationEntry.tsx              # Add new fermentation data entries
-│   │   │   └── editFermentationEntry/                # Fermentation entry editing interfaces
-│   │   │       └── [id].tsx                          # Individual fermentation entry editing with ID routing
+│   │   │   └── editFermentationEntry.tsx             # Fermentation entry editing interface
 │   │   ├── (calculators)/                            # Brewing calculator tools
 │   │   │   ├── _layout.tsx                           # Calculator modals layout
 │   │   │   ├── abv.tsx                               # ABV (Alcohol by Volume) calculator
@@ -105,6 +102,8 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   └── _layout.tsx                                   # Root layout with AuthProvider and QueryClient
 ├── src/                                              # Source code for React Native components and services
 │   ├── components/                                   # Reusable UI components organized by feature
+│   │   ├── boilTimer/                                # Boil timer specific components
+│   │   │   └── RecipeSelector.tsx                    # Recipe selection component for boil timer
 │   │   ├── brewSessions/                             # Brew session specific components
 │   │   │   ├── FermentationChart.tsx                 # Interactive fermentation tracking charts with dual-axis
 │   │   │   ├── FermentationData.tsx                  # Fermentation data display and management component
@@ -125,6 +124,9 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │       ├── ParametersForm.tsx                # Brewing parameters (boil time, efficiency, mash temp)
 │   │   │       ├── IngredientsForm.tsx               # Ingredient list management interface
 │   │   │       └── ReviewForm.tsx                    # Final recipe review and submission
+│   │   ├── NetworkStatusBanner.tsx                   # Network connectivity status banner component
+│   │   ├── splash/                                   # Splash screen components
+│   │   │   └── SplashScreen.tsx                      # App loading splash screen component
 │   │   └── ui/                                       # Generic UI components
 │   │       └── ContextMenu/                          # Context menu implementations
 │   │           ├── BaseContextMenu.tsx               # Base context menu component with common functionality
@@ -134,12 +136,16 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   ├── contexts/                                     # React contexts for global state
 │   │   ├── AuthContext.tsx                           # Authentication context with secure token storage
 │   │   ├── CalculatorsContext.tsx                    # Calculator state management and shared logic
+│   │   ├── DeveloperContext.tsx                      # Developer options and debugging context
+│   │   ├── NetworkContext.tsx                        # Network connectivity detection for offline functionality
 │   │   ├── ScreenDimensionsContext.tsx               # Screen dimensions management with support for foldable devices
 │   │   ├── ThemeContext.tsx                          # Theme management with light/dark mode support
 │   │   └── UnitContext.tsx                           # Unit system management (imperial/metric)
 │   ├── hooks/                                        # Custom React hooks
 │   │   ├── useBeerStyles.ts                          # Beer style data fetching and management
 │   │   ├── useDebounce.ts                            # Performance optimization for search inputs
+│   │   ├── useOfflineIngredients.ts                  # Offline-first ingredient management with React Query integration
+│   │   ├── useOfflineRecipes.ts                      # Offline-first recipe management with React Query integration
 │   │   ├── useRecipeMetrics.ts                       # Real-time recipe calculations hook
 │   │   └── useStoragePermissions.ts                  # Storage permission management for file operations
 │   ├── services/                                     # API services and business logic
@@ -149,6 +155,10 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   └── idInterceptor.ts                      # MongoDB ObjectId to string normalization
 │   │   ├── beerxml/                                  # BeerXML processing services
 │   │   │   └── BeerXMLService.ts                     # BeerXML import/export with mobile file integration
+│   │   ├── offline/                                  # Offline functionality services
+│   │   │   ├── OfflineCacheService.ts                # Generic offline caching service with AsyncStorage
+│   │   │   ├── OfflineMetricsCalculator.ts           # Offline brewing calculations and recipe metrics
+│   │   │   └── OfflineRecipeService.ts               # Offline-first recipe CRUD with automatic synchronization
 │   │   ├── calculators/                              # Brewing calculation services
 │   │   │   ├── ABVCalculator.ts                      # Alcohol by Volume calculation logic
 │   │   │   ├── BoilTimerCalculator.ts                # Boil timer and hop addition scheduling
@@ -160,14 +170,19 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── UnitConverter.ts                      # Unit conversion utilities and logic
 │   │   │   └── YeastPitchRateCalculator.ts           # Yeast pitching rate and viability calculations (Service created, modal route not implemented yet)
 │   │   ├── config.ts                                 # Service configuration and constants
-│   │   └── storageService.ts                         # Storage service for file operations and permissions
+│   │   ├── NotificationService.ts                    # Local notification service for timers and alerts
+│   │   ├── storageService.ts                         # Storage service for file operations and permissions
+│   │   └── TimerPersistenceService.ts                # Timer state persistence for boil timer
 │   ├── constants/                                    # Shared constants and configuration
 │   │   ├── hopConstants.ts                           # Hop usage options, time presets, and type definitions
 │   │   └── testIDs.ts                                # Centralized test IDs for consistent testing across components
 │   ├── utils/                                        # Utility functions
 │   │   ├── formatUtils.ts                            # Comprehensive brewing data formatting utilities
 │   │   ├── idNormalization.ts                        # MongoDB ObjectId normalization utilities
-│   │   └── timeUtils.ts                              # Time calculation and conversion utilities
+│   │   ├── jwtUtils.ts                               # JWT token validation and management utilities
+│   │   ├── keyUtils.ts                               # Secure key generation and management utilities
+│   │   ├── timeUtils.ts                              # Time calculation and conversion utilities
+│   │   └── userValidation.ts                         # User input validation utilities
 │   ├── types/                                        # TypeScript type definitions for mobile app
 │   │   ├── api.ts                                    # API request/response interfaces
 │   │   ├── common.ts                                 # Shared utility types
@@ -186,6 +201,9 @@ BrewTrackerAndroid/                                   # React Native Android app
 │       │   ├── brewSessionsStyles.ts                 # Brew session list screen styling
 │       │   └── profileStyles.ts                      # Profile screen styling
 │       ├── modals/                                   # Modal screen styles
+│       │   ├── calculators/                          # Calculator modal styles
+│       │   │   ├── boilTimerStyles.ts                # Boil timer calculator styling
+│       │   │   └── calculatorScreenStyles.ts         # Common calculator screen styling
 │       │   ├── viewRecipeStyles.ts                   # Recipe detail view styling
 │       │   ├── createRecipeStyles.ts                 # Recipe creation wizard styling
 │       │   ├── ingredientPickerStyles.ts             # Ingredient picker styling
@@ -194,7 +212,15 @@ BrewTrackerAndroid/                                   # React Native Android app
 │       │   ├── editBrewSessionStyles.ts              # Brew session editing styling
 │       │   └── settingsStyles.ts                     # Settings screen styling
 │       ├── components/                               # Component-specific styles
-│       │   └── brewingMetricsStyles.ts               # Brewing metrics display styling
+│       │   ├── brewingMetricsStyles.ts               # Brewing metrics display styling
+│       │   ├── calculators/                          # Calculator component styles
+│       │   │   ├── calculatorCardStyles.ts           # Calculator card component styling
+│       │   │   ├── calculatorHeaderStyles.ts         # Calculator header component styling
+│       │   │   ├── numberInputStyles.ts              # Number input component styling
+│       │   │   ├── resultDisplayStyles.ts            # Result display component styling
+│       │   │   └── unitToggleStyles.ts               # Unit toggle component styling
+│       │   └── charts/                               # Chart component styles
+│       │       └── fermentationChartStyles.ts        # Fermentation chart styling
 │       ├── recipes/                                  # Recipe component styles
 │       │   └── ingredientDetailEditorStyles.ts       # Ingredient editor styling
 │       ├── ui/                                       # UI component styles
@@ -202,7 +228,8 @@ BrewTrackerAndroid/                                   # React Native Android app
 │       │   └── recipeContextMenuStyles.ts            # Recipe context menu styling
 │       └── common/                                   # Shared styling utilities
 │           ├── colors.ts                             # Theme color definitions
-│           └── buttons.ts                            # Reusable button styles
+│           ├── buttons.ts                            # Reusable button styles
+│           └── sharedStyles.ts                       # Common shared styling utilities
 ├── tests/                                            # Test files and configuration
 ├── assets/                                           # Static assets (images, fonts, icons)
 ├── app.json                                          # Expo configuration for Android-only development
@@ -218,10 +245,15 @@ BrewTrackerAndroid/                                   # React Native Android app
 ### Key Technologies
 
 - **Expo Router**: File-based navigation with nested route groups and modal presentation
-- **React Query**: Server state management with caching and optimistic updates
+- **React Query**: Server state management with caching, optimistic updates, and offline persistence
 - **Expo Secure Store**: Secure JWT token storage for authentication
-- **AsyncStorage**: Local data persistence for user preferences
+- **AsyncStorage**: Local data persistence for user preferences and offline data
+- **NetInfo**: Network connectivity detection for offline functionality
 - **Axios**: HTTP client with request/response interceptors
+- **React Native Reanimated**: High-performance animations and gestures
+- **React Native Gesture Handler**: Advanced touch and gesture handling
+- **Expo Notifications**: Local notification support for timers and alerts
+- **React Native Gifted Charts**: Interactive charts for fermentation tracking
 - **TypeScript**: Full type safety across the application
 - **oxlint**: Ultra-fast Rust-based linter (100x performance improvement over ESLint)
 - **Material Icons**: Consistent iconography from @expo/vector-icons
@@ -239,10 +271,12 @@ BrewTrackerAndroid/                                   # React Native Android app
 ### State Management
 
 - **Authentication**: React Context with Expo SecureStore for JWT tokens
+- **Network Connectivity**: React Context with NetInfo for offline detection
 - **Screen Dimensions**: React Context with support for foldable devices
 - **Theme Management**: React Context with AsyncStorage persistence
 - **Unit System**: React Context for imperial/metric conversion
-- **Server Data**: React Query for caching, background updates, and offline support
+- **Server Data**: React Query with AsyncStorage persistence for offline support
+- **Offline Data**: AsyncStorage with React Query integration for seamless offline/online experience
 - **Local State**: React hooks (useState, useReducer) for component-level state
 
 ### Styling Architecture
@@ -278,7 +312,7 @@ This approach provides:
 ### Available Scripts
 
 - `npm start` - Start Expo development server
-- `npm run android` - Start with Android-specific options
+- `npm run android` - Build and run on Android device/emulator
 - `npm run lint` - Run oxlint (100x faster than ESLint)
 - `npm run lint:fix` - Run oxlint with auto-fix
 - `npm run lint:eslint` - Fallback to ESLint if needed
@@ -286,12 +320,19 @@ This approach provides:
 - `npm run type-check` - Run TypeScript type checking
 - `npm run format` - Format code with Prettier
 - `npm run format:check` - Check code formatting
+- `npm test` - Run test suite
+- `npm run test:watch` - Run tests in watch mode
+- `npm run coverage` - Run tests with coverage report
+- `npm run test:ci` - Run tests for CI/CD with coverage
+- `npm run version:patch` - Increment patch version and sync with app.json
+- `npm run version:minor` - Increment minor version and sync with app.json
+- `npm run version:major` - Increment major version and sync with app.json
 
 ### Code Quality & Testing
 
 - **TypeScript**: Strict type checking with `npm run type-check` (must pass for all commits)
 - **Linting**: oxlint primary linter (100x faster than ESLint), ESLint fallback available
-- **Testing**: >70% coverage with 2,500+ comprehensive tests across all features
+- **Testing**: >70% coverage with comprehensive test suite across all features (119+ test files)
 - **Quality Gates**: All CRUD operations, advanced features, and UI components fully tested
 - **CI/CD**: Automated quality checks ensure code standards
 
@@ -303,7 +344,7 @@ Configure in `.env`:
 - `EXPO_PUBLIC_DEBUG_MODE` - Enable debug logging (optional)
 - `EXPO_PUBLIC_LOG_LEVEL` - Set logging level (optional)
 - `EXPO_PUBLIC_ENABLE_GOOGLE_AUTH` - Enable Google authentication (optional)
-- `EXPO_PUBLIC_ENABLE_OFFLINE_MODE` - Enable offline features (optional)
+- `EXPO_PUBLIC_ENABLE_OFFLINE_MODE` - Enable offline features (enabled by default)
 - `EXPO_PUBLIC_ANALYTICS_ENABLED` - Enable analytics tracking (optional)
 
 ### Backend Integration
@@ -416,6 +457,78 @@ EXPO_PUBLIC_API_URL=https://api.brewtracker.com/v1  # Must be valid URL
 EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
 ```
 
+## 🌐 **Offline Functionality**
+
+### **Phase 2 Complete: Recipe Offline CRUD Operations** ✅
+
+BrewTrackerAndroid now supports comprehensive offline functionality for recipe management, ensuring brewers can continue working even without an internet connection.
+
+#### ✅ **Implemented Offline Features**
+
+**Offline Recipe Management:**
+
+- **Complete CRUD Operations**: Create, read, update, and delete recipes offline
+- **Automatic Fallback**: Seamlessly switches to offline storage when network unavailable
+- **Optimistic Updates**: Instant UI updates with rollback on sync failure
+- **Temporary ID Generation**: Offline-created recipes get unique temporary IDs until synced
+
+**Synchronization System:**
+
+- **Automatic Background Sync**: When network returns, pending changes sync automatically
+- **Manual Sync Trigger**: Users can manually trigger sync with visual feedback
+- **Conflict Resolution**: Last-write-wins strategy with timestamp-based merging
+- **Retry Logic**: Failed sync operations retry with exponential backoff (max 3 attempts)
+
+**Enhanced UI with Sync Status:**
+
+- **Sync Indicators**: Visual indicators show recipes pending sync and sync status
+- **Network Status**: Real-time network connectivity detection and user feedback
+- **Sync Progress**: Loading states and progress indicators during synchronization
+- **Error Handling**: Clear error messages and retry options for sync failures
+
+#### 🏗️ **Technical Architecture**
+
+**Offline Service Layer:**
+
+- `OfflineRecipeService.ts` - Comprehensive offline-first service with AsyncStorage persistence
+- `useOfflineRecipes.ts` - React Query hooks with offline integration and optimistic updates
+- Network detection with `@react-native-community/netinfo`
+- React Query persistence with AsyncStorage for seamless data access
+
+**Data Flow:**
+
+1. **Online**: Operations attempt server first, fallback to offline on failure
+2. **Offline**: Operations stored locally with pending sync queue
+3. **Network Return**: Automatic background sync with conflict resolution
+4. **UI Updates**: Real-time sync status with manual trigger options
+
+#### 📱 **User Experience**
+
+**Seamless Offline/Online Transition:**
+
+- No user intervention required for offline/online switching
+- Visual feedback for all sync operations and network status
+- Offline-created content clearly marked until successfully synced
+- Background sync preserves user focus without interruption
+
+**Reliability Features:**
+
+- **Data Persistence**: All offline data survives app restarts
+- ⚠️ Security: AsyncStorage is not encrypted; do not store secrets/PII. Tokens remain in SecureStore.
+- **Conflict Resolution**: Automatic handling of concurrent edits
+- **Sync Recovery**: Failed operations automatically retry when network improves
+- **User Control**: Manual sync triggers for immediate synchronization
+
+#### 🚀 **Next Phase: Ingredients & Calculations Offline**
+
+**Phase 3 Roadmap:**
+
+- **Ingredients Database Caching**: Cache ingredients database with background refresh
+- **Offline Calculations**: Ensure recipe metrics work without internet connection
+- **Enhanced Offline UI**: Additional sync status indicators and conflict resolution UI
+
+---
+
 ## 💡 **Development Achievements & Architecture**
 
 ### **Phase 5 Completion Status: ~85% Feature Parity** ✅
@@ -424,16 +537,20 @@ EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
 
 - **Authentication**: Complete login/register flow with email verification and secure JWT token storage
 - **Recipe Management**: Full CRUD operations with 4-step creation wizard and real-time calculations
+- **Offline Recipe Management**: Complete offline-first recipe CRUD with automatic synchronization
 - **Recipe Cloning System**: Differentiated logic for private recipes (versioning) vs public recipes (attribution)
 - **Version History**: Complete timeline navigation with visual version tree and interactive browsing
 - **BeerXML Import/Export**: 3-screen mobile workflow with ingredient matching and file sharing
 - **Brew Session Tracking**: Full CRUD operations with comprehensive fermentation data management
 - **Advanced UI/UX**: Touch-optimized interface, context menus, gesture navigation, and theme support
-- **Testing Infrastructure**: >70% coverage with 2,500+ comprehensive tests
+- **Testing Infrastructure**: >70% coverage with comprehensive test suite (119+ test files)
 
 ### 🔧 Advanced Technical Features
 
-- **React Query Integration**: Optimistic updates, cache invalidation, and background sync
+- **Offline-First Architecture**: Complete recipe management works without internet connection
+- **React Query Integration**: Optimistic updates, cache invalidation, background sync, and offline persistence
+- **Automatic Synchronization**: Background sync when network becomes available with conflict resolution
+- **Network Detection**: Real-time connectivity monitoring with automatic fallback behavior
 - **Secure Storage**: JWT tokens in Expo SecureStore (not localStorage)
 - **Mobile-First Design**: 48dp touch targets, responsive layouts, foldable device support
 - **Network Resilience**: Hardened API service with retry logic and error normalization
@@ -447,7 +564,8 @@ EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
 
 - **AI Optimization Engine**: Recipe analysis and improvement suggestions
 - **Advanced Analytics**: Brewing dashboard and comprehensive reporting
-- **Enhanced Ingredient Database**: Advanced ingredient management and search
+- **Advanced Ingredient Management**: Enhanced search and filtering capabilities
+- **Push Notifications**: Real-time brew session reminders and alerts
 
 ## Contributing
 

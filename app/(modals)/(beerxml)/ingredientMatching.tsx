@@ -27,7 +27,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@contexts/ThemeContext";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import BeerXMLService from "@services/beerxml/BeerXMLService";
-import { TEST_IDS } from "@src/constants/testIDs";
+import { TEST_IDS } from "@constants/testIDs";
+import { generateUniqueId } from "@utils/keyUtils";
 
 interface MatchingState {
   step: "matching" | "reviewing" | "creating" | "finalizing";
@@ -248,6 +249,7 @@ export default function IngredientMatchingScreen() {
                 decision.selectedMatch.id ||
                 decision.selectedMatch.ingredient_id,
               name: decision.selectedMatch.name,
+              instance_id: generateUniqueId("ing"), // Ensure unique instance ID
             };
           } else {
             // Use newly created ingredient
@@ -299,6 +301,7 @@ export default function IngredientMatchingScreen() {
               ingredient_id:
                 createdIngredient?.id || createdIngredient?.ingredient_id,
               name: createdIngredient?.name || decision.imported.name,
+              instance_id: generateUniqueId("ing"), // Ensure unique instance ID
             };
           }
         }

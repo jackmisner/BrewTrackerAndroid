@@ -155,21 +155,13 @@ export type CreateRecipeRequest = RecipeFormData;
 
 export type UpdateRecipeRequest = Partial<RecipeFormData>;
 
-export interface CloneRecipeResponse {
-  message: string;
-  recipe: Recipe;
-  recipe_id: string;
-}
+export type CloneRecipeResponse = Recipe;
 
 export interface ClonePublicRecipeRequest {
   originalAuthor: string;
 }
 
-export interface ClonePublicRecipeResponse {
-  message: string;
-  recipe: Recipe;
-  recipe_id: string;
-}
+export type ClonePublicRecipeResponse = Recipe;
 
 export interface RecipeMetricsResponse {
   og?: number;
@@ -180,6 +172,11 @@ export interface RecipeMetricsResponse {
   avg_abv?: number;
   ibu?: number;
   srm?: number;
+  estimated_og?: number;
+  estimated_fg?: number;
+  estimated_abv?: number;
+  estimated_ibu?: number;
+  estimated_srm?: number;
 }
 
 export interface CalculateMetricsPreviewRequest {

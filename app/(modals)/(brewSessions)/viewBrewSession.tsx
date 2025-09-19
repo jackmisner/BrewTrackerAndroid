@@ -456,6 +456,7 @@ export default function ViewBrewSession() {
             actualOG={brewSession.actual_og}
             temperatureUnit={brewSession.temperature_unit}
             brewSessionId={brewSessionId}
+            brewSessionUserId={brewSession.user_id}
           />
         </View>
       </ScrollView>

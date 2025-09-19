@@ -47,6 +47,7 @@ import {
 import { User } from "@src/types/user";
 import { Recipe } from "@src/types/recipe";
 import { BrewSessionSummary } from "@src/types/brewSession";
+import { ID } from "@src/types/common";
 
 // Shared test fixtures
 const mockUser: User = {
@@ -361,14 +362,11 @@ describe("API Types", () => {
     describe("CloneRecipeResponse", () => {
       it("should return cloned recipe data", () => {
         const response: CloneRecipeResponse = {
-          message: "Recipe cloned successfully",
-          recipe: mockRecipe,
-          recipe_id: "cloned-recipe-456",
+          ...mockRecipe,
+          id: "cloned-recipe-456" as ID,
         };
 
-        expect(response.message).toContain("cloned");
-        expect(response.recipe).toEqual(mockRecipe);
-        expect(response.recipe_id).toBe("cloned-recipe-456");
+        expect(response.id).toBe("cloned-recipe-456");
       });
     });
 
@@ -428,6 +426,7 @@ describe("API Types", () => {
               unit: "lb",
               potential: 1.036,
               color: 2,
+              instance_id: "mock-uuid",
             },
           ],
           mash_temperature: 152,

@@ -17,10 +17,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import ApiService from "@services/api/apiService";
 import { BrewSession, UpdateFermentationEntryRequest } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
+import { useUserValidation } from "@utils/userValidation";
 import { editBrewSessionStyles } from "@styles/modals/editBrewSessionStyles";
 
 export default function EditFermentationEntryScreen() {
   const theme = useTheme();
+  const userValidation = useUserValidation();
   const styles = editBrewSessionStyles(theme);
   const params = useLocalSearchParams();
   const queryClient = useQueryClient();
@@ -146,8 +148,56 @@ export default function EditFermentationEntryScreen() {
     return errors.length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateForm()) {
+      return;
+    }
+
+    // Validate user permissions for fermentation entry editing (fail closed)
+    try {
+      // If no user_id is present, block the operation
+      if (!brewSessionData?.user_id) {
+        Alert.alert(
+          "Access Denied",
+          "Unable to verify ownership of this brew session"
+        );
+        return;
+      }
+
+      const canModify = await userValidation.canUserModifyResource({
+        user_id: brewSessionData.user_id,
+        is_owner: brewSessionData.is_owner,
+      });
+
+      if (!canModify) {
+        Alert.alert(
+          "Access Denied",
+          "You don't have permission to edit fermentation entries for this brew session"
+        );
+        return;
+      }
+    } catch (error) {
+      console.error(
+        "❌ User validation error during fermentation entry edit:",
+        error
+      );
+      Alert.alert(
+        "Validation Error",
+        "Unable to verify permissions. Please try again."
+      );
+      return;
+    }
+
+    // Validate entryIndex before proceeding with mutation
+    if (
+      !Number.isFinite(entryIndex) ||
+      entryIndex < 0 ||
+      entryIndex >= (brewSessionData?.fermentation_entries?.length || 0)
+    ) {
+      Alert.alert(
+        "Error",
+        "Invalid fermentation entry index. Please try again."
+      );
       return;
     }
 
@@ -160,6 +210,15 @@ export default function EditFermentationEntryScreen() {
       ...(formData.ph.trim() && { ph: parseFloat(formData.ph) }),
       ...(formData.notes.trim() && { notes: formData.notes.trim() }),
     };
+
+    // Log fermentation entry update for security monitoring
+    console.log("📝 Updating fermentation entry:", {
+      brewSessionId,
+      brewSessionName: brewSessionData?.name,
+      entryIndex,
+      hasBrewSessionUserId: !!brewSessionData?.user_id,
+      entryDate: entryData.entry_date,
+    });
 
     updateEntryMutation.mutate(entryData);
   };

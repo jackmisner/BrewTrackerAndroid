@@ -2,7 +2,7 @@
  * Tests for VersionHistoryScreen
  *
  * Tests the version history modal including API integration, UI states,
- * navigation, and user interactions using testID patterns.
+ * navigation, and user interactions.
  */
 
 import React from "react";

@@ -29,6 +29,8 @@ import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import ApiService from "@services/api/apiService";
 import { IngredientInput } from "@src/types";
 import { TEST_IDS } from "@src/constants/testIDs";
+import { generateUniqueId } from "@utils/keyUtils";
+import { QUERY_KEYS } from "@services/api/queryClient";
 
 function coerceIngredientTime(input: unknown): number | undefined {
   if (input == null) {
@@ -180,6 +182,7 @@ export default function ImportReviewScreen() {
               unit: ing.unit,
               use: ing.use,
               time: coerceIngredientTime(ing.time),
+              instance_id: generateUniqueId("ing"), // Generate unique instance ID for each imported ingredient
             })
           ),
       };
@@ -189,8 +192,8 @@ export default function ImportReviewScreen() {
     },
     onSuccess: createdRecipe => {
       // Invalidate queries to refresh recipe lists
-      queryClient.invalidateQueries({ queryKey: ["recipes"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.RECIPES });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD });
 
       // Show success message and navigate to recipe
       Alert.alert(

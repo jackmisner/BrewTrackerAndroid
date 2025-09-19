@@ -27,6 +27,12 @@ jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: "MaterialIcons",
 }));
 
+// Mock keyUtils to provide predictable instance_id generation
+jest.mock("@utils/keyUtils", () => ({
+  ...jest.requireActual("@utils/keyUtils"),
+  generateUniqueId: jest.fn(() => "mock-uuid"),
+}));
+
 // Mock expo-router
 const mockRouter = {
   push: jest.fn(),
@@ -182,6 +188,7 @@ describe("IngredientsForm", () => {
     amount: 10,
     unit: "lb",
     grain_type: "base_malt",
+    instance_id: "mock-uuid",
   };
 
   const mockHopIngredient: RecipeIngredient = {
@@ -193,6 +200,7 @@ describe("IngredientsForm", () => {
     use: "boil",
     time: 60,
     alpha_acid: 5.5,
+    instance_id: "mock-uuid",
   };
 
   const mockYeastIngredient: RecipeIngredient = {
@@ -203,6 +211,7 @@ describe("IngredientsForm", () => {
     unit: "pkg",
     manufacturer: "Fermentis",
     attenuation: 78,
+    instance_id: "mock-uuid",
   };
 
   let mockRouterInstance: any;
@@ -438,7 +447,10 @@ describe("IngredientsForm", () => {
       );
 
       expect(mockOnUpdateField).toHaveBeenCalledWith("ingredients", [
-        mockGrainIngredient,
+        {
+          ...mockGrainIngredient,
+          instance_id: "mock-uuid",
+        },
       ]);
       expect(mockRouterInstance.setParams).toHaveBeenCalledWith({
         selectedIngredient: undefined,

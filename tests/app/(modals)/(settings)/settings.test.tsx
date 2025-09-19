@@ -37,6 +37,14 @@ jest.mock("@contexts/ThemeContext", () => ({
   })),
 }));
 
+jest.mock("@contexts/DeveloperContext", () => ({
+  useDeveloper: jest.fn(() => ({
+    isDeveloperMode: false,
+    networkSimulationMode: false,
+    setNetworkSimulationMode: jest.fn(),
+  })),
+}));
+
 // Mock styles
 jest.mock("@styles/modals/settingsStyles", () => ({
   settingsStyles: jest.fn(() => ({

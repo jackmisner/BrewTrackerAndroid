@@ -123,6 +123,7 @@ describe("ReviewForm", () => {
     amount: 10,
     unit: "lb",
     grain_type: "base_malt",
+    instance_id: "mock-uuid",
   };
 
   const mockHopIngredient: RecipeIngredient = {
@@ -134,6 +135,7 @@ describe("ReviewForm", () => {
     use: "boil",
     time: 60,
     alpha_acid: 5.5,
+    instance_id: "mock-uuid",
   };
 
   const mockYeastIngredient: RecipeIngredient = {
@@ -145,6 +147,7 @@ describe("ReviewForm", () => {
     manufacturer: "Fermentis",
     attenuation: 78,
     yeast_type: "Ale",
+    instance_id: "mock-uuid",
   };
 
   const mockOtherIngredient: RecipeIngredient = {
@@ -153,6 +156,7 @@ describe("ReviewForm", () => {
     type: "other",
     amount: 1,
     unit: "tsp",
+    instance_id: "mock-uuid",
   };
 
   describe("Basic rendering", () => {
@@ -616,6 +620,7 @@ describe("ReviewForm", () => {
         type: "other",
         amount: 1,
         unit: "oz",
+        instance_id: "mock-uuid",
       };
 
       const recipeWithMinimalIngredient = {
@@ -638,6 +643,7 @@ describe("ReviewForm", () => {
         type: "yeast",
         amount: 1,
         unit: "pkg",
+        instance_id: "mock-uuid",
       };
 
       const recipeWithMinimalYeast = {
@@ -660,6 +666,7 @@ describe("ReviewForm", () => {
         type: "other",
         amount: 1,
         unit: "oz",
+        instance_id: "mock-uuid",
       };
 
       const recipeWithIngredientNoId = {

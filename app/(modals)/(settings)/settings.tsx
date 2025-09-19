@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import Constants from "expo-constants";
 import { useTheme, ThemeMode } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
+import { useDeveloper } from "@contexts/DeveloperContext";
 import { UnitSystem } from "@src/types";
 import { settingsStyles } from "@styles/modals/settingsStyles";
 import { TEST_IDS } from "@src/constants/testIDs";
@@ -21,6 +22,8 @@ export default function SettingsScreen() {
   const themeContext = useTheme();
   const { theme, setTheme } = themeContext;
   const { unitSystem, updateUnitSystem, loading: unitsLoading } = useUnits();
+  const { isDeveloperMode, networkSimulationMode, setNetworkSimulationMode } =
+    useDeveloper();
   const styles = settingsStyles(themeContext);
 
   const handleGoBack = () => {
@@ -358,6 +361,102 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
+
+        {/* Developer Section - Only show in development mode */}
+        {isDeveloperMode && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Developer</Text>
+
+            <View style={styles.settingGroup}>
+              <Text style={styles.groupTitle}>Network Simulation</Text>
+              <View style={styles.groupContent}>
+                {/* Normal Network Mode */}
+                <TouchableOpacity
+                  style={styles.optionItem}
+                  onPress={() => setNetworkSimulationMode("normal")}
+                >
+                  <View style={styles.optionContent}>
+                    <Text style={styles.optionTitle}>Normal</Text>
+                    <Text style={styles.optionSubtitle}>
+                      Use actual network connection
+                    </Text>
+                  </View>
+                  <View style={styles.radioButton}>
+                    {networkSimulationMode === "normal" ? (
+                      <MaterialIcons
+                        name="check-circle"
+                        size={24}
+                        color={themeContext.colors.primary}
+                      />
+                    ) : (
+                      <MaterialIcons
+                        name="radio-button-unchecked"
+                        size={24}
+                        color={themeContext.colors.textMuted}
+                      />
+                    )}
+                  </View>
+                </TouchableOpacity>
+
+                {/* Slow Network Mode */}
+                <TouchableOpacity
+                  style={styles.optionItem}
+                  onPress={() => setNetworkSimulationMode("slow")}
+                >
+                  <View style={styles.optionContent}>
+                    <Text style={styles.optionTitle}>Slow Network</Text>
+                    <Text style={styles.optionSubtitle}>
+                      Simulate poor connection quality
+                    </Text>
+                  </View>
+                  <View style={styles.radioButton}>
+                    {networkSimulationMode === "slow" ? (
+                      <MaterialIcons
+                        name="check-circle"
+                        size={24}
+                        color={themeContext.colors.primary}
+                      />
+                    ) : (
+                      <MaterialIcons
+                        name="radio-button-unchecked"
+                        size={24}
+                        color={themeContext.colors.textMuted}
+                      />
+                    )}
+                  </View>
+                </TouchableOpacity>
+
+                {/* Offline Mode */}
+                <TouchableOpacity
+                  style={styles.optionItem}
+                  onPress={() => setNetworkSimulationMode("offline")}
+                >
+                  <View style={styles.optionContent}>
+                    <Text style={styles.optionTitle}>Offline</Text>
+                    <Text style={styles.optionSubtitle}>
+                      Test offline functionality
+                    </Text>
+                  </View>
+                  <View style={styles.radioButton}>
+                    {networkSimulationMode === "offline" ? (
+                      <MaterialIcons
+                        name="check-circle"
+                        size={24}
+                        color={themeContext.colors.primary}
+                      />
+                    ) : (
+                      <MaterialIcons
+                        name="radio-button-unchecked"
+                        size={24}
+                        color={themeContext.colors.textMuted}
+                      />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Bottom spacing */}
         <View style={styles.bottomSpacing} />

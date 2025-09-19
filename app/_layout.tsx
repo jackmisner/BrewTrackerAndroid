@@ -34,13 +34,19 @@
 import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { Stack } from "expo-router";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { AuthProvider } from "@contexts/AuthContext";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { AuthProvider, useAuth } from "@contexts/AuthContext";
 import { ThemeProvider, useTheme } from "@contexts/ThemeContext";
 import { UnitProvider } from "@contexts/UnitContext";
 import { ScreenDimensionsProvider } from "@contexts/ScreenDimensionsContext";
 import { CalculatorsProvider } from "@contexts/CalculatorsContext";
-import { queryClient } from "@services/api/queryClient";
+import { NetworkProvider } from "@contexts/NetworkContext";
+import { DeveloperProvider } from "@contexts/DeveloperContext";
+import {
+  queryClient,
+  createUserScopedPersister,
+} from "@services/api/queryClient";
+import Constants from "expo-constants";
 
 // Component to handle StatusBar with theme
 const ThemedStatusBar = () => {
@@ -48,58 +54,108 @@ const ThemedStatusBar = () => {
   return <StatusBar style={isDark ? "light" : "dark"} />;
 };
 
+// Component to handle dynamic persister based on auth state
+const DynamicPersistQueryClientProvider = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
+  const { user } = useAuth();
+  const [persister, setPersister] = React.useState(() =>
+    createUserScopedPersister(user?.id ? String(user.id) : undefined)
+  );
+
+  // Track previous user ID to detect changes
+  const prevUserIdRef = React.useRef<string | undefined>(undefined);
+
+  React.useEffect(() => {
+    const userId = user?.id ? String(user.id) : undefined;
+    const prevUserId = prevUserIdRef.current;
+    // Clear cache whenever identity changes (including anonymous ↔ user)
+    const prevKey = prevUserId ?? "anonymous";
+    const nextKey = userId ?? "anonymous";
+    if (prevKey !== nextKey) {
+      queryClient.clear();
+    }
+    // Update previous user ID and create new persister
+    prevUserIdRef.current = userId;
+    setPersister(createUserScopedPersister(userId));
+  }, [user?.id]);
+
+  return (
+    <PersistQueryClientProvider
+      key={user?.id || "anonymous"} // Force re-creation when user changes
+      client={queryClient}
+      persistOptions={{
+        persister,
+        // Invalidate cache on new native build or when dev/version changes
+        buster:
+          Constants.nativeBuildVersion ||
+          Constants.expoConfig?.version ||
+          "dev",
+      }}
+    >
+      {children}
+    </PersistQueryClientProvider>
+  );
+};
+
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <ThemedStatusBar />
-        <ScreenDimensionsProvider>
-          <AuthProvider>
-            <UnitProvider>
-              <CalculatorsProvider>
-                <Stack
-                  screenOptions={{
-                    headerStyle: {
-                      backgroundColor: "#f4511e",
-                    },
-                    headerTintColor: "#fff",
-                    headerTitleStyle: {
-                      fontWeight: "bold",
-                    },
-                  }}
-                >
-                  <Stack.Screen
-                    name="index"
-                    options={{
-                      title: "BrewTracker",
-                      headerShown: false,
-                    }}
-                  />
-                  <Stack.Screen
-                    name="(auth)"
-                    options={{
-                      headerShown: false,
-                    }}
-                  />
-                  <Stack.Screen
-                    name="(tabs)"
-                    options={{
-                      headerShown: false,
-                    }}
-                  />
-                  <Stack.Screen
-                    name="(modals)"
-                    options={{
-                      headerShown: false,
-                      presentation: "modal",
-                    }}
-                  />
-                </Stack>
-              </CalculatorsProvider>
-            </UnitProvider>
-          </AuthProvider>
-        </ScreenDimensionsProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <DeveloperProvider>
+      <NetworkProvider>
+        <ThemeProvider>
+          <ThemedStatusBar />
+          <ScreenDimensionsProvider>
+            <AuthProvider>
+              <DynamicPersistQueryClientProvider>
+                <UnitProvider>
+                  <CalculatorsProvider>
+                    <Stack
+                      screenOptions={{
+                        headerStyle: {
+                          backgroundColor: "#f4511e",
+                        },
+                        headerTintColor: "#fff",
+                        headerTitleStyle: {
+                          fontWeight: "bold",
+                        },
+                      }}
+                    >
+                      <Stack.Screen
+                        name="index"
+                        options={{
+                          title: "BrewTracker",
+                          headerShown: false,
+                        }}
+                      />
+                      <Stack.Screen
+                        name="(auth)"
+                        options={{
+                          headerShown: false,
+                        }}
+                      />
+                      <Stack.Screen
+                        name="(tabs)"
+                        options={{
+                          headerShown: false,
+                        }}
+                      />
+                      <Stack.Screen
+                        name="(modals)"
+                        options={{
+                          headerShown: false,
+                          presentation: "modal",
+                        }}
+                      />
+                    </Stack>
+                  </CalculatorsProvider>
+                </UnitProvider>
+              </DynamicPersistQueryClientProvider>
+            </AuthProvider>
+          </ScreenDimensionsProvider>
+        </ThemeProvider>
+      </NetworkProvider>
+    </DeveloperProvider>
   );
 }

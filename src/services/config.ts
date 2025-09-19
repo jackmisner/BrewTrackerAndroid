@@ -29,8 +29,10 @@ export const STORAGE_KEYS = {
   USER_DATA: "user_data",
   USER_SETTINGS: "user_settings",
   OFFLINE_RECIPES: "offline_recipes",
+  OFFLINE_CACHE: "offline_cache",
   CACHED_INGREDIENTS: "cached_ingredients",
   LAST_SYNC: "last_sync",
+  NETWORK_STATE: "network_state",
 } as const;
 
 /**

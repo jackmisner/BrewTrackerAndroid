@@ -3,7 +3,7 @@
  */
 
 import React from "react";
-import { render } from "@testing-library/react-native";
+import { renderWithProviders } from "../../testUtils";
 import ModalsLayout from "../../../app/(modals)/_layout";
 
 // Mock expo-router Stack with Screen component
@@ -26,7 +26,7 @@ jest.mock("expo-router", () => {
 describe("ModalsLayout", () => {
   it("should render without crashing", () => {
     expect(() => {
-      render(<ModalsLayout />);
+      renderWithProviders(<ModalsLayout />);
     }).not.toThrow();
   });
 });

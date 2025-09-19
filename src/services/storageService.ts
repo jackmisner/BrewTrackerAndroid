@@ -6,13 +6,18 @@
  *
  * Migration from deprecated WRITE_EXTERNAL_STORAGE/READ_EXTERNAL_STORAGE
  * to scoped storage APIs (MediaLibrary, DocumentPicker, SAF).
+ *
+ * Extended for offline functionality with data persistence, sync management,
+ * and offline-first storage patterns for React Query cache integration.
  */
 
 import * as DocumentPicker from "expo-document-picker";
 import * as MediaLibrary from "expo-media-library";
 import * as Sharing from "expo-sharing";
-import * as FileSystem from "expo-file-system";
+import { File, Directory, Paths } from "expo-file-system";
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { STORAGE_KEYS } from "@services/config";
 
 /**
  * Android API levels for permission handling
@@ -150,8 +155,10 @@ export class StorageService {
   ): Promise<FileOperationResult> {
     try {
       // Create temporary file
-      const fileUri = `${FileSystem.cacheDirectory}${filename}`;
-      await FileSystem.writeAsStringAsync(fileUri, content);
+      const file = new File(Paths.cache, filename);
+      await file.create();
+      await file.write(content);
+      const fileUri = file.uri;
 
       // Share file (allows user to choose where to save)
       if (await Sharing.isAvailableAsync()) {
@@ -227,7 +234,15 @@ export class StorageService {
     documentUri: string
   ): Promise<{ success: boolean; content?: string; error?: string }> {
     try {
-      const content = await FileSystem.readAsStringAsync(documentUri);
+      // Create file instance from URI
+      const file = new File(documentUri);
+      if (!file.exists) {
+        return {
+          success: false,
+          error: "File not found at the specified URI",
+        };
+      }
+      const content = await file.text();
       return {
         success: true,
         content,
@@ -362,18 +377,6 @@ export class BeerXMLService {
     recipeName: string
   ): Promise<FileOperationResult & { userCancelled?: boolean }> {
     try {
-      // Request directory permissions - opens system directory picker
-      const permissions =
-        await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-
-      if (!permissions.granted) {
-        return {
-          success: false,
-          error: "Directory permission denied",
-          userCancelled: true,
-        };
-      }
-
       // Sanitize filename for filesystem
       const sanitizedName = recipeName
         .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_")
@@ -385,21 +388,39 @@ export class BeerXMLService {
       const truncatedName = baseName.slice(0, 200);
       const filename = `${truncatedName}_recipe.xml`;
 
-      // Create file in user-selected directory
-      const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
-        permissions.directoryUri,
-        filename,
-        "application/xml"
-      );
+      // Use Directory.pickDirectoryAsync for directory selection
+      const directory = await Directory.pickDirectoryAsync();
 
-      // Write XML content to the file
-      await FileSystem.writeAsStringAsync(fileUri, xmlContent, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      if (!directory) {
+        return {
+          success: false,
+          error: "Directory selection cancelled",
+          userCancelled: true,
+        };
+      }
+
+      // Validate filename doesn't contain path separators after sanitization
+      if (filename.includes("/") || filename.includes("\\")) {
+        return {
+          success: false,
+          error: "Invalid filename",
+        };
+      }
+
+      // Create file in selected directory
+      const file = new File(directory.uri, filename);
+
+      // Check if file exists and handle appropriately
+      if (file.exists) {
+        await file.delete();
+      }
+
+      await file.create();
+      await file.write(xmlContent);
 
       return {
         success: true,
-        uri: fileUri,
+        uri: file.uri,
       };
     } catch (error) {
       console.error("🍺 BeerXML Export - Directory choice error:", error);
@@ -408,6 +429,278 @@ export class BeerXMLService {
         error: error instanceof Error ? error.message : "File save failed",
       };
     }
+  }
+}
+
+/**
+ * Offline Data Management Service
+ *
+ * Handles offline data storage, sync operations, and cache management
+ * for React Query integration and offline-first functionality.
+ */
+export class OfflineStorageService {
+  /**
+   * Store offline recipes data
+   */
+  static async storeOfflineRecipes(recipes: any[]): Promise<boolean> {
+    try {
+      // Validate input
+      if (!Array.isArray(recipes)) {
+        console.error("Invalid recipes data: expected array");
+        return false;
+      }
+
+      // Check size limits (e.g., 10MB)
+      const dataSize = JSON.stringify(recipes).length;
+      const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+      if (dataSize > MAX_SIZE) {
+        console.error(
+          `Recipe data too large: ${dataSize} bytes exceeds ${MAX_SIZE} bytes limit`
+        );
+        return false;
+      }
+
+      const timestamp = Date.now();
+      const offlineData = {
+        recipes,
+        timestamp,
+        version: 1,
+      };
+
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.OFFLINE_RECIPES,
+        JSON.stringify(offlineData)
+      );
+
+      return true;
+    } catch (error) {
+      console.error("Failed to store offline recipes:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Get offline recipes data
+   */
+  static async getOfflineRecipes(): Promise<{
+    success: boolean;
+    recipes?: any[];
+    timestamp?: number;
+    error?: string;
+  }> {
+    try {
+      const data = await AsyncStorage.getItem(STORAGE_KEYS.OFFLINE_RECIPES);
+
+      if (!data) {
+        return {
+          success: true,
+          recipes: [],
+        };
+      }
+
+      const parsed = JSON.parse(data);
+
+      return {
+        success: true,
+        recipes: parsed.recipes || [],
+        timestamp: parsed.timestamp,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to load offline recipes",
+      };
+    }
+  }
+
+  /**
+   * Store cached ingredients data
+   */
+  static async storeCachedIngredients(ingredients: any[]): Promise<boolean> {
+    try {
+      // Validate input
+      if (!Array.isArray(ingredients)) {
+        console.error("Invalid ingredients data: expected array");
+        return false;
+      }
+
+      // Check size limits
+      const dataSize = JSON.stringify(ingredients).length;
+      const MAX_SIZE = 5 * 1024 * 1024; // 5MB for ingredients
+      if (dataSize > MAX_SIZE) {
+        console.error(
+          `Ingredients data too large: ${dataSize} bytes exceeds ${MAX_SIZE} bytes limit`
+        );
+        return false;
+      }
+
+      const timestamp = Date.now();
+      const cachedData = {
+        ingredients,
+        timestamp,
+        version: 1,
+      };
+
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.CACHED_INGREDIENTS,
+        JSON.stringify(cachedData)
+      );
+
+      return true;
+    } catch (error) {
+      console.error("Failed to cache ingredients:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Get cached ingredients data
+   */
+  static async getCachedIngredients(): Promise<{
+    success: boolean;
+    ingredients?: any[];
+    timestamp?: number;
+    isStale?: boolean;
+    error?: string;
+  }> {
+    try {
+      const data = await AsyncStorage.getItem(STORAGE_KEYS.CACHED_INGREDIENTS);
+
+      if (!data) {
+        return {
+          success: true,
+          ingredients: [],
+        };
+      }
+
+      const parsed = JSON.parse(data);
+      const timestamp = parsed.timestamp || 0;
+      const now = Date.now();
+
+      // Consider ingredients stale after 24 hours
+      const isStale = now - timestamp > 24 * 60 * 60 * 1000;
+
+      return {
+        success: true,
+        ingredients: parsed.ingredients || [],
+        timestamp,
+        isStale,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to load cached ingredients",
+      };
+    }
+  }
+
+  /**
+   * Store last sync timestamp
+   */
+  static async updateLastSync(
+    timestamp: number = Date.now()
+  ): Promise<boolean> {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.LAST_SYNC, timestamp.toString());
+      return true;
+    } catch (error) {
+      console.error("Failed to update last sync timestamp:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Get last sync timestamp
+   */
+  static async getLastSync(): Promise<number | null> {
+    try {
+      const raw = await AsyncStorage.getItem(STORAGE_KEYS.LAST_SYNC);
+      if (!raw) {
+        return null;
+      }
+      const value = Number(raw);
+      return Number.isFinite(value) ? value : null;
+    } catch (error) {
+      console.error("Failed to get last sync timestamp:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Clear all offline data
+   */
+  static async clearOfflineData(): Promise<boolean> {
+    try {
+      await AsyncStorage.multiRemove([
+        STORAGE_KEYS.OFFLINE_RECIPES,
+        STORAGE_KEYS.CACHED_INGREDIENTS,
+        STORAGE_KEYS.LAST_SYNC,
+      ]);
+
+      return true;
+    } catch (error) {
+      console.error("Failed to clear offline data:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Get offline storage statistics
+   */
+  static async getOfflineStats(): Promise<{
+    recipesCount: number;
+    ingredientsCount: number;
+    lastSync: number | null;
+    totalStorageSize: number;
+  }> {
+    try {
+      const [recipesResult, ingredientsResult, lastSync] = await Promise.all([
+        this.getOfflineRecipes(),
+        this.getCachedIngredients(),
+        this.getLastSync(),
+      ]);
+
+      const recipesCount = recipesResult.recipes?.length || 0;
+      const ingredientsCount = ingredientsResult.ingredients?.length || 0;
+
+      // Estimate storage size (rough calculation)
+      const recipesSize = recipesResult.recipes
+        ? JSON.stringify(recipesResult.recipes).length
+        : 0;
+      const ingredientsSize = ingredientsResult.ingredients
+        ? JSON.stringify(ingredientsResult.ingredients).length
+        : 0;
+
+      return {
+        recipesCount,
+        ingredientsCount,
+        lastSync,
+        totalStorageSize: recipesSize + ingredientsSize,
+      };
+    } catch (error) {
+      console.error("Failed to get offline stats:", error);
+      return {
+        recipesCount: 0,
+        ingredientsCount: 0,
+        lastSync: null,
+        totalStorageSize: 0,
+      };
+    }
+  }
+
+  /**
+   * Check if data needs refresh based on age
+   */
+  static isDataStale(timestamp: number, maxAgeHours: number = 6): boolean {
+    const now = Date.now();
+    const maxAgeMs = maxAgeHours * 60 * 60 * 1000;
+    return now - timestamp > maxAgeMs;
   }
 }
 

@@ -14,7 +14,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
-import ApiService from "@services/api/apiService";
+import OfflineRecipeService from "@services/offline/OfflineRecipeService";
 import { RecipeFormData, RecipeIngredient, Recipe } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
@@ -22,6 +22,8 @@ import { ParametersForm } from "@src/components/recipes/RecipeForm/ParametersFor
 import { IngredientsForm } from "@src/components/recipes/RecipeForm/IngredientsForm";
 import { ReviewForm } from "@src/components/recipes/RecipeForm/ReviewForm";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
+import { generateUniqueId } from "@utils/keyUtils";
+import { QUERY_KEYS } from "@services/api/queryClient";
 
 // Recipe builder steps
 enum RecipeStep {
@@ -32,6 +34,87 @@ enum RecipeStep {
 }
 
 const STEP_TITLES = ["Basic Info", "Parameters", "Ingredients", "Review"];
+
+/**
+ * Efficiently compares two recipe objects for changes, ignoring volatile fields
+ * that shouldn't trigger unsaved changes detection.
+ *
+ * Uses shallow comparison for top-level fields and array length + simple hashing
+ * for ingredients array instead of expensive JSON.stringify.
+ *
+ * @internal Exported for testing purposes only
+ */
+export function hasRecipeChanges(
+  current: RecipeFormData | null,
+  original: RecipeFormData | null
+): boolean {
+  if (!current || !original) {
+    return false;
+  }
+  if (current === original) {
+    return false;
+  }
+
+  // Compare top-level scalar fields (ignore volatile fields)
+  const fieldsToCompare: (keyof RecipeFormData)[] = [
+    "name",
+    "style",
+    "description",
+    "batch_size",
+    "batch_size_unit",
+    "unit_system",
+    "boil_time",
+    "efficiency",
+    "mash_temperature",
+    "mash_temp_unit",
+    "mash_time",
+    "notes",
+    "is_public",
+  ];
+
+  for (const field of fieldsToCompare) {
+    if (current[field] !== original[field]) {
+      return true;
+    }
+  }
+
+  // Fast ingredients array comparison
+  const currentIngredients = current.ingredients || [];
+  const originalIngredients = original.ingredients || [];
+
+  // Quick length check
+  if (currentIngredients.length !== originalIngredients.length) {
+    return true;
+  }
+
+  // Compare ingredients by stable fields only (ignore volatile instance_id)
+  for (let i = 0; i < currentIngredients.length; i++) {
+    const curr = currentIngredients[i];
+    const orig = originalIngredients[i];
+
+    // Compare stable ingredient fields that matter for unsaved changes
+    // Note: instance_id is intentionally ignored as it's volatile and regenerated
+    if (
+      curr.name !== orig.name ||
+      curr.type !== orig.type ||
+      curr.amount !== orig.amount ||
+      curr.unit !== orig.unit ||
+      curr.use !== orig.use ||
+      curr.time !== orig.time ||
+      curr.alpha_acid !== orig.alpha_acid ||
+      curr.notes !== orig.notes ||
+      curr.id !== orig.id || // ID changes are significant
+      curr.potential !== orig.potential ||
+      curr.color !== orig.color ||
+      curr.attenuation !== orig.attenuation ||
+      curr.description !== orig.description
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 // Helper function to convert values to optional numbers
 const toOptionalNumber = (v: any): number | undefined => {
@@ -174,10 +257,13 @@ export default function EditRecipeScreen() {
     isLoading: loadingRecipe,
     error: loadError,
   } = useQuery<Recipe>({
-    queryKey: ["recipe", recipe_id],
+    queryKey: [...QUERY_KEYS.RECIPE(recipe_id)],
     queryFn: async () => {
-      const response = await ApiService.recipes.getById(recipe_id);
-      return response.data;
+      const recipe = await OfflineRecipeService.getById(recipe_id);
+      if (!recipe) {
+        throw new Error("Recipe not found");
+      }
+      return recipe;
     },
     enabled: !!recipe_id,
     retry: 1,
@@ -196,13 +282,10 @@ export default function EditRecipeScreen() {
     }
   }, [existingRecipe, unitSystem]);
 
-  // Check for unsaved changes
+  // Check for unsaved changes using efficient comparison
   useEffect(() => {
-    if (originalRecipe) {
-      const hasChanges =
-        JSON.stringify(recipeData) !== JSON.stringify(originalRecipe);
-      setHasUnsavedChanges(hasChanges);
-    }
+    const hasChanges = hasRecipeChanges(recipeData, originalRecipe);
+    setHasUnsavedChanges(hasChanges);
   }, [recipeData, originalRecipe]);
 
   // Real-time recipe metrics calculation
@@ -275,9 +358,10 @@ export default function EditRecipeScreen() {
         // Explicit ID mapping as fallback (API interceptor should handle this but has issues with nested ingredients)
         if (sanitized.id && !sanitized.ingredient_id) {
           sanitized.ingredient_id = sanitized.id;
-          delete sanitized.id;
         }
-
+        if (!sanitized.instance_id) {
+          sanitized.instance_id = generateUniqueId("ing");
+        }
         return sanitized;
       });
 
@@ -317,39 +401,35 @@ export default function EditRecipeScreen() {
         is_public: Boolean(formData.is_public),
         notes: formData.notes || "",
         ingredients: sanitizedIngredients,
-        // Include estimated metrics if available
-        ...(metricsData && {
-          estimated_og:
-            typeof metricsData.og === "number" &&
-            Number.isFinite(metricsData.og)
-              ? metricsData.og
-              : null,
-          estimated_fg:
-            typeof metricsData.fg === "number" &&
-            Number.isFinite(metricsData.fg)
-              ? metricsData.fg
-              : null,
-          estimated_abv:
-            typeof metricsData.abv === "number" &&
-            Number.isFinite(metricsData.abv)
-              ? metricsData.abv
-              : null,
-          estimated_ibu:
-            typeof metricsData.ibu === "number" &&
-            Number.isFinite(metricsData.ibu)
-              ? metricsData.ibu
-              : null,
-          estimated_srm:
-            typeof metricsData.srm === "number" &&
-            Number.isFinite(metricsData.srm)
-              ? metricsData.srm
-              : null,
-        }),
+        // Include estimated metrics only when finite
+        ...(metricsData &&
+          Number.isFinite(metricsData.og) && {
+            estimated_og: metricsData.og,
+          }),
+        ...(metricsData &&
+          Number.isFinite(metricsData.fg) && {
+            estimated_fg: metricsData.fg,
+          }),
+        ...(metricsData &&
+          Number.isFinite(metricsData.abv) && {
+            estimated_abv: metricsData.abv,
+          }),
+        ...(metricsData &&
+          Number.isFinite(metricsData.ibu) && {
+            estimated_ibu: metricsData.ibu,
+          }),
+        ...(metricsData &&
+          Number.isFinite(metricsData.srm) && {
+            estimated_srm: metricsData.srm,
+          }),
       };
 
-      const response = await ApiService.recipes.update(recipe_id, updateData);
+      const updatedRecipe = await OfflineRecipeService.update(
+        recipe_id,
+        updateData
+      );
 
-      return response.data;
+      return updatedRecipe;
     },
     onSuccess: updatedRecipe => {
       // Update the original recipe to prevent unsaved changes warning
@@ -361,8 +441,16 @@ export default function EditRecipeScreen() {
       setHasUnsavedChanges(false);
 
       // Invalidate and refetch recipe queries
-      queryClient.invalidateQueries({ queryKey: ["recipe", recipe_id] });
-      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      queryClient.invalidateQueries({
+        queryKey: [...QUERY_KEYS.RECIPE(recipe_id)],
+      });
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
+      queryClient.invalidateQueries({
+        queryKey: [...QUERY_KEYS.RECIPE(recipe_id), "offline"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [...QUERY_KEYS.RECIPES, "offline"],
+      });
 
       // Navigate back to the updated recipe view
       router.back();

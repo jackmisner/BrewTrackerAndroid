@@ -1,5 +1,6 @@
 import React from "react";
-import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
+import { fireEvent, waitFor, act } from "@testing-library/react-native";
+import { renderWithProviders, testUtils } from "../../../../testUtils";
 import { Alert } from "react-native";
 
 import {
@@ -24,6 +25,11 @@ jest.mock("react-native", () => ({
     create: (styles: any) => styles,
     flatten: (styles: any) => styles,
   },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
+  },
 }));
 
 // Mock MaterialIcons
@@ -31,15 +37,78 @@ jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: "MaterialIcons",
 }));
 
-// Mock dependencies
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: () => ({
-    colors: {
-      background: "#000000",
-      text: "#ffffff",
-      textMuted: "#888888",
-      error: "#ff0000",
-    },
+// Mock dependencies with comprehensive provider support
+jest.mock("@contexts/ThemeContext", () => {
+  const React = require("react");
+  return {
+    useTheme: () => ({
+      colors: {
+        background: "#000000",
+        text: "#ffffff",
+        textMuted: "#888888",
+        error: "#ff0000",
+      },
+    }),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+// Mock context providers for testUtils
+jest.mock("@contexts/NetworkContext", () => {
+  const React = require("react");
+  return {
+    NetworkProvider: ({ children }: { children: React.ReactNode }) => children,
+    useNetwork: () => ({ isConnected: true }),
+  };
+});
+
+jest.mock("@contexts/DeveloperContext", () => {
+  const React = require("react");
+  return {
+    DeveloperProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+    useDeveloper: () => ({ isDeveloperMode: false }),
+  };
+});
+
+jest.mock("@contexts/UnitContext", () => {
+  const React = require("react");
+  return {
+    UnitProvider: ({ children }: { children: React.ReactNode }) => children,
+    useUnit: () => ({ temperatureUnit: "F", weightUnit: "lb" }),
+  };
+});
+
+jest.mock("@contexts/CalculatorsContext", () => {
+  const React = require("react");
+  return {
+    CalculatorsProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+    useCalculators: () => ({ state: {}, dispatch: jest.fn() }),
+  };
+});
+
+jest.mock("@contexts/AuthContext", () => {
+  const React = require("react");
+  return {
+    AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+    useAuth: () => ({
+      user: null,
+      isLoading: false,
+      isAuthenticated: false,
+      error: null,
+      login: jest.fn(),
+      register: jest.fn(),
+      logout: jest.fn(),
+    }),
+  };
+});
+
+// Mock user validation
+jest.mock("@utils/userValidation", () => ({
+  useUserValidation: () => ({
+    canUserModifyResource: jest.fn().mockResolvedValue(true),
+    validateUserOwnership: jest.fn().mockResolvedValue({ isValid: true }),
   }),
 }));
 
@@ -114,12 +183,13 @@ const createMockActionHandlers = () => ({
 describe("RecipeContextMenu", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    testUtils.resetCounters();
   });
 
   describe("Visibility and Basic Rendering", () => {
     it("should not render when recipe is null", () => {
       const actions: BaseAction<Recipe>[] = [];
-      const { queryByTestId } = render(
+      const { queryByTestId } = renderWithProviders(
         <RecipeContextMenu
           visible={true}
           recipe={null}
@@ -142,7 +212,7 @@ describe("RecipeContextMenu", () => {
         },
       ];
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <RecipeContextMenu
           visible={true}
           recipe={recipe}
@@ -164,7 +234,7 @@ describe("RecipeContextMenu", () => {
       const recipe = createMockRecipe({ name: "", style: "" });
       const actions: BaseAction<Recipe>[] = [];
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <RecipeContextMenu
           visible={true}
           recipe={recipe}
@@ -196,7 +266,7 @@ describe("RecipeContextMenu", () => {
       const position = { x: 100, y: 200 };
       const onClose = jest.fn();
 
-      const { getByTestId } = render(
+      const { getByTestId } = renderWithProviders(
         <RecipeContextMenu
           visible={true}
           recipe={recipe}
@@ -409,7 +479,7 @@ describe("RecipeContextMenu Integration", () => {
     const actions = createDefaultRecipeActions(handlers);
     const recipe = createMockRecipe();
 
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithProviders(
       <RecipeContextMenu
         visible={true}
         recipe={recipe}
@@ -452,7 +522,7 @@ describe("RecipeContextMenu Integration", () => {
       name: "Public Recipe",
     });
 
-    const { queryByTestId } = render(
+    const { queryByTestId } = renderWithProviders(
       <RecipeContextMenu
         visible={true}
         recipe={publicNotOwnedRecipe}

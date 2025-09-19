@@ -11,6 +11,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import ApiService from "@services/api/apiService";
+import OfflineRecipeService from "@services/offline/OfflineRecipeService";
 import { Recipe } from "@src/types";
 import {
   RecipeVersionHistoryResponse,
@@ -64,8 +65,12 @@ export default function ViewRecipeScreen() {
       if (!recipe_id) {
         throw new Error("No recipe ID provided");
       }
-      const response = await ApiService.recipes.getById(recipe_id);
-      return response.data;
+      // Use OfflineRecipeService to handle both real and temporary IDs
+      const recipe = await OfflineRecipeService.getById(recipe_id);
+      if (!recipe) {
+        throw new Error(`Recipe with ID ${recipe_id} not found`);
+      }
+      return recipe;
     },
     enabled: !!recipe_id, // Only run query if recipe_id exists
     retry: 1,
@@ -195,21 +200,10 @@ export default function ViewRecipeScreen() {
             <MaterialIcons name={icon as any} size={20} color="#f4511e" />
             <Text style={styles.ingredientGroupTitle}>{title}</Text>
           </View>
-          {ingredients.map((ingredient, index) => {
-            const additionalContext =
-              ingredient.type === "hop"
-                ? `${ingredient.use || "unknown"}-${ingredient.time || 0}min`
-                : ingredient.type === "grain"
-                  ? ingredient.grain_type || "unknown"
-                  : undefined;
-
+          {ingredients.map(ingredient => {
             return (
               <View
-                key={generateIngredientKey(
-                  ingredient,
-                  index,
-                  additionalContext
-                )}
+                key={generateIngredientKey(ingredient)}
                 style={styles.ingredientItem}
               >
                 <Text style={styles.ingredientName}>{ingredient.name}</Text>

@@ -5,7 +5,8 @@
  */
 
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
+import { fireEvent } from "@testing-library/react-native";
+import { renderWithProviders, testUtils } from "@/tests/testUtils";
 import UtilitiesScreen from "../../../app/(tabs)/utilities";
 
 // Comprehensive React Native mocking
@@ -18,6 +19,11 @@ jest.mock("react-native", () => ({
     create: (styles: any) => styles,
     flatten: (styles: any) => styles,
   },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
+  },
 }));
 
 // Mock MaterialIcons
@@ -25,19 +31,7 @@ jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: ({ name }: { name: string }) => name,
 }));
 
-// Mock theme context
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: () => ({
-    colors: {
-      text: "#000000",
-      textSecondary: "#666666",
-      primary: "#007AFF",
-      background: "#FFFFFF",
-      backgroundSecondary: "#F8F9FA",
-      borderLight: "#E0E0E0",
-    },
-  }),
-}));
+// ThemeContext is provided by testUtils
 
 // Mock expo-router
 const mockPush = jest.fn();
@@ -50,15 +44,16 @@ jest.mock("expo-router", () => ({
 describe("UtilitiesScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    testUtils.resetCounters();
   });
 
   describe("basic rendering", () => {
     it("should render without crashing", () => {
-      expect(() => render(<UtilitiesScreen />)).not.toThrow();
+      expect(() => renderWithProviders(<UtilitiesScreen />)).not.toThrow();
     });
 
     it("should render header with title and subtitle", () => {
-      const { getByText } = render(<UtilitiesScreen />);
+      const { getByText } = renderWithProviders(<UtilitiesScreen />);
 
       expect(getByText("Brewing Calculators")).toBeTruthy();
       expect(
@@ -67,7 +62,7 @@ describe("UtilitiesScreen", () => {
     });
 
     it("should render all calculator cards", () => {
-      const { getByText } = render(<UtilitiesScreen />);
+      const { getByText } = renderWithProviders(<UtilitiesScreen />);
 
       // Check for all calculator titles
       expect(getByText("Unit Converter")).toBeTruthy();
@@ -79,7 +74,7 @@ describe("UtilitiesScreen", () => {
     });
 
     it("should render calculator descriptions", () => {
-      const { getByText } = render(<UtilitiesScreen />);
+      const { getByText } = renderWithProviders(<UtilitiesScreen />);
 
       expect(
         getByText("Convert between metric and imperial units")
@@ -97,18 +92,18 @@ describe("UtilitiesScreen", () => {
 
     it("should render calculator icons", () => {
       // Icons are rendered as direct text nodes in our mock, verified by component rendering
-      expect(() => render(<UtilitiesScreen />)).not.toThrow();
+      expect(() => renderWithProviders(<UtilitiesScreen />)).not.toThrow();
     });
 
     it("should render chevron icons for navigation", () => {
       // Chevron icons are rendered as direct text nodes, verified by component rendering
-      expect(() => render(<UtilitiesScreen />)).not.toThrow();
+      expect(() => renderWithProviders(<UtilitiesScreen />)).not.toThrow();
     });
   });
 
   describe("navigation interactions", () => {
     it("should navigate to Unit Converter when pressed", () => {
-      const { getByTestId } = render(<UtilitiesScreen />);
+      const { getByTestId } = renderWithProviders(<UtilitiesScreen />);
 
       const unitConverterCard = getByTestId("calculator-unit-converter");
       fireEvent.press(unitConverterCard);
@@ -119,7 +114,7 @@ describe("UtilitiesScreen", () => {
     });
 
     it("should navigate to ABV Calculator when pressed", () => {
-      const { getByTestId } = render(<UtilitiesScreen />);
+      const { getByTestId } = renderWithProviders(<UtilitiesScreen />);
 
       const abvCard = getByTestId("calculator-abv-calculator");
       fireEvent.press(abvCard);
@@ -128,7 +123,7 @@ describe("UtilitiesScreen", () => {
     });
 
     it("should navigate to Strike Water Calculator when pressed", () => {
-      const { getByTestId } = render(<UtilitiesScreen />);
+      const { getByTestId } = renderWithProviders(<UtilitiesScreen />);
 
       const strikeWaterCard = getByTestId("calculator-strike-water");
       fireEvent.press(strikeWaterCard);
@@ -139,7 +134,7 @@ describe("UtilitiesScreen", () => {
     });
 
     it("should navigate to Hydrometer Correction when pressed", () => {
-      const { getByTestId } = render(<UtilitiesScreen />);
+      const { getByTestId } = renderWithProviders(<UtilitiesScreen />);
 
       const hydrometerCard = getByTestId("calculator-hydrometer-correction");
       fireEvent.press(hydrometerCard);
@@ -150,7 +145,7 @@ describe("UtilitiesScreen", () => {
     });
 
     it("should navigate to Dilution Calculator when pressed", () => {
-      const { getByTestId } = render(<UtilitiesScreen />);
+      const { getByTestId } = renderWithProviders(<UtilitiesScreen />);
 
       const dilutionCard = getByTestId("calculator-dilution");
       fireEvent.press(dilutionCard);
@@ -159,7 +154,7 @@ describe("UtilitiesScreen", () => {
     });
 
     it("should navigate to Boil Timer when pressed", () => {
-      const { getByTestId } = render(<UtilitiesScreen />);
+      const { getByTestId } = renderWithProviders(<UtilitiesScreen />);
 
       const boilTimerCard = getByTestId("calculator-boil-timer");
       fireEvent.press(boilTimerCard);
@@ -172,7 +167,7 @@ describe("UtilitiesScreen", () => {
 
   describe("test IDs", () => {
     it("should have correct test IDs for all calculators", () => {
-      const { getByTestId } = render(<UtilitiesScreen />);
+      const { getByTestId } = renderWithProviders(<UtilitiesScreen />);
 
       expect(getByTestId("calculator-unit-converter")).toBeTruthy();
       expect(getByTestId("calculator-abv-calculator")).toBeTruthy();
@@ -186,7 +181,7 @@ describe("UtilitiesScreen", () => {
   describe("theming", () => {
     it("should apply theme colors to components", () => {
       // Component should render without errors when theme is applied
-      expect(() => render(<UtilitiesScreen />)).not.toThrow();
+      expect(() => renderWithProviders(<UtilitiesScreen />)).not.toThrow();
     });
   });
 });
@@ -202,13 +197,13 @@ describe("withAlpha helper function", () => {
 
     it("should handle hex colors in component rendering", () => {
       // The component uses withAlpha internally with theme.colors.primary
-      expect(() => render(<UtilitiesScreen />)).not.toThrow();
+      expect(() => renderWithProviders(<UtilitiesScreen />)).not.toThrow();
     });
   });
 
   describe("component integration", () => {
     it("should render calculator cards with alpha-modified backgrounds", () => {
-      const { getByTestId } = render(<UtilitiesScreen />);
+      const { getByTestId } = renderWithProviders(<UtilitiesScreen />);
 
       // Each calculator card should render successfully with alpha-modified background
       const calculatorIds = [
@@ -232,13 +227,13 @@ describe("UtilitiesScreen integration", () => {
   describe("scrollable content", () => {
     it("should render within ScrollView", () => {
       // Component should render successfully with ScrollView wrapper
-      expect(() => render(<UtilitiesScreen />)).not.toThrow();
+      expect(() => renderWithProviders(<UtilitiesScreen />)).not.toThrow();
     });
   });
 
   describe("responsive layout", () => {
     it("should handle calculator grid layout", () => {
-      const { getByTestId } = render(<UtilitiesScreen />);
+      const { getByTestId } = renderWithProviders(<UtilitiesScreen />);
 
       // All calculator cards should be present in the grid
       expect(getByTestId("calculator-unit-converter")).toBeTruthy();
@@ -252,7 +247,7 @@ describe("UtilitiesScreen integration", () => {
 
   describe("accessibility", () => {
     it("should render text with proper line limits", () => {
-      const { getByText } = render(<UtilitiesScreen />);
+      const { getByText } = renderWithProviders(<UtilitiesScreen />);
 
       // Description text should render (numberOfLines={2} should not cause issues)
       expect(
@@ -266,7 +261,7 @@ describe("UtilitiesScreen integration", () => {
 
   describe("content completeness", () => {
     it("should render all required content elements", () => {
-      const { getByText } = render(<UtilitiesScreen />);
+      const { getByText } = renderWithProviders(<UtilitiesScreen />);
 
       // Header content
       expect(getByText("Brewing Calculators")).toBeTruthy();
