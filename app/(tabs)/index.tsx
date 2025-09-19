@@ -73,7 +73,7 @@ import {
 } from "@src/components/ui/ContextMenu/BrewSessionContextMenu";
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
-import { QUERY_KEYS } from "@/src/services/api/queryClient";
+import { QUERY_KEYS } from "@services/api/queryClient";
 export default function DashboardScreen() {
   const { user } = useAuth();
   const theme = useTheme();
@@ -124,7 +124,7 @@ export default function DashboardScreen() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["dashboard", user?.id ?? "anonymous"],
+    queryKey: [...QUERY_KEYS.DASHBOARD, user?.id ?? "anonymous"],
     queryFn: async () => {
       try {
         // Try to fetch fresh data first
@@ -157,11 +157,12 @@ export default function DashboardScreen() {
         };
 
         // Cache the fresh data for offline use
-        OfflineCacheService.cacheDashboardData(freshDashboardData).catch(
-          error => {
-            console.warn("Failed to cache dashboard data:", error);
-          }
-        );
+        OfflineCacheService.cacheDashboardData(
+          freshDashboardData,
+          user?.id
+        ).catch(error => {
+          console.warn("Failed to cache dashboard data:", error);
+        });
 
         return {
           data: freshDashboardData,
@@ -179,7 +180,9 @@ export default function DashboardScreen() {
 
         // Try to get cached data when API fails
         try {
-          const cachedData = await OfflineCacheService.getCachedDashboardData();
+          const cachedData = await OfflineCacheService.getCachedDashboardData(
+            user?.id
+          );
           if (cachedData) {
             console.log("Using cached dashboard data due to API error");
             return {
@@ -264,7 +267,7 @@ export default function DashboardScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.DASHBOARD] });
     },
     onError: (error: unknown) => {
       console.error("Failed to delete recipe:", error);
@@ -291,7 +294,7 @@ export default function DashboardScreen() {
     },
     onSuccess: (response, recipe) => {
       queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.DASHBOARD] });
       const cloneType = recipe.is_public ? "cloned" : "versioned";
       Alert.alert(
         "Recipe Cloned",

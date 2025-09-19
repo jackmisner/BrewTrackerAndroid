@@ -60,7 +60,7 @@ import {
 } from "@src/components/ui/ContextMenu/BrewSessionContextMenu";
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
-import { QUERY_KEYS } from "@/src/services/api/queryClient";
+import { QUERY_KEYS } from "@services/api/queryClient";
 export default function BrewSessionsScreen() {
   const theme = useTheme();
   const styles = brewSessionsStyles(theme);
@@ -121,11 +121,19 @@ export default function BrewSessionsScreen() {
     mutationFn: async (brewSessionId: string) => {
       return ApiService.brewSessions.delete(brewSessionId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [...QUERY_KEYS.BREW_SESSIONS],
+    onSuccess: (_data, brewSessionId) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.BREW_SESSIONS });
+      // Drop stale detail caches for the deleted session
+      queryClient.removeQueries({
+        queryKey: QUERY_KEYS.BREW_SESSION(brewSessionId),
       });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.removeQueries({
+        queryKey: QUERY_KEYS.FERMENTATION_DATA(brewSessionId),
+      });
+      queryClient.removeQueries({
+        queryKey: QUERY_KEYS.FERMENTATION_STATS(brewSessionId),
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD });
     },
     onError: (error, brewSessionId) => {
       console.error("Failed to delete brew session:", error);

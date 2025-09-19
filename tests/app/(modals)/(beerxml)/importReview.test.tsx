@@ -29,22 +29,34 @@ jest.mock("expo-router", () => ({
   })),
 }));
 
-jest.mock("@tanstack/react-query", () => ({
-  useQuery: jest.fn(() => ({
-    data: null,
-    isLoading: false,
-    error: null,
-  })),
-  useMutation: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isLoading: false,
-    error: null,
-  })),
-  useQueryClient: jest.fn(() => ({
-    invalidateQueries: jest.fn(),
-  })),
-}));
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query");
+  return {
+    ...actual,
+    QueryClient: jest.fn().mockImplementation(() => ({
+      invalidateQueries: jest.fn(),
+      clear: jest.fn(),
+      getQueryCache: jest.fn(() => ({
+        getAll: jest.fn(() => []),
+      })),
+      removeQueries: jest.fn(),
+    })),
+    useQuery: jest.fn(() => ({
+      data: null,
+      isLoading: false,
+      error: null,
+    })),
+    useMutation: jest.fn(() => ({
+      mutate: jest.fn(),
+      mutateAsync: jest.fn(),
+      isLoading: false,
+      error: null,
+    })),
+    useQueryClient: jest.fn(() => ({
+      invalidateQueries: jest.fn(),
+    })),
+  };
+});
 
 jest.mock("@services/api/apiService", () => ({
   default: {

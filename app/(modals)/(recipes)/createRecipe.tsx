@@ -49,7 +49,7 @@ import { ReviewForm } from "@src/components/recipes/RecipeForm/ReviewForm";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { generateUniqueId } from "@utils/keyUtils";
-import { QUERY_KEYS } from "@/src/services/api/queryClient";
+import { QUERY_KEYS } from "@services/api/queryClient";
 
 /**
  * Recipe creation wizard steps
@@ -260,11 +260,12 @@ export default function CreateRecipeScreen() {
     onSuccess: response => {
       // Invalidate relevant recipe caches to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["userRecipes"] });
-      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] }); // AllRecipes cache
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.RECIPES] }); // AllRecipes cache
       queryClient.invalidateQueries({
         queryKey: [...QUERY_KEYS.RECIPES, "offline"],
       }); // Offline recipes cache
-
+      // Prime the detail cache for immediate access
+      queryClient.setQueryData(QUERY_KEYS.RECIPE(response.id), response);
       Alert.alert("Success", "Recipe created successfully!", [
         {
           text: "View Recipe",

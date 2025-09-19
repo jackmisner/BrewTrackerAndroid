@@ -164,7 +164,7 @@ export function useOfflineCreateRecipe() {
         queryKey: [...QUERY_KEYS.RECIPES, "offline"],
       });
       queryClient.invalidateQueries({
-        queryKey: ["dashboard"],
+        queryKey: [QUERY_KEYS.DASHBOARD],
       });
       // Invalidate sync status for immediate banner updates
       queryClient.invalidateQueries({
@@ -262,7 +262,7 @@ export function useOfflineUpdateRecipe() {
         queryKey: [...QUERY_KEYS.RECIPE(id), "offline"],
       });
       queryClient.invalidateQueries({
-        queryKey: ["dashboard"],
+        queryKey: [QUERY_KEYS.DASHBOARD],
       });
       // Invalidate sync status for immediate banner updates
       queryClient.invalidateQueries({
@@ -317,7 +317,7 @@ export function useOfflineDeleteRecipe() {
         queryKey: [...QUERY_KEYS.RECIPES, "offline"],
       });
       queryClient.invalidateQueries({
-        queryKey: ["dashboard"],
+        queryKey: [QUERY_KEYS.DASHBOARD],
       });
       // IMPORTANT: Invalidate sync status so banner updates immediately
       queryClient.invalidateQueries({

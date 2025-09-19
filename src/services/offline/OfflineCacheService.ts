@@ -83,6 +83,11 @@ export interface CachedDashboardData {
   timestamp: number;
 }
 
+// User-scoped dashboard cache
+interface DashboardByUser {
+  [userId: string]: CachedDashboardData;
+}
+
 // Recipe list data types
 interface CachedRecipeListData {
   recipes: Recipe[];
@@ -98,7 +103,8 @@ interface CachedRecipeListData {
 interface CachedData {
   ingredients: CachedIngredients;
   beerStyles: CachedBeerStyles;
-  dashboard?: CachedDashboardData;
+  dashboard?: CachedDashboardData; // Legacy single-user cache
+  dashboardByUser?: DashboardByUser; // New user-scoped cache
   recipeList?: CachedRecipeListData;
   metadata: CacheMetadata;
 }
@@ -613,13 +619,16 @@ export class OfflineCacheService {
   // ==============================
 
   /**
-   * Cache dashboard data for offline viewing
+   * Cache dashboard data for offline viewing (user-scoped)
    */
-  static async cacheDashboardData(dashboardData: {
-    user_stats: DashboardUserStats;
-    recent_recipes: Recipe[];
-    active_brew_sessions: BrewSession[];
-  }): Promise<void> {
+  static async cacheDashboardData(
+    dashboardData: {
+      user_stats: DashboardUserStats;
+      recent_recipes: Recipe[];
+      active_brew_sessions: BrewSession[];
+    },
+    userId?: string
+  ): Promise<void> {
     try {
       const cachedData = await this.loadCachedData();
       if (!cachedData) {
@@ -627,10 +636,27 @@ export class OfflineCacheService {
         return;
       }
 
-      cachedData.dashboard = {
+      const dashboardWithTimestamp = {
         ...dashboardData,
         timestamp: Date.now(),
       };
+
+      if (userId) {
+        // User-scoped caching
+        if (!cachedData.dashboardByUser) {
+          cachedData.dashboardByUser = {};
+        }
+        cachedData.dashboardByUser[userId] = dashboardWithTimestamp;
+
+        // Migrate legacy data to user-scoped if it exists
+        if (cachedData.dashboard && !cachedData.dashboardByUser[userId]) {
+          cachedData.dashboardByUser[userId] = cachedData.dashboard;
+          delete cachedData.dashboard; // Clean up legacy data
+        }
+      } else {
+        // Legacy fallback for backward compatibility
+        cachedData.dashboard = dashboardWithTimestamp;
+      }
 
       // Update metadata
       cachedData.metadata.lastUpdated = Date.now();
@@ -644,25 +670,59 @@ export class OfflineCacheService {
   }
 
   /**
-   * Get cached dashboard data
+   * Get cached dashboard data (user-scoped)
    */
-  static async getCachedDashboardData(): Promise<CachedDashboardData | null> {
+  static async getCachedDashboardData(
+    userId?: string
+  ): Promise<CachedDashboardData | null> {
     try {
       const cachedData = await this.loadCachedData();
-      if (!cachedData?.dashboard) {
+      if (!cachedData) {
+        return null;
+      }
+
+      let dashboardData: CachedDashboardData | null = null;
+
+      if (userId && cachedData.dashboardByUser?.[userId]) {
+        // User-scoped data
+        dashboardData = cachedData.dashboardByUser[userId];
+      } else if (cachedData.dashboard) {
+        // Legacy fallback
+        dashboardData = cachedData.dashboard;
+
+        // Auto-migrate legacy data to user-scoped if userId is provided
+        if (userId) {
+          if (!cachedData.dashboardByUser) {
+            cachedData.dashboardByUser = {};
+          }
+          cachedData.dashboardByUser[userId] = dashboardData;
+          delete cachedData.dashboard;
+
+          // Save migrated data
+          try {
+            const dataString = JSON.stringify(cachedData);
+            await AsyncStorage.setItem(this.CACHE_KEY, dataString);
+            console.log(`Migrated dashboard cache for user ${userId}`);
+          } catch (error) {
+            console.warn("Failed to save migrated dashboard data:", error);
+          }
+        }
+      }
+
+      if (!dashboardData) {
         return null;
       }
 
       // Check if dashboard cache is still valid (24 hours)
       const dashboardCacheExpiry = 24 * 60 * 60 * 1000; // 24 hours
       const isExpired =
-        Date.now() - cachedData.dashboard.timestamp > dashboardCacheExpiry;
+        Date.now() - dashboardData.timestamp > dashboardCacheExpiry;
 
       if (isExpired) {
         console.log("Cached dashboard data is expired but returning anyway");
       }
 
-      return cachedData.dashboard;
+      return dashboardData;
     } catch (error) {
       console.error("Failed to get cached dashboard data:", error);
       return null;
@@ -780,6 +840,8 @@ export class OfflineCacheService {
       try {
         const dashboardData = await this.fetchDashboardData();
         if (dashboardData) {
+          // Note: We don't have userId in background refresh, so use legacy method
+          // Individual components should call cacheDashboardData with userId when they have it
           await this.cacheDashboardData(dashboardData);
         }
       } catch (error) {
