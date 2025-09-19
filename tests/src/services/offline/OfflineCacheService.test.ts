@@ -23,6 +23,7 @@ jest.mock("@services/api/apiService");
 jest.mock("@services/config", () => ({
   STORAGE_KEYS: {
     OFFLINE_CACHE: "offline_cache_test",
+    USER_DATA: "user_data_test",
   },
 }));
 

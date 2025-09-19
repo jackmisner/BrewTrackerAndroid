@@ -34,6 +34,7 @@ import {
   BrewSession,
 } from "@src/types";
 import { BeerStyleOption } from "@src/hooks/useBeerStyles";
+import { extractUserIdFromJWT } from "@utils/jwtUtils";
 
 // Cache metadata interface
 interface CacheMetadata {
@@ -233,6 +234,9 @@ export class OfflineCacheService {
   private static async fetchAndCacheData(
     reportProgress?: (step: string, message: string, percent: number) => void
   ): Promise<void> {
+    // Get current user ID for cache ownership
+    const currentUserId = await this.getCurrentUserId();
+
     const cachedData: CachedData = {
       ingredients: {
         grain: [],
@@ -245,6 +249,7 @@ export class OfflineCacheService {
         version: this.CACHE_VERSION,
         lastUpdated: Date.now(),
         dataSize: 0,
+        userId: currentUserId || undefined,
       },
     };
 
@@ -390,7 +395,99 @@ export class OfflineCacheService {
   }
 
   /**
-   * Load cached data from storage
+   * Get current user ID from JWT token
+   */
+  private static async getCurrentUserId(): Promise<string | null> {
+    try {
+      const token = await ApiService.token.getToken();
+      if (!token) {
+        return null;
+      }
+      return extractUserIdFromJWT(token);
+    } catch (error) {
+      console.warn("Failed to get current user ID from JWT:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Validate cache ownership and handle cross-user cache scenarios
+   */
+  private static async validateCacheOwnership(
+    cachedData: CachedData
+  ): Promise<CachedData | null> {
+    try {
+      const currentUserId = await this.getCurrentUserId();
+      const cacheUserId = cachedData.metadata.userId;
+
+      // If no current user, allow cache to be used
+      if (!currentUserId) {
+        return cachedData;
+      }
+
+      // If cache has no user ID (legacy cache), migrate it
+      if (!cacheUserId) {
+        console.log(`Migrating legacy cache to user ${currentUserId}`);
+        cachedData.metadata.userId = currentUserId;
+
+        // Migrate legacy dashboard cache to user-scoped
+        if (cachedData.dashboard && !cachedData.dashboardByUser) {
+          cachedData.dashboardByUser = {
+            [currentUserId]: cachedData.dashboard,
+          };
+          delete cachedData.dashboard;
+        }
+
+        // Save migrated cache
+        try {
+          const dataString = JSON.stringify(cachedData);
+          await AsyncStorage.setItem(this.CACHE_KEY, dataString);
+        } catch (error) {
+          console.warn("Failed to save migrated cache:", error);
+        }
+
+        return cachedData;
+      }
+
+      // If cache belongs to current user, return it
+      if (cacheUserId === currentUserId) {
+        return cachedData;
+      }
+
+      // Cache belongs to different user - clear user-specific data
+      console.warn(
+        `Cache user mismatch: cache belongs to ${cacheUserId}, current user is ${currentUserId}. Clearing user-specific data.`
+      );
+
+      // Keep ingredients and beer styles (shared data), clear user-specific data
+      const cleanedCache: CachedData = {
+        ingredients: cachedData.ingredients,
+        beerStyles: cachedData.beerStyles,
+        metadata: {
+          ...cachedData.metadata,
+          userId: currentUserId,
+          dashboardLastUpdated: undefined,
+          recipeListLastUpdated: undefined,
+        },
+      };
+
+      // Save cleaned cache
+      try {
+        const dataString = JSON.stringify(cleanedCache);
+        await AsyncStorage.setItem(this.CACHE_KEY, dataString);
+      } catch (error) {
+        console.warn("Failed to save cleaned cache:", error);
+      }
+
+      return cleanedCache;
+    } catch (error) {
+      console.error("Failed to validate cache ownership:", error);
+      return cachedData; // Return original cache on error
+    }
+  }
+
+  /**
+   * Load cached data from storage with user validation
    */
   private static async loadCachedData(): Promise<CachedData | null> {
     try {
@@ -400,7 +497,9 @@ export class OfflineCacheService {
       }
 
       const data: CachedData = JSON.parse(dataString);
-      return data;
+
+      // Validate cache ownership and handle cross-user scenarios
+      return await this.validateCacheOwnership(data);
     } catch (error) {
       console.error("Failed to load cached data:", error);
       return null;
@@ -505,6 +604,9 @@ export class OfflineCacheService {
       // Load existing cached data
       let cachedData = await this.loadCachedData();
       if (!cachedData) {
+        // Get current user ID for cache ownership
+        const currentUserId = await this.getCurrentUserId();
+
         // If no cache exists, create empty structure
         cachedData = {
           ingredients: { grain: [], hop: [], yeast: [], other: [] },
@@ -513,6 +615,7 @@ export class OfflineCacheService {
             version: this.CACHE_VERSION,
             lastUpdated: Date.now(),
             dataSize: 0,
+            userId: currentUserId || undefined,
           },
         };
       }
@@ -901,15 +1004,15 @@ export class OfflineCacheService {
         await Promise.all([
           withTimeout(
             ApiService.recipes.getAll(PAGE, RECENT_RECIPES_LIMIT),
-            10000
+            5000
           ),
           withTimeout(
             ApiService.brewSessions.getAll(PAGE, BREW_SESSIONS_LIMIT),
-            10000
+            5000
           ),
           withTimeout(
             ApiService.recipes.getPublic(PAGE, PUBLIC_PAGE_SIZE),
-            10000
+            5000
           ),
         ]);
 

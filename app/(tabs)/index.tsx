@@ -39,7 +39,7 @@
  * @testing_notes
  * - Covered by integration tests for data loading states (loading, error, success) and menu actions
  */
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -90,16 +90,18 @@ export default function DashboardScreen() {
   const recipeContextMenu = useContextMenu<Recipe>();
   const brewSessionContextMenu = useContextMenu<BrewSession>();
 
+  // Cleanup cooldown tracking
+  const CLEANUP_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+  const lastCleanupTimeRef = useRef(0);
+
   // Handle pull to refresh
   const onRefresh = async () => {
     setRefreshing(true);
-    const CLEANUP_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
-    let lastCleanupTime = 0;
     try {
       // Clean up stale cache data when online and refreshing
       try {
         const now = Date.now();
-        if (now - lastCleanupTime < CLEANUP_COOLDOWN_MS) {
+        if (now - lastCleanupTimeRef.current < CLEANUP_COOLDOWN_MS) {
           console.log("Skipping cleanup due to cooldown");
         } else {
           const cleanup = await OfflineRecipeService.cleanupStaleData();
@@ -108,7 +110,7 @@ export default function DashboardScreen() {
               `Dashboard refresh cleaned up ${cleanup.removed} stale recipes`
             );
           }
-          lastCleanupTime = now;
+          lastCleanupTimeRef.current = now;
         }
       } catch (error) {
         console.warn(

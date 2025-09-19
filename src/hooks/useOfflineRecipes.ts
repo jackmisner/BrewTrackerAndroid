@@ -29,7 +29,7 @@ import OfflineRecipeService from "@services/offline/OfflineRecipeService";
 import { OfflineRecipe } from "@src/types/offline";
 import { QUERY_KEYS } from "@services/api/queryClient";
 import { CreateRecipeRequest, UpdateRecipeRequest } from "@src/types";
-
+const SYNC_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes cooldown between auto-syncs
 /**
  * Hook for getting all recipes with offline support
  */
@@ -83,6 +83,7 @@ export function useOfflineCreateRecipe() {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({
         queryKey: [...QUERY_KEYS.RECIPES, "offline"],
+        exact: true,
       });
 
       // Snapshot the previous value
@@ -371,31 +372,38 @@ export function useOfflineSync() {
 }
 
 /**
+ * Factory function for creating auto-sync hooks with shared cooldown logic
+ */
+function createAutoSyncHook(syncHook: () => any) {
+  return function useAutoSync() {
+    const { isConnected } = useNetwork();
+    const syncMutation = syncHook();
+    const { mutate } = syncMutation;
+    const lastSyncRef = useRef<number | null>(null);
+
+    // Trigger sync when network becomes available
+    useEffect(() => {
+      if (!isConnected || syncMutation.isPending) {
+        return;
+      }
+      const now = Date.now();
+      const canSync =
+        lastSyncRef.current == null ||
+        now - lastSyncRef.current > SYNC_COOLDOWN_MS;
+      if (canSync) {
+        mutate();
+        lastSyncRef.current = now;
+      }
+    }, [isConnected, syncMutation.isPending, mutate]);
+
+    return syncMutation;
+  };
+}
+
+/**
  * Hook that automatically syncs when network becomes available
  */
-export function useAutoOfflineSync() {
-  const { isConnected } = useNetwork();
-  const syncMutation = useOfflineSync();
-  const { mutate } = syncMutation;
-  const lastSyncRef = useRef<number | null>(null);
-  const SYNC_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
-
-  // Trigger sync when network becomes available
-  useEffect(() => {
-    if (!isConnected || syncMutation.isPending) {
-      return;
-    }
-    const now = Date.now();
-    const canSync =
-      lastSyncRef.current == null ||
-      now - lastSyncRef.current > SYNC_COOLDOWN_MS;
-    if (canSync) {
-      mutate();
-      lastSyncRef.current = now;
-    }
-  }, [isConnected, syncMutation.isPending, mutate, SYNC_COOLDOWN_MS]);
-  return syncMutation;
-}
+export const useAutoOfflineSync = createAutoSyncHook(useOfflineSync);
 
 /**
  * Hook for manually triggering sync using modified flags (new approach)
@@ -428,26 +436,6 @@ export function useOfflineModifiedSync() {
 /**
  * Hook that automatically syncs modified recipes when network becomes available
  */
-export function useAutoOfflineModifiedSync() {
-  const { isConnected } = useNetwork();
-  const syncMutation = useOfflineModifiedSync();
-  const { mutate } = syncMutation;
-  const lastSyncRef = useRef<number | null>(null);
-  const SYNC_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
-
-  // Trigger sync when network becomes available
-  useEffect(() => {
-    if (!isConnected || syncMutation.isPending) {
-      return;
-    }
-    const now = Date.now();
-    const canSync =
-      lastSyncRef.current == null ||
-      now - lastSyncRef.current > SYNC_COOLDOWN_MS;
-    if (canSync) {
-      mutate();
-      lastSyncRef.current = now;
-    }
-  }, [isConnected, syncMutation.isPending, mutate, SYNC_COOLDOWN_MS]);
-  return syncMutation;
-}
+export const useAutoOfflineModifiedSync = createAutoSyncHook(
+  useOfflineModifiedSync
+);
