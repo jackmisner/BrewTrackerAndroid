@@ -36,6 +36,7 @@ jest.mock("@tanstack/react-query", () => {
     QueryClient: jest.fn().mockImplementation(() => ({
       invalidateQueries: jest.fn(),
       clear: jest.fn(),
+      defaultOptions: jest.fn(() => ({ queries: { retry: false } })),
       getQueryCache: jest.fn(() => ({
         getAll: jest.fn(() => []),
       })),

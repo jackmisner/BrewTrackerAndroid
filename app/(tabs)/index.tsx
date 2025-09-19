@@ -93,14 +93,22 @@ export default function DashboardScreen() {
   // Handle pull to refresh
   const onRefresh = async () => {
     setRefreshing(true);
+    const CLEANUP_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+    let lastCleanupTime = 0;
     try {
       // Clean up stale cache data when online and refreshing
       try {
-        const cleanup = await OfflineRecipeService.cleanupStaleData();
-        if (cleanup.removed > 0) {
-          console.log(
-            `Dashboard refresh cleaned up ${cleanup.removed} stale recipes`
-          );
+        const now = Date.now();
+        if (now - lastCleanupTime < CLEANUP_COOLDOWN_MS) {
+          console.log("Skipping cleanup due to cooldown");
+        } else {
+          const cleanup = await OfflineRecipeService.cleanupStaleData();
+          if (cleanup.removed > 0) {
+            console.log(
+              `Dashboard refresh cleaned up ${cleanup.removed} stale recipes`
+            );
+          }
+          lastCleanupTime = now;
         }
       } catch (error) {
         console.warn(
@@ -157,12 +165,16 @@ export default function DashboardScreen() {
         };
 
         // Cache the fresh data for offline use
-        OfflineCacheService.cacheDashboardData(
-          freshDashboardData,
-          user?.id
-        ).catch(error => {
-          console.warn("Failed to cache dashboard data:", error);
-        });
+        if (!user?.id) {
+          console.warn("Cannot cache dashboard data without user ID");
+        } else {
+          OfflineCacheService.cacheDashboardData(
+            freshDashboardData,
+            user.id
+          ).catch(error => {
+            console.warn("Failed to cache dashboard data:", error);
+          });
+        }
 
         return {
           data: freshDashboardData,
@@ -180,6 +192,10 @@ export default function DashboardScreen() {
 
         // Try to get cached data when API fails
         try {
+          if (!user?.id) {
+            console.warn("Cannot load cached dashboard data without user ID");
+            throw error; // Rethrow original error
+          }
           const cachedData = await OfflineCacheService.getCachedDashboardData(
             user?.id
           );

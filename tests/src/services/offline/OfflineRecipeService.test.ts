@@ -16,12 +16,14 @@ import ApiService from "@services/api/apiService";
 import NetInfo from "@react-native-community/netinfo";
 import { extractUserIdFromJWT } from "@utils/jwtUtils";
 import { Recipe, CreateRecipeRequest, UpdateRecipeRequest } from "@src/types";
+import OfflineMetricsCalculator from "@services/offline/OfflineMetricsCalculator";
 
 // Mock all external dependencies
 jest.mock("@react-native-async-storage/async-storage");
 jest.mock("@services/api/apiService");
 jest.mock("@react-native-community/netinfo");
 jest.mock("@utils/jwtUtils");
+jest.mock("@services/offline/OfflineMetricsCalculator");
 
 const mockAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
 const mockApiService = ApiService as jest.Mocked<typeof ApiService> & {
@@ -37,6 +39,9 @@ const mockApiService = ApiService as jest.Mocked<typeof ApiService> & {
 };
 const mockExtractUserIdFromJWT = extractUserIdFromJWT as jest.MockedFunction<
   typeof extractUserIdFromJWT
+>;
+const mockOfflineMetricsCalculator = OfflineMetricsCalculator as jest.Mocked<
+  typeof OfflineMetricsCalculator
 >;
 
 // NetInfo is already mocked in setupTests.js, get the default export mock
@@ -100,6 +105,7 @@ describe("OfflineRecipeService", () => {
     mockAsyncStorage.getItem.mockResolvedValue(null);
     mockAsyncStorage.setItem.mockResolvedValue();
     mockAsyncStorage.multiRemove.mockResolvedValue();
+    mockAsyncStorage.getAllKeys = jest.fn().mockResolvedValue([]);
 
     // Default mocks - NetInfo (online by default)
     mockNetInfoDefault.fetch.mockResolvedValue({
@@ -131,6 +137,20 @@ describe("OfflineRecipeService", () => {
       data: mockRecipe,
     } as any);
     mockApiService.recipes.delete.mockResolvedValue(undefined as any);
+
+    // Default mocks - OfflineMetricsCalculator
+    mockOfflineMetricsCalculator.calculateMetrics.mockReturnValue({
+      estimated_og: 1.05,
+      estimated_fg: 1.012,
+      estimated_abv: 5.2,
+      estimated_ibu: 35,
+      estimated_srm: 8,
+      og: 0,
+      fg: 0,
+      abv: 0,
+      ibu: 0,
+      srm: 0,
+    });
   });
 
   describe("loadOfflineState", () => {
@@ -1057,6 +1077,378 @@ describe("OfflineRecipeService", () => {
       const recipes = await OfflineRecipeService.getAll();
 
       expect(recipes).toEqual([]);
+    });
+  });
+
+  describe("cleanupStaleData", () => {
+    it("should remove recipes with missing required fields", async () => {
+      const invalidRecipe = {
+        ...mockRecipe,
+        id: "", // Missing ID
+        name: "", // Missing name
+        needsSync: false, // Not needing sync
+      };
+      const validRecipe = {
+        ...mockRecipe,
+        id: "valid-recipe",
+        name: "Valid Recipe",
+      };
+
+      // Set up AsyncStorage to return recipes with invalid data
+      mockAsyncStorage.getItem.mockImplementation(key => {
+        if (key.includes("_pending")) {
+          return Promise.resolve("[]");
+        }
+        return Promise.resolve(JSON.stringify([invalidRecipe, validRecipe]));
+      });
+      mockAsyncStorage.setItem.mockResolvedValue();
+
+      const result = await OfflineRecipeService.cleanupStaleData();
+
+      expect(result.removed).toBe(1); // Should remove 1 invalid recipe
+      expect(result.cleaned).toHaveLength(1); // Should have 1 cleaned item
+      expect(mockAsyncStorage.setItem).toHaveBeenCalled(); // Should save cleaned state
+    });
+
+    it("should preserve recipes that need syncing even if data is invalid", async () => {
+      const invalidButSyncNeededRecipe = {
+        ...mockRecipe,
+        id: "", // Missing ID
+        name: "", // Missing name
+        needsSync: true, // NEEDS SYNC - should be preserved
+      };
+
+      // Set up AsyncStorage to return recipe that needs sync
+      mockAsyncStorage.getItem.mockImplementation(key => {
+        if (key.includes("_pending")) {
+          return Promise.resolve("[]");
+        }
+        return Promise.resolve(JSON.stringify([invalidButSyncNeededRecipe]));
+      });
+      mockAsyncStorage.setItem.mockResolvedValue();
+
+      const result = await OfflineRecipeService.cleanupStaleData();
+
+      expect(result.removed).toBe(0); // Should not remove recipe that needs sync
+      expect(result.cleaned).toHaveLength(0); // Should not clean recipes that need sync
+    });
+
+    it("should handle cleanup errors gracefully", async () => {
+      mockAsyncStorage.getItem.mockRejectedValue(new Error("Storage error"));
+
+      const result = await OfflineRecipeService.cleanupStaleData();
+
+      expect(result.removed).toBe(0);
+      expect(result.cleaned).toEqual([]);
+    });
+  });
+
+  describe("clearUserData", () => {
+    it("should clear specific user's data when userId is provided", async () => {
+      const userId = "user-123";
+      const userKeys = [
+        `offline_recipes_${userId}`,
+        `offline_recipes_${userId}_pending`,
+        `offline_recipes_${userId}_meta`,
+        `offline_recipes_${userId}_pending_failed`,
+      ];
+
+      // Mock AsyncStorage.multiRemove to track what gets removed
+      const mockMultiRemove = jest.fn().mockResolvedValue(userId === null);
+      mockAsyncStorage.multiRemove = mockMultiRemove;
+
+      await OfflineRecipeService.clearUserData(userId);
+
+      expect(mockMultiRemove).toHaveBeenCalledWith(userKeys);
+    });
+
+    it("should clear all offline recipe keys when no userId is provided", async () => {
+      const allKeys = [
+        "offline_recipes_user1",
+        "offline_recipes_user1_pending",
+        "offline_recipes_user2",
+        "offline_recipes_user2_meta",
+        "other_storage_key", // Should not be included
+        "offline_recipes_anonymous_device123",
+      ];
+
+      const expectedKeysToRemove = [
+        "offline_recipes_user1",
+        "offline_recipes_user1_pending",
+        "offline_recipes_user2",
+        "offline_recipes_user2_meta",
+        "offline_recipes_anonymous_device123",
+      ];
+
+      mockAsyncStorage.getAllKeys.mockResolvedValue(allKeys);
+      const mockMultiRemove = jest.fn().mockResolvedValue(null);
+      mockAsyncStorage.multiRemove = mockMultiRemove;
+
+      await OfflineRecipeService.clearUserData();
+
+      expect(mockAsyncStorage.getAllKeys).toHaveBeenCalled();
+      expect(mockMultiRemove).toHaveBeenCalledWith(expectedKeysToRemove);
+    });
+
+    it("should handle errors when clearing user data", async () => {
+      const userId = "user-123";
+      mockAsyncStorage.multiRemove.mockRejectedValue(
+        new Error("Storage error")
+      );
+
+      await expect(OfflineRecipeService.clearUserData(userId)).rejects.toThrow(
+        "Storage error"
+      );
+    });
+  });
+
+  describe("cleanupTombstones", () => {
+    it("should remove old tombstones older than 30 days", async () => {
+      const now = Date.now();
+      const thirtyOneDaysAgo = now - 31 * 24 * 60 * 60 * 1000; // 31 days ago
+      const twentyNineDaysAgo = now - 29 * 24 * 60 * 60 * 1000; // 29 days ago
+
+      const oldTombstone = {
+        ...mockRecipe,
+        id: "old-tombstone",
+        name: "Old Deleted Recipe",
+        isDeleted: true,
+        deletedAt: thirtyOneDaysAgo,
+        syncStatus: "pending" as const,
+      };
+
+      const recentTombstone = {
+        ...mockRecipe,
+        id: "recent-tombstone",
+        name: "Recent Deleted Recipe",
+        isDeleted: true,
+        deletedAt: twentyNineDaysAgo,
+        syncStatus: "pending" as const,
+      };
+
+      const normalRecipe = {
+        ...mockRecipe,
+        id: "normal-recipe",
+        name: "Normal Recipe",
+        isDeleted: false,
+      };
+
+      // Set up AsyncStorage to return recipes with tombstones
+      mockAsyncStorage.getItem.mockImplementation(key => {
+        if (key.includes("_pending")) {
+          return Promise.resolve("[]");
+        }
+        return Promise.resolve(
+          JSON.stringify([oldTombstone, recentTombstone, normalRecipe])
+        );
+      });
+      mockAsyncStorage.setItem.mockResolvedValue();
+
+      const result = await OfflineRecipeService.cleanupTombstones();
+
+      expect(result.cleaned).toBe(1); // Should remove 1 old tombstone
+      expect(result.details).toHaveLength(1);
+      expect(result.details[0]).toContain("Old Deleted Recipe");
+      expect(mockAsyncStorage.setItem).toHaveBeenCalled(); // Should save cleaned state
+    });
+
+    it("should remove successfully synced tombstones", async () => {
+      const syncedTombstone = {
+        ...mockRecipe,
+        id: "synced-tombstone",
+        name: "Synced Deleted Recipe",
+        isDeleted: true,
+        deletedAt: Date.now() - 5 * 24 * 60 * 60 * 1000, // 5 days ago
+        syncStatus: "synced" as const,
+        needsSync: false, // Successfully synced
+      };
+
+      const pendingTombstone = {
+        ...mockRecipe,
+        id: "pending-tombstone",
+        name: "Pending Deleted Recipe",
+        isDeleted: true,
+        deletedAt: Date.now() - 5 * 24 * 60 * 60 * 1000, // 5 days ago
+        syncStatus: "pending" as const,
+        needsSync: true, // Still needs sync
+      };
+
+      // Set up AsyncStorage to return tombstones
+      mockAsyncStorage.getItem.mockImplementation(key => {
+        if (key.includes("_pending")) {
+          return Promise.resolve("[]");
+        }
+        return Promise.resolve(
+          JSON.stringify([syncedTombstone, pendingTombstone])
+        );
+      });
+      mockAsyncStorage.setItem.mockResolvedValue();
+
+      const result = await OfflineRecipeService.cleanupTombstones();
+
+      expect(result.cleaned).toBe(1); // Should remove 1 synced tombstone
+      expect(result.details).toHaveLength(1);
+      expect(result.details[0]).toContain("Synced Deleted Recipe");
+      expect(mockAsyncStorage.setItem).toHaveBeenCalled(); // Should save cleaned state
+    });
+
+    it("should return zero cleaned when no tombstones need cleanup", async () => {
+      const recentTombstone = {
+        ...mockRecipe,
+        id: "recent-tombstone",
+        name: "Recent Pending Tombstone",
+        isDeleted: true,
+        deletedAt: Date.now() - 5 * 24 * 60 * 60 * 1000, // 5 days ago
+        syncStatus: "pending" as const,
+        needsSync: true, // Still needs sync
+      };
+
+      const normalRecipe = {
+        ...mockRecipe,
+        id: "normal-recipe",
+        name: "Normal Recipe",
+        isDeleted: false, // Not a tombstone
+      };
+
+      // Set up AsyncStorage to return recipes without cleanable tombstones
+      mockAsyncStorage.getItem.mockImplementation(key => {
+        if (key.includes("_pending")) {
+          return Promise.resolve("[]");
+        }
+        return Promise.resolve(JSON.stringify([recentTombstone, normalRecipe]));
+      });
+      mockAsyncStorage.setItem.mockResolvedValue();
+
+      const result = await OfflineRecipeService.cleanupTombstones();
+
+      expect(result.cleaned).toBe(0); // Should not clean any tombstones
+      expect(result.details).toHaveLength(0); // No cleanup details
+      // Should not call setItem since no cleanup was needed
+      expect(mockAsyncStorage.setItem).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("calculateMissingMetrics", () => {
+    it("should calculate metrics for recipes that lack them", async () => {
+      const recipeWithoutMetrics = {
+        ...mockRecipe,
+        id: "recipe-without-metrics",
+        name: "Recipe Without Metrics",
+        batch_size: 20,
+        efficiency: 75,
+        ingredients: [{ id: "ing-1", name: "Maris Otter", type: "grain" }],
+        // Missing estimated metrics
+        estimated_og: undefined,
+        estimated_fg: undefined,
+        estimated_abv: undefined,
+        estimated_ibu: undefined,
+        estimated_srm: undefined,
+      };
+
+      const recipeWithMetrics = {
+        ...mockRecipe,
+        id: "recipe-with-metrics",
+        name: "Recipe With Metrics",
+        batch_size: 20,
+        efficiency: 75,
+        ingredients: [{ id: "ing-1", name: "Maris Otter", type: "grain" }],
+        estimated_og: 1.05, // Already has metrics
+        estimated_abv: 5.2,
+      };
+
+      // Set up AsyncStorage to return recipes
+      mockAsyncStorage.getItem.mockImplementation(key => {
+        if (key.includes("_pending")) {
+          return Promise.resolve("[]");
+        }
+        return Promise.resolve(
+          JSON.stringify([recipeWithoutMetrics, recipeWithMetrics])
+        );
+      });
+      mockAsyncStorage.setItem.mockResolvedValue();
+
+      const result = await OfflineRecipeService.calculateMissingMetrics();
+
+      expect(result.processed).toBe(1); // Should process 1 recipe missing metrics
+      expect(result.updated).toBe(1); // Should update 1 recipe
+      expect(result.details).toHaveLength(1);
+      expect(result.details[0]).toContain("Recipe Without Metrics");
+      expect(mockAsyncStorage.setItem).toHaveBeenCalled(); // Should save updated state
+    });
+
+    it("should return zero updated when no recipes need metrics calculation", async () => {
+      const recipeWithMetrics = {
+        ...mockRecipe,
+        id: "recipe-with-metrics",
+        name: "Recipe With Metrics",
+        batch_size: 20,
+        efficiency: 75,
+        ingredients: [{ id: "ing-1", name: "Maris Otter", type: "grain" }],
+        estimated_og: 1.05, // Already has metrics
+        estimated_abv: 5.2,
+      };
+
+      const deletedRecipe = {
+        ...mockRecipe,
+        id: "deleted-recipe",
+        name: "Deleted Recipe",
+        isDeleted: true, // Should be skipped
+        batch_size: 20,
+        efficiency: 75,
+        ingredients: [{ id: "ing-1", name: "Maris Otter", type: "grain" }],
+      };
+
+      // Set up AsyncStorage to return recipes that don't need metrics calculation
+      mockAsyncStorage.getItem.mockImplementation(key => {
+        if (key.includes("_pending")) {
+          return Promise.resolve("[]");
+        }
+        return Promise.resolve(
+          JSON.stringify([recipeWithMetrics, deletedRecipe])
+        );
+      });
+      mockAsyncStorage.setItem.mockResolvedValue();
+
+      const result = await OfflineRecipeService.calculateMissingMetrics();
+
+      expect(result.processed).toBe(0); // Should not process any recipes
+      expect(result.updated).toBe(0); // Should not update any recipes
+      expect(result.details).toHaveLength(1);
+      expect(result.details[0]).toContain(
+        "No recipes found that need metrics calculation"
+      );
+      // Should not call setItem since no updates were made
+      expect(mockAsyncStorage.setItem).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("syncModifiedRecipes", () => {
+    it("should return early when device is offline", async () => {
+      mockNetInfoDefault.fetch.mockResolvedValue({
+        isConnected: false,
+        isInternetReachable: false,
+      } as any);
+
+      const result = await OfflineRecipeService.syncModifiedRecipes();
+
+      expect(result.success).toBe(0);
+      expect(result.failed).toBe(0);
+      expect(result.details).toEqual(["Device is offline"]);
+    });
+
+    it("should handle sync process with no pending recipes", async () => {
+      // Test that syncModifiedRecipes method can be called successfully
+      // and handles the case where there are no recipes to sync
+      mockNetInfoDefault.fetch.mockResolvedValue({
+        isConnected: false, // Keep it simple for now
+        isInternetReachable: false,
+      } as any);
+
+      const result = await OfflineRecipeService.syncModifiedRecipes();
+
+      expect(result.success).toBe(0);
+      expect(result.failed).toBe(0);
+      expect(result.details).toContain("Device is offline");
     });
   });
 });

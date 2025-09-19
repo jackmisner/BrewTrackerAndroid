@@ -659,7 +659,7 @@ export class OfflineCacheService {
       }
 
       // Update metadata
-      cachedData.metadata.lastUpdated = Date.now();
+      cachedData.metadata.dashboardLastUpdated = Date.now();
       const dataString = JSON.stringify(cachedData);
       cachedData.metadata.dataSize = dataString.length;
 
@@ -885,11 +885,32 @@ export class OfflineCacheService {
       const BREW_SESSIONS_LIMIT = 20;
       const PUBLIC_PAGE_SIZE = 1;
 
+      const withTimeout = <T>(
+        promise: Promise<T>,
+        timeoutMs: number
+      ): Promise<T> => {
+        return Promise.race([
+          promise,
+          new Promise<T>((_, reject) =>
+            setTimeout(() => reject(new Error("Request timeout")), timeoutMs)
+          ),
+        ]);
+      };
+
       const [recipesResponse, brewSessionsResponse, publicRecipesResponse] =
         await Promise.all([
-          ApiService.recipes.getAll(PAGE, RECENT_RECIPES_LIMIT),
-          ApiService.brewSessions.getAll(PAGE, BREW_SESSIONS_LIMIT),
-          ApiService.recipes.getPublic(PAGE, PUBLIC_PAGE_SIZE),
+          withTimeout(
+            ApiService.recipes.getAll(PAGE, RECENT_RECIPES_LIMIT),
+            10000
+          ),
+          withTimeout(
+            ApiService.brewSessions.getAll(PAGE, BREW_SESSIONS_LIMIT),
+            10000
+          ),
+          withTimeout(
+            ApiService.recipes.getPublic(PAGE, PUBLIC_PAGE_SIZE),
+            10000
+          ),
         ]);
 
       const recipes = recipesResponse.data?.recipes || [];

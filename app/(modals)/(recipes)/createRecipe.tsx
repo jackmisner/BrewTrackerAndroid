@@ -260,7 +260,7 @@ export default function CreateRecipeScreen() {
     onSuccess: response => {
       // Invalidate relevant recipe caches to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["userRecipes"] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.RECIPES] }); // AllRecipes cache
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.RECIPES }); // AllRecipes cache
       queryClient.invalidateQueries({
         queryKey: [...QUERY_KEYS.RECIPES, "offline"],
       }); // Offline recipes cache

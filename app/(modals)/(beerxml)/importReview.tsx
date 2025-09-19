@@ -192,8 +192,8 @@ export default function ImportReviewScreen() {
     },
     onSuccess: createdRecipe => {
       // Invalidate queries to refresh recipe lists
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.RECIPES] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.DASHBOARD] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.RECIPES });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD });
 
       // Show success message and navigate to recipe
       Alert.alert(
