@@ -73,6 +73,7 @@ import {
 } from "@src/components/ui/ContextMenu/BrewSessionContextMenu";
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
+import { QUERY_KEYS } from "@/src/services/api/queryClient";
 export default function DashboardScreen() {
   const { user } = useAuth();
   const theme = useTheme();
@@ -262,7 +263,7 @@ export default function DashboardScreen() {
       await ApiService.recipes.delete(recipeId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (error: unknown) => {
@@ -289,7 +290,7 @@ export default function DashboardScreen() {
       }
     },
     onSuccess: (response, recipe) => {
-      queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       const cloneType = recipe.is_public ? "cloned" : "versioned";
       Alert.alert(

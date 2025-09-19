@@ -60,6 +60,7 @@ import {
 } from "@src/components/ui/ContextMenu/BrewSessionContextMenu";
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
+import { QUERY_KEYS } from "@/src/services/api/queryClient";
 export default function BrewSessionsScreen() {
   const theme = useTheme();
   const styles = brewSessionsStyles(theme);
@@ -121,7 +122,9 @@ export default function BrewSessionsScreen() {
       return ApiService.brewSessions.delete(brewSessionId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["brewSessions"] });
+      queryClient.invalidateQueries({
+        queryKey: [...QUERY_KEYS.BREW_SESSIONS],
+      });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (error, brewSessionId) => {

@@ -1,8 +1,6 @@
 /* eslint-disable import/first */
 /**
  * useOfflineRecipes Hook Test Suite - Working Tests
- *
- * Testing ACTUAL functionality one test at a time
  */
 
 // Mock data - define before mocks

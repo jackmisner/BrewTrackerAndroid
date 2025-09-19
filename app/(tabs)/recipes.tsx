@@ -282,7 +282,7 @@ export default function RecipesScreen() {
     onSuccess: (response, recipe) => {
       // Add a small delay to ensure server has processed the clone before refreshing
       setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["recipes"] });
+        queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
         queryClient.invalidateQueries({ queryKey: ["dashboard"] });
         // Ensure offline lists reflect the new clone
         queryClient.invalidateQueries({
