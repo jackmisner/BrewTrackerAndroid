@@ -478,4 +478,427 @@ describe("EditRecipeScreen", () => {
       ).not.toThrow();
     });
   });
+
+  describe("hasRecipeChanges Function", () => {
+    // Import the function directly for testing
+    const {
+      hasRecipeChanges,
+    } = require("../../../../app/(modals)/(recipes)/editRecipe");
+
+    const createMockRecipe = (overrides: Partial<any> = {}) => ({
+      name: "Test Recipe",
+      style: "American IPA",
+      description: "A test recipe",
+      batch_size: 5,
+      batch_size_unit: "gal",
+      unit_system: "imperial",
+      boil_time: 60,
+      efficiency: 75,
+      mash_temperature: 152,
+      mash_temp_unit: "F",
+      mash_time: 60,
+      notes: "Test notes",
+      is_public: false,
+      ingredients: [],
+      ...overrides,
+    });
+
+    it("should return false for null or undefined inputs", () => {
+      const recipe = createMockRecipe();
+
+      expect(hasRecipeChanges(null, recipe)).toBe(false);
+      expect(hasRecipeChanges(recipe, null)).toBe(false);
+      expect(hasRecipeChanges(null, null)).toBe(false);
+    });
+
+    it("should return false for identical recipes", () => {
+      const recipe1 = createMockRecipe();
+      const recipe2 = createMockRecipe();
+
+      expect(hasRecipeChanges(recipe1, recipe2)).toBe(false);
+    });
+
+    it("should return false for same reference", () => {
+      const recipe = createMockRecipe();
+
+      expect(hasRecipeChanges(recipe, recipe)).toBe(false);
+    });
+
+    it("should detect changes in scalar fields", () => {
+      const original = createMockRecipe();
+
+      // Test each scalar field that should be compared
+      expect(
+        hasRecipeChanges(createMockRecipe({ name: "Changed Name" }), original)
+      ).toBe(true);
+      expect(
+        hasRecipeChanges(createMockRecipe({ style: "Changed Style" }), original)
+      ).toBe(true);
+      expect(
+        hasRecipeChanges(
+          createMockRecipe({ description: "Changed Description" }),
+          original
+        )
+      ).toBe(true);
+      expect(
+        hasRecipeChanges(createMockRecipe({ batch_size: 10 }), original)
+      ).toBe(true);
+      expect(
+        hasRecipeChanges(createMockRecipe({ batch_size_unit: "l" }), original)
+      ).toBe(true);
+      expect(
+        hasRecipeChanges(createMockRecipe({ unit_system: "metric" }), original)
+      ).toBe(true);
+      expect(
+        hasRecipeChanges(createMockRecipe({ boil_time: 90 }), original)
+      ).toBe(true);
+      expect(
+        hasRecipeChanges(createMockRecipe({ efficiency: 80 }), original)
+      ).toBe(true);
+      expect(
+        hasRecipeChanges(createMockRecipe({ mash_temperature: 155 }), original)
+      ).toBe(true);
+      expect(
+        hasRecipeChanges(createMockRecipe({ mash_temp_unit: "C" }), original)
+      ).toBe(true);
+      expect(
+        hasRecipeChanges(createMockRecipe({ mash_time: 90 }), original)
+      ).toBe(true);
+      expect(
+        hasRecipeChanges(createMockRecipe({ notes: "Changed Notes" }), original)
+      ).toBe(true);
+      expect(
+        hasRecipeChanges(createMockRecipe({ is_public: true }), original)
+      ).toBe(true);
+    });
+
+    it("should detect changes in ingredient array length", () => {
+      const original = createMockRecipe({ ingredients: [] });
+      const withIngredient = createMockRecipe({
+        ingredients: [
+          {
+            id: "ing1",
+            name: "Test Grain",
+            type: "grain",
+            amount: 10,
+            unit: "lb",
+            instance_id: "ing-1",
+          },
+        ],
+      });
+
+      expect(hasRecipeChanges(withIngredient, original)).toBe(true);
+    });
+
+    it("should detect changes in ingredient properties", () => {
+      const baseIngredient = {
+        id: "ing1",
+        name: "Test Grain",
+        type: "grain",
+        amount: 10,
+        unit: "lb",
+        instance_id: "ing-1",
+      };
+
+      const original = createMockRecipe({ ingredients: [baseIngredient] });
+
+      // Test each ingredient property that should be compared
+      expect(
+        hasRecipeChanges(
+          createMockRecipe({
+            ingredients: [{ ...baseIngredient, name: "Changed Grain" }],
+          }),
+          original
+        )
+      ).toBe(true);
+
+      expect(
+        hasRecipeChanges(
+          createMockRecipe({
+            ingredients: [{ ...baseIngredient, type: "hop" }],
+          }),
+          original
+        )
+      ).toBe(true);
+
+      expect(
+        hasRecipeChanges(
+          createMockRecipe({
+            ingredients: [{ ...baseIngredient, amount: 15 }],
+          }),
+          original
+        )
+      ).toBe(true);
+
+      expect(
+        hasRecipeChanges(
+          createMockRecipe({
+            ingredients: [{ ...baseIngredient, unit: "kg" }],
+          }),
+          original
+        )
+      ).toBe(true);
+
+      expect(
+        hasRecipeChanges(
+          createMockRecipe({
+            ingredients: [{ ...baseIngredient, id: "different-id" }],
+          }),
+          original
+        )
+      ).toBe(true);
+    });
+
+    it("should ignore volatile instance_id field changes", () => {
+      const baseIngredient = {
+        id: "ing1",
+        name: "Test Grain",
+        type: "grain",
+        amount: 10,
+        unit: "lb",
+        instance_id: "ing-1",
+      };
+
+      const original = createMockRecipe({ ingredients: [baseIngredient] });
+      const withDifferentInstanceId = createMockRecipe({
+        ingredients: [
+          { ...baseIngredient, instance_id: "different-instance-id" },
+        ],
+      });
+
+      // Should return false because only instance_id changed (volatile field)
+      expect(hasRecipeChanges(withDifferentInstanceId, original)).toBe(false);
+    });
+
+    it("should handle complex ingredient comparison scenarios", () => {
+      const hopIngredient = {
+        id: "hop1",
+        name: "Cascade",
+        type: "hop",
+        amount: 1,
+        unit: "oz",
+        use: "boil",
+        time: 60,
+        alpha_acid: 5.5,
+        notes: "Hop notes",
+        instance_id: "hop-1",
+      };
+
+      const original = createMockRecipe({ ingredients: [hopIngredient] });
+
+      // Test hop-specific fields
+      expect(
+        hasRecipeChanges(
+          createMockRecipe({
+            ingredients: [{ ...hopIngredient, use: "flameout" }],
+          }),
+          original
+        )
+      ).toBe(true);
+
+      expect(
+        hasRecipeChanges(
+          createMockRecipe({ ingredients: [{ ...hopIngredient, time: 30 }] }),
+          original
+        )
+      ).toBe(true);
+
+      expect(
+        hasRecipeChanges(
+          createMockRecipe({
+            ingredients: [{ ...hopIngredient, alpha_acid: 6.0 }],
+          }),
+          original
+        )
+      ).toBe(true);
+
+      expect(
+        hasRecipeChanges(
+          createMockRecipe({
+            ingredients: [{ ...hopIngredient, notes: "Different notes" }],
+          }),
+          original
+        )
+      ).toBe(true);
+    });
+
+    it("should handle grain-specific properties", () => {
+      const grainIngredient = {
+        id: "grain1",
+        name: "Pilsner Malt",
+        type: "grain",
+        amount: 10,
+        unit: "lb",
+        potential: 1.037,
+        color: 2,
+        attenuation: 80,
+        description: "Base malt",
+        instance_id: "grain-1",
+      };
+
+      const original = createMockRecipe({ ingredients: [grainIngredient] });
+
+      // Test grain-specific fields
+      expect(
+        hasRecipeChanges(
+          createMockRecipe({
+            ingredients: [{ ...grainIngredient, potential: 1.04 }],
+          }),
+          original
+        )
+      ).toBe(true);
+
+      expect(
+        hasRecipeChanges(
+          createMockRecipe({ ingredients: [{ ...grainIngredient, color: 5 }] }),
+          original
+        )
+      ).toBe(true);
+
+      expect(
+        hasRecipeChanges(
+          createMockRecipe({
+            ingredients: [{ ...grainIngredient, attenuation: 85 }],
+          }),
+          original
+        )
+      ).toBe(true);
+
+      expect(
+        hasRecipeChanges(
+          createMockRecipe({
+            ingredients: [
+              { ...grainIngredient, description: "Different description" },
+            ],
+          }),
+          original
+        )
+      ).toBe(true);
+    });
+
+    it("should handle multiple ingredients correctly", () => {
+      const ingredient1 = {
+        id: "ing1",
+        name: "Grain 1",
+        type: "grain",
+        amount: 10,
+        unit: "lb",
+        instance_id: "ing-1",
+      };
+
+      const ingredient2 = {
+        id: "ing2",
+        name: "Hop 1",
+        type: "hop",
+        amount: 1,
+        unit: "oz",
+        instance_id: "ing-2",
+      };
+
+      const original = createMockRecipe({
+        ingredients: [ingredient1, ingredient2],
+      });
+
+      // Change second ingredient
+      const modified = createMockRecipe({
+        ingredients: [ingredient1, { ...ingredient2, amount: 2 }],
+      });
+
+      expect(hasRecipeChanges(modified, original)).toBe(true);
+    });
+
+    it("should return false when only volatile fields differ", () => {
+      const baseRecipe = createMockRecipe({
+        ingredients: [
+          {
+            id: "ing1",
+            name: "Test Ingredient",
+            type: "grain",
+            amount: 10,
+            unit: "lb",
+            instance_id: "original-id",
+          },
+        ],
+      });
+
+      const volatileOnlyDiff = createMockRecipe({
+        ingredients: [
+          {
+            id: "ing1",
+            name: "Test Ingredient",
+            type: "grain",
+            amount: 10,
+            unit: "lb",
+            instance_id: "different-id", // Only volatile field differs
+          },
+        ],
+      });
+
+      expect(hasRecipeChanges(volatileOnlyDiff, baseRecipe)).toBe(false);
+    });
+
+    it("should handle undefined/null ingredient properties", () => {
+      const ingredient1 = {
+        id: "ing1",
+        name: "Test",
+        type: "grain",
+        amount: 10,
+        unit: "lb",
+        use: undefined,
+        time: null,
+        alpha_acid: undefined,
+        instance_id: "ing-1",
+      };
+
+      const ingredient2 = {
+        id: "ing1",
+        name: "Test",
+        type: "grain",
+        amount: 10,
+        unit: "lb",
+        use: null,
+        time: undefined,
+        alpha_acid: null,
+        instance_id: "ing-2", // Different volatile field
+      };
+
+      const recipe1 = createMockRecipe({ ingredients: [ingredient1] });
+      const recipe2 = createMockRecipe({ ingredients: [ingredient2] });
+
+      // Should detect difference between null and undefined (this is correct behavior)
+      expect(hasRecipeChanges(recipe1, recipe2)).toBe(true);
+    });
+
+    it("should return false when properties are truly identical", () => {
+      const ingredient1 = {
+        id: "ing1",
+        name: "Test",
+        type: "grain",
+        amount: 10,
+        unit: "lb",
+        use: undefined,
+        time: undefined,
+        alpha_acid: undefined,
+        instance_id: "ing-1",
+      };
+
+      const ingredient2 = {
+        id: "ing1",
+        name: "Test",
+        type: "grain",
+        amount: 10,
+        unit: "lb",
+        use: undefined,
+        time: undefined,
+        alpha_acid: undefined,
+        instance_id: "ing-2", // Different volatile field (should be ignored)
+      };
+
+      const recipe1 = createMockRecipe({ ingredients: [ingredient1] });
+      const recipe2 = createMockRecipe({ ingredients: [ingredient2] });
+
+      // Should return false when only volatile fields differ
+      expect(hasRecipeChanges(recipe1, recipe2)).toBe(false);
+    });
+  });
 });

@@ -25,10 +25,8 @@ import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNetwork } from "@contexts/NetworkContext";
 import { useAuth } from "@contexts/AuthContext";
-import {
-  OfflineRecipeService,
-  OfflineRecipe,
-} from "@services/offline/OfflineRecipeService";
+import OfflineRecipeService from "@services/offline/OfflineRecipeService";
+import { OfflineRecipe } from "@src/types/offline";
 import { QUERY_KEYS } from "@services/api/queryClient";
 import { CreateRecipeRequest, UpdateRecipeRequest } from "@src/types";
 

@@ -49,7 +49,7 @@ import {
   useOfflineModifiedSync,
   useAutoOfflineModifiedSync,
 } from "@src/hooks/useOfflineRecipes";
-import { OfflineRecipeService } from "@services/offline/OfflineRecipeService";
+import OfflineRecipeService from "@services/offline/OfflineRecipeService";
 
 import { QUERY_KEYS } from "@services/api/queryClient";
 import { useNetwork } from "@contexts/NetworkContext";

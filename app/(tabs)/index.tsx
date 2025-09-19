@@ -56,7 +56,7 @@ import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
-import { OfflineRecipeService } from "@services/offline/OfflineRecipeService";
+import OfflineRecipeService from "@services/offline/OfflineRecipeService";
 import OfflineCacheService from "@services/offline/OfflineCacheService";
 import { NetworkStatusBanner } from "@src/components/NetworkStatusBanner";
 import ApiService from "@services/api/apiService";

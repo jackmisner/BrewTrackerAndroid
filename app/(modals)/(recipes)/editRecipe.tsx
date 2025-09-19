@@ -14,7 +14,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
-import { OfflineRecipeService } from "@services/offline/OfflineRecipeService";
+import OfflineRecipeService from "@services/offline/OfflineRecipeService";
 import { RecipeFormData, RecipeIngredient, Recipe } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
@@ -34,6 +34,87 @@ enum RecipeStep {
 }
 
 const STEP_TITLES = ["Basic Info", "Parameters", "Ingredients", "Review"];
+
+/**
+ * Efficiently compares two recipe objects for changes, ignoring volatile fields
+ * that shouldn't trigger unsaved changes detection.
+ *
+ * Uses shallow comparison for top-level fields and array length + simple hashing
+ * for ingredients array instead of expensive JSON.stringify.
+ *
+ * @internal Exported for testing purposes only
+ */
+export function hasRecipeChanges(
+  current: RecipeFormData | null,
+  original: RecipeFormData | null
+): boolean {
+  if (!current || !original) {
+    return false;
+  }
+  if (current === original) {
+    return false;
+  }
+
+  // Compare top-level scalar fields (ignore volatile fields)
+  const fieldsToCompare: (keyof RecipeFormData)[] = [
+    "name",
+    "style",
+    "description",
+    "batch_size",
+    "batch_size_unit",
+    "unit_system",
+    "boil_time",
+    "efficiency",
+    "mash_temperature",
+    "mash_temp_unit",
+    "mash_time",
+    "notes",
+    "is_public",
+  ];
+
+  for (const field of fieldsToCompare) {
+    if (current[field] !== original[field]) {
+      return true;
+    }
+  }
+
+  // Fast ingredients array comparison
+  const currentIngredients = current.ingredients || [];
+  const originalIngredients = original.ingredients || [];
+
+  // Quick length check
+  if (currentIngredients.length !== originalIngredients.length) {
+    return true;
+  }
+
+  // Compare ingredients by stable fields only (ignore volatile instance_id)
+  for (let i = 0; i < currentIngredients.length; i++) {
+    const curr = currentIngredients[i];
+    const orig = originalIngredients[i];
+
+    // Compare stable ingredient fields that matter for unsaved changes
+    // Note: instance_id is intentionally ignored as it's volatile and regenerated
+    if (
+      curr.name !== orig.name ||
+      curr.type !== orig.type ||
+      curr.amount !== orig.amount ||
+      curr.unit !== orig.unit ||
+      curr.use !== orig.use ||
+      curr.time !== orig.time ||
+      curr.alpha_acid !== orig.alpha_acid ||
+      curr.notes !== orig.notes ||
+      curr.id !== orig.id || // ID changes are significant
+      curr.potential !== orig.potential ||
+      curr.color !== orig.color ||
+      curr.attenuation !== orig.attenuation ||
+      curr.description !== orig.description
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 // Helper function to convert values to optional numbers
 const toOptionalNumber = (v: any): number | undefined => {
@@ -201,13 +282,10 @@ export default function EditRecipeScreen() {
     }
   }, [existingRecipe, unitSystem]);
 
-  // Check for unsaved changes
+  // Check for unsaved changes using efficient comparison
   useEffect(() => {
-    if (originalRecipe) {
-      const hasChanges =
-        JSON.stringify(recipeData) !== JSON.stringify(originalRecipe);
-      setHasUnsavedChanges(hasChanges);
-    }
+    const hasChanges = hasRecipeChanges(recipeData, originalRecipe);
+    setHasUnsavedChanges(hasChanges);
   }, [recipeData, originalRecipe]);
 
   // Real-time recipe metrics calculation

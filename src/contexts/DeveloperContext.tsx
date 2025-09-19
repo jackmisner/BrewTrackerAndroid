@@ -30,7 +30,7 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STORAGE_KEYS } from "@services/config";
-import { OfflineRecipeService } from "@services/offline/OfflineRecipeService";
+import OfflineRecipeService from "@services/offline/OfflineRecipeService";
 
 /**
  * Network simulation modes for testing
@@ -206,7 +206,7 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
     }
 
     try {
-      const result = await OfflineRecipeService.devCleanupAllTombstones();
+      const result = await OfflineRecipeService.devCleanupAllTombstonesAsync();
       console.log("Developer: Tombstone cleanup completed", result);
       return result;
     } catch (error) {

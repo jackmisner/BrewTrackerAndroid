@@ -5,11 +5,12 @@
  * and network state handling for recipe management.
  */
 
-import OfflineRecipeService, {
+import OfflineRecipeService from "@services/offline/OfflineRecipeService";
+import {
   OfflineRecipe,
   OfflineRecipeState,
   OfflinePendingOperation,
-} from "@services/offline/OfflineRecipeService";
+} from "@src/types/offline";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ApiService from "@services/api/apiService";
 import NetInfo from "@react-native-community/netinfo";
@@ -41,6 +42,7 @@ const mockExtractUserIdFromJWT = extractUserIdFromJWT as jest.MockedFunction<
 // NetInfo is already mocked in setupTests.js, get the default export mock
 const mockNetInfoDefault = require("@react-native-community/netinfo").default;
 
+const mockOfflineStorageService = require("@src/services/storageService");
 describe("OfflineRecipeService", () => {
   const mockUserId = "user-123";
   const mockToken = "mock-jwt-token";
@@ -490,7 +492,7 @@ describe("OfflineRecipeService", () => {
       expect(mockApiService.recipes.create).not.toHaveBeenCalled();
     });
 
-    it("should add pending operation for offline creation", async () => {
+    it("should not add legacy pending operation when using needsSync flow", async () => {
       mockNetInfoDefault.fetch.mockResolvedValue({
         isConnected: false,
         isInternetReachable: false,
@@ -498,9 +500,21 @@ describe("OfflineRecipeService", () => {
 
       await OfflineRecipeService.create(mockCreateRequest);
 
+      // Should not add legacy pending operations when needsSync is true
+      // The modern sync flow handles recipes with needsSync flag
+      const pendingOperationCalls = (
+        mockAsyncStorage.setItem as jest.Mock
+      ).mock.calls.filter(
+        call =>
+          call[0]?.includes("_pending") && call[1]?.includes('"type":"create"')
+      );
+
+      expect(pendingOperationCalls).toHaveLength(0);
+
+      // Should still save the recipe with needsSync: true
       expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
-        expect.stringContaining("_pending"),
-        expect.stringContaining('"type":"create"')
+        expect.stringContaining("offline_recipes_"),
+        expect.stringContaining('"needsSync":true')
       );
     });
   });

@@ -1,7 +1,7 @@
 {
   "name": "brewtracker",
   "main": "expo-router/entry",
-  "version": "0.18.1",
+  "version": "0.18.3",
   "license": "GPL-3.0-or-later",
   "scripts": {
     "start": "expo start",
@@ -38,6 +38,7 @@
     "expo": "~54.0.8",
     "expo-blur": "~15.0.7",
     "expo-constants": "~18.0.9",
+    "expo-device": "^8.0.7",
     "expo-document-picker": "~14.0.7",
     "expo-file-system": "~19.0.14",
     "expo-font": "~14.0.8",

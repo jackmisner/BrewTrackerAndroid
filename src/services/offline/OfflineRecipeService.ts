@@ -25,52 +25,56 @@
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import NetInfo from "@react-native-community/netinfo";
+import * as Device from "expo-device";
 import ApiService from "@services/api/apiService";
 import { STORAGE_KEYS } from "@services/config";
-import {
-  Recipe,
-  CreateRecipeRequest,
-  UpdateRecipeRequest,
-  RecipeIngredient,
-} from "@src/types";
-import NetInfo from "@react-native-community/netinfo";
 import { extractUserIdFromJWT } from "@utils/jwtUtils";
-import { OfflineMetricsCalculator } from "./OfflineMetricsCalculator";
 import { generateUniqueId } from "@utils/keyUtils";
+import { Recipe, CreateRecipeRequest, UpdateRecipeRequest } from "@src/types";
+import {
+  OfflineRecipe,
+  OfflinePendingOperation,
+  OfflineRecipeState,
+} from "@src/types/offline";
+import OfflineMetricsCalculator from "./OfflineMetricsCalculator";
 
-// Offline-specific types
-export interface OfflineRecipe extends Recipe {
-  // Offline-specific metadata
-  isOffline?: boolean;
-  tempId?: string;
-  lastModified: number;
-  syncStatus: "pending" | "synced" | "conflict" | "failed";
-  needsSync?: boolean; // Flag indicating recipe has been modified and needs sync
-  isDeleted?: boolean; // Flag indicating recipe is deleted (tombstone)
-  deletedAt?: number; // Timestamp when recipe was deleted
-  originalData?: Recipe; // For conflict resolution
-}
-
-export interface OfflinePendingOperation {
-  id: string;
-  type: "create" | "update" | "delete";
-  recipeId: string;
-  data?: CreateRecipeRequest | UpdateRecipeRequest;
-  timestamp: number;
-  retryCount: number;
-}
-
-export interface OfflineRecipeState {
-  recipes: OfflineRecipe[];
-  pendingOperations: OfflinePendingOperation[];
-  lastSync: number;
-  version: number;
-}
+// Re-export types from @types/offline for backward compatibility
+export type {
+  OfflineRecipe,
+  OfflinePendingOperation,
+  OfflineRecipeState,
+} from "@src/types/offline";
 
 /**
  * Offline-first Recipe Service
  */
 export class OfflineRecipeService {
+  /**
+   * Get current user ID from JWT token
+   * Returns null if no token or extraction fails
+   */
+  private static async getCurrentUserId(): Promise<string | null> {
+    try {
+      const token = await ApiService.token.getToken();
+      if (!token) {
+        return null;
+      }
+
+      const userId = extractUserIdFromJWT(token);
+      if (!userId && __DEV__) {
+        console.warn("Failed to extract user ID from JWT token");
+      }
+
+      return userId;
+    } catch (error) {
+      if (__DEV__) {
+        console.warn("Error extracting user ID from token:", error);
+      }
+      return null;
+    }
+  }
+
   /**
    * Generate user-scoped storage keys and metadata key
    */
@@ -78,12 +82,32 @@ export class OfflineRecipeService {
     const userId = await this.getCurrentUserId();
     const baseKey = userId
       ? `${STORAGE_KEYS.OFFLINE_RECIPES}_${userId}`
-      : STORAGE_KEYS.OFFLINE_RECIPES;
+      : `${STORAGE_KEYS.OFFLINE_RECIPES}_anonymous_${await this.getDeviceId()}`;
     return {
       STORAGE_KEY: baseKey,
       PENDING_OPERATIONS_KEY: `${baseKey}_pending`,
       METADATA_KEY: `${baseKey}_meta`,
     };
+  }
+
+  /**
+   * Returns a unique device identifier for anonymous offline storage.
+   * Falls back to a random string if device info is unavailable.
+   */
+  private static async getDeviceId(): Promise<string> {
+    try {
+      // Use Expo Device API if available
+      if (Device.osInternalBuildId) {
+        return Device.osInternalBuildId;
+      }
+      if (Device.deviceName) {
+        return `${Device.deviceName}`;
+      }
+      // Fallback: use a random string (not persistent)
+      return `anonymous_${crypto.randomUUID ? crypto.randomUUID() : generateUniqueId("device")}`;
+    } catch {
+      return `anonymous_${crypto.randomUUID ? crypto.randomUUID() : generateUniqueId("device")}`;
+    }
   }
 
   /**
@@ -261,33 +285,6 @@ export class OfflineRecipeService {
   }
 
   /**
-   * Get current user ID from JWT token
-   * Returns null if no token or extraction fails
-   */
-  private static async getCurrentUserId(): Promise<string | null> {
-    try {
-      const token = await ApiService.token.getToken();
-      if (!token) {
-        // No warning - this is expected when user is not authenticated
-        return null;
-      }
-
-      const userId = extractUserIdFromJWT(token);
-      if (!userId && __DEV__) {
-        // Only warn in development mode and limit frequency
-        console.warn("Failed to extract user ID from JWT token");
-      }
-
-      return userId;
-    } catch (error) {
-      if (__DEV__) {
-        console.warn("Error extracting user ID from token:", error);
-      }
-      return null;
-    }
-  }
-
-  /**
    * Clean up stale or invalid recipe data from cache
    * Removes recipes with invalid IDs, corrupted data, etc.
    */
@@ -298,98 +295,175 @@ export class OfflineRecipeService {
     try {
       const state = await this.loadOfflineState();
       const initialCount = state.recipes.length;
-      const removedRecipes: string[] = [];
 
-      // Filter out recipes with invalid data
-      state.recipes = state.recipes.filter(recipe => {
-        // CRITICAL: Never remove recipes that need syncing, regardless of data issues
-        if (recipe.needsSync) {
-          if (__DEV__) {
-            console.log(
-              `🔒 Preserving recipe that needs sync: ${recipe.name} (${recipe.id})`
-            );
-          }
-          return true;
-        }
+      // Use utility to clean up stale recipes
+      const cleanupResult = this.cleanupStaleRecipes(state.recipes);
+      state.recipes = cleanupResult.cleanedRecipes;
 
-        // Check for basic required fields
-        if (!recipe.id || !recipe.name) {
-          const missingFields = [];
-          if (!recipe.id) {
-            missingFields.push("id");
-          }
-          if (!recipe.name) {
-            missingFields.push("name");
-          }
-
-          removedRecipes.push(
-            `${recipe.name || recipe.id || "Unknown"} (missing required fields: ${missingFields.join(", ")})`
-          );
-          console.warn(`🧹 CLEANUP: Recipe missing fields:`, {
-            recipeName: recipe.name,
-            recipeId: recipe.id,
-            missingFields,
-            recipeKeys: Object.keys(recipe),
-          });
-          return false;
-        }
-
-        // Accept any non-empty string ID (allow UUIDs, numerics, etc.). We already filtered missing IDs above.
-        // Keep recipe to avoid accidental data loss.
-        if (
-          __DEV__ &&
-          !this.isValidObjectId(recipe.id) &&
-          !recipe.id.startsWith("offline_") &&
-          !recipe.id.startsWith("temp")
-        ) {
-          console.warn(
-            `🔍 Non-standard recipe ID format detected: "${recipe.id}" for recipe "${recipe.name}"`
-          );
-        }
-
-        // Check for corrupted ingredients data
-        if (!Array.isArray(recipe.ingredients)) {
-          removedRecipes.push(`${recipe.name} (corrupted ingredients data)`);
-          return false;
-        }
-
-        return true;
-      });
-
-      // Clean up pending operations for recipes that were actually removed
-      // (Get removed IDs by comparing initial state with filtered state)
+      // Clean up pending operations for recipes that were removed
       const currentRecipeIds = new Set(state.recipes.map(r => r.id));
       const currentTempIds = new Set(
-        state.recipes.map(r => r.tempId).filter(Boolean)
+        state.recipes
+          .map(r => r.tempId)
+          .filter((id): id is string => Boolean(id))
       );
 
-      state.pendingOperations = state.pendingOperations.filter(op => {
-        // Keep operations for recipes that still exist (by ID or tempId)
-        return (
-          currentRecipeIds.has(op.recipeId) || currentTempIds.has(op.recipeId)
-        );
-      });
+      state.pendingOperations = this.cleanupPendingOperations(
+        state.pendingOperations,
+        currentRecipeIds,
+        currentTempIds
+      );
 
       // Save cleaned state
       await this.saveOfflineState(state);
 
       const removedCount = initialCount - state.recipes.length;
 
-      if (removedCount > 0 && __DEV__) {
-        console.log(
-          `Cleaned up ${removedCount} stale recipes:`,
-          removedRecipes
-        );
-      }
-
       return {
         removed: removedCount,
-        cleaned: removedRecipes,
+        cleaned: cleanupResult.cleanedNames,
       };
     } catch (error) {
       console.error("Failed to cleanup stale recipe data:", error);
       return { removed: 0, cleaned: [] };
     }
+  }
+
+  /**
+   * Clean up stale or invalid recipe data from cache
+   * Removes recipes with invalid IDs, corrupted data, etc.
+   */
+  private static cleanupStaleRecipes(recipes: OfflineRecipe[]): {
+    cleanedRecipes: OfflineRecipe[];
+    removedCount: number;
+    cleanedNames: string[];
+  } {
+    const initialCount = recipes.length;
+    const removedRecipes: string[] = [];
+
+    // Filter out recipes with invalid data
+    const cleanedRecipes = recipes.filter(recipe => {
+      // CRITICAL: Never remove recipes that need syncing, regardless of data issues
+      if (recipe.needsSync) {
+        if (__DEV__) {
+          console.log(
+            `🔒 Preserving recipe that needs sync: ${recipe.name} (${recipe.id})`
+          );
+        }
+        return true;
+      }
+
+      // Check for basic required fields
+      if (!recipe.id || !recipe.name) {
+        const missingFields = [];
+        if (!recipe.id) {
+          missingFields.push("id");
+        }
+        if (!recipe.name) {
+          missingFields.push("name");
+        }
+
+        removedRecipes.push(
+          `${recipe.name || recipe.id || "Unknown"} (missing required fields: ${missingFields.join(", ")})`
+        );
+        console.warn(`🧹 CLEANUP: Recipe missing fields:`, {
+          recipeName: recipe.name,
+          recipeId: recipe.id,
+          missingFields,
+          recipeKeys: Object.keys(recipe),
+        });
+        return false;
+      }
+
+      // Accept any non-empty string ID (allow UUIDs, numerics, etc.). We already filtered missing IDs above.
+      // Keep recipe to avoid accidental data loss.
+      if (
+        __DEV__ &&
+        !this.isValidObjectId(recipe.id) &&
+        !recipe.id.startsWith("offline_") &&
+        !recipe.id.startsWith("temp")
+      ) {
+        console.warn(
+          `🔍 Non-standard recipe ID format detected: "${recipe.id}" for recipe "${recipe.name}"`
+        );
+      }
+
+      // Check for corrupted ingredients data
+      if (!Array.isArray(recipe.ingredients)) {
+        removedRecipes.push(`${recipe.name} (corrupted ingredients data)`);
+        return false;
+      }
+
+      return true;
+    });
+
+    const removedCount = initialCount - cleanedRecipes.length;
+
+    if (removedCount > 0 && __DEV__) {
+      console.log(`Cleaned up ${removedCount} stale recipes:`, removedRecipes);
+    }
+
+    return {
+      cleanedRecipes,
+      removedCount,
+      cleanedNames: removedRecipes,
+    };
+  }
+
+  /**
+   * Clean up pending operations for recipes that were removed
+   */
+  private static cleanupPendingOperations(
+    operations: OfflinePendingOperation[],
+    existingRecipeIds: Set<string>,
+    existingTempIds: Set<string>
+  ): OfflinePendingOperation[] {
+    return operations.filter(op => {
+      // Keep operations for recipes that still exist (by ID or tempId)
+      return (
+        existingRecipeIds.has(op.recipeId) || existingTempIds.has(op.recipeId)
+      );
+    });
+  }
+
+  /**
+   * DEV ONLY: Force cleanup all tombstones to get app back to clean state
+   * Use this during development when you've manually cleaned the database
+   */
+  static devCleanupAllTombstones(recipes: OfflineRecipe[]): {
+    cleanedRecipes: OfflineRecipe[];
+    removedTombstones: number;
+    tombstoneNames: string[];
+  } {
+    if (!__DEV__) {
+      throw new Error(
+        "devCleanupAllTombstones is only available in development mode"
+      );
+    }
+
+    // Count and log tombstones before cleanup
+    const tombstones = recipes.filter(r => r.isDeleted);
+    const tombstoneNames = tombstones.map(t => t.name);
+    const tombstoneCount = tombstones.length;
+
+    if (tombstoneCount > 0) {
+      console.log(`🧹 DEV: Force removing ${tombstoneCount} tombstones:`);
+      tombstoneNames.forEach(name => console.log(`   - ${name}`));
+    } else {
+      console.log(`🧹 DEV: No tombstones found to clean up`);
+    }
+
+    // Remove ALL tombstones regardless of sync status
+    const cleanedRecipes = recipes.filter(r => !r.isDeleted);
+
+    const result = {
+      cleanedRecipes,
+      removedTombstones: tombstoneCount,
+      tombstoneNames,
+    };
+
+    console.log(`🧹 DEV: Tombstone cleanup complete:`, result);
+    return result;
   }
 
   /**
@@ -454,7 +528,9 @@ export class OfflineRecipeService {
         while (hasMore) {
           const response = await ApiService.recipes.getAll(page, pageSize);
           allServerRecipes = [...allServerRecipes, ...response.data.recipes];
-          hasMore = response.data.recipes.length === pageSize;
+          hasMore =
+            response.data.recipes.length > 0 &&
+            response.data.recipes.length === pageSize;
           page++;
         }
         const serverRecipes: OfflineRecipe[] = allServerRecipes.map(recipe => {
@@ -646,9 +722,14 @@ export class OfflineRecipeService {
     }
 
     try {
+      // Normalize batch size unit before passing to calculator
+      const normalizedBatchSizeUnit = this.normalizeBatchSizeUnit(
+        recipe.batch_size_unit || "gallon"
+      );
+
       const metrics = OfflineMetricsCalculator.calculateMetrics({
         batch_size: recipe.batch_size,
-        batch_size_unit: recipe.batch_size_unit || "gallon",
+        batch_size_unit: normalizedBatchSizeUnit,
         efficiency: recipe.efficiency,
         boil_time: recipe.boil_time || 60,
         ingredients: recipe.ingredients,
@@ -676,11 +757,37 @@ export class OfflineRecipeService {
    *
    * Preserves the original ingredient.id and maps it to ingredient_id for the API payload.
    * This maintains referential integrity without fabricating new ObjectIds.
+   *
+   * @throws Error if any ingredient is missing an ID
    */
   private static prepareIngredientsForSync(
-    ingredients: RecipeIngredient[]
+    ingredients: any[],
+    recipeContext?: { id?: string; name?: string }
   ): any[] {
-    return ingredients.map(ingredient => {
+    return ingredients.map((ingredient, index) => {
+      // Check for null/undefined ingredient
+      if (!ingredient) {
+        const recipeInfo = recipeContext
+          ? `recipe "${recipeContext.name || recipeContext.id || "unknown"}"`
+          : "recipe";
+        throw new Error(
+          `Ingredient validation failed: ingredient at index ${index} in ${recipeInfo} is null or undefined.`
+        );
+      }
+      // Validate that ingredient has an ID
+      if (!ingredient.id || ingredient.id === undefined) {
+        const recipeInfo = recipeContext
+          ? `recipe "${recipeContext.name || recipeContext.id || "unknown"}"`
+          : "recipe";
+        const ingredientInfo =
+          ingredient.name || `ingredient at index ${index}`;
+
+        throw new Error(
+          `Ingredient validation failed: ${ingredientInfo} in ${recipeInfo} is missing ID. ` +
+            `Cannot sync ingredients without valid IDs.`
+        );
+      }
+
       // Create the payload object with ingredient_id set to the original id, and omit the id field
       const { id, ...ingredientWithoutId } = ingredient;
 
@@ -699,8 +806,17 @@ export class OfflineRecipeService {
 
     if (isOnline) {
       try {
-        // Try online creation first
-        const response = await ApiService.recipes.create(recipeData);
+        // Try online creation first - prepare payload with normalized ingredients
+        const outboundPayload = {
+          ...recipeData,
+          ingredients: recipeData.ingredients
+            ? this.prepareIngredientsForSync(recipeData.ingredients, {
+                name: recipeData.name,
+              })
+            : [],
+        };
+
+        const response = await ApiService.recipes.create(outboundPayload);
         const serverTimestamp = this.normalizeServerTimestamp(response.data);
         const newRecipe: OfflineRecipe = {
           ...response.data,
@@ -767,14 +883,17 @@ export class OfflineRecipeService {
       }
     }
 
-    // Add pending operation for later sync
-    await this.addPendingOperation({
-      type: "create",
-      recipeId: tempId,
-      data: recipeData,
-      timestamp: Date.now(),
-      retryCount: 0,
-    });
+    // Only add legacy pending operation if not using needsSync flow
+    // When needsSync is true, recipe will be handled by syncModifiedRecipes
+    if (!offlineRecipe.needsSync) {
+      await this.addPendingOperation({
+        type: "create",
+        recipeId: tempId,
+        data: recipeData,
+        timestamp: Date.now(),
+        retryCount: 0,
+      });
+    }
 
     return offlineRecipe;
   }
@@ -800,8 +919,18 @@ export class OfflineRecipeService {
 
     if (isOnline && !existingRecipe.tempId) {
       try {
-        // Try online update first (if recipe has real ID)
-        const response = await ApiService.recipes.update(id, recipeData);
+        // Try online update first (if recipe has real ID) - prepare payload with normalized ingredients
+        const outboundPayload = {
+          ...recipeData,
+          ingredients: recipeData.ingredients
+            ? this.prepareIngredientsForSync(recipeData.ingredients, {
+                id,
+                name: recipeData.name || existingRecipe.name,
+              })
+            : recipeData.ingredients, // Keep original if undefined/null
+        };
+
+        const response = await ApiService.recipes.update(id, outboundPayload);
         const serverTimestamp = this.normalizeServerTimestamp(response.data);
         const updatedRecipe: OfflineRecipe = {
           ...response.data,
@@ -840,14 +969,17 @@ export class OfflineRecipeService {
     state.recipes[existingRecipeIndex] = updatedRecipe;
     await this.saveOfflineState(state);
 
-    // Add pending operation for later sync
-    await this.addPendingOperation({
-      type: "update",
-      recipeId: existingRecipe.tempId || id,
-      data: recipeData,
-      timestamp: Date.now(),
-      retryCount: 0,
-    });
+    // Only add legacy pending operation if not using needsSync flow
+    // When needsSync is true, recipe will be handled by syncModifiedRecipes
+    if (!updatedRecipe.needsSync) {
+      await this.addPendingOperation({
+        type: "update",
+        recipeId: existingRecipe.tempId || id,
+        data: recipeData,
+        timestamp: Date.now(),
+        retryCount: 0,
+      });
+    }
 
     return updatedRecipe;
   }
@@ -1446,16 +1578,7 @@ export class OfflineRecipeService {
         } else {
           failedCount++;
           // Store failed operations separately for manual retry or user notification
-          const { PENDING_OPERATIONS_KEY } = await this.getUserScopedKeys();
-          const failedOpsKey = `${PENDING_OPERATIONS_KEY}_failed`;
-          const existingFailed = await AsyncStorage.getItem(failedOpsKey);
-          const failedOps = existingFailed ? JSON.parse(existingFailed) : [];
-          failedOps.push({
-            ...operation,
-            failedAt: Date.now(),
-            error: (error as any).message || "Unknown error",
-          });
-          await AsyncStorage.setItem(failedOpsKey, JSON.stringify(failedOps));
+          await this.storeFailedOperation(operation, error);
 
           // Mark recipe as failed sync
           const recipe = state.recipes.find(
@@ -1603,7 +1726,8 @@ export class OfflineRecipeService {
       lastSync: state.lastSync,
     };
   }
-
+  // Configurable tombstone retention period (default: 30 days)
+  private static readonly TOMBSTONE_RETENTION_DAYS = 30;
   /**
    * Clean up old tombstones that have been successfully synced or are very old
    */
@@ -1616,7 +1740,9 @@ export class OfflineRecipeService {
     const cleanupDetails: string[] = [];
 
     // Remove tombstones older than 30 days or already synced
-    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const retentionPeriodMs =
+      this.TOMBSTONE_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const cutoffTime = Date.now() - retentionPeriodMs;
 
     state.recipes = state.recipes.filter(recipe => {
       // Keep non-tombstones
@@ -1625,7 +1751,7 @@ export class OfflineRecipeService {
       }
 
       // Remove old tombstones (30+ days old)
-      if (recipe.deletedAt && recipe.deletedAt < thirtyDaysAgo) {
+      if (recipe.deletedAt && recipe.deletedAt < cutoffTime) {
         cleanupDetails.push(
           `Cleaned old tombstone: ${recipe.name} (deleted ${new Date(recipe.deletedAt).toLocaleDateString()})`
         );
@@ -1657,49 +1783,6 @@ export class OfflineRecipeService {
       cleaned: cleanedCount,
       details: cleanupDetails,
     };
-  }
-
-  /**
-   * DEV ONLY: Force cleanup all tombstones to get app back to clean state
-   * Use this during development when you've manually cleaned the database
-   */
-  static async devCleanupAllTombstones(): Promise<{
-    removedTombstones: number;
-    tombstoneNames: string[];
-  }> {
-    if (!__DEV__) {
-      throw new Error(
-        "devCleanupAllTombstones is only available in development mode"
-      );
-    }
-
-    const state = await this.loadOfflineState();
-
-    // Count and log tombstones before cleanup
-    const tombstones = state.recipes.filter(r => r.isDeleted);
-    const tombstoneNames = tombstones.map(t => t.name);
-    const tombstoneCount = tombstones.length;
-
-    if (tombstoneCount > 0) {
-      console.log(`🧹 DEV: Force removing ${tombstoneCount} tombstones:`);
-      tombstoneNames.forEach(name => console.log(`   - ${name}`));
-    } else {
-      console.log(`🧹 DEV: No tombstones found to clean up`);
-    }
-
-    // Remove ALL tombstones regardless of sync status
-    state.recipes = state.recipes.filter(r => !r.isDeleted);
-
-    // Save cleaned state
-    await this.saveOfflineState(state);
-
-    const result = {
-      removedTombstones: tombstoneCount,
-      tombstoneNames,
-    };
-
-    console.log(`🧹 DEV: Tombstone cleanup complete:`, result);
-    return result;
   }
 
   /**
@@ -1795,7 +1878,7 @@ export class OfflineRecipeService {
             `Skipped ${recipe.name}: insufficient data for calculation`
           );
         }
-      } catch (error) {
+      } catch (error: any) {
         details.push(
           `Failed to calculate metrics for ${recipe.name}: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -1822,6 +1905,64 @@ export class OfflineRecipeService {
   }
 
   /**
+   * Normalizes batch size unit from shorthand to full name for calculator compatibility
+   */
+  private static normalizeBatchSizeUnit(unit: string): string {
+    const normalizedUnit = unit.toLowerCase().trim();
+
+    switch (normalizedUnit) {
+      case "gal":
+      case "gallon":
+      case "gallons":
+        return "gallon";
+      case "l":
+      case "liter":
+      case "liters":
+      case "litre":
+      case "litres":
+        return "liter";
+      default:
+        // Default to "gallon" for any unrecognized or empty unit
+        if (
+          __DEV__ &&
+          normalizedUnit &&
+          normalizedUnit !== "gallon" &&
+          normalizedUnit !== "liter"
+        ) {
+          console.warn(
+            `Unknown batch size unit "${unit}" - defaulting to "gallon"`
+          );
+        }
+        return "gallon";
+    }
+  }
+
+  /**
+   * DEV ONLY: Force cleanup all tombstones to get app back to clean state (async wrapper)
+   * Use this during development when you've manually cleaned the database
+   */
+  static async devCleanupAllTombstonesAsync(): Promise<{
+    removedTombstones: number;
+    tombstoneNames: string[];
+  }> {
+    if (!__DEV__) {
+      throw new Error(
+        "devCleanupAllTombstones is only available in development mode"
+      );
+    }
+
+    const state = await this.loadOfflineState();
+    const cleanupResult = this.devCleanupAllTombstones(state.recipes);
+    state.recipes = cleanupResult.cleanedRecipes;
+    await this.saveOfflineState(state);
+
+    return {
+      removedTombstones: cleanupResult.removedTombstones,
+      tombstoneNames: cleanupResult.tombstoneNames,
+    };
+  }
+
+  /**
    * Clear all offline data (use with caution)
    */
   static async clearOfflineData(): Promise<void> {
@@ -1833,6 +1974,29 @@ export class OfflineRecipeService {
       METADATA_KEY,
       `${PENDING_OPERATIONS_KEY}_failed`, // Failed operations key
     ]);
+  }
+
+  /**
+   * Store failed operations for manual retry or user notification
+   */
+  private static async storeFailedOperation(
+    operation: OfflinePendingOperation,
+    error: any
+  ): Promise<void> {
+    try {
+      const { PENDING_OPERATIONS_KEY } = await this.getUserScopedKeys();
+      const failedOpsKey = `${PENDING_OPERATIONS_KEY}_failed`;
+      const existingFailed = await AsyncStorage.getItem(failedOpsKey);
+      const failedOps = existingFailed ? JSON.parse(existingFailed) : [];
+      failedOps.push({
+        ...operation,
+        failedAt: Date.now(),
+        error: error?.message || "Unknown error",
+      });
+      await AsyncStorage.setItem(failedOpsKey, JSON.stringify(failedOps));
+    } catch (err) {
+      console.error("Failed to store failed operation:", err);
+    }
   }
 }
 

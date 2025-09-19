@@ -40,7 +40,7 @@ import ApiService from "@services/api/apiService";
 import { STORAGE_KEYS } from "@services/config";
 import { extractUserIdFromJWT, debugJWTToken } from "@utils/jwtUtils";
 import { cacheUtils } from "@services/api/queryClient";
-import { OfflineRecipeService } from "@services/offline/OfflineRecipeService";
+import OfflineRecipeService from "@services/offline/OfflineRecipeService";
 import OfflineCacheService from "@services/offline/OfflineCacheService";
 
 /**

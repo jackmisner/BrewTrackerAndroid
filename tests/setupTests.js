@@ -43,6 +43,11 @@ jest.mock("expo-secure-store", () => ({
   deleteItemAsync: jest.fn(),
 }));
 
+jest.mock("expo-device", () => ({
+  osInternalBuildId: "dfyt4uf",
+  getDeviceId: jest.fn().mockResolvedValue("dfyt4uf"),
+}));
+
 jest.mock("@react-native-async-storage/async-storage", () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
