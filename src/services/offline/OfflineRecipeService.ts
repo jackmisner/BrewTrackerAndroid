@@ -95,6 +95,16 @@ export class OfflineRecipeService {
    * Falls back to a random string if device info is unavailable.
    */
   private static async getDeviceId(): Promise<string> {
+    const prefix = "anonymous";
+    // Use a global counter to reduce collision risk in fallback IDs
+    let globalCounter = 0;
+    const fallbackIdGeneration = () => {
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substring(2, 9);
+      const id = `${timestamp}_${globalCounter}_${random}`;
+      globalCounter++;
+      return id;
+    };
     try {
       // Use Expo Device API if available
       if (Device.osInternalBuildId) {
@@ -103,10 +113,21 @@ export class OfflineRecipeService {
       if (Device.deviceName) {
         return `${Device.deviceName}`;
       }
-      // Fallback: use a random string (not persistent)
-      return `anonymous_${crypto.randomUUID ? crypto.randomUUID() : generateUniqueId("device")}`;
+      // Use crypto.randomUUID() when available (most secure and unique)
+      if (
+        typeof globalThis !== "undefined" &&
+        globalThis.crypto &&
+        typeof globalThis.crypto.randomUUID === "function"
+      ) {
+        const uuid = globalThis.crypto.randomUUID();
+        return prefix ? `${prefix}_${uuid}` : uuid;
+      } else {
+        const id = fallbackIdGeneration();
+        return `${prefix}_${id}`;
+      }
     } catch {
-      return `anonymous_${crypto.randomUUID ? crypto.randomUUID() : generateUniqueId("device")}`;
+      const id = fallbackIdGeneration();
+      return `${prefix}_${id}`;
     }
   }
 

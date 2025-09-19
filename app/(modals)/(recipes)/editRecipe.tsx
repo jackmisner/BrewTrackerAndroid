@@ -23,7 +23,7 @@ import { IngredientsForm } from "@src/components/recipes/RecipeForm/IngredientsF
 import { ReviewForm } from "@src/components/recipes/RecipeForm/ReviewForm";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 import { generateUniqueId } from "@utils/keyUtils";
-import { QUERY_KEYS } from "@/src/services/api/queryClient";
+import { QUERY_KEYS } from "@services/api/queryClient";
 
 // Recipe builder steps
 enum RecipeStep {
@@ -358,7 +358,6 @@ export default function EditRecipeScreen() {
         // Explicit ID mapping as fallback (API interceptor should handle this but has issues with nested ingredients)
         if (sanitized.id && !sanitized.ingredient_id) {
           sanitized.ingredient_id = sanitized.id;
-          delete sanitized.id;
         }
         if (!sanitized.instance_id) {
           sanitized.instance_id = generateUniqueId("ing");

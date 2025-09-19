@@ -284,6 +284,15 @@ export default function RecipesScreen() {
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ["recipes"] });
         queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        // Ensure offline lists reflect the new clone
+        queryClient.invalidateQueries({
+          queryKey: [...QUERY_KEYS.RECIPES, "offline"],
+        });
+        if (response?.data?.id) {
+          queryClient.invalidateQueries({
+            queryKey: [...QUERY_KEYS.RECIPE(response.data.id), "offline"],
+          });
+        }
       }, 1000); // 1 second delay
       const cloneType = recipe.is_public ? "cloned" : "versioned";
       Alert.alert(
