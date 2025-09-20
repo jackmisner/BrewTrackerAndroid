@@ -35,6 +35,9 @@ temp/*
 # local env files
 .env
 .env*.local
+.env.development
+.env.production
 
 # typescript
 *.tsbuildinfo
+secrets/*
