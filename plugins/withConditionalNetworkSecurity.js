@@ -9,11 +9,13 @@ const { withPlugins } = require("@expo/config-plugins");
 const withConditionalNetworkSecurity = config => {
   // Get the environment from process env with secure default
   const environment = process.env.EXPO_PUBLIC_ENVIRONMENT || "production";
-  
+
   // Validate against allowed values
   const allowedEnvironments = ["development", "preview", "production"];
-  const validEnvironment = allowedEnvironments.includes(environment) ? environment : "production";
-  
+  const validEnvironment = allowedEnvironments.includes(environment)
+    ? environment
+    : "production";
+
   if (environment !== validEnvironment) {
     console.warn(
       `⚠️  Unknown EXPO_PUBLIC_ENVIRONMENT value "${environment}", falling back to "production" for security`
