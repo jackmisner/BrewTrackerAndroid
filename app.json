@@ -55,7 +55,7 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#f4511e"
+          "backgroundColor": "#1a1a1a"
         }
       ],
       "./plugins/withConditionalNetworkSecurity.js",
