@@ -46,99 +46,25 @@ function writeJsonFile(filePath, data, description) {
 function updateGradleFile(filePath, version, versionCode) {
   try {
     let gradle = fs.readFileSync(filePath, "utf8");
-    // Find defaultConfig with brace-balanced scan (handles nested blocks, strings, comments)
-    const startIdx = gradle.indexOf("defaultConfig");
-    if (startIdx === -1) {
-      throw new Error("build.gradle: defaultConfig block not found");
+    const vcRe = /versionCode \d+/;
+    const vnRe = /versionName "[^"]+"/;
+    if (!vcRe.test(gradle)) {
+      exitWithError("build.gradle: versionCode pattern not found");
     }
-    const openIdx = gradle.indexOf("{", startIdx);
-    if (openIdx === -1) {
-      throw new Error(
-        "build.gradle: opening brace for defaultConfig not found"
-      );
+    if (!vnRe.test(gradle)) {
+      exitWithError("build.gradle: versionName pattern not found");
     }
-    let i = openIdx + 1;
-    let depth = 1;
-    let inSQ = false,
-      inDQ = false,
-      inLC = false,
-      inBC = false;
-    while (i < gradle.length && depth > 0) {
-      const c = gradle[i];
-      const n = gradle[i + 1];
-      if (inLC) {
-        if (c === "\n") {
-          inLC = false;
-        }
-        i++;
-        continue;
-      }
-      if (inBC) {
-        if (c === "*" && n === "/") {
-          inBC = false;
-          i += 2;
-          continue;
-        }
-        i++;
-        continue;
-      }
-      if (!inSQ && !inDQ && c === "/" && n === "/") {
-        inLC = true;
-        i += 2;
-        continue;
-      }
-      if (!inSQ && !inDQ && c === "/" && n === "*") {
-        inBC = true;
-        i += 2;
-        continue;
-      }
-      if (!inDQ && c === "'" && gradle[i - 1] !== "\\") {
-        inSQ = !inSQ;
-        i++;
-        continue;
-      }
-      if (!inSQ && c === '"' && gradle[i - 1] !== "\\") {
-        inDQ = !inDQ;
-        i++;
-        continue;
-      }
-      if (!inSQ && !inDQ) {
-        if (c === "{") {
-          depth++;
-        } else if (c === "}") {
-          depth--;
-        }
-      }
-      i++;
-    }
-    if (depth !== 0) {
-      throw new Error("build.gradle: unmatched braces in defaultConfig");
-    }
-    const blockStart = openIdx + 1;
-    const blockEnd = i - 1; // index of closing brace
-    const block = gradle.slice(blockStart, blockEnd);
-    const vcRe = /\bversionCode\s+\d+\b/;
-    const vnRe = /\bversionName\s*=?\s*["'][^"']+["']/;
-    if (!vcRe.test(block)) {
-      throw new Error(
-        "build.gradle: versionCode pattern not found in defaultConfig"
-      );
-    }
-    if (!vnRe.test(block)) {
-      throw new Error(
-        "build.gradle: versionName pattern not found in defaultConfig"
-      );
-    }
-    const updatedBlock = block
-      .replace(vcRe, `versionCode ${versionCode}`)
-      .replace(vnRe, `versionName "${version}"`);
-    gradle =
-      gradle.slice(0, blockStart) + updatedBlock + gradle.slice(blockEnd);
+    const gradleAfterVC = gradle.replace(vcRe, `versionCode ${versionCode}`);
+    const gradleAfterBoth = gradleAfterVC.replace(
+      vnRe,
+      `versionName "${version}"`
+    );
+    fs.writeFileSync(filePath, gradleAfterBoth);
     console.log(
       `✅ Updated build.gradle (versionCode: ${versionCode}, versionName: ${version})`
     );
   } catch (error) {
-    throw new Error(`Failed to update build.gradle: ${error.message}`);
+    exitWithError(`Failed to update build.gradle: ${error.message}`);
   }
 }
 
