@@ -75,7 +75,7 @@ export class UserCacheService {
    */
   static async createRecipe(recipe: Partial<Recipe>): Promise<Recipe> {
     try {
-      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
       const now = Date.now();
 
       // Get current user ID from JWT token
