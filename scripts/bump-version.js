@@ -46,12 +46,20 @@ function writeJsonFile(filePath, data, description) {
 function updateGradleFile(filePath, version, versionCode) {
   try {
     let gradle = fs.readFileSync(filePath, "utf8");
-
-    // Update versionCode and versionName
-    gradle = gradle.replace(/versionCode \d+/, `versionCode ${versionCode}`);
-    gradle = gradle.replace(/versionName "[^"]+"/, `versionName "${version}"`);
-
-    fs.writeFileSync(filePath, gradle);
+    const vcRe = /versionCode \d+/;
+    const vnRe = /versionName "[^"]+"/;
+    if (!vcRe.test(gradle)) {
+      exitWithError("build.gradle: versionCode pattern not found");
+    }
+    if (!vnRe.test(gradle)) {
+      exitWithError("build.gradle: versionName pattern not found");
+    }
+    const gradleAfterVC = gradle.replace(vcRe, `versionCode ${versionCode}`);
+    const gradleAfterBoth = gradleAfterVC.replace(
+      vnRe,
+      `versionName "${version}"`
+    );
+    fs.writeFileSync(filePath, gradleAfterBoth);
     console.log(
       `✅ Updated build.gradle (versionCode: ${versionCode}, versionName: ${version})`
     );
@@ -65,54 +73,52 @@ function bumpVersion(type) {
   if (!["patch", "minor", "major"].includes(type)) {
     exitWithError(`Invalid bump type "${type}". Use: patch, minor, or major`);
   }
-
   // File paths
-  const packageJsonPath = path.join(process.cwd(), "package.json");
-  const appJsonPath = path.join(process.cwd(), "app.json");
-  const gradlePath = path.join(process.cwd(), "android/app/build.gradle");
-
+  const repoRoot = path.resolve(__dirname, "..");
+  const packageJsonPath = path.join(repoRoot, "package.json");
+  const appJsonPath = path.join(repoRoot, "app.json");
+  const gradlePath = path.join(repoRoot, "android/app/build.gradle");
   // Validate files exist
   validateFile(packageJsonPath, "package.json");
   validateFile(appJsonPath, "app.json");
   validateFile(gradlePath, "android/app/build.gradle");
-
   console.log(`🚀 Bumping ${type} version...`);
-
+  // Snapshot originals for rollback
+  const snapshots = {};
+  const readIfExists = p =>
+    fs.existsSync(p) ? fs.readFileSync(p, "utf8") : null;
+  snapshots.packageJson = readIfExists(packageJsonPath);
+  snapshots.packageLock = readIfExists(
+    path.join(process.cwd(), "package-lock.json")
+  );
+  snapshots.appJson = readIfExists(appJsonPath);
+  snapshots.gradle = readIfExists(gradlePath);
   try {
     // 1. Bump npm version (this updates package.json)
     console.log(`📦 Running npm version ${type}...`);
     execSync(`npm version ${type} --no-git-tag-version`, { stdio: "inherit" });
-
     // 2. Read updated package.json
     const pkg = readJsonFile(packageJsonPath, "package.json");
     const newVersion = pkg.version;
     console.log(`📋 New version: ${newVersion}`);
-
     // 3. Update app.json
     const app = readJsonFile(appJsonPath, "app.json");
-
     if (!app.expo) {
       exitWithError("app.json is missing expo configuration");
     }
-
     if (!app.expo.android) {
       exitWithError("app.json is missing expo.android configuration");
     }
-
     // Update version fields
     app.expo.version = newVersion;
     app.expo.runtimeVersion = newVersion;
-
     // Increment versionCode
     const currentVersionCode = app.expo.android.versionCode || 1;
     const newVersionCode = currentVersionCode + 1;
     app.expo.android.versionCode = newVersionCode;
-
     writeJsonFile(appJsonPath, app, "app.json");
-
     // 4. Update Android build.gradle
     updateGradleFile(gradlePath, newVersion, newVersionCode);
-
     // 5. Success summary
     console.log("\n🎉 Version bump completed successfully!");
     console.log(`📊 Summary:`);
@@ -120,6 +126,25 @@ function bumpVersion(type) {
     console.log(`   • Android versionCode: ${newVersionCode}`);
     console.log(`   • Files updated: package.json, app.json, build.gradle`);
   } catch (error) {
+    // Best-effort rollback
+    try {
+      if (snapshots.packageJson !== null) {
+        fs.writeFileSync(packageJsonPath, snapshots.packageJson);
+      }
+      const packageLockPath = path.join(process.cwd(), "package-lock.json");
+      if (snapshots.packageLock !== null) {
+        fs.writeFileSync(packageLockPath, snapshots.packageLock);
+      }
+      if (snapshots.appJson !== null) {
+        fs.writeFileSync(appJsonPath, snapshots.appJson);
+      }
+      if (snapshots.gradle !== null) {
+        fs.writeFileSync(gradlePath, snapshots.gradle);
+      }
+      console.error("↩️ Rolled back files after failure.");
+    } catch (rbErr) {
+      console.error(`⚠️ Rollback encountered issues: ${rbErr.message}`);
+    }
     exitWithError(`Version bump failed: ${error.message}`);
   }
 }
