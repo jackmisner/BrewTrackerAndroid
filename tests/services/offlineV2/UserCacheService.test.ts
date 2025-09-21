@@ -251,9 +251,7 @@ describe("UserCacheService", () => {
       });
 
       expect(result.name).toBe("Updated Recipe");
-      expect(result.updated_at).toBe(
-        "Mon Jan 01 2024 00:00:00 GMT+0000 (Greenwich Mean Time)"
-      ); // 2024-01-01T00:00:00Z
+      expect(result.updated_at).toBe("2024-01-01T00:00:00.000Z");
       expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
         STORAGE_KEYS_V2.USER_RECIPES,
         expect.stringContaining('"Updated Recipe"')

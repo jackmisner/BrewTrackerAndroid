@@ -190,7 +190,7 @@ export class UserCacheService {
       const updatedRecipe: Recipe = {
         ...existingItem.data,
         ...updates,
-        updated_at: new Date(now).toString(),
+        updated_at: new Date(now).toISOString(),
       };
 
       // Update syncable item
