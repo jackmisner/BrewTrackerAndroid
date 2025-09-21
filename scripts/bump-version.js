@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable no-undef */
 
 /**
  * Version Bump Script for BrewTracker Android
@@ -30,7 +31,7 @@ function readJsonFile(filePath, description) {
   try {
     return JSON.parse(fs.readFileSync(filePath, "utf8"));
   } catch (error) {
-    exitWithError(`Failed to read ${description}: ${error.message}`);
+    throw new Error(`Failed to read ${description}: ${error.message}`);
   }
 }
 
@@ -39,32 +40,40 @@ function writeJsonFile(filePath, data, description) {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + "\n");
     console.log(`✅ Updated ${description}`);
   } catch (error) {
-    exitWithError(`Failed to write ${description}: ${error.message}`);
+    throw new Error(`Failed to write ${description}: ${error.message}`);
   }
 }
 
 function updateGradleFile(filePath, version, versionCode) {
   try {
     let gradle = fs.readFileSync(filePath, "utf8");
-    const vcRe = /versionCode \d+/;
-    const vnRe = /versionName "[^"]+"/;
-    if (!vcRe.test(gradle)) {
-      exitWithError("build.gradle: versionCode pattern not found");
+    const blockRe = /defaultConfig\s*{([\s\S]*?)}/m;
+    const match = gradle.match(blockRe);
+    if (!match) {
+      throw new Error("build.gradle: defaultConfig block not found");
     }
-    if (!vnRe.test(gradle)) {
-      exitWithError("build.gradle: versionName pattern not found");
+    const vcRe = /\bversionCode\s+\d+\b/;
+    const vnRe = /\bversionName\s*=?\s*["'][^"']+["']/;
+    if (!vcRe.test(match[1])) {
+      throw new Error(
+        "build.gradle: versionCode pattern not found in defaultConfig"
+      );
     }
-    const gradleAfterVC = gradle.replace(vcRe, `versionCode ${versionCode}`);
-    const gradleAfterBoth = gradleAfterVC.replace(
-      vnRe,
-      `versionName "${version}"`
-    );
-    fs.writeFileSync(filePath, gradleAfterBoth);
+    if (!vnRe.test(match[1])) {
+      throw new Error(
+        "build.gradle: versionName pattern not found in defaultConfig"
+      );
+    }
+    const updatedBlock = match[1]
+      .replace(vcRe, `versionCode ${versionCode}`)
+      .replace(vnRe, `versionName "${version}"`);
+    gradle = gradle.replace(blockRe, m => m.replace(match[1], updatedBlock));
+    fs.writeFileSync(filePath, gradle);
     console.log(
       `✅ Updated build.gradle (versionCode: ${versionCode}, versionName: ${version})`
     );
   } catch (error) {
-    exitWithError(`Failed to update build.gradle: ${error.message}`);
+    throw new Error(`Failed to update build.gradle: ${error.message}`);
   }
 }
 
@@ -89,7 +98,7 @@ function bumpVersion(type) {
     fs.existsSync(p) ? fs.readFileSync(p, "utf8") : null;
   snapshots.packageJson = readIfExists(packageJsonPath);
   snapshots.packageLock = readIfExists(
-    path.join(process.cwd(), "package-lock.json")
+    path.join(repoRoot, "package-lock.json")
   );
   snapshots.appJson = readIfExists(appJsonPath);
   snapshots.gradle = readIfExists(gradlePath);
@@ -113,8 +122,14 @@ function bumpVersion(type) {
     app.expo.version = newVersion;
     app.expo.runtimeVersion = newVersion;
     // Increment versionCode
-    const currentVersionCode = app.expo.android.versionCode || 1;
-    const newVersionCode = currentVersionCode + 1;
+    const currentVersionCodeApp = Number(app.expo.android.versionCode) || 0;
+    const gradleContent = fs.readFileSync(gradlePath, "utf8");
+    const vcMatch = gradleContent.match(
+      /defaultConfig[\s\S]*?\bversionCode\s+(\d+)/m
+    );
+    const currentVersionCodeGradle = vcMatch ? parseInt(vcMatch[1], 10) : 0;
+    const newVersionCode =
+      Math.max(currentVersionCodeApp, currentVersionCodeGradle) + 1;
     app.expo.android.versionCode = newVersionCode;
     writeJsonFile(appJsonPath, app, "app.json");
     // 4. Update Android build.gradle
@@ -131,7 +146,7 @@ function bumpVersion(type) {
       if (snapshots.packageJson !== null) {
         fs.writeFileSync(packageJsonPath, snapshots.packageJson);
       }
-      const packageLockPath = path.join(process.cwd(), "package-lock.json");
+      const packageLockPath = path.join(repoRoot, "package-lock.json");
       if (snapshots.packageLock !== null) {
         fs.writeFileSync(packageLockPath, snapshots.packageLock);
       }

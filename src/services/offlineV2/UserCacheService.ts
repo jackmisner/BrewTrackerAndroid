@@ -106,9 +106,9 @@ export class UserCacheService {
       const now = Date.now();
 
       // Get current user ID from JWT token
-      const validationResult =
-        await UserValidationService.validateOwnershipFromToken("");
-      const currentUserId = validationResult.currentUserId;
+      const currentUserId =
+        recipe.user_id ??
+        (await UserValidationService.getCurrentUserIdFromToken());
 
       const newRecipe: Recipe = {
         ...recipe,
@@ -141,7 +141,7 @@ export class UserCacheService {
         type: "create",
         entityType: "recipe",
         entityId: tempId,
-        data: { ...recipe, user_id: currentUserId },
+        data: { ...recipe, user_id: newRecipe.user_id },
         timestamp: now,
         retryCount: 0,
         maxRetries: this.MAX_RETRY_ATTEMPTS,
@@ -509,17 +509,15 @@ export class UserCacheService {
    * Get pending operations
    */
   private static async getPendingOperations(): Promise<PendingOperation[]> {
-    return await withKeyQueue(STORAGE_KEYS_V2.PENDING_OPERATIONS, async () => {
-      try {
-        const cached = await AsyncStorage.getItem(
-          STORAGE_KEYS_V2.PENDING_OPERATIONS
-        );
-        return cached ? JSON.parse(cached) : [];
-      } catch (error) {
-        console.error("Error getting pending operations:", error);
-        return [];
-      }
-    });
+    try {
+      const cached = await AsyncStorage.getItem(
+        STORAGE_KEYS_V2.PENDING_OPERATIONS
+      );
+      return cached ? JSON.parse(cached) : [];
+    } catch (error) {
+      console.error("Error getting pending operations:", error);
+      return [];
+    }
   }
 
   /**
@@ -530,9 +528,11 @@ export class UserCacheService {
   ): Promise<void> {
     return await withKeyQueue(STORAGE_KEYS_V2.PENDING_OPERATIONS, async () => {
       try {
-        const operations = await this.getPendingOperations();
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.PENDING_OPERATIONS
+        );
+        const operations: PendingOperation[] = cached ? JSON.parse(cached) : [];
         operations.push(operation);
-
         await AsyncStorage.setItem(
           STORAGE_KEYS_V2.PENDING_OPERATIONS,
           JSON.stringify(operations)
@@ -556,9 +556,11 @@ export class UserCacheService {
   ): Promise<void> {
     return await withKeyQueue(STORAGE_KEYS_V2.PENDING_OPERATIONS, async () => {
       try {
-        const operations = await this.getPendingOperations();
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.PENDING_OPERATIONS
+        );
+        const operations: PendingOperation[] = cached ? JSON.parse(cached) : [];
         const filtered = operations.filter(op => op.id !== operationId);
-
         await AsyncStorage.setItem(
           STORAGE_KEYS_V2.PENDING_OPERATIONS,
           JSON.stringify(filtered)
@@ -577,9 +579,11 @@ export class UserCacheService {
   ): Promise<void> {
     return await withKeyQueue(STORAGE_KEYS_V2.PENDING_OPERATIONS, async () => {
       try {
-        const operations = await this.getPendingOperations();
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.PENDING_OPERATIONS
+        );
+        const operations: PendingOperation[] = cached ? JSON.parse(cached) : [];
         const index = operations.findIndex(op => op.id === operation.id);
-
         if (index >= 0) {
           operations[index] = operation;
           await AsyncStorage.setItem(
