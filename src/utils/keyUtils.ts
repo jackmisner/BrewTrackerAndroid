@@ -26,20 +26,25 @@ const slugify = (s: string): string =>
  * - ingredientId: database ingredient ID
  * - instanceId: unique instance identifier that never changes
  *
- * @param ingredient - The recipe ingredient (must have instance_id)
+ * @param ingredient - The recipe ingredient (will have instance_id generated if missing)
  * @returns Stable unique key that never changes once generated
  */
 export function generateIngredientKey(ingredient: RecipeIngredient): string {
   const type = ingredient.type || "unknown";
   const ingredientId =
     ingredient.id != null ? String(ingredient.id) : "unknown";
-  const instanceId = ingredient.instance_id;
+
+  let instanceId = ingredient.instance_id;
   if (!instanceId) {
-    throw new Error(
-      `Ingredient is missing required instance_id for key generation: ${JSON.stringify(
-        ingredient
-      )}`
-    );
+    instanceId = generateIngredientInstanceId();
+    // Persist so future renders reuse the same key
+
+    ingredient.instance_id = instanceId;
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        `Ingredient missing instance_id; generated one: ${ingredient.name}`
+      );
+    }
   }
   return `${type}-${ingredientId}-${instanceId}`;
 }
