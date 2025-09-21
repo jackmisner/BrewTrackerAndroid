@@ -529,7 +529,7 @@ export class StaticDataService {
       filtered = filtered.filter(
         style =>
           style.name.toLowerCase().includes(searchLower) ||
-          style.description?.toLowerCase().includes(searchLower)
+          (style.description ?? "").toLowerCase().includes(searchLower)
       );
     }
 
