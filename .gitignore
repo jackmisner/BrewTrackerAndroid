@@ -32,6 +32,10 @@ local.properties
 gradle-wrapper.jar
 gradle-wrapper.properties
 
+# Specifically allow these files
+!Android/network_security_config*.xml
+!.env.example
+
 # EAS Build
 .eas/
 
@@ -50,10 +54,8 @@ temp/*
 *.pem
 
 # local env files
-.env
-.env*.local
-.env.development
-.env.production
+.env*
+
 
 # typescript
 *.tsbuildinfo
