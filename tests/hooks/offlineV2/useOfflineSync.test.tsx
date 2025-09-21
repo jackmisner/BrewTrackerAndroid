@@ -184,11 +184,23 @@ describe("useOfflineSync hooks", () => {
       );
     });
 
-    it("should throw error when sync is already in progress", async () => {
+    it("should implement single-flight protection when sync is already in progress", async () => {
       mockUseNetwork.mockReturnValue(mockNetwork());
-      // Mock a long-running sync operation that never resolves
+
+      let resolveSync: () => void;
+      // Mock a sync operation that resolves when we want it to
       mockUserCacheService.syncPendingOperations.mockImplementation(
-        () => new Promise(() => {}) // Never resolves to keep sync in progress
+        () =>
+          new Promise<any>(resolve => {
+            resolveSync = () =>
+              resolve({
+                success: true,
+                processed: 1,
+                failed: 0,
+                conflicts: 0,
+                errors: [],
+              });
+          })
       );
 
       const { result } = renderHook(() => useOfflineSync(), {
@@ -199,15 +211,28 @@ describe("useOfflineSync hooks", () => {
         expect(result.current.pendingOperations).toBe(0);
       });
 
-      // Start first sync (will hang)
-      result.current.sync().catch(() => {}); // Ignore the error
+      // Start first sync
+      const firstSyncPromise = result.current.sync();
 
-      // Give the first sync a moment to start
-      await new Promise(resolve => setTimeout(resolve, 10));
+      // Start second sync immediately (should use single-flight protection)
+      const secondSyncPromise = result.current.sync();
 
-      // Try to start second sync while first is still running
-      await expect(result.current.sync()).rejects.toThrow(
-        "Sync already in progress"
+      // Resolve the sync
+      resolveSync!();
+
+      // Both should resolve to the same result
+      const [firstResult, secondResult] = await Promise.all([
+        firstSyncPromise,
+        secondSyncPromise,
+      ]);
+
+      // Verify both calls get the same result
+      expect(firstResult).toEqual(secondResult);
+      expect(firstResult.success).toBe(true);
+
+      // Verify that the underlying service was only called once (single-flight protection)
+      expect(mockUserCacheService.syncPendingOperations).toHaveBeenCalledTimes(
+        1
       );
     });
 

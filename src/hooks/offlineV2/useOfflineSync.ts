@@ -4,7 +4,7 @@
  * React hook for managing offline sync operations and monitoring sync state.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { UserCacheService } from "@services/offlineV2/UserCacheService";
 import { StaticDataService } from "@services/offlineV2/StaticDataService";
 import {
@@ -24,6 +24,9 @@ export function useOfflineSync(): UseOfflineSyncReturn {
   const [conflicts, setConflicts] = useState(0);
   const [lastSync, setLastSync] = useState<number | null>(null);
   const [, setLastSyncResult] = useState<SyncResult | null>(null);
+
+  // Single-flight protection - prevent multiple concurrent sync operations
+  const syncInProgressRef = useRef<Promise<SyncResult> | null>(null);
 
   // Load sync state
   const loadSyncState = useCallback(async () => {
@@ -47,48 +50,61 @@ export function useOfflineSync(): UseOfflineSyncReturn {
       throw new Error("Cannot sync while offline");
     }
 
-    if (isSyncing) {
-      throw new Error("Sync already in progress");
+    // Return existing sync promise if one is in progress (single-flight protection)
+    if (syncInProgressRef.current) {
+      return syncInProgressRef.current;
     }
 
-    try {
-      setIsSyncing(true);
+    // Create new sync promise
+    const syncPromise = (async (): Promise<SyncResult> => {
+      try {
+        setIsSyncing(true);
 
-      // Sync user data
-      const userResult = await UserCacheService.syncPendingOperations();
+        // Sync user data
+        const userResult = await UserCacheService.syncPendingOperations();
 
-      // Check for static data updates
-      const updates = await StaticDataService.checkForUpdates();
+        // Check for static data updates
+        const updates = await StaticDataService.checkForUpdates();
 
-      if (updates.ingredients) {
-        await StaticDataService.updateIngredientsCache();
+        if (updates.ingredients) {
+          await StaticDataService.updateIngredientsCache();
+        }
+
+        if (updates.beerStyles) {
+          await StaticDataService.updateBeerStylesCache();
+        }
+
+        // Update state
+        setLastSync(Date.now());
+        setLastSyncResult(userResult);
+        await loadSyncState();
+
+        return userResult;
+      } catch (error) {
+        console.error("Sync failed:", error);
+        const errorResult: SyncResult = {
+          success: false,
+          processed: 0,
+          failed: 0,
+          conflicts: 0,
+          errors: [
+            error instanceof Error ? error.message : "Unknown sync error",
+          ],
+        };
+        setLastSyncResult(errorResult);
+        throw error;
+      } finally {
+        setIsSyncing(false);
+        // Clear the sync promise when done
+        syncInProgressRef.current = null;
       }
+    })();
 
-      if (updates.beerStyles) {
-        await StaticDataService.updateBeerStylesCache();
-      }
+    // Store the promise for single-flight protection
+    syncInProgressRef.current = syncPromise;
 
-      // Update state
-      setLastSync(Date.now());
-      setLastSyncResult(userResult);
-      await loadSyncState();
-
-      return userResult;
-    } catch (error) {
-      console.error("Sync failed:", error);
-      const errorResult: SyncResult = {
-        success: false,
-        processed: 0,
-        failed: 0,
-        conflicts: 0,
-        errors: [error instanceof Error ? error.message : "Unknown sync error"],
-      };
-      setLastSyncResult(errorResult);
-      throw error;
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [isConnected, isSyncing, loadSyncState]);
+    return syncPromise;
+  }, [isConnected, loadSyncState]);
 
   // Clear all pending operations
   const clearPending = useCallback(async (): Promise<void> => {

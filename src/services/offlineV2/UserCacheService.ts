@@ -78,6 +78,11 @@ export class UserCacheService {
       const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const now = Date.now();
 
+      // Get current user ID from JWT token
+      const validationResult =
+        await UserValidationService.validateOwnershipFromToken("");
+      const currentUserId = validationResult.currentUserId;
+
       const newRecipe: Recipe = {
         ...recipe,
         id: tempId,
@@ -86,7 +91,7 @@ export class UserCacheService {
         ingredients: recipe.ingredients || [],
         created_at: new Date(now).toISOString(),
         updated_at: new Date(now).toISOString(),
-        user_id: recipe.user_id || "",
+        user_id: recipe.user_id || currentUserId || "",
         is_public: recipe.is_public || false,
       } as Recipe;
 

@@ -47,34 +47,8 @@ export class StaticDataService {
       const cached = await this.getCachedIngredients();
 
       if (cached && cached.data) {
-        // Apply filters if provided
-        let filtered = cached.data;
-
-        if (filters?.type) {
-          filtered = filtered.filter(ing => ing.type === filters.type);
-        }
-
-        if (filters?.search) {
-          const searchLower = filters.search.toLowerCase();
-          filtered = filtered.filter(ing =>
-            ing.name.toLowerCase().includes(searchLower)
-          );
-        }
-
-        if (filters?.category) {
-          filtered = filtered.filter(ing => {
-            if (filters.type === "grain") {
-              return ing.grain_type === filters.category;
-            }
-            if (filters.type === "yeast") {
-              return ing.yeast_type === filters.category;
-            }
-            if (filters.type === "hop") {
-              return ing.hop_type === filters.category;
-            }
-            return true;
-          });
-        }
+        // Apply filters using helper method
+        const filtered = this.applyIngredientFilters(cached.data, filters);
 
         // Background version check (don't wait for it)
         this.backgroundVersionCheck("ingredients");
@@ -83,7 +57,8 @@ export class StaticDataService {
       }
 
       // No cache, fetch fresh data
-      return await this.fetchAndCacheIngredients();
+      const freshData = await this.fetchAndCacheIngredients();
+      return this.applyIngredientFilters(freshData, filters);
     } catch (error) {
       console.error("Error getting ingredients:", error);
       throw new OfflineError(
@@ -106,23 +81,8 @@ export class StaticDataService {
       const cached = await this.getCachedBeerStyles();
 
       if (cached && cached.data) {
-        // Apply filters if provided
-        let filtered = cached.data;
-
-        if (filters?.category) {
-          filtered = filtered.filter(
-            style => style.category === filters.category
-          );
-        }
-
-        if (filters?.search) {
-          const searchLower = filters.search.toLowerCase();
-          filtered = filtered.filter(
-            style =>
-              style.name.toLowerCase().includes(searchLower) ||
-              style.description?.toLowerCase().includes(searchLower)
-          );
-        }
+        // Apply filters using helper method
+        const filtered = this.applyBeerStyleFilters(cached.data, filters);
 
         // Background version check (don't wait for it)
         this.backgroundVersionCheck("beer_styles");
@@ -131,7 +91,8 @@ export class StaticDataService {
       }
 
       // No cache, fetch fresh data
-      return await this.fetchAndCacheBeerStyles();
+      const freshData = await this.fetchAndCacheBeerStyles();
+      return this.applyBeerStyleFilters(freshData, filters);
     } catch (error) {
       console.error("Error getting beer styles:", error);
       throw new OfflineError(
@@ -491,5 +452,87 @@ export class StaticDataService {
     } finally {
       this.versionCheckInProgress = false;
     }
+  }
+
+  // ============================================================================
+  // Filter Helper Methods
+  // ============================================================================
+
+  /**
+   * Apply filters to ingredients data
+   */
+  private static applyIngredientFilters(
+    data: Ingredient[],
+    filters?: {
+      type?: string;
+      category?: string;
+      search?: string;
+    }
+  ): Ingredient[] {
+    if (!filters) {
+      return data;
+    }
+
+    let filtered = data;
+
+    if (filters.type) {
+      filtered = filtered.filter(ing => ing.type === filters.type);
+    }
+
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(ing =>
+        ing.name.toLowerCase().includes(searchLower)
+      );
+    }
+
+    if (filters.category) {
+      filtered = filtered.filter(ing => {
+        if (filters.type === "grain") {
+          return ing.grain_type === filters.category;
+        }
+        if (filters.type === "yeast") {
+          return ing.yeast_type === filters.category;
+        }
+        if (filters.type === "hop") {
+          return ing.hop_type === filters.category;
+        }
+        return true;
+      });
+    }
+
+    return filtered;
+  }
+
+  /**
+   * Apply filters to beer styles data
+   */
+  private static applyBeerStyleFilters(
+    data: BeerStyle[],
+    filters?: {
+      category?: string;
+      search?: string;
+    }
+  ): BeerStyle[] {
+    if (!filters) {
+      return data;
+    }
+
+    let filtered = data;
+
+    if (filters.category) {
+      filtered = filtered.filter(style => style.category === filters.category);
+    }
+
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(
+        style =>
+          style.name.toLowerCase().includes(searchLower) ||
+          style.description?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered;
   }
 }
