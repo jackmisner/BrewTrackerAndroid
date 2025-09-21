@@ -34,15 +34,18 @@ export function generateIngredientKey(ingredient: RecipeIngredient): string {
   const ingredientId =
     ingredient.id != null ? String(ingredient.id) : "unknown";
 
-  // Generate instance_id if missing (without mutating the original object)
-  const instanceId = ingredient.instance_id ?? generateIngredientInstanceId();
+  let instanceId = ingredient.instance_id;
+  if (!instanceId) {
+    instanceId = generateIngredientInstanceId();
+    // Persist so future renders reuse the same key
 
-  if (!ingredient.instance_id) {
-    console.warn(
-      `Ingredient is missing instance_id, generating new one: ${ingredient.name}`
-    );
+    ingredient.instance_id = instanceId;
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        `Ingredient missing instance_id; generated one: ${ingredient.name}`
+      );
+    }
   }
-
   return `${type}-${ingredientId}-${instanceId}`;
 }
 

@@ -29,10 +29,8 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            {
-              "scheme": "https",
-              "host": "*.brewtracker.app"
-            },
+            { "scheme": "https", "host": "brewtracker.app" },
+            { "scheme": "https", "host": "www.brewtracker.app" },
             {
               "scheme": "brewtracker"
             }
@@ -54,15 +52,7 @@
           "backgroundColor": "#f4511e"
         }
       ],
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "usesCleartextTraffic": true,
-            "networkSecurityConfig": "./android/network_security_config.xml"
-          }
-        }
-      ],
+      "./plugins/withConditionalNetworkSecurity.js",
       "./plugins/withSingleTaskLaunchMode.js"
     ],
     "experiments": {

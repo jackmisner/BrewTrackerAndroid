@@ -64,7 +64,6 @@
   "submit": {
     "production": {
       "android": {
-        "serviceAccountKeyPath": "./secrets/brewtracker-467413-c56b21e68900.json",
         "track": "internal"
       }
     }
