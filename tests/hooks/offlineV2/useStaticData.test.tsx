@@ -125,7 +125,7 @@ describe("useStaticData hooks", () => {
       mockStaticDataService.getIngredients.mockResolvedValue(mockIngredients);
       mockStaticDataService.getCacheStats.mockResolvedValue(mockCacheStats);
 
-      const filters = { type: "grain", search: "pale" };
+      const filters = { type: "grain" as const, search: "pale" };
       const { result } = renderHook(() => useIngredients(filters), {
         wrapper: createWrapper(),
       });
@@ -447,7 +447,7 @@ describe("useStaticData hooks", () => {
 
       const options = {
         ingredients: {
-          filters: { type: "grain" },
+          filters: { type: "grain" as const },
         },
         beerStyles: {
           filters: { category: "IPA" },

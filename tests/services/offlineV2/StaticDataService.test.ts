@@ -74,9 +74,15 @@ describe("StaticDataService", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset static properties
-    (StaticDataService as any).versionCheckInProgress = false;
-    (StaticDataService as any).lastVersionCheck = 0;
+    // Reset static properties correctly
+    (StaticDataService as any).versionCheckInProgress = {
+      ingredients: false,
+      beer_styles: false,
+    };
+    (StaticDataService as any).lastVersionCheck = {
+      ingredients: 0,
+      beer_styles: 0,
+    };
   });
 
   describe("getIngredients", () => {

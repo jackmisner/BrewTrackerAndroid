@@ -24,7 +24,7 @@ import {
  * Hook for accessing ingredients with filtering
  */
 export function useIngredients(filters?: {
-  type?: string;
+  type?: Ingredient["type"];
   search?: string;
   category?: string;
 }): UseStaticDataReturn<Ingredient> {
@@ -252,7 +252,7 @@ export function useStaticData(
     ingredients?: {
       enabled?: boolean;
       filters?: {
-        type?: string;
+        type?: Ingredient["type"];
         search?: string;
         category?: string;
       };
