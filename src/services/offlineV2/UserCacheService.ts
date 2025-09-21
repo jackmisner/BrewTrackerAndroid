@@ -14,6 +14,7 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ApiService from "@services/api/apiService";
+import { UserValidationService } from "@utils/userValidation";
 import {
   SyncableItem,
   PendingOperation,
@@ -44,7 +45,25 @@ export class UserCacheService {
       return cached
         .filter(item => !item.isDeleted)
         .map(item => item.data)
-        .sort((a, b) => Number(b.created_at) - Number(a.created_at));
+        .sort((a, b) => {
+          // Handle both numeric timestamp strings and ISO date strings
+          const getTimestamp = (dateStr: string) => {
+            if (!dateStr) {
+              return 0;
+            }
+            const parsed = Date.parse(dateStr);
+            if (!isNaN(parsed)) {
+              return parsed;
+            }
+            // Fallback to treating it as a numeric timestamp string
+            const numericTimestamp = Number(dateStr);
+            return isNaN(numericTimestamp) ? 0 : numericTimestamp;
+          };
+
+          const aTime = getTimestamp(a.created_at || "");
+          const bTime = getTimestamp(b.created_at || "");
+          return bTime - aTime; // Newest first (descending)
+        });
     } catch (error) {
       console.error("Error getting recipes:", error);
       throw new OfflineError("Failed to get recipes", "RECIPES_ERROR", true);
@@ -60,15 +79,15 @@ export class UserCacheService {
       const now = Date.now();
 
       const newRecipe: Recipe = {
+        ...recipe,
         id: tempId,
         name: recipe.name || "",
         description: recipe.description || "",
         ingredients: recipe.ingredients || [],
-        created_at: now.toString(),
-        updated_at: now.toString(),
+        created_at: new Date(now).toISOString(),
+        updated_at: new Date(now).toISOString(),
         user_id: recipe.user_id || "",
         is_public: recipe.is_public || false,
-        ...recipe,
       } as Recipe;
 
       // Create syncable item
@@ -116,7 +135,16 @@ export class UserCacheService {
     updates: Partial<Recipe>
   ): Promise<Recipe> {
     try {
-      const userId = updates.user_id || "";
+      const userId =
+        updates.user_id ??
+        (await UserValidationService.getCurrentUserIdFromToken());
+      if (!userId) {
+        throw new OfflineError(
+          "User ID is required for updating recipes",
+          "AUTH_ERROR",
+          false
+        );
+      }
       const cached = await this.getCachedRecipes(userId);
       const existingItem = cached.find(
         item => item.id === id || item.data.id === id
@@ -177,7 +205,16 @@ export class UserCacheService {
    */
   static async deleteRecipe(id: string, userId?: string): Promise<void> {
     try {
-      const cached = await this.getCachedRecipes(userId || "");
+      const currentUserId =
+        userId ?? (await UserValidationService.getCurrentUserIdFromToken());
+      if (!currentUserId) {
+        throw new OfflineError(
+          "User ID is required for deleting recipes",
+          "AUTH_ERROR",
+          false
+        );
+      }
+      const cached = await this.getCachedRecipes(currentUserId);
       const existingItem = cached.find(
         item => item.id === id || item.data.id === id
       );
@@ -256,9 +293,8 @@ export class UserCacheService {
     this.syncInProgress = true;
     this.syncStartTime = Date.now();
 
-    this.syncInProgress = true;
     const result: SyncResult = {
-      success: true,
+      success: false,
       processed: 0,
       failed: 0,
       conflicts: 0,
@@ -310,9 +346,7 @@ export class UserCacheService {
         })
       );
 
-      if (result.failed === 0) {
-        result.success = true;
-      }
+      result.success = result.failed === 0;
 
       return result;
     } catch (error) {
@@ -514,7 +548,13 @@ export class UserCacheService {
       switch (operation.type) {
         case "create":
           if (operation.entityType === "recipe") {
-            await ApiService.recipes.create(operation.data);
+            const response = await ApiService.recipes.create(operation.data);
+            if (response && response.data && response.data.id) {
+              await this.mapTempIdToRealId(
+                operation.entityId,
+                response.data.id
+              );
+            }
           }
           break;
 
@@ -565,6 +605,60 @@ export class UserCacheService {
       }, 1000); // 1 second delay
     } catch (error) {
       console.warn("Failed to start background sync:", error);
+    }
+  }
+
+  /**
+   * Map temp ID to real ID after successful creation
+   */
+  private static async mapTempIdToRealId(
+    tempId: string,
+    realId: string
+  ): Promise<void> {
+    try {
+      // Update the recipe in cache with real ID
+      const cached = await AsyncStorage.getItem(STORAGE_KEYS_V2.USER_RECIPES);
+      if (!cached) {
+        return;
+      }
+
+      const recipes: SyncableItem<Recipe>[] = JSON.parse(cached);
+      const recipeIndex = recipes.findIndex(
+        item => item.id === tempId || item.data.id === tempId
+      );
+
+      if (recipeIndex >= 0) {
+        recipes[recipeIndex].id = realId;
+        recipes[recipeIndex].data.id = realId;
+        recipes[recipeIndex].syncStatus = "synced";
+        recipes[recipeIndex].needsSync = false;
+        delete recipes[recipeIndex].tempId;
+
+        await AsyncStorage.setItem(
+          STORAGE_KEYS_V2.USER_RECIPES,
+          JSON.stringify(recipes)
+        );
+      }
+
+      // Update pending operations that reference the temp ID
+      const operations = await this.getPendingOperations();
+      let operationsUpdated = false;
+
+      for (const operation of operations) {
+        if (operation.entityId === tempId) {
+          operation.entityId = realId;
+          operationsUpdated = true;
+        }
+      }
+
+      if (operationsUpdated) {
+        await AsyncStorage.setItem(
+          STORAGE_KEYS_V2.PENDING_OPERATIONS,
+          JSON.stringify(operations)
+        );
+      }
+    } catch (error) {
+      console.error("Error mapping temp ID to real ID:", error);
     }
   }
 }

@@ -456,10 +456,6 @@ describe("useUserData hooks", () => {
     });
 
     it("should reload data when user changes", async () => {
-      const { rerender } = renderHook(() => useRecipes(), {
-        wrapper: createWrapper(),
-      });
-
       // Initially no user
       mockUseAuth.mockReturnValue({
         user: null,
@@ -477,7 +473,11 @@ describe("useUserData hooks", () => {
         checkVerificationStatus: jest.fn(),
         forgotPassword: jest.fn(),
         resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
+        getUserId: jest.fn().mockReturnValue(null),
+      });
+
+      const { rerender } = renderHook(() => useRecipes(), {
+        wrapper: createWrapper(),
       });
 
       rerender(undefined);

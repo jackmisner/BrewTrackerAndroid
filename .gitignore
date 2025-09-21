@@ -19,7 +19,6 @@ expo-env.d.ts
 *.mobileprovision
 
 # Android build artifacts
-Android/*
 *.apk
 *.aab
 *.ap_

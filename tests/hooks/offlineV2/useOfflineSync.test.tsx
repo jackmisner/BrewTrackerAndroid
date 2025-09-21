@@ -240,14 +240,16 @@ describe("useOfflineSync hooks", () => {
         expect(result.current.pendingOperations).toBe(0);
       });
 
-      // Test conflict resolution (placeholder implementation)
+      // Test conflict resolution throws error for unimplemented feature
       await act(async () => {
-        await result.current.resolveConflict("conflict-1", {
-          strategy: "local_wins",
-        });
+        await expect(
+          result.current.resolveConflict("conflict-1", {
+            strategy: "local_wins",
+          })
+        ).rejects.toThrow("Conflict resolution not implemented");
       });
 
-      // Just verify it doesn't throw - implementation is placeholder
+      // Verify function exists and is callable
       expect(typeof result.current.resolveConflict).toBe("function");
     });
   });

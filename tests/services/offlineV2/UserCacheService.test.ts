@@ -435,7 +435,7 @@ describe("UserCacheService", () => {
 
       const result = await UserCacheService.syncPendingOperations();
 
-      expect(result.success).toBe(true); // Still successful overall
+      expect(result.success).toBe(false); // Failed operations mean sync was not fully successful
       expect(result.processed).toBe(0);
       expect(result.failed).toBe(1);
       expect(result.errors).toContain(

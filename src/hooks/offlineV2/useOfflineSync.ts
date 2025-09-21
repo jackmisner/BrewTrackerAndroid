@@ -103,20 +103,10 @@ export function useOfflineSync(): UseOfflineSyncReturn {
 
   // Resolve a conflict
   const resolveConflict = useCallback(
-    async (id: string, resolution: ConflictResolution): Promise<void> => {
-      try {
-        // TODO: Implement conflict resolution in UserCacheService
-        console.log("Conflict resolution not yet implemented:", {
-          id,
-          resolution,
-        });
-        await loadSyncState();
-      } catch (error) {
-        console.error("Error resolving conflict:", error);
-        throw error;
-      }
+    async (_id: string, _resolution: ConflictResolution): Promise<void> => {
+      throw new Error("Conflict resolution not implemented");
     },
-    [loadSyncState]
+    []
   );
 
   // Auto-sync when network becomes available

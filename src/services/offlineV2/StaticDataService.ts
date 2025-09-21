@@ -69,6 +69,9 @@ export class StaticDataService {
             if (filters.type === "yeast") {
               return ing.yeast_type === filters.category;
             }
+            if (filters.type === "hop") {
+              return ing.hop_type === filters.category;
+            }
             return true;
           });
         }
@@ -358,11 +361,15 @@ export class StaticDataService {
       const beerStylesData =
         dataResponse.data.categories || dataResponse.data || [];
 
-      // Flatten categories into styles
+      // Flatten categories into styles or use flat array directly
       const allStyles: BeerStyle[] = [];
-      beerStylesData.forEach((category: any) => {
-        if (category.styles) {
-          allStyles.push(...category.styles);
+      beerStylesData.forEach((item: any) => {
+        if (item.styles) {
+          // Item is a category with styles array
+          allStyles.push(...item.styles);
+        } else {
+          // Item is already a style
+          allStyles.push(item);
         }
       });
 

@@ -95,6 +95,7 @@ import {
   // Common types
   ID,
   IngredientType,
+  StaticDataVersionResponse,
 } from "@src/types";
 
 /**
@@ -843,13 +844,8 @@ const ApiService = {
         )
       ),
 
-    getVersion: (): Promise<
-      AxiosResponse<{
-        version: string;
-        last_modified: string;
-        total_records: number;
-      }>
-    > => withRetry(() => api.get(ENDPOINTS.BEER_STYLES.VERSION)),
+    getVersion: (): Promise<AxiosResponse<StaticDataVersionResponse>> =>
+      withRetry(() => api.get(ENDPOINTS.BEER_STYLES.VERSION)),
   },
 
   // Ingredients endpoints
@@ -936,13 +932,8 @@ const ApiService = {
     getRecipesUsingIngredient: (id: ID): Promise<AxiosResponse<Recipe[]>> =>
       withRetry(() => api.get(ENDPOINTS.INGREDIENTS.RECIPES(id))),
 
-    getVersion: (): Promise<
-      AxiosResponse<{
-        version: string;
-        last_modified: string;
-        total_records: number;
-      }>
-    > => withRetry(() => api.get(ENDPOINTS.INGREDIENTS.VERSION)),
+    getVersion: (): Promise<AxiosResponse<StaticDataVersionResponse>> =>
+      withRetry(() => api.get(ENDPOINTS.INGREDIENTS.VERSION)),
   },
 
   // Dashboard endpoints

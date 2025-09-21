@@ -68,6 +68,12 @@ export interface StaticDataVersion {
   data_type: "ingredients" | "beer_styles";
 }
 
+export interface StaticDataVersionResponse {
+  version: string;
+  last_modified: string;
+  total_records: number;
+}
+
 export interface CachedStaticData<T> {
   data: T[];
   version: string;
