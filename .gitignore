@@ -28,8 +28,6 @@ build/
 local.properties
 *.iml
 .idea/
-gradle-wrapper.jar
-gradle-wrapper.properties
 
 # Specifically allow these files
 !Android/network_security_config*.xml
