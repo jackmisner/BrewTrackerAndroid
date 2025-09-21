@@ -26,8 +26,20 @@ import {
 } from "@src/types";
 
 export class StaticDataService {
-  private static versionCheckInProgress = false;
-  private static lastVersionCheck = 0;
+  private static versionCheckInProgress: Record<
+    "ingredients" | "beer_styles",
+    boolean
+  > = {
+    ingredients: false,
+    beer_styles: false,
+  };
+  private static lastVersionCheck: Record<
+    "ingredients" | "beer_styles",
+    number
+  > = {
+    ingredients: 0,
+    beer_styles: 0,
+  };
   private static readonly VERSION_CHECK_COOLDOWN = 30000; // 30 seconds
 
   // ============================================================================
@@ -38,7 +50,7 @@ export class StaticDataService {
    * Get all ingredients with optional filtering
    */
   static async getIngredients(filters?: {
-    type?: string;
+    type?: Ingredient["type"];
     search?: string;
     category?: string;
   }): Promise<Ingredient[]> {
@@ -420,14 +432,14 @@ export class StaticDataService {
     // Prevent excessive version checks
     const now = Date.now();
     if (
-      this.versionCheckInProgress ||
-      now - this.lastVersionCheck < this.VERSION_CHECK_COOLDOWN
+      this.versionCheckInProgress[dataType] ||
+      now - this.lastVersionCheck[dataType] < this.VERSION_CHECK_COOLDOWN
     ) {
       return;
     }
 
-    this.versionCheckInProgress = true;
-    this.lastVersionCheck = now;
+    this.versionCheckInProgress[dataType] = true;
+    this.lastVersionCheck[dataType] = now;
 
     try {
       // Get version using ApiService
@@ -450,7 +462,7 @@ export class StaticDataService {
       // Silent fail for background checks
       console.warn(`Background version check failed for ${dataType}:`, error);
     } finally {
-      this.versionCheckInProgress = false;
+      this.versionCheckInProgress[dataType] = false;
     }
   }
 
@@ -464,7 +476,7 @@ export class StaticDataService {
   private static applyIngredientFilters(
     data: Ingredient[],
     filters?: {
-      type?: string;
+      type?: Ingredient["type"];
       category?: string;
       search?: string;
     }
@@ -480,9 +492,11 @@ export class StaticDataService {
     }
 
     if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter(ing =>
-        ing.name.toLowerCase().includes(searchLower)
+      const searchLower = filters.search.trim().toLowerCase();
+      filtered = filtered.filter(
+        ing =>
+          ing.name.toLowerCase().includes(searchLower) ||
+          (ing.description ?? "").toLowerCase().includes(searchLower)
       );
     }
 
@@ -525,7 +539,8 @@ export class StaticDataService {
     }
 
     if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
+      const searchLower = filters.search.trim().toLowerCase(); // avoids misses due to leading/trailing spaces.
+
       filtered = filtered.filter(
         style =>
           style.name.toLowerCase().includes(searchLower) ||
