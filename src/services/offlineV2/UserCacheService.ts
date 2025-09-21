@@ -603,55 +603,50 @@ export class UserCacheService {
   private static async processPendingOperation(
     operation: PendingOperation
   ): Promise<void> {
-    return await withKeyQueue(STORAGE_KEYS_V2.PENDING_OPERATIONS, async () => {
-      try {
-        switch (operation.type) {
-          case "create":
-            if (operation.entityType === "recipe") {
-              const response = await ApiService.recipes.create(operation.data);
-              if (response && response.data && response.data.id) {
-                await this.mapTempIdToRealId(
-                  operation.entityId,
-                  response.data.id
-                );
-              }
-            }
-            break;
-
-          case "update":
-            if (operation.entityType === "recipe") {
-              await ApiService.recipes.update(
+    try {
+      switch (operation.type) {
+        case "create":
+          if (operation.entityType === "recipe") {
+            const response = await ApiService.recipes.create(operation.data);
+            if (response && response.data && response.data.id) {
+              await this.mapTempIdToRealId(
                 operation.entityId,
-                operation.data
+                response.data.id
               );
             }
-            break;
+          }
+          break;
 
-          case "delete":
-            if (operation.entityType === "recipe") {
-              await ApiService.recipes.delete(operation.entityId);
-            }
-            break;
+        case "update":
+          if (operation.entityType === "recipe") {
+            await ApiService.recipes.update(operation.entityId, operation.data);
+          }
+          break;
 
-          default:
-            throw new SyncError(
-              `Unknown operation type: ${operation.type}`,
-              operation
-            );
-        }
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown error";
-        console.error(
-          `Error processing ${operation.type} operation:`,
-          errorMessage
-        );
-        throw new SyncError(
-          `Failed to ${operation.type} ${operation.entityType}: ${errorMessage}`,
-          operation
-        );
+        case "delete":
+          if (operation.entityType === "recipe") {
+            await ApiService.recipes.delete(operation.entityId);
+          }
+          break;
+
+        default:
+          throw new SyncError(
+            `Unknown operation type: ${operation.type}`,
+            operation
+          );
       }
-    });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error(
+        `Error processing ${operation.type} operation:`,
+        errorMessage
+      );
+      throw new SyncError(
+        `Failed to ${operation.type} ${operation.entityType}: ${errorMessage}`,
+        operation
+      );
+    }
   }
 
   /**
