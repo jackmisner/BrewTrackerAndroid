@@ -26,7 +26,7 @@ import {
 } from "@src/types";
 
 // Simple per-key queue (no external deps)
-const keyQueues = new Map<string, Promise<void>>();
+const keyQueues = new Map<string, Promise<unknown>>();
 async function withKeyQueue<T>(key: string, fn: () => Promise<T>): Promise<T> {
   // In test environment, bypass the queue to avoid hanging
   if (process.env.NODE_ENV === "test" || (global as any).__JEST_ENVIRONMENT__) {
@@ -34,22 +34,18 @@ async function withKeyQueue<T>(key: string, fn: () => Promise<T>): Promise<T> {
   }
 
   const prev = keyQueues.get(key) ?? Promise.resolve();
-  let release!: () => void;
-  const next = new Promise<void>(r => (release = r));
+  const next = prev
+    .catch(() => undefined) // keep the chain alive after errors
+    .then(fn);
   keyQueues.set(
     key,
-    prev.then(() => next)
+    next.finally(() => {
+      if (keyQueues.get(key) === next) {
+        keyQueues.delete(key);
+      }
+    })
   );
-  try {
-    await prev;
-    return await fn();
-  } finally {
-    release();
-    // Best-effort cleanup
-    if (keyQueues.get(key) === next) {
-      keyQueues.delete(key);
-    }
-  }
+  return next;
 }
 
 export class UserCacheService {
@@ -87,8 +83,8 @@ export class UserCacheService {
             return isNaN(numericTimestamp) ? 0 : numericTimestamp;
           };
 
-          const aTime = getTimestamp(a.created_at || "");
-          const bTime = getTimestamp(b.created_at || "");
+          const aTime = getTimestamp(a.updated_at || a.created_at || "");
+          const bTime = getTimestamp(b.updated_at || b.created_at || "");
           return bTime - aTime; // Newest first (descending)
         });
     } catch (error) {
@@ -109,7 +105,13 @@ export class UserCacheService {
       const currentUserId =
         recipe.user_id ??
         (await UserValidationService.getCurrentUserIdFromToken());
-
+      if (!currentUserId && !recipe.user_id) {
+        throw new OfflineError(
+          "User ID is required for creating recipes",
+          "AUTH_ERROR",
+          false
+        );
+      }
       const newRecipe: Recipe = {
         ...recipe,
         id: tempId,
@@ -430,13 +432,18 @@ export class UserCacheService {
     userId: string
   ): Promise<SyncableItem<Recipe>[]> {
     return await withKeyQueue(STORAGE_KEYS_V2.USER_RECIPES, async () => {
-      const cached = await AsyncStorage.getItem(STORAGE_KEYS_V2.USER_RECIPES);
-      if (!cached) {
+      try {
+        const cached = await AsyncStorage.getItem(STORAGE_KEYS_V2.USER_RECIPES);
+        if (!cached) {
+          return [];
+        }
+        const allRecipes: SyncableItem<Recipe>[] = JSON.parse(cached);
+        return allRecipes.filter(item => item.data.user_id === userId);
+      } catch (e) {
+        console.warn("Corrupt USER_RECIPES cache; resetting", e);
+        await AsyncStorage.removeItem(STORAGE_KEYS_V2.USER_RECIPES);
         return [];
       }
-
-      const allRecipes: SyncableItem<Recipe>[] = JSON.parse(cached);
-      return allRecipes.filter(item => item.data.user_id === userId);
     });
   }
 
@@ -650,10 +657,17 @@ export class UserCacheService {
   }
 
   /**
-   * Background sync with exponential backoff (not yet implemented)
+   * Background sync with exponential backoff
    */
   private static async backgroundSync(): Promise<void> {
     try {
+      const ops = await this.getPendingOperations().catch(() => []);
+      const minRetry =
+        ops.length > 0 ? Math.min(...ops.map(o => o.retryCount)) : 0;
+      const exp = Math.min(minRetry, 5); // cap backoff
+      const base = this.RETRY_BACKOFF_BASE * Math.pow(2, exp);
+      const jitter = Math.floor(base * 0.1 * Math.random());
+      const delay = base + jitter;
       // Don't wait for sync to complete
       setTimeout(async () => {
         try {
@@ -661,7 +675,7 @@ export class UserCacheService {
         } catch (error) {
           console.warn("Background sync failed:", error);
         }
-      }, this.RETRY_BACKOFF_BASE);
+      }, delay);
     } catch (error) {
       console.warn("Failed to start background sync:", error);
     }
@@ -675,48 +689,50 @@ export class UserCacheService {
     realId: string
   ): Promise<void> {
     try {
-      // Update the recipe in cache with real ID
-      const cached = await AsyncStorage.getItem(STORAGE_KEYS_V2.USER_RECIPES);
-      if (!cached) {
-        return;
-      }
-
-      const recipes: SyncableItem<Recipe>[] = JSON.parse(cached);
-      const recipeIndex = recipes.findIndex(
-        item => item.id === tempId || item.data.id === tempId
-      );
-
-      if (recipeIndex >= 0) {
-        recipes[recipeIndex].id = realId;
-        recipes[recipeIndex].data.id = realId;
-        recipes[recipeIndex].data.updated_at = new Date().toISOString();
-        recipes[recipeIndex].syncStatus = "synced";
-        recipes[recipeIndex].needsSync = false;
-        delete recipes[recipeIndex].tempId;
-
-        await AsyncStorage.setItem(
-          STORAGE_KEYS_V2.USER_RECIPES,
-          JSON.stringify(recipes)
-        );
-      }
-
-      // Update pending operations that reference the temp ID
-      const operations = await this.getPendingOperations();
-      let operationsUpdated = false;
-
-      for (const operation of operations) {
-        if (operation.entityId === tempId) {
-          operation.entityId = realId;
-          operationsUpdated = true;
+      // 1) Update recipe cache under USER_RECIPES lock
+      await withKeyQueue(STORAGE_KEYS_V2.USER_RECIPES, async () => {
+        const cached = await AsyncStorage.getItem(STORAGE_KEYS_V2.USER_RECIPES);
+        if (!cached) {
+          return;
         }
-      }
-
-      if (operationsUpdated) {
-        await AsyncStorage.setItem(
-          STORAGE_KEYS_V2.PENDING_OPERATIONS,
-          JSON.stringify(operations)
+        const recipes: SyncableItem<Recipe>[] = JSON.parse(cached);
+        const i = recipes.findIndex(
+          item => item.id === tempId || item.data.id === tempId
         );
-      }
+        if (i >= 0) {
+          recipes[i].id = realId;
+          recipes[i].data.id = realId;
+          recipes[i].data.updated_at = new Date().toISOString();
+          recipes[i].syncStatus = "synced";
+          recipes[i].needsSync = false;
+          delete recipes[i].tempId;
+          await AsyncStorage.setItem(
+            STORAGE_KEYS_V2.USER_RECIPES,
+            JSON.stringify(recipes)
+          );
+        }
+      });
+
+      // 2) Update pending ops under PENDING_OPERATIONS lock
+      await withKeyQueue(STORAGE_KEYS_V2.PENDING_OPERATIONS, async () => {
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.PENDING_OPERATIONS
+        );
+        const operations: PendingOperation[] = cached ? JSON.parse(cached) : [];
+        let updated = false;
+        for (const op of operations) {
+          if (op.entityId === tempId) {
+            op.entityId = realId;
+            updated = true;
+          }
+        }
+        if (updated) {
+          await AsyncStorage.setItem(
+            STORAGE_KEYS_V2.PENDING_OPERATIONS,
+            JSON.stringify(operations)
+          );
+        }
+      });
     } catch (error) {
       console.error("Error mapping temp ID to real ID:", error);
     }

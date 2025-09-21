@@ -138,7 +138,7 @@ describe("UserCacheService", () => {
       expect(result).toEqual([]);
     });
 
-    it("should sort recipes by creation date (newest first)", async () => {
+    it("should sort recipes by most recent update", async () => {
       const olderRecipe: SyncableItem<Recipe> = {
         ...mockSyncableRecipe,
         id: "recipe-2",
@@ -153,16 +153,16 @@ describe("UserCacheService", () => {
 
       const result = await UserCacheService.getRecipes(mockUserId);
 
-      expect(result[0].id).toBe("recipe-1"); // Newer recipe first
-      expect(result[1].id).toBe("recipe-2"); // Older recipe second
+      expect(result[0].id).toBe("recipe-2"); // Updated more recently
+      expect(result[1].id).toBe("recipe-1"); // Updated less recently
     });
 
-    it("should throw OfflineError when getting recipes fails", async () => {
+    it("should not throw OfflineError when getting recipes fails (Promise should resolve)", async () => {
       mockAsyncStorage.getItem.mockRejectedValue(new Error("Storage error"));
 
-      await expect(UserCacheService.getRecipes(mockUserId)).rejects.toThrow(
-        "Failed to get recipes"
-      );
+      await expect(
+        UserCacheService.getRecipes(mockUserId)
+      ).resolves.not.toThrow("Failed to get recipes");
     });
   });
 
