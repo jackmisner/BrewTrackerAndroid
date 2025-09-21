@@ -3,26 +3,40 @@
     "name": "BrewTracker",
     "slug": "brewtracker-android",
     "orientation": "portrait",
-    "version": "0.18.5",
-    "icon": "./assets/images/icon.png",
+    "version": "1.0.1",
+    "icon": "./assets/images/BrewTrackerAndroidLogo.png",
     "scheme": "brewtracker",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "platforms": ["android"],
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/BrewTrackerAndroidLogo.png",
         "backgroundColor": "#f4511e"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.brewtracker.android",
-      "versionCode": 80,
+      "versionCode": 82,
       "permissions": [
         "CAMERA",
         "VIBRATE",
         "POST_NOTIFICATIONS",
         "RECEIVE_BOOT_COMPLETED",
         "WAKE_LOCK"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            { "scheme": "https", "host": "brewtracker.app" },
+            { "scheme": "https", "host": "www.brewtracker.app" },
+            {
+              "scheme": "brewtracker"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "plugins": [
@@ -37,15 +51,32 @@
           "resizeMode": "contain",
           "backgroundColor": "#f4511e"
         }
-      ]
+      ],
+      "./plugins/withConditionalNetworkSecurity.js",
+      "./plugins/withSingleTaskLaunchMode.js"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "router": {
-        "origin": false
+        "origin": false,
+        "unstable_settings": {
+          "initialRouteName": "index",
+          "enableFreeze": false
+        }
+      },
+      "eas": {
+        "projectId": "edf222a8-b532-4d12-9b69-4e7fbb1d41c2"
       }
-    }
+    },
+    "owner": "jackmisner",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/edf222a8-b532-4d12-9b69-4e7fbb1d41c2"
+    },
+    "ios": {}
   }
 }
