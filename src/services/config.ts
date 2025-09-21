@@ -82,6 +82,7 @@ export const ENDPOINTS = {
     SEARCH: "/beer-styles/search",
     SUGGESTIONS: (recipeId: string) => `/beer-styles/suggestions/${recipeId}`,
     ANALYSIS: (recipeId: string) => `/beer-styles/analysis/${recipeId}`,
+    VERSION: "/beer-styles/version",
   },
 
   // Ingredients
@@ -92,6 +93,7 @@ export const ENDPOINTS = {
     UPDATE: (id: string) => `/ingredients/${id}`,
     DELETE: (id: string) => `/ingredients/${id}`,
     RECIPES: (id: string) => `/ingredients/${id}/recipes`,
+    VERSION: "/ingredients/version",
   },
 
   // Brew Sessions

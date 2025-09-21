@@ -3,7 +3,7 @@
     "name": "BrewTracker",
     "slug": "brewtracker-android",
     "orientation": "portrait",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "icon": "./assets/images/BrewTrackerAndroidLogo.png",
     "scheme": "brewtracker",
     "userInterfaceStyle": "automatic",
@@ -16,7 +16,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.brewtracker.android",
-      "versionCode": 82,
+      "versionCode": 83,
       "permissions": [
         "CAMERA",
         "VIBRATE",
@@ -29,8 +29,14 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "https", "host": "brewtracker.app" },
-            { "scheme": "https", "host": "www.brewtracker.app" },
+            {
+              "scheme": "https",
+              "host": "brewtracker.app"
+            },
+            {
+              "scheme": "https",
+              "host": "www.brewtracker.app"
+            },
             {
               "scheme": "brewtracker"
             }
