@@ -19,7 +19,6 @@ expo-env.d.ts
 *.mobileprovision
 
 # Android build artifacts
-Android/*
 *.apk
 *.aab
 *.ap_
@@ -29,8 +28,6 @@ build/
 local.properties
 *.iml
 .idea/
-gradle-wrapper.jar
-gradle-wrapper.properties
 
 # Specifically allow these files
 !Android/network_security_config*.xml

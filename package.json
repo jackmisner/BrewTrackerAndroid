@@ -1,7 +1,7 @@
 {
   "name": "brewtracker",
   "main": "expo-router/entry",
-  "version": "1.0.1",
+  "version": "1.1.5",
   "license": "GPL-3.0-or-later",
   "scripts": {
     "start": "expo start",
@@ -17,9 +17,9 @@
     "test:watch": "jest --watch",
     "coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false",
-    "version:patch": "npm version patch --no-git-tag-version && node -e \"const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); const app = JSON.parse(fs.readFileSync('./app.json', 'utf8')); app.expo.version = pkg.version; app.expo.android.versionCode = (app.expo.android.versionCode || 1) + 1; fs.writeFileSync('./app.json', JSON.stringify(app, null, 2) + '\\n');\"",
-    "version:minor": "npm version minor --no-git-tag-version && node -e \"const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); const app = JSON.parse(fs.readFileSync('./app.json', 'utf8')); app.expo.version = pkg.version; app.expo.android.versionCode = (app.expo.android.versionCode || 1) + 1; fs.writeFileSync('./app.json', JSON.stringify(app, null, 2) + '\\n');\"",
-    "version:major": "npm version major --no-git-tag-version && node -e \"const fs = require('fs'); const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8')); const app = JSON.parse(fs.readFileSync('./app.json', 'utf8')); app.expo.version = pkg.version; app.expo.android.versionCode = (app.expo.android.versionCode || 1) + 1; fs.writeFileSync('./app.json', JSON.stringify(app, null, 2) + '\\n');\"",
+    "version:patch": "node scripts/bump-version.js patch && prettier --log-level silent --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "version:minor": "node scripts/bump-version.js minor && prettier --log-level silent --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "version:major": "node scripts/bump-version.js major && prettier --log-level silent --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "build:dev": "node scripts/build-helper.js development && eas build --profile development --platform android",
     "build:preview": "node scripts/build-helper.js production && eas build --profile preview --platform android",
     "build:prod": "node scripts/build-helper.js production && eas build --profile production --platform android",

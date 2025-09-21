@@ -9,6 +9,7 @@
  * - API: Request/response types for all backend endpoints
  * - Brew Sessions: Fermentation tracking and brew session management
  * - Common: Shared types and utilities used across the app
+ * - Offline V2: Clean offline architecture types for caching and sync
  * - Recipe: Recipe data structures, ingredients, and metrics
  * - User: User profiles, authentication, and settings
  *
@@ -26,3 +27,4 @@ export * from "./user";
 export * from "./recipe";
 export * from "./brewSession";
 export * from "./api";
+export * from "./offlineV2";
