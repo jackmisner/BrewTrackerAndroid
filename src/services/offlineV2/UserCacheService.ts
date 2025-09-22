@@ -151,8 +151,8 @@ export class UserCacheService {
 
       await this.addPendingOperation(operation);
 
-      // Trigger background sync
-      this.backgroundSync();
+      // Trigger background sync (fire and forget)
+      void this.backgroundSync();
 
       return newRecipe;
     } catch (error) {
@@ -313,6 +313,7 @@ export class UserCacheService {
       if (elapsed > this.SYNC_TIMEOUT_MS) {
         console.warn("Resetting stuck sync flag");
         this.syncInProgress = false;
+        this.syncStartTime = undefined;
       }
     }
 
@@ -662,9 +663,9 @@ export class UserCacheService {
   private static async backgroundSync(): Promise<void> {
     try {
       const ops = await this.getPendingOperations().catch(() => []);
-      const minRetry =
-        ops.length > 0 ? Math.min(...ops.map(o => o.retryCount)) : 0;
-      const exp = Math.min(minRetry, 5); // cap backoff
+      const maxRetry =
+        ops.length > 0 ? Math.max(...ops.map(o => o.retryCount)) : 0;
+      const exp = Math.min(maxRetry, 5); // cap backoff
       const base = this.RETRY_BACKOFF_BASE * Math.pow(2, exp);
       const jitter = Math.floor(base * 0.1 * Math.random());
       const delay = base + jitter;

@@ -157,12 +157,15 @@ describe("UserCacheService", () => {
       expect(result[1].id).toBe("recipe-1"); // Updated less recently
     });
 
-    it("should not throw OfflineError when getting recipes fails (Promise should resolve)", async () => {
+    it("recovers from storage error and returns []", async () => {
       mockAsyncStorage.getItem.mockRejectedValue(new Error("Storage error"));
 
       await expect(
         UserCacheService.getRecipes(mockUserId)
       ).resolves.not.toThrow("Failed to get recipes");
+      await expect(
+        UserCacheService.getRecipes(mockUserId)
+      ).resolves.toStrictEqual([]);
     });
   });
 

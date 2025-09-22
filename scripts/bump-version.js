@@ -22,7 +22,7 @@ function exitWithError(message) {
 
 function validateFile(filePath, description) {
   if (!fs.existsSync(filePath)) {
-    exitWithError(`${description} not found at ${filePath}`);
+    throw new Error(`${description} not found at ${filePath}`);
   }
 }
 
@@ -46,32 +46,81 @@ function writeJsonFile(filePath, data, description) {
 function updateGradleFile(filePath, version, versionCode) {
   try {
     let gradle = fs.readFileSync(filePath, "utf8");
-    const vcRe = /versionCode \d+/;
-    const vnRe = /versionName "[^"]+"/;
-    if (!vcRe.test(gradle)) {
-      exitWithError("build.gradle: versionCode pattern not found");
+
+    // Find defaultConfig block by locating the token and walking braces
+    const defaultConfigIndex = gradle.indexOf("defaultConfig");
+    if (defaultConfigIndex === -1) {
+      throw new Error("build.gradle: defaultConfig block not found");
     }
-    if (!vnRe.test(gradle)) {
-      exitWithError("build.gradle: versionName pattern not found");
+
+    // Find the opening brace after defaultConfig
+    let braceStartIndex = gradle.indexOf("{", defaultConfigIndex);
+    if (braceStartIndex === -1) {
+      throw new Error("build.gradle: defaultConfig opening brace not found");
     }
-    const gradleAfterVC = gradle.replace(vcRe, `versionCode ${versionCode}`);
-    const gradleAfterBoth = gradleAfterVC.replace(
-      vnRe,
-      `versionName "${version}"`
+
+    // Walk braces to find the matching closing brace
+    let braceCount = 1;
+    let braceEndIndex = braceStartIndex + 1;
+    while (braceCount > 0 && braceEndIndex < gradle.length) {
+      if (gradle[braceEndIndex] === "{") {
+        braceCount++;
+      } else if (gradle[braceEndIndex] === "}") {
+        braceCount--;
+      }
+      braceEndIndex++;
+    }
+
+    if (braceCount > 0) {
+      throw new Error("build.gradle: defaultConfig closing brace not found");
+    }
+
+    // Extract the defaultConfig block content
+    const beforeDefaultConfig = gradle.substring(0, braceStartIndex + 1);
+    const defaultConfigContent = gradle.substring(
+      braceStartIndex + 1,
+      braceEndIndex - 1
     );
-    fs.writeFileSync(filePath, gradleAfterBoth);
+    const afterDefaultConfig = gradle.substring(braceEndIndex - 1);
+
+    // Tightened regexes with optional '=' and single/double quotes
+    const vcRe = /versionCode\s*=?\s*\d+/;
+    const vnRe = /versionName\s*=?\s*(['"][^'"]+['"])/;
+
+    if (!vcRe.test(defaultConfigContent)) {
+      throw new Error(
+        "build.gradle: versionCode pattern not found in defaultConfig block"
+      );
+    }
+    if (!vnRe.test(defaultConfigContent)) {
+      throw new Error(
+        "build.gradle: versionName pattern not found in defaultConfig block"
+      );
+    }
+
+    // Perform replacements only within the defaultConfig block
+    const updatedDefaultConfigContent = defaultConfigContent
+      .replace(vcRe, `versionCode ${versionCode}`)
+      .replace(vnRe, `versionName "${version}"`);
+
+    // Reassemble the file
+    const updatedGradle =
+      beforeDefaultConfig + updatedDefaultConfigContent + afterDefaultConfig;
+
+    fs.writeFileSync(filePath, updatedGradle);
     console.log(
       `✅ Updated build.gradle (versionCode: ${versionCode}, versionName: ${version})`
     );
   } catch (error) {
-    exitWithError(`Failed to update build.gradle: ${error.message}`);
+    // Rethrow error instead of exiting so caller handles rollback
+    throw new Error(`Failed to update build.gradle: ${error.message}`);
   }
 }
 
 function bumpVersion(type) {
   // Validate bump type
   if (!["patch", "minor", "major"].includes(type)) {
-    exitWithError(`Invalid bump type "${type}". Use: patch, minor, or major`);
+    throw new Error(`Invalid bump type "${type}". Use: patch, minor, or major`);
   }
   // File paths
   const repoRoot = path.resolve(__dirname, "..");
@@ -104,10 +153,10 @@ function bumpVersion(type) {
     // 3. Update app.json
     const app = readJsonFile(appJsonPath, "app.json");
     if (!app.expo) {
-      exitWithError("app.json is missing expo configuration");
+      throw new Error("app.json is missing expo configuration");
     }
     if (!app.expo.android) {
-      exitWithError("app.json is missing expo.android configuration");
+      throw new Error("app.json is missing expo.android configuration");
     }
     // Update version fields
     app.expo.version = newVersion;
@@ -151,7 +200,7 @@ function bumpVersion(type) {
     } catch (rbErr) {
       console.error(`⚠️ Rollback encountered issues: ${rbErr.message}`);
     }
-    exitWithError(`Version bump failed: ${error.message}`);
+    throw new Error(`Version bump failed: ${error.message}`);
   }
 }
 
@@ -170,7 +219,11 @@ function main() {
   }
 
   const bumpType = args[0];
-  bumpVersion(bumpType);
+  try {
+    bumpVersion(bumpType);
+  } catch (error) {
+    exitWithError(error);
+  }
 }
 
 // Run only if called directly
