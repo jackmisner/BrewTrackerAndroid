@@ -60,28 +60,6 @@ jest.mock("@contexts/CalculatorsContext", () => ({
 
 // ThemeContext is provided by renderWithProviders
 
-// Mock React Query for ModalHeader dependency
-jest.mock("@tanstack/react-query", () => {
-  const actual = jest.requireActual("@tanstack/react-query");
-  return {
-    ...actual,
-    useQueryClient: jest.fn(() => ({
-      invalidateQueries: jest.fn(),
-      setQueryData: jest.fn(),
-      getQueryData: jest.fn(),
-      mount: jest.fn(),
-      unmount: jest.fn(),
-    })),
-    QueryClient: jest.fn(() => ({
-      invalidateQueries: jest.fn(),
-      setQueryData: jest.fn(),
-      getQueryData: jest.fn(),
-      mount: jest.fn(),
-      unmount: jest.fn(),
-    })),
-  };
-});
-
 // Mock ModalHeader component
 jest.mock("@src/components/ui/ModalHeader", () => ({
   ModalHeader: ({ title, testID }: { title: string; testID: string }) => {

@@ -117,6 +117,8 @@ const convertIngredientToRecipeIngredient = (
 ): RecipeIngredient => {
   return {
     ...ingredient,
+    // Ensure RecipeIngredient has a type for downstream formatters
+    type: ingredient.type as IngredientType,
     amount: ingredient.amount || 0,
     unit: (ingredient.unit as IngredientUnit) || "oz",
     instance_id: generateUniqueId("ing"),

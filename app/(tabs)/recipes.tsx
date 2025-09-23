@@ -445,8 +445,17 @@ export default function RecipesScreen() {
           {
             text: "Delete",
             style: "destructive",
-            onPress: () => {
-              deleteRecipe(recipe.id);
+            onPress: async () => {
+              try {
+                await deleteRecipe(recipe.id);
+              } catch (err) {
+                console.error("Delete failed:", err);
+                Alert.alert(
+                  "Delete Failed",
+                  "Unable to delete recipe. Please try again.",
+                  [{ text: "OK" }]
+                );
+              }
             },
           },
         ]

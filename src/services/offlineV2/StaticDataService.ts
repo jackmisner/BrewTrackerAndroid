@@ -306,7 +306,10 @@ export class StaticDataService {
           STORAGE_KEYS_V2.INGREDIENTS_DATA,
           JSON.stringify(cachedData)
         ),
-        AsyncStorage.setItem(STORAGE_KEYS_V2.INGREDIENTS_VERSION, version),
+        AsyncStorage.setItem(
+          STORAGE_KEYS_V2.INGREDIENTS_VERSION,
+          String(version)
+        ),
       ]);
 
       return ingredients;
@@ -398,7 +401,10 @@ export class StaticDataService {
           STORAGE_KEYS_V2.BEER_STYLES_DATA,
           JSON.stringify(cachedData)
         ),
-        AsyncStorage.setItem(STORAGE_KEYS_V2.BEER_STYLES_VERSION, version),
+        AsyncStorage.setItem(
+          STORAGE_KEYS_V2.BEER_STYLES_VERSION,
+          String(version)
+        ),
       ]);
 
       return allStyles;

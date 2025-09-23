@@ -27,6 +27,8 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
     const userId = await getUserId();
     if (!userId) {
       console.log(`[useRecipes] No user ID available`);
+      setData(null);
+      setIsLoading(false);
       return null;
     }
     return userId;

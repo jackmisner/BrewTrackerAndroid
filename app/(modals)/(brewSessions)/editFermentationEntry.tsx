@@ -193,7 +193,7 @@ export default function EditFermentationEntryScreen() {
     if (
       !Number.isFinite(entryIndex) ||
       entryIndex < 0 ||
-      entryIndex >= (brewSessionData?.fermentation_entries?.length || 0)
+      entryIndex >= (brewSessionData?.fermentation_data?.length || 0)
     ) {
       Alert.alert(
         "Error",

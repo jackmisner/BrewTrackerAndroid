@@ -157,8 +157,6 @@ export function denormalizeEntityId<T extends Record<string, any> & { id: ID }>(
  * @returns The detected EntityType, or null if the URL does not match any known entity type
  */
 export function detectEntityTypeFromUrl(url: string): EntityType | null {
-  const normalizedUrl = url.toLowerCase();
-
   // Endpoint patterns to entity type mapping
   const patterns: { pattern: RegExp; entityType: EntityType }[] = [
     // Specific sub-resources first
@@ -184,7 +182,7 @@ export function detectEntityTypeFromUrl(url: string): EntityType | null {
 
   // Check patterns in order (most specific first)
   for (const { pattern, entityType } of patterns) {
-    if (pattern.test(normalizedUrl)) {
+    if (pattern.test(url)) {
       return entityType;
     }
   }
@@ -254,6 +252,21 @@ export function normalizeResponseData(data: any, entityType: EntityType): any {
       ...data,
       data: normalizeEntityIds(data.data, entityType),
     };
+  }
+
+  // Handle auth endpoint wrappers (e.g., { user: {...}, token: "..." })
+  if (
+    entityType === "user" &&
+    typeof data === "object" &&
+    !Array.isArray(data)
+  ) {
+    if (data.user && typeof data.user === "object") {
+      // Normalize the nested user object while preserving wrapper
+      return {
+        ...data,
+        user: normalizeResponseData(data.user, "user"),
+      };
+    }
   }
 
   // Handle single entity response

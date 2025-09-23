@@ -96,7 +96,7 @@ jest.mock("@src/hooks/useDebounce", () => ({
 }));
 
 // Mock V2 offline hooks
-const mockIngredients = [
+const mockOfflineIngredients = [
   {
     id: "1",
     name: "Pale Malt",
@@ -118,10 +118,10 @@ const mockIngredients = [
 
 jest.mock("@src/hooks/offlineV2", () => ({
   useIngredients: jest.fn(() => ({
-    data: mockIngredients,
+    data: mockOfflineIngredients,
     isLoading: false,
     error: null,
-    refetch: jest.fn(),
+    refresh: jest.fn(),
   })),
 }));
 

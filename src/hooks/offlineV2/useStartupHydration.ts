@@ -25,13 +25,19 @@ export function useStartupHydration(): UseStartupHydrationReturn {
   const [isHydrating, setIsHydrating] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUserId, setLastUserID] = useState<string | null>(null);
 
   useEffect(() => {
     let isCancelled = false;
 
     const performHydration = async () => {
       // Only hydrate if user is authenticated, online, and we haven't hydrated yet
-      if (!isAuthenticated || !user?.id || !isConnected || hasHydrated) {
+      if (
+        !isAuthenticated ||
+        !user?.id ||
+        !isConnected ||
+        (hasHydrated && lastUserId === user.id)
+      ) {
         return;
       }
 
@@ -49,6 +55,7 @@ export function useStartupHydration(): UseStartupHydrationReturn {
 
         if (!isCancelled) {
           setHasHydrated(true);
+          setLastUserID(userId);
           console.log(`[useStartupHydration] Hydration completed successfully`);
         }
       } catch (hydrationError) {
@@ -75,7 +82,7 @@ export function useStartupHydration(): UseStartupHydrationReturn {
     return () => {
       isCancelled = true;
     };
-  }, [isAuthenticated, user?.id, isConnected, hasHydrated]);
+  }, [isAuthenticated, user?.id, isConnected, hasHydrated, lastUserId]);
 
   // Reset hydration state when user logs out
   useEffect(() => {
@@ -83,6 +90,7 @@ export function useStartupHydration(): UseStartupHydrationReturn {
       setHasHydrated(false);
       setIsHydrating(false);
       setError(null);
+      setLastUserID(null);
       StartupHydrationService.resetHydrationState();
       console.log(
         `[useStartupHydration] Reset hydration state (user logged out)`

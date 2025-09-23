@@ -210,18 +210,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       const response = await ApiService.auth.login(credentials);
       const { access_token, user: userData } = response.data;
 
-      // Debug user data structure (development only)
-      console.log("=== User Data Debug (Login) ===");
-      console.log("Raw userData from API:", userData);
-      console.log("Available user fields:", Object.keys(userData || {}));
-      console.log("user.id:", userData?.id);
-      console.log("==============================");
-
       // Store token securely
       await ApiService.token.setToken(access_token);
 
       // Debug JWT token structure (development only)
-      debugJWTToken(access_token);
+      if (__DEV__) {
+        debugJWTToken(access_token);
+      }
 
       // Cache user data
       await AsyncStorage.setItem(

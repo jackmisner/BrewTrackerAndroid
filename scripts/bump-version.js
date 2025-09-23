@@ -7,6 +7,7 @@
  * - package.json (semver)
  * - app.json (expo config)
  * - android/app/build.gradle (Android versionCode & versionName)
+ * - android/app/src/main/res/values/strings.xml (expo_runtime_version)
  *
  * Usage: node scripts/bump-version.js <patch|minor|major>
  */
@@ -117,6 +118,28 @@ function updateGradleFile(filePath, version, versionCode) {
   }
 }
 
+function updateStringsXml(filePath, version) {
+  try {
+    let strings = fs.readFileSync(filePath, "utf8");
+
+    // Pattern to match expo_runtime_version string
+    const runtimeVersionRe =
+      /(<string name="expo_runtime_version">)[^<]*(<\/string>)/;
+
+    if (!runtimeVersionRe.test(strings)) {
+      throw new Error("strings.xml: expo_runtime_version pattern not found");
+    }
+
+    // Replace the expo_runtime_version value
+    const updatedStrings = strings.replace(runtimeVersionRe, `$1${version}$2`);
+
+    fs.writeFileSync(filePath, updatedStrings);
+    console.log(`✅ Updated strings.xml (expo_runtime_version: ${version})`);
+  } catch (error) {
+    throw new Error(`Failed to update strings.xml: ${error.message}`);
+  }
+}
+
 function bumpVersion(type) {
   // Validate bump type
   if (!["patch", "minor", "major"].includes(type)) {
@@ -127,10 +150,15 @@ function bumpVersion(type) {
   const packageJsonPath = path.join(repoRoot, "package.json");
   const appJsonPath = path.join(repoRoot, "app.json");
   const gradlePath = path.join(repoRoot, "android/app/build.gradle");
+  const stringsXmlPath = path.join(
+    repoRoot,
+    "android/app/src/main/res/values/strings.xml"
+  );
   // Validate files exist
   validateFile(packageJsonPath, "package.json");
   validateFile(appJsonPath, "app.json");
   validateFile(gradlePath, "android/app/build.gradle");
+  validateFile(stringsXmlPath, "strings.xml");
   console.log(`🚀 Bumping ${type} version...`);
   // Snapshot originals for rollback
   const snapshots = {};
@@ -142,6 +170,7 @@ function bumpVersion(type) {
   );
   snapshots.appJson = readIfExists(appJsonPath);
   snapshots.gradle = readIfExists(gradlePath);
+  snapshots.stringsXml = readIfExists(stringsXmlPath);
   try {
     // 1. Bump npm version (this updates package.json)
     console.log(`📦 Running npm version ${type}...`);
@@ -174,12 +203,16 @@ function bumpVersion(type) {
     writeJsonFile(appJsonPath, app, "app.json");
     // 4. Update Android build.gradle
     updateGradleFile(gradlePath, newVersion, newVersionCode);
-    // 5. Success summary
+    // 5. Update strings.xml
+    updateStringsXml(stringsXmlPath, newVersion);
+    // 6. Success summary
     console.log("\n🎉 Version bump completed successfully!");
     console.log(`📊 Summary:`);
     console.log(`   • Version: ${newVersion}`);
     console.log(`   • Android versionCode: ${newVersionCode}`);
-    console.log(`   • Files updated: package.json, app.json, build.gradle`);
+    console.log(
+      `   • Files updated: package.json, app.json, build.gradle, strings.xml`
+    );
   } catch (error) {
     // Best-effort rollback
     try {
@@ -195,6 +228,9 @@ function bumpVersion(type) {
       }
       if (snapshots.gradle !== null) {
         fs.writeFileSync(gradlePath, snapshots.gradle);
+      }
+      if (snapshots.stringsXml !== null) {
+        fs.writeFileSync(stringsXmlPath, snapshots.stringsXml);
       }
       console.error("↩️ Rolled back files after failure.");
     } catch (rbErr) {

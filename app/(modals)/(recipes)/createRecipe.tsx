@@ -450,6 +450,7 @@ export default function CreateRecipeScreen() {
         title="Create Recipe"
         onBack={handleCancel}
         testID="create-recipe-header"
+        showHomeButton={false}
       />
 
       {/* Progress Bar */}
