@@ -214,7 +214,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       await ApiService.token.setToken(access_token);
 
       // Debug JWT token structure (development only)
-      debugJWTToken(access_token);
+      if (__DEV__) {
+        debugJWTToken(access_token);
+      }
 
       // Cache user data
       await AsyncStorage.setItem(

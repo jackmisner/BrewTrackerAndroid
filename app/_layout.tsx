@@ -46,12 +46,19 @@ import {
   queryClient,
   createUserScopedPersister,
 } from "@services/api/queryClient";
+import { useStartupHydration } from "@src/hooks/offlineV2";
 import Constants from "expo-constants";
 
 // Component to handle StatusBar with theme
 const ThemedStatusBar = () => {
   const { isDark } = useTheme();
   return <StatusBar style={isDark ? "light" : "dark"} />;
+};
+
+// Component to trigger startup hydration
+const StartupHydration = () => {
+  useStartupHydration();
+  return null;
 };
 
 // Component to handle dynamic persister based on auth state
@@ -95,6 +102,7 @@ const DynamicPersistQueryClientProvider = ({
           "dev",
       }}
     >
+      <StartupHydration />
       {children}
     </PersistQueryClientProvider>
   );

@@ -5,8 +5,8 @@
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { UserCacheService } from "@services/offlineV2/UserCacheService";
 import ApiService from "@services/api/apiService";
+import { UserValidationService } from "@utils/userValidation";
 import {
   STORAGE_KEYS_V2,
   SyncableItem,
@@ -30,9 +30,23 @@ jest.mock("@services/api/apiService", () => ({
   },
 }));
 
+// Mock UserValidationService
+jest.mock("@utils/userValidation", () => ({
+  UserValidationService: {
+    validateOwnershipFromToken: jest.fn(),
+    getCurrentUserIdFromToken: jest.fn(),
+  },
+}));
+
+// Import the service
+import { UserCacheService } from "@services/offlineV2/UserCacheService";
+
 describe("UserCacheService", () => {
   const mockAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
   const mockApiService = ApiService as jest.Mocked<typeof ApiService>;
+  const mockUserValidation = UserValidationService as jest.Mocked<
+    typeof UserValidationService
+  >;
 
   const mockUserId = "test-user-id";
   const mockRecipe: Recipe = {
@@ -65,10 +79,27 @@ describe("UserCacheService", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2024-01-01T00:00:00Z"));
+
     // Reset static properties
     (UserCacheService as any).syncInProgress = false;
-    // Clear all timers
-    jest.clearAllTimers();
+
+    // Setup UserValidationService mocks
+    mockUserValidation.validateOwnershipFromToken.mockResolvedValue({
+      currentUserId: mockUserId,
+      isValid: true,
+    });
+    mockUserValidation.getCurrentUserIdFromToken.mockResolvedValue(mockUserId);
+
+    // Mock all background sync operations to be synchronous
+    jest
+      .spyOn(UserCacheService as any, "backgroundSync")
+      .mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe("getRecipes", () => {
@@ -107,7 +138,7 @@ describe("UserCacheService", () => {
       expect(result).toEqual([]);
     });
 
-    it("should sort recipes by creation date (newest first)", async () => {
+    it("should sort recipes by most recent update", async () => {
       const olderRecipe: SyncableItem<Recipe> = {
         ...mockSyncableRecipe,
         id: "recipe-2",
@@ -122,29 +153,23 @@ describe("UserCacheService", () => {
 
       const result = await UserCacheService.getRecipes(mockUserId);
 
-      expect(result[0].id).toBe("recipe-1"); // Newer recipe first
-      expect(result[1].id).toBe("recipe-2"); // Older recipe second
+      expect(result[0].id).toBe("recipe-2"); // Updated more recently
+      expect(result[1].id).toBe("recipe-1"); // Updated less recently
     });
 
-    it("should throw OfflineError when getting recipes fails", async () => {
+    it("recovers from storage error and returns []", async () => {
       mockAsyncStorage.getItem.mockRejectedValue(new Error("Storage error"));
 
-      await expect(UserCacheService.getRecipes(mockUserId)).rejects.toThrow(
-        "Failed to get recipes"
-      );
+      await expect(
+        UserCacheService.getRecipes(mockUserId)
+      ).resolves.not.toThrow("Failed to get recipes");
+      await expect(
+        UserCacheService.getRecipes(mockUserId)
+      ).resolves.toStrictEqual([]);
     });
   });
 
   describe("createRecipe", () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-      jest.setSystemTime(new Date("2024-01-01T00:00:00Z"));
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
     it("should create a new recipe with temporary ID", async () => {
       mockAsyncStorage.getItem
         .mockResolvedValueOnce("[]") // existing recipes
@@ -213,20 +238,13 @@ describe("UserCacheService", () => {
   });
 
   describe("updateRecipe", () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-      jest.setSystemTime(new Date("2024-01-01T00:00:00Z"));
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
     it("should update existing recipe", async () => {
       const cachedRecipes = [mockSyncableRecipe];
       mockAsyncStorage.getItem
-        .mockResolvedValueOnce(JSON.stringify(cachedRecipes))
-        .mockResolvedValueOnce("[]"); // pending operations
+        .mockResolvedValueOnce(JSON.stringify(cachedRecipes)) // getCachedRecipes
+        .mockResolvedValueOnce("[]") // getPendingOperations for addPendingOperation
+        .mockResolvedValueOnce(JSON.stringify(cachedRecipes)) // updateRecipeInCache read
+        .mockResolvedValueOnce("[]"); // addPendingOperation read
 
       const updates = { name: "Updated Recipe" };
 
@@ -236,7 +254,7 @@ describe("UserCacheService", () => {
       });
 
       expect(result.name).toBe("Updated Recipe");
-      expect(result.updated_at).toBe("1704067200000"); // 2024-01-01T00:00:00Z
+      expect(result.updated_at).toBe("2024-01-01T00:00:00.000Z");
       expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
         STORAGE_KEYS_V2.USER_RECIPES,
         expect.stringContaining('"Updated Recipe"')
@@ -274,15 +292,6 @@ describe("UserCacheService", () => {
   });
 
   describe("deleteRecipe", () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-      jest.setSystemTime(new Date("2024-01-01T00:00:00Z"));
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
     it("should mark recipe as deleted (tombstone)", async () => {
       const cachedRecipes = [mockSyncableRecipe];
       mockAsyncStorage.getItem

@@ -11,7 +11,7 @@
  * - Cache statistics and refresh capability
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { StaticDataService } from "@services/offlineV2/StaticDataService";
 import {
   UseStaticDataReturn,
@@ -38,6 +38,13 @@ export function useIngredients(filters?: {
     last_updated: null,
   });
 
+  // Memoize filters to prevent infinite re-renders
+  // Use JSON.stringify for stable comparison of filter object contents
+  const filtersKey = JSON.stringify(filters);
+  /* eslint-disable react-hooks/exhaustive-deps */
+  const memoizedFilters = useMemo(() => filters, [filtersKey]);
+  /* eslint-enable react-hooks/exhaustive-deps */
+
   const loadData = useCallback(
     async (showLoading = true) => {
       try {
@@ -46,7 +53,8 @@ export function useIngredients(filters?: {
         }
         setError(null);
 
-        const ingredients = await StaticDataService.getIngredients(filters);
+        const ingredients =
+          await StaticDataService.getIngredients(memoizedFilters);
         setData(ingredients);
 
         // Get updated stats
@@ -61,7 +69,7 @@ export function useIngredients(filters?: {
         setIsLoading(false);
       }
     },
-    [filters]
+    [memoizedFilters]
   );
 
   const refresh = useCallback(async () => {
@@ -114,6 +122,13 @@ export function useBeerStyles(filters?: {
     last_updated: null,
   });
 
+  // Memoize filters to prevent infinite re-renders
+  // Use JSON.stringify for stable comparison of filter object contents
+  const filtersKey = JSON.stringify(filters);
+  /* eslint-disable react-hooks/exhaustive-deps */
+  const memoizedFilters = useMemo(() => filters, [filtersKey]);
+  /* eslint-enable react-hooks/exhaustive-deps */
+
   const loadData = useCallback(
     async (showLoading = true) => {
       try {
@@ -122,7 +137,8 @@ export function useBeerStyles(filters?: {
         }
         setError(null);
 
-        const beerStyles = await StaticDataService.getBeerStyles(filters);
+        const beerStyles =
+          await StaticDataService.getBeerStyles(memoizedFilters);
         setData(beerStyles);
 
         // Get updated stats
@@ -137,7 +153,7 @@ export function useBeerStyles(filters?: {
         setIsLoading(false);
       }
     },
-    [filters]
+    [memoizedFilters]
   );
 
   const refresh = useCallback(async () => {

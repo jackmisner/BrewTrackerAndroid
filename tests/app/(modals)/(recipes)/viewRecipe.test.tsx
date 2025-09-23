@@ -239,7 +239,7 @@ describe("ViewRecipeScreen", () => {
             color: 2,
             type: "grain",
             unit: "lb",
-            instance_id: "mock-uuid",
+            instance_id: "mock-uuid-grain-1",
           },
           {
             name: "Munich Malt",
@@ -247,7 +247,7 @@ describe("ViewRecipeScreen", () => {
             color: 9,
             type: "grain",
             unit: "lb",
-            instance_id: "mock-uuid",
+            instance_id: "mock-uuid-grain-2",
           },
         ],
       };
@@ -278,7 +278,7 @@ describe("ViewRecipeScreen", () => {
             alpha_acid: 5.5,
             type: "hop",
             unit: "oz",
-            instance_id: "mock-uuid",
+            instance_id: "mock-uuid-hop-1",
           },
           {
             name: "Centennial",
@@ -288,7 +288,7 @@ describe("ViewRecipeScreen", () => {
             alpha_acid: 10.0,
             type: "hop",
             unit: "oz",
-            instance_id: "mock-uuid",
+            instance_id: "mock-uuid-hop-2",
           },
         ],
       };
@@ -317,7 +317,7 @@ describe("ViewRecipeScreen", () => {
             attenuation: 81,
             amount: 1,
             unit: "packet",
-            instance_id: "mock-uuid",
+            instance_id: "mock-uuid-yeast-1",
           },
         ],
       };
@@ -344,7 +344,7 @@ describe("ViewRecipeScreen", () => {
             amount: 2.0,
             type: "other",
             unit: "g",
-            instance_id: "mock-uuid",
+            instance_id: "mock-uuid-other-1",
           },
         ],
       };
@@ -376,9 +376,9 @@ describe("ViewRecipeScreen", () => {
     it("should navigate back when back button is pressed", () => {
       const { getByTestId } = render(<ViewRecipeScreen />);
 
-      // Find the back button using testID
+      // Find the back button using testID (from ModalHeader component)
       const backButton = getByTestId(
-        TEST_IDS.patterns.touchableOpacityAction("view-recipe-back")
+        TEST_IDS.patterns.touchableOpacityAction("view-recipe-header-back")
       );
 
       // Simulate pressing the back button
@@ -510,7 +510,7 @@ describe("ViewRecipeScreen", () => {
             alpha_acid: 5.5,
             type: "hop",
             unit: "oz",
-            instance_id: "mock-uuid",
+            instance_id: "mock-uuid-hop-utility-1",
           },
         ],
       };

@@ -14,7 +14,7 @@ import { useAuth } from "@contexts/AuthContext";
  * Hook for managing recipes with offline capabilities
  */
 export function useRecipes(): UseUserDataReturn<Recipe> {
-  const { user } = useAuth();
+  const { getUserId } = useAuth();
   const [data, setData] = useState<Recipe[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,9 +22,23 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
   const [conflictCount] = useState(0);
   const [lastSync, setLastSync] = useState<number | null>(null);
 
+  // Helper to get user ID consistently
+  const getUserIdForOperations = useCallback(async () => {
+    const userId = await getUserId();
+    if (!userId) {
+      console.log(`[useRecipes] No user ID available`);
+      setData(null);
+      setIsLoading(false);
+      return null;
+    }
+    return userId;
+  }, [getUserId]);
+
   const loadData = useCallback(
     async (showLoading = true) => {
-      if (!user?.id) {
+      const userId = await getUserIdForOperations();
+      if (!userId) {
+        console.log(`[useRecipes.loadData] No user ID found`);
         return;
       }
 
@@ -34,7 +48,14 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
         }
         setError(null);
 
-        const recipes = await UserCacheService.getRecipes(user.id);
+        console.log(
+          `[useRecipes.loadData] Loading recipes for user ID: "${userId}"`
+        );
+
+        const recipes = await UserCacheService.getRecipes(userId);
+        console.log(
+          `[useRecipes.loadData] UserCacheService returned ${recipes.length} recipes`
+        );
         setData(recipes);
 
         // Update sync status
@@ -47,18 +68,19 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
         setIsLoading(false);
       }
     },
-    [user?.id]
+    [getUserIdForOperations]
   );
 
   const create = useCallback(
     async (recipe: Partial<Recipe>): Promise<Recipe> => {
-      if (!user?.id) {
+      const userId = await getUserIdForOperations();
+      if (!userId) {
         throw new Error("User not authenticated");
       }
 
       const newRecipe = await UserCacheService.createRecipe({
         ...recipe,
-        user_id: user.id,
+        user_id: userId,
       });
 
       // Refresh data
@@ -66,18 +88,19 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
 
       return newRecipe;
     },
-    [user?.id, loadData]
+    [getUserIdForOperations, loadData]
   );
 
   const update = useCallback(
     async (id: string, updates: Partial<Recipe>): Promise<Recipe> => {
-      if (!user?.id) {
+      const userId = await getUserIdForOperations();
+      if (!userId) {
         throw new Error("User not authenticated");
       }
 
       const updatedRecipe = await UserCacheService.updateRecipe(id, {
         ...updates,
-        user_id: user.id,
+        user_id: userId,
       });
 
       // Refresh data
@@ -85,21 +108,22 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
 
       return updatedRecipe;
     },
-    [user?.id, loadData]
+    [getUserIdForOperations, loadData]
   );
 
   const deleteRecipe = useCallback(
     async (id: string): Promise<void> => {
-      if (!user?.id) {
+      const userId = await getUserIdForOperations();
+      if (!userId) {
         throw new Error("User not authenticated");
       }
 
-      await UserCacheService.deleteRecipe(id, user.id);
+      await UserCacheService.deleteRecipe(id, userId);
 
       // Refresh data
       await loadData(false);
     },
-    [user?.id, loadData]
+    [getUserIdForOperations, loadData]
   );
 
   const sync = useCallback(async (): Promise<SyncResult> => {
@@ -112,15 +136,57 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
     return result;
   }, [loadData]);
 
-  // Load data on mount and when user changes
-  useEffect(() => {
-    if (user?.id) {
-      loadData();
-    } else {
-      setData(null);
+  const refresh = useCallback(async (): Promise<void> => {
+    try {
+      const userIdForCache = await getUserIdForOperations();
+      if (!userIdForCache) {
+        console.log(`[useRecipes.refresh] No user ID found for refresh`);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      console.log(
+        `[useRecipes.refresh] Refreshing recipes from server for user: "${userIdForCache}"`
+      );
+
+      const refreshedRecipes =
+        await UserCacheService.refreshRecipesFromServer(userIdForCache);
+      console.log(
+        `[useRecipes.refresh] Refresh completed, got ${refreshedRecipes.length} recipes`
+      );
+
+      setData(refreshedRecipes);
+
+      // Update sync status
+      const pending = await UserCacheService.getPendingOperationsCount();
+      setPendingCount(pending);
+      setLastSync(Date.now())
+    } catch (error) {
+      console.error(`[useRecipes.refresh] Refresh failed:`, error);
+      setError(
+        error instanceof Error ? error.message : "Failed to refresh recipes"
+      );
+    } finally {
       setIsLoading(false);
     }
-  }, [user?.id, loadData]);
+  }, [getUserIdForOperations]);
+
+  // Load data on mount and when user changes
+  useEffect(() => {
+    const loadDataIfAuthenticated = async () => {
+      const userId = await getUserIdForOperations();
+      if (userId) {
+        loadData();
+      } else {
+        setData(null);
+        setIsLoading(false);
+      }
+    };
+
+    loadDataIfAuthenticated();
+  }, [getUserIdForOperations, loadData]);
 
   return {
     data,
@@ -133,6 +199,7 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
     update,
     delete: deleteRecipe,
     sync,
+    refresh,
   };
 }
 
@@ -151,8 +218,8 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
   // TODO: Implement brew sessions methods similar to recipes
   // For now, return basic structure
 
-  const loadData = useCallback(async (_showLoading = true) => {
-    // TODO: Implement when UserCacheService supports brew sessions
+  // TODO: Implement loadData when UserCacheService supports brew sessions
+  useEffect(() => {
     setIsLoading(false);
   }, []);
 
@@ -191,9 +258,10 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
     };
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const refresh = useCallback(async (): Promise<void> => {
+    // TODO: Implement when UserCacheService supports brew sessions
+    // For now, do nothing since brew sessions are not implemented
+  }, []);
 
   return {
     data,
@@ -206,5 +274,6 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
     update,
     delete: deleteSession,
     sync,
+    refresh,
   };
 }

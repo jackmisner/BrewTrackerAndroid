@@ -19,6 +19,7 @@ import { BrewSession, UpdateFermentationEntryRequest } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUserValidation } from "@utils/userValidation";
 import { editBrewSessionStyles } from "@styles/modals/editBrewSessionStyles";
+import { ModalHeader } from "@src/components/ui/ModalHeader";
 
 export default function EditFermentationEntryScreen() {
   const theme = useTheme();
@@ -192,7 +193,7 @@ export default function EditFermentationEntryScreen() {
     if (
       !Number.isFinite(entryIndex) ||
       entryIndex < 0 ||
-      entryIndex >= (brewSessionData?.fermentation_entries?.length || 0)
+      entryIndex >= (brewSessionData?.fermentation_data?.length || 0)
     ) {
       Alert.alert(
         "Error",
@@ -241,13 +242,13 @@ export default function EditFermentationEntryScreen() {
   if (isLoadingSession) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.headerButton} onPress={handleCancel}>
-            <MaterialIcons name="close" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Fermentation Entry</Text>
-          <View style={styles.saveButton} />
-        </View>
+        <ModalHeader
+          title="Edit Fermentation Entry"
+          testID="edit-fermentation-entry-header"
+          rightActions={<View style={styles.saveButton} />}
+          showHomeButton={false}
+          onBack={handleCancel}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Loading entry...</Text>
@@ -259,13 +260,13 @@ export default function EditFermentationEntryScreen() {
   if (sessionError || !brewSessionData?.fermentation_data?.[entryIndex]) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.headerButton} onPress={handleCancel}>
-            <MaterialIcons name="close" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Fermentation Entry</Text>
-          <View style={styles.saveButton} testID="save-button" />
-        </View>
+        <ModalHeader
+          title="Edit Fermentation Entry"
+          testID="edit-fermentation-entry-header"
+          rightActions={<View style={styles.saveButton} testID="save-button" />}
+          showHomeButton={false}
+          onBack={handleCancel}
+        />
         <View style={styles.errorContainer}>
           <MaterialIcons name="error" size={64} color={theme.colors.error} />
           <Text style={styles.errorText}>Entry Not Found</Text>
@@ -282,28 +283,31 @@ export default function EditFermentationEntryScreen() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.headerButton} onPress={handleCancel}>
-          <MaterialIcons name="close" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Fermentation Entry</Text>
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            updateEntryMutation.isPending && styles.saveButtonDisabled,
-          ]}
-          onPress={handleSave}
-          disabled={updateEntryMutation.isPending}
-          testID="save-button"
-        >
-          {updateEntryMutation.isPending ? (
-            <ActivityIndicator size="small" color={theme.colors.primaryText} />
-          ) : (
-            <Text style={styles.saveButtonText}>Save</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      <ModalHeader
+        title="Edit Fermentation Entry"
+        testID="edit-fermentation-entry-header"
+        rightActions={
+          <TouchableOpacity
+            style={[
+              styles.saveButton,
+              updateEntryMutation.isPending && styles.saveButtonDisabled,
+            ]}
+            onPress={handleSave}
+            disabled={updateEntryMutation.isPending}
+            testID="save-button"
+          >
+            {updateEntryMutation.isPending ? (
+              <ActivityIndicator
+                size="small"
+                color={theme.colors.primaryText}
+              />
+            ) : (
+              <Text style={styles.saveButtonText}>Save</Text>
+            )}
+          </TouchableOpacity>
+        }
+        showHomeButton={false}
+      />
 
       {/* Validation Errors */}
       {validationErrors.length > 0 ? (

@@ -87,25 +87,28 @@ jest.mock("@contexts/CalculatorsContext", () => ({
 }));
 
 // Mock services
-const mockBoilTimerCalculator = {
-  createFromRecipe: jest.fn(() => ({
-    boilTime: 60,
-    hopAlerts: [
-      {
-        time: 60,
-        name: "Cascade",
-        amount: 1,
-        unit: "oz",
-        added: false,
-        alertScheduled: false,
-      },
-    ],
-  })),
-};
-
 jest.mock("@services/calculators/BoilTimerCalculator", () => ({
-  BoilTimerCalculator: mockBoilTimerCalculator,
+  BoilTimerCalculator: {
+    createFromRecipe: jest.fn(() => ({
+      boilTime: 60,
+      hopAlerts: [
+        {
+          time: 60,
+          name: "Cascade",
+          amount: 1,
+          unit: "oz",
+          added: false,
+          alertScheduled: false,
+        },
+      ],
+    })),
+  },
 }));
+
+// Get reference to the mocked BoilTimerCalculator
+const {
+  BoilTimerCalculator: mockBoilTimerCalculator,
+} = require("@services/calculators/BoilTimerCalculator");
 
 jest.mock("@services/NotificationService", () => ({
   NotificationService: {
@@ -154,6 +157,20 @@ jest.mock("@services/api/apiService", () => ({
 // Mock React Query
 jest.mock("@tanstack/react-query", () => ({
   ...jest.requireActual("@tanstack/react-query"),
+  useQueryClient: jest.fn(() => ({
+    invalidateQueries: jest.fn(),
+    setQueryData: jest.fn(),
+    getQueryData: jest.fn(),
+    mount: jest.fn(),
+    unmount: jest.fn(),
+  })),
+  QueryClient: jest.fn(() => ({
+    invalidateQueries: jest.fn(),
+    setQueryData: jest.fn(),
+    getQueryData: jest.fn(),
+    mount: jest.fn(),
+    unmount: jest.fn(),
+  })),
   useQuery: jest.fn(() => ({
     data: {
       data: {
@@ -182,18 +199,23 @@ jest.mock("@components/calculators/CalculatorCard", () => {
   };
 });
 
-jest.mock("@components/calculators/CalculatorHeader", () => {
-  const React = require("react");
-  const RN = require("react-native");
-  return {
-    CalculatorHeader: ({ title, testID }: any) =>
-      React.createElement(
-        RN.View,
-        { testID },
-        React.createElement(RN.Text, {}, title)
-      ),
-  };
-});
+// Mock ModalHeader component
+jest.mock("@src/components/ui/ModalHeader", () => ({
+  ModalHeader: ({ title, testID }: { title: string; testID: string }) => {
+    const React = require("react");
+    return React.createElement("View", { testID }, [
+      React.createElement("TouchableOpacity", {
+        testID: `${testID}-back-button`,
+        key: "back",
+      }),
+      React.createElement("Text", { key: "title" }, title),
+      React.createElement("TouchableOpacity", {
+        testID: `${testID}-home-button`,
+        key: "home",
+      }),
+    ]);
+  },
+}));
 
 jest.mock("@components/calculators/NumberInput", () => {
   const React = require("react");

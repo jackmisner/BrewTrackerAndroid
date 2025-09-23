@@ -41,8 +41,13 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import { useDebounce } from "@src/hooks/useDebounce";
-import { useOfflineIngredients } from "@src/hooks/useOfflineIngredients";
-import { RecipeIngredient, IngredientType, IngredientUnit } from "@src/types";
+import { useIngredients } from "@src/hooks/offlineV2";
+import {
+  RecipeIngredient,
+  IngredientType,
+  IngredientUnit,
+  Ingredient,
+} from "@src/types";
 import { ingredientPickerStyles } from "@styles/modals/ingredientPickerStyles";
 import { IngredientDetailEditor } from "@src/components/recipes/IngredientEditor/IngredientDetailEditor";
 import { HOP_USAGE_OPTIONS } from "@constants/hopConstants";
@@ -103,6 +108,23 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 // Legacy constants for basic quantity form removed - IngredientDetailEditor has its own unit/hop handling
+
+/**
+ * Converts an Ingredient to a RecipeIngredient with required fields
+ */
+const convertIngredientToRecipeIngredient = (
+  ingredient: Ingredient
+): RecipeIngredient => {
+  return {
+    ...ingredient,
+    // Ensure RecipeIngredient has a type for downstream formatters
+    type: ingredient.type as IngredientType,
+    amount: ingredient.amount || 0,
+    unit: (ingredient.unit as IngredientUnit) || "oz",
+    // Defer actual instance_id assignment; created in createRecipeIngredientWithDefaults
+    instance_id: "",
+  };
+};
 
 /**
  * Creates a complete RecipeIngredient with sensible defaults for editing
@@ -194,19 +216,19 @@ export default function IngredientPickerScreen() {
     data: ingredients = [],
     isLoading,
     error,
-    refetch,
-  } = useOfflineIngredients(
-    ingredientType,
-    debouncedQuery || undefined,
-    selectedCategory || undefined
-  );
+    refresh: refetch,
+  } = useIngredients({
+    type: ingredientType,
+    search: debouncedQuery || undefined,
+    category: selectedCategory || undefined,
+  });
 
   // Legacy useEffect for setting default units/amounts removed - IngredientDetailEditor handles defaults
 
   // Custom sorting function for ingredients with special handling for caramel malts and candi syrups
   // Based on the sophisticated algorithm from BrewTracker web frontend
   const sortIngredients = useMemo(() => {
-    return (ingredients: RecipeIngredient[]): RecipeIngredient[] => {
+    return (ingredients: Ingredient[]): Ingredient[] => {
       return [...ingredients].sort((a, b) => {
         const aName = a.name.toLowerCase();
         const bName = b.name.toLowerCase();
@@ -219,8 +241,8 @@ export default function IngredientPickerScreen() {
 
         if (aCaramelMatch && bCaramelMatch) {
           // Both are caramel malts - sort by number
-          const aNum = parseInt(aCaramelMatch[1]);
-          const bNum = parseInt(bCaramelMatch[1]);
+          const aNum = parseInt(aCaramelMatch[1], 10);
+          const bNum = parseInt(bCaramelMatch[1], 10);
           return aNum - bNum;
         } else if (aCaramelMatch && !bCaramelMatch) {
           // Only a is caramel - check if b starts with caramel/crystal
@@ -243,8 +265,8 @@ export default function IngredientPickerScreen() {
 
         if (aCandiMatch && bCandiMatch) {
           // Both are candi syrups - sort by number
-          const aNum = parseInt(aCandiMatch[1]);
-          const bNum = parseInt(bCandiMatch[1]);
+          const aNum = parseInt(aCandiMatch[1], 10);
+          const bNum = parseInt(bCandiMatch[1], 10);
           return aNum - bNum;
         } else if (aCandiMatch && !bCandiMatch) {
           // Only a is candi syrup - check if b starts with 'candi' or 'd-'
@@ -281,10 +303,12 @@ export default function IngredientPickerScreen() {
     return sortedIngredients;
   }, [ingredients, sortIngredients]);
 
-  const handleIngredientSelect = (ingredient: RecipeIngredient) => {
+  const handleIngredientSelect = (ingredient: Ingredient) => {
+    // Convert Ingredient to RecipeIngredient first
+    const recipeIngredient = convertIngredientToRecipeIngredient(ingredient);
     // Create a complete RecipeIngredient with defaults for editing
     const ingredientWithDefaults = createRecipeIngredientWithDefaults(
-      ingredient,
+      recipeIngredient,
       ingredientType,
       unitSystem
     );
@@ -326,7 +350,7 @@ export default function IngredientPickerScreen() {
     router.back();
   };
 
-  const renderIngredientItem = ({ item }: { item: RecipeIngredient }) => (
+  const renderIngredientItem = ({ item }: { item: Ingredient }) => (
     <TouchableOpacity
       style={styles.ingredientItem}
       onPress={() => handleIngredientSelect(item)}
@@ -341,7 +365,9 @@ export default function IngredientPickerScreen() {
 
         {/* Type-specific info using shared formatting utilities */}
         <View style={styles.ingredientSpecs}>
-          <Text style={styles.specText}>{formatIngredientDetails(item)}</Text>
+          <Text style={styles.specText}>
+            {formatIngredientDetails(convertIngredientToRecipeIngredient(item))}
+          </Text>
         </View>
       </View>
 

@@ -18,6 +18,7 @@ import {
 jest.mock("@react-native-async-storage/async-storage", () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
+  multiSet: jest.fn(),
   removeItem: jest.fn(),
 }));
 
@@ -118,13 +119,11 @@ describe("StaticDataService", () => {
       expect(result).toEqual(mockIngredients);
       expect(mockApiService.ingredients.getVersion).toHaveBeenCalled();
       expect(mockApiService.ingredients.getAll).toHaveBeenCalled();
-      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
-        STORAGE_KEYS_V2.INGREDIENTS_DATA,
-        expect.stringContaining('"data"')
-      );
-      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
-        STORAGE_KEYS_V2.INGREDIENTS_VERSION,
-        "v1.0.0"
+      expect(mockAsyncStorage.multiSet).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          [STORAGE_KEYS_V2.INGREDIENTS_DATA, expect.stringContaining('"data"')],
+          [STORAGE_KEYS_V2.INGREDIENTS_VERSION, "v1.0.0"],
+        ])
       );
     });
 
@@ -230,9 +229,11 @@ describe("StaticDataService", () => {
       expect(result).toEqual(mockBeerStyles);
       expect(mockApiService.beerStyles.getVersion).toHaveBeenCalled();
       expect(mockApiService.beerStyles.getAll).toHaveBeenCalled();
-      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
-        STORAGE_KEYS_V2.BEER_STYLES_DATA,
-        expect.stringContaining('"data"')
+      expect(mockAsyncStorage.multiSet).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          [STORAGE_KEYS_V2.BEER_STYLES_DATA, expect.stringContaining('"data"')],
+          [STORAGE_KEYS_V2.BEER_STYLES_VERSION, "v1.0.0"],
+        ])
       );
     });
 
@@ -339,9 +340,11 @@ describe("StaticDataService", () => {
 
       expect(mockApiService.ingredients.getVersion).toHaveBeenCalled();
       expect(mockApiService.ingredients.getAll).toHaveBeenCalled();
-      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
-        STORAGE_KEYS_V2.INGREDIENTS_DATA,
-        expect.any(String)
+      expect(mockAsyncStorage.multiSet).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          [STORAGE_KEYS_V2.INGREDIENTS_DATA, expect.any(String)],
+          [STORAGE_KEYS_V2.INGREDIENTS_VERSION, "v1.0.0"],
+        ])
       );
     });
 
@@ -371,9 +374,11 @@ describe("StaticDataService", () => {
 
       expect(mockApiService.beerStyles.getVersion).toHaveBeenCalled();
       expect(mockApiService.beerStyles.getAll).toHaveBeenCalled();
-      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith(
-        STORAGE_KEYS_V2.BEER_STYLES_DATA,
-        expect.any(String)
+      expect(mockAsyncStorage.multiSet).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          [STORAGE_KEYS_V2.BEER_STYLES_DATA, expect.any(String)],
+          [STORAGE_KEYS_V2.BEER_STYLES_VERSION, "v1.0.0"],
+        ])
       );
     });
   });

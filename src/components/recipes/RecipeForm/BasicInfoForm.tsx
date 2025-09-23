@@ -12,7 +12,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { RecipeFormData, BatchSizeUnit } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
-import { useBeerStyles } from "@src/hooks/useBeerStyles";
+import { useBeerStyles } from "@src/hooks/offlineV2";
 import { TEST_IDS } from "@src/constants/testIDs";
 
 interface BasicInfoFormProps {
@@ -46,7 +46,9 @@ export function BasicInfoForm({
     data: beerStyles,
     isLoading: stylesLoading,
     error: stylesError,
-  } = useBeerStyles();
+  } = useBeerStyles({
+    search: styleSearchQuery || undefined,
+  });
 
   const validateField = (field: keyof RecipeFormData, value: any) => {
     const newErrors = { ...errors };
@@ -118,13 +120,6 @@ export function BasicInfoForm({
 
     const displayStyles = beerStyles || [];
 
-    // Filter styles based on search query
-    const filteredStyles = displayStyles.filter(
-      style =>
-        style.name.toLowerCase().includes(styleSearchQuery.toLowerCase()) ||
-        style.styleId.toLowerCase().includes(styleSearchQuery.toLowerCase())
-    );
-
     return (
       <View style={styles.stylePickerContainer}>
         <View style={styles.stylePickerHeader}>
@@ -180,9 +175,9 @@ export function BasicInfoForm({
               </Text>
             </View>
           ) : null}
-          {filteredStyles.map(style => (
+          {displayStyles.map(style => (
             <TouchableOpacity
-              key={`${style.styleId}-${style.name}`}
+              key={`${style.style_id}-${style.name}`}
               style={styles.stylePickerItem}
               onPress={() => {
                 handleFieldChange("style", style.name);
@@ -191,12 +186,12 @@ export function BasicInfoForm({
               }}
             >
               <View style={styles.stylePickerItemRow}>
-                <Text style={styles.stylePickerItemId}>{style.styleId}</Text>
+                <Text style={styles.stylePickerItemId}>{style.style_id}</Text>
                 <Text style={styles.stylePickerItemText}>{style.name}</Text>
               </View>
             </TouchableOpacity>
           ))}
-          {filteredStyles.length === 0 && !stylesLoading ? (
+          {displayStyles.length === 0 && !stylesLoading ? (
             <View style={styles.infoSection}>
               <Text style={styles.infoText}>
                 {styleSearchQuery

@@ -95,6 +95,36 @@ jest.mock("@src/hooks/useDebounce", () => ({
   useDebounce: jest.fn(value => value),
 }));
 
+// Mock V2 offline hooks
+const mockOfflineIngredients = [
+  {
+    id: "1",
+    name: "Pale Malt",
+    type: "grain",
+    category: "Base Malt",
+    potential: 1.037,
+    color: 2,
+    description: "Standard base malt",
+  },
+  {
+    id: "2",
+    name: "Cascade",
+    type: "hop",
+    category: "Aroma",
+    alpha_acid: 5.5,
+    description: "Citrusy American hop",
+  },
+];
+
+jest.mock("@src/hooks/offlineV2", () => ({
+  useIngredients: jest.fn(() => ({
+    data: mockOfflineIngredients,
+    isLoading: false,
+    error: null,
+    refresh: jest.fn(),
+  })),
+}));
+
 // Mock styles
 jest.mock("@styles/modals/ingredientPickerStyles", () => ({
   ingredientPickerStyles: () => ({

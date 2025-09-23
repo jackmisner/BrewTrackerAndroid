@@ -9,7 +9,19 @@ jest.mock("react-native", () => ({
   View: "View",
   Text: "Text",
   TouchableOpacity: "TouchableOpacity",
-  FlatList: "FlatList",
+  FlatList: ({ data, ListEmptyComponent }: any) => {
+    // Render empty component when data is empty
+    if (!data || data.length === 0) {
+      if (ListEmptyComponent) {
+        // Call the function if it's a function, otherwise return it directly
+        return typeof ListEmptyComponent === "function"
+          ? ListEmptyComponent()
+          : ListEmptyComponent;
+      }
+      return null;
+    }
+    return "FlatList";
+  },
   RefreshControl: "RefreshControl",
   TextInput: "TextInput",
   ActivityIndicator: "ActivityIndicator",
@@ -136,37 +148,24 @@ jest.mock("@contexts/CalculatorsContext", () => {
   };
 });
 
-// Additional offline hooks mock
-jest.mock("@src/hooks/useOfflineRecipes", () => ({
-  useOfflineRecipes: jest.fn(() => ({
+// Mock V2 offline hooks
+jest.mock("@src/hooks/offlineV2", () => ({
+  useRecipes: jest.fn(() => ({
     data: [],
     isLoading: false,
     error: null,
-    refetch: jest.fn(),
-  })),
-  useOfflineDeleteRecipe: jest.fn(() => ({
-    mutate: jest.fn(),
-    isLoading: false,
-  })),
-  useOfflineSyncStatus: jest.fn(() => ({
-    data: { pendingCount: 0, lastSync: null },
-    isLoading: false,
+    delete: jest.fn(),
+    sync: jest.fn(),
+    refresh: jest.fn(),
   })),
   useOfflineSync: jest.fn(() => ({
-    mutate: jest.fn(),
-    isLoading: false,
-  })),
-  useOfflineModifiedSync: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
-    isLoading: false,
-  })),
-  useAutoOfflineModifiedSync: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
-    isLoading: false,
+    isSyncing: false,
+    pendingOperations: 0,
+    conflicts: 0,
+    lastSync: null,
+    sync: jest.fn(),
+    clearPending: jest.fn(),
+    resolveConflict: jest.fn(),
   })),
 }));
 
@@ -280,15 +279,8 @@ const mockUseMutation = require("@tanstack/react-query").useMutation;
 const mockRouter = require("expo-router").router;
 const mockUseLocalSearchParams = require("expo-router").useLocalSearchParams;
 
-// Get references to offline hook mocks
-const {
-  useOfflineRecipes,
-  useOfflineDeleteRecipe,
-  useOfflineSyncStatus,
-  useOfflineSync,
-  useOfflineModifiedSync,
-  useAutoOfflineModifiedSync,
-} = require("@src/hooks/useOfflineRecipes");
+// Get references to V2 offline hook mocks
+const { useRecipes, useOfflineSync } = require("@src/hooks/offlineV2");
 
 beforeEach(() => {
   // Reset all mock implementations between tests
@@ -328,35 +320,22 @@ beforeEach(() => {
     hideMenu: jest.fn(),
   });
 
-  // Safe defaults for offline hooks to avoid crashes in tests that don't override them
-  useOfflineRecipes.mockReturnValue({
+  // Safe defaults for V2 offline hooks to avoid crashes in tests that don't override them
+  useRecipes.mockReturnValue({
     data: [],
     isLoading: false,
     error: null,
-    refetch: jest.fn(),
-  });
-  useOfflineDeleteRecipe.mockReturnValue({
-    mutate: jest.fn(),
-    isPending: false,
-  });
-  useOfflineSyncStatus.mockReturnValue({
-    data: { pendingSync: 0, conflicts: 0, failedSync: 0 },
-    isLoading: false,
-    error: null,
+    delete: jest.fn(),
+    sync: jest.fn(),
   });
   useOfflineSync.mockReturnValue({
-    mutate: jest.fn(),
-    isPending: false,
-  });
-  useOfflineModifiedSync.mockReturnValue({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
-  });
-  useAutoOfflineModifiedSync.mockReturnValue({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
+    isSyncing: false,
+    pendingOperations: 0,
+    conflicts: 0,
+    lastSync: null,
+    sync: jest.fn(),
+    clearPending: jest.fn(),
+    resolveConflict: jest.fn(),
   });
 });
 // Context providers are managed by renderWithProviders
@@ -503,12 +482,13 @@ describe("RecipesScreen", () => {
 
   describe("loading states", () => {
     it("should show loading indicator for my recipes", () => {
-      // Mock offline recipes hook to return loading state
-      useOfflineRecipes.mockReturnValue({
+      // Mock V2 recipes hook to return loading state
+      useRecipes.mockReturnValue({
         data: undefined,
         isLoading: true,
         error: null,
-        refetch: jest.fn(),
+        delete: jest.fn(),
+        sync: jest.fn(),
       });
 
       const { getByText } = renderWithProviders(<RecipesScreen />, {
@@ -552,12 +532,13 @@ describe("RecipesScreen", () => {
 
   describe("error states", () => {
     it("should show error message when my recipes fail to load", () => {
-      // Mock offline recipes hook to return error state
-      useOfflineRecipes.mockReturnValue({
+      // Mock V2 recipes hook to return error state
+      useRecipes.mockReturnValue({
         data: undefined,
         isLoading: false,
         error: new Error("Network error"),
-        refetch: jest.fn(),
+        delete: jest.fn(),
+        sync: jest.fn(),
       });
 
       const { getByText } = renderWithProviders(<RecipesScreen />, {
@@ -573,13 +554,16 @@ describe("RecipesScreen", () => {
     });
 
     it("should allow retry when error occurs", () => {
-      const mockRefetch = jest.fn();
-      // Mock offline recipes hook to return error state
-      useOfflineRecipes.mockReturnValue({
+      const mockSync = jest.fn();
+      const mockRefresh = jest.fn();
+      // Mock V2 recipes hook to return error state
+      useRecipes.mockReturnValue({
         data: undefined,
         isLoading: false,
         error: new Error("Network error"),
-        refetch: mockRefetch,
+        delete: jest.fn(),
+        sync: mockSync,
+        refresh: mockRefresh,
       });
 
       const { getByText } = renderWithProviders(<RecipesScreen />, {
@@ -589,7 +573,7 @@ describe("RecipesScreen", () => {
 
       fireEvent.press(retryButton);
 
-      expect(mockRefetch).toHaveBeenCalled();
+      expect(mockRefresh).toHaveBeenCalled();
     });
   });
 
@@ -618,12 +602,13 @@ describe("RecipesScreen", () => {
     ];
 
     beforeEach(() => {
-      // Mock offline recipes hook to return mock data
-      useOfflineRecipes.mockReturnValue({
+      // Mock V2 recipes hook to return mock data
+      useRecipes.mockReturnValue({
         data: mockRecipes,
         isLoading: false,
         error: null,
-        refetch: jest.fn(),
+        delete: jest.fn(),
+        sync: jest.fn(),
       });
 
       // Mock public recipes query to return empty data
@@ -701,39 +686,24 @@ describe("RecipesScreen", () => {
 
   describe("empty states", () => {
     beforeEach(() => {
-      // Mock offline recipes hook to return empty data
-      useOfflineRecipes.mockReturnValue({
+      // Mock V2 recipes hook to return empty data
+      useRecipes.mockReturnValue({
         data: [],
         isLoading: false,
         error: null,
-        refetch: jest.fn(),
+        delete: jest.fn(),
+        sync: jest.fn(),
       });
 
       // Mock sync status hook to return no pending syncs
-      useOfflineSyncStatus.mockReturnValue({
-        data: { pendingSync: 0, conflicts: 0, failedSync: 0 },
-        isLoading: false,
-        error: null,
-      });
-
-      // Mock sync hook
       useOfflineSync.mockReturnValue({
-        mutate: jest.fn(),
-        isPending: false,
-      });
-
-      // Mock modified sync hook
-      useOfflineModifiedSync.mockReturnValue({
-        mutate: jest.fn(),
-        mutateAsync: jest.fn(),
-        isPending: false,
-      });
-
-      // Mock auto modified sync hook
-      useAutoOfflineModifiedSync.mockReturnValue({
-        mutate: jest.fn(),
-        mutateAsync: jest.fn(),
-        isPending: false,
+        isSyncing: false,
+        pendingOperations: 0,
+        conflicts: 0,
+        lastSync: null,
+        sync: jest.fn(),
+        clearPending: jest.fn(),
+        resolveConflict: jest.fn(),
       });
     });
 
@@ -762,11 +732,12 @@ describe("RecipesScreen", () => {
 
     it("should navigate to create recipe from empty state", () => {
       // Ensure empty state is shown by mocking proper data
-      useOfflineRecipes.mockReturnValue({
+      useRecipes.mockReturnValue({
         data: [],
         isLoading: false,
         error: null,
-        refetch: jest.fn(),
+        delete: jest.fn(),
+        sync: jest.fn(),
       });
 
       const { getByText } = renderWithProviders(<RecipesScreen />, {

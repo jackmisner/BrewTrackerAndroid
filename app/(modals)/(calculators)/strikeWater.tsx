@@ -3,7 +3,7 @@ import { View, ScrollView } from "react-native";
 import { useCalculators } from "@contexts/CalculatorsContext";
 import { StrikeWaterCalculator } from "@services/calculators/StrikeWaterCalculator";
 import { CalculatorCard } from "@components/calculators/CalculatorCard";
-import { CalculatorHeader } from "@components/calculators/CalculatorHeader";
+import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { NumberInput } from "@components/calculators/NumberInput";
 import { UnitToggle, DropdownToggle } from "@components/calculators/UnitToggle";
 import {
@@ -238,7 +238,10 @@ export default function StrikeWaterCalculatorScreen() {
         { backgroundColor: theme.colors.background },
       ]}
     >
-      <CalculatorHeader title="Strike Water Calculator" />
+      <ModalHeader
+        title="Strike Water Calculator"
+        testID="strike-water-header"
+      />
 
       <ScrollView style={{ flex: 1 }}>
         <CalculatorCard title="Settings">

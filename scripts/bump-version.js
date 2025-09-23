@@ -7,6 +7,7 @@
  * - package.json (semver)
  * - app.json (expo config)
  * - android/app/build.gradle (Android versionCode & versionName)
+ * - android/app/src/main/res/values/strings.xml (expo_runtime_version)
  *
  * Usage: node scripts/bump-version.js <patch|minor|major>
  */
@@ -22,7 +23,7 @@ function exitWithError(message) {
 
 function validateFile(filePath, description) {
   if (!fs.existsSync(filePath)) {
-    exitWithError(`${description} not found at ${filePath}`);
+    throw new Error(`${description} not found at ${filePath}`);
   }
 }
 
@@ -30,7 +31,7 @@ function readJsonFile(filePath, description) {
   try {
     return JSON.parse(fs.readFileSync(filePath, "utf8"));
   } catch (error) {
-    exitWithError(`Failed to read ${description}: ${error.message}`);
+    throw new Error(`Failed to read ${description}: ${error.message}`);
   }
 }
 
@@ -39,7 +40,7 @@ function writeJsonFile(filePath, data, description) {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + "\n");
     console.log(`✅ Updated ${description}`);
   } catch (error) {
-    exitWithError(`Failed to write ${description}: ${error.message}`);
+    throw new Error(`Failed to write ${description}: ${error.message}`);
   }
 }
 
@@ -47,80 +48,195 @@ function updateGradleFile(filePath, version, versionCode) {
   try {
     let gradle = fs.readFileSync(filePath, "utf8");
 
-    // Update versionCode and versionName
-    gradle = gradle.replace(/versionCode \d+/, `versionCode ${versionCode}`);
-    gradle = gradle.replace(/versionName "[^"]+"/, `versionName "${version}"`);
+    // Find defaultConfig block by locating the token and walking braces
+    const defaultConfigIndex = gradle.indexOf("defaultConfig");
+    if (defaultConfigIndex === -1) {
+      throw new Error("build.gradle: defaultConfig block not found");
+    }
 
-    fs.writeFileSync(filePath, gradle);
+    // Find the opening brace after defaultConfig
+    let braceStartIndex = gradle.indexOf("{", defaultConfigIndex);
+    if (braceStartIndex === -1) {
+      throw new Error("build.gradle: defaultConfig opening brace not found");
+    }
+
+    // Walk braces to find the matching closing brace
+    let braceCount = 1;
+    let braceEndIndex = braceStartIndex + 1;
+    while (braceCount > 0 && braceEndIndex < gradle.length) {
+      if (gradle[braceEndIndex] === "{") {
+        braceCount++;
+      } else if (gradle[braceEndIndex] === "}") {
+        braceCount--;
+      }
+      braceEndIndex++;
+    }
+
+    if (braceCount > 0) {
+      throw new Error("build.gradle: defaultConfig closing brace not found");
+    }
+
+    // Extract the defaultConfig block content
+    const beforeDefaultConfig = gradle.substring(0, braceStartIndex + 1);
+    const defaultConfigContent = gradle.substring(
+      braceStartIndex + 1,
+      braceEndIndex - 1
+    );
+    const afterDefaultConfig = gradle.substring(braceEndIndex - 1);
+
+    // Tightened regexes with optional '=' and single/double quotes
+    const vcRe = /versionCode\s*=?\s*\d+/;
+    const vnRe = /versionName\s*=?\s*(['"][^'"]+['"])/;
+
+    if (!vcRe.test(defaultConfigContent)) {
+      throw new Error(
+        "build.gradle: versionCode pattern not found in defaultConfig block"
+      );
+    }
+    if (!vnRe.test(defaultConfigContent)) {
+      throw new Error(
+        "build.gradle: versionName pattern not found in defaultConfig block"
+      );
+    }
+
+    // Perform replacements only within the defaultConfig block
+    const updatedDefaultConfigContent = defaultConfigContent
+      .replace(vcRe, `versionCode ${versionCode}`)
+      .replace(vnRe, `versionName "${version}"`);
+
+    // Reassemble the file
+    const updatedGradle =
+      beforeDefaultConfig + updatedDefaultConfigContent + afterDefaultConfig;
+
+    fs.writeFileSync(filePath, updatedGradle);
     console.log(
       `✅ Updated build.gradle (versionCode: ${versionCode}, versionName: ${version})`
     );
   } catch (error) {
-    exitWithError(`Failed to update build.gradle: ${error.message}`);
+    // Rethrow error instead of exiting so caller handles rollback
+    throw new Error(`Failed to update build.gradle: ${error.message}`);
+  }
+}
+
+function updateStringsXml(filePath, version) {
+  try {
+    let strings = fs.readFileSync(filePath, "utf8");
+
+    // Pattern to match expo_runtime_version string
+    const runtimeVersionRe =
+      /(<string name="expo_runtime_version">)[^<]*(<\/string>)/;
+
+    if (!runtimeVersionRe.test(strings)) {
+      throw new Error("strings.xml: expo_runtime_version pattern not found");
+    }
+
+    // Replace the expo_runtime_version value
+    const updatedStrings = strings.replace(runtimeVersionRe, `$1${version}$2`);
+
+    fs.writeFileSync(filePath, updatedStrings);
+    console.log(`✅ Updated strings.xml (expo_runtime_version: ${version})`);
+  } catch (error) {
+    throw new Error(`Failed to update strings.xml: ${error.message}`);
   }
 }
 
 function bumpVersion(type) {
   // Validate bump type
   if (!["patch", "minor", "major"].includes(type)) {
-    exitWithError(`Invalid bump type "${type}". Use: patch, minor, or major`);
+    throw new Error(`Invalid bump type "${type}". Use: patch, minor, or major`);
   }
-
   // File paths
-  const packageJsonPath = path.join(process.cwd(), "package.json");
-  const appJsonPath = path.join(process.cwd(), "app.json");
-  const gradlePath = path.join(process.cwd(), "android/app/build.gradle");
-
+  const repoRoot = path.resolve(__dirname, "..");
+  const packageJsonPath = path.join(repoRoot, "package.json");
+  const appJsonPath = path.join(repoRoot, "app.json");
+  const gradlePath = path.join(repoRoot, "android/app/build.gradle");
+  const stringsXmlPath = path.join(
+    repoRoot,
+    "android/app/src/main/res/values/strings.xml"
+  );
   // Validate files exist
   validateFile(packageJsonPath, "package.json");
   validateFile(appJsonPath, "app.json");
   validateFile(gradlePath, "android/app/build.gradle");
-
+  validateFile(stringsXmlPath, "strings.xml");
   console.log(`🚀 Bumping ${type} version...`);
-
+  // Snapshot originals for rollback
+  const snapshots = {};
+  const readIfExists = p =>
+    fs.existsSync(p) ? fs.readFileSync(p, "utf8") : null;
+  snapshots.packageJson = readIfExists(packageJsonPath);
+  snapshots.packageLock = readIfExists(
+    path.join(repoRoot, "package-lock.json")
+  );
+  snapshots.appJson = readIfExists(appJsonPath);
+  snapshots.gradle = readIfExists(gradlePath);
+  snapshots.stringsXml = readIfExists(stringsXmlPath);
   try {
     // 1. Bump npm version (this updates package.json)
     console.log(`📦 Running npm version ${type}...`);
     execSync(`npm version ${type} --no-git-tag-version`, { stdio: "inherit" });
-
     // 2. Read updated package.json
     const pkg = readJsonFile(packageJsonPath, "package.json");
     const newVersion = pkg.version;
     console.log(`📋 New version: ${newVersion}`);
-
     // 3. Update app.json
     const app = readJsonFile(appJsonPath, "app.json");
-
     if (!app.expo) {
-      exitWithError("app.json is missing expo configuration");
+      throw new Error("app.json is missing expo configuration");
     }
-
     if (!app.expo.android) {
-      exitWithError("app.json is missing expo.android configuration");
+      throw new Error("app.json is missing expo.android configuration");
     }
-
     // Update version fields
     app.expo.version = newVersion;
     app.expo.runtimeVersion = newVersion;
-
     // Increment versionCode
-    const currentVersionCode = app.expo.android.versionCode || 1;
-    const newVersionCode = currentVersionCode + 1;
+    const currentVersionCodeApp = Number(app.expo.android.versionCode) || 0;
+    const gradleContent = fs.readFileSync(gradlePath, "utf8");
+    const vcMatch = gradleContent.match(
+      /defaultConfig[\s\S]*?\bversionCode\s+(\d+)/m
+    );
+    const currentVersionCodeGradle = vcMatch ? parseInt(vcMatch[1], 10) : 0;
+    const newVersionCode =
+      Math.max(currentVersionCodeApp, currentVersionCodeGradle) + 1;
     app.expo.android.versionCode = newVersionCode;
-
     writeJsonFile(appJsonPath, app, "app.json");
-
     // 4. Update Android build.gradle
     updateGradleFile(gradlePath, newVersion, newVersionCode);
-
-    // 5. Success summary
+    // 5. Update strings.xml
+    updateStringsXml(stringsXmlPath, newVersion);
+    // 6. Success summary
     console.log("\n🎉 Version bump completed successfully!");
     console.log(`📊 Summary:`);
     console.log(`   • Version: ${newVersion}`);
     console.log(`   • Android versionCode: ${newVersionCode}`);
-    console.log(`   • Files updated: package.json, app.json, build.gradle`);
+    console.log(
+      `   • Files updated: package.json, app.json, build.gradle, strings.xml`
+    );
   } catch (error) {
-    exitWithError(`Version bump failed: ${error.message}`);
+    // Best-effort rollback
+    try {
+      if (snapshots.packageJson !== null) {
+        fs.writeFileSync(packageJsonPath, snapshots.packageJson);
+      }
+      const packageLockPath = path.join(repoRoot, "package-lock.json");
+      if (snapshots.packageLock !== null) {
+        fs.writeFileSync(packageLockPath, snapshots.packageLock);
+      }
+      if (snapshots.appJson !== null) {
+        fs.writeFileSync(appJsonPath, snapshots.appJson);
+      }
+      if (snapshots.gradle !== null) {
+        fs.writeFileSync(gradlePath, snapshots.gradle);
+      }
+      if (snapshots.stringsXml !== null) {
+        fs.writeFileSync(stringsXmlPath, snapshots.stringsXml);
+      }
+      console.error("↩️ Rolled back files after failure.");
+    } catch (rbErr) {
+      console.error(`⚠️ Rollback encountered issues: ${rbErr.message}`);
+    }
+    throw new Error(`Version bump failed: ${error.message}`);
   }
 }
 
@@ -139,7 +255,11 @@ function main() {
   }
 
   const bumpType = args[0];
-  bumpVersion(bumpType);
+  try {
+    bumpVersion(bumpType);
+  } catch (error) {
+    exitWithError(error.message || String(error));
+  }
 }
 
 // Run only if called directly

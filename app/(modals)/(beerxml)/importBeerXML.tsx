@@ -28,6 +28,7 @@ import { useTheme } from "@contexts/ThemeContext";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import BeerXMLService from "@services/beerxml/BeerXMLService";
 import { TEST_IDS } from "@src/constants/testIDs";
+import { ModalHeader } from "@src/components/ui/ModalHeader";
 
 interface Recipe {
   name?: string;
@@ -167,13 +168,6 @@ export default function ImportBeerXMLScreen() {
       parsedRecipes: [],
       selectedRecipe: null,
     });
-  };
-
-  /**
-   * Navigate back
-   */
-  const handleGoBack = () => {
-    router.back();
   };
 
   /**
@@ -373,32 +367,25 @@ export default function ImportBeerXMLScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleGoBack}
-          testID={TEST_IDS.patterns.touchableOpacityAction(
-            "beerxml-import-back"
-          )}
-        >
-          <MaterialIcons
-            name="arrow-back"
-            size={24}
-            color={theme.colors.text}
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Import BeerXML</Text>
-        {importState.step !== "file_selection" && !importState.error ? (
-          <TouchableOpacity
-            style={styles.resetButton}
-            onPress={resetImport}
-            testID={TEST_IDS.patterns.touchableOpacityAction("reset-import")}
-          >
-            <MaterialIcons name="refresh" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-        ) : null}
-      </View>
+      <ModalHeader
+        title="Import BeerXML"
+        testID="import-beerxml-header"
+        rightActions={
+          importState.step !== "file_selection" && !importState.error ? (
+            <TouchableOpacity
+              style={styles.resetButton}
+              onPress={resetImport}
+              testID={TEST_IDS.patterns.touchableOpacityAction("reset-import")}
+            >
+              <MaterialIcons
+                name="refresh"
+                size={24}
+                color={theme.colors.text}
+              />
+            </TouchableOpacity>
+          ) : null
+        }
+      />
 
       <ScrollView
         style={styles.scrollView}

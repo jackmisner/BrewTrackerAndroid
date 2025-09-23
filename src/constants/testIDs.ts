@@ -99,6 +99,10 @@ type PatternFns = {
   modalComponent: (val: string) => ModalComponentTestId;
   sectionContainer: (val: string) => SectionContainerTestId;
   iconElement: (val: string) => IconElementTestId;
+  modalHeaderAction: (
+    modalName: string,
+    action: string
+  ) => ModalHeaderActionTestId;
 };
 
 const PATTERN_GENERATORS = {
@@ -112,6 +116,8 @@ const PATTERN_GENERATORS = {
   modalComponent: makeId("", "-modal"),
   sectionContainer: makeId("", "-section"),
   iconElement: makeId("icon-", ""),
+  modalHeaderAction: (modalName: string, action: string) =>
+    `${toSlug(modalName)}-${toSlug(action)}-button` as ModalHeaderActionTestId,
 } satisfies PatternFns;
 
 // Template literal types for dynamic test IDs
@@ -125,6 +131,7 @@ export type InputFieldTestId = `${string}-input`;
 export type ModalComponentTestId = `${string}-modal`;
 export type SectionContainerTestId = `${string}-section`;
 export type IconElementTestId = `icon-${string}`;
+export type ModalHeaderActionTestId = `${string}-${string}-button`;
 
 export const TEST_IDS = {
   // Navigation & Headers

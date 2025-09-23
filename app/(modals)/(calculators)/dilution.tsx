@@ -3,7 +3,7 @@ import { View, ScrollView } from "react-native";
 import { useCalculators } from "@contexts/CalculatorsContext";
 import { DilutionCalculator } from "@services/calculators/DilutionCalculator";
 import { CalculatorCard } from "@components/calculators/CalculatorCard";
-import { CalculatorHeader } from "@components/calculators/CalculatorHeader";
+import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { NumberInput } from "@components/calculators/NumberInput";
 import { ResultDisplay } from "@components/calculators/ResultDisplay";
 import { useTheme } from "@contexts/ThemeContext";
@@ -114,7 +114,10 @@ export default function DilutionCalculatorScreen() {
         { backgroundColor: theme.colors.background },
       ]}
     >
-      <CalculatorHeader title="Dilution Calculator" />
+      <ModalHeader
+        title="Dilution Calculator"
+        testID="dilution-calculator-header"
+      />
 
       <ScrollView style={calculatorScreenStyles.scrollContent}>
         <CalculatorCard title="Current Beer">
