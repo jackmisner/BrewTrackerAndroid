@@ -95,15 +95,15 @@ jest.mock("@styles/modals/createRecipeStyles", () => ({
   }),
 }));
 
-// Mock beer styles hook
+// Mock beer styles hook - V2 offline hooks
 const mockBeerStyles = [
-  { styleId: "1A", name: "American Light Lager" },
-  { styleId: "21A", name: "American IPA" },
-  { styleId: "19B", name: "American Brown Ale" },
-  { styleId: "20A", name: "American Porter" },
+  { style_id: "1A", name: "American Light Lager" },
+  { style_id: "21A", name: "American IPA" },
+  { style_id: "19B", name: "American Brown Ale" },
+  { style_id: "20A", name: "American Porter" },
 ];
 
-jest.mock("@src/hooks/useBeerStyles", () => ({
+jest.mock("@src/hooks/offlineV2", () => ({
   useBeerStyles: jest.fn(() => ({
     data: mockBeerStyles,
     isLoading: false,
@@ -535,7 +535,7 @@ describe("BasicInfoForm", () => {
 
   describe("Loading and error states", () => {
     it("should show loading state for beer styles", async () => {
-      const { useBeerStyles } = require("@src/hooks/useBeerStyles");
+      const { useBeerStyles } = require("@src/hooks/offlineV2");
       useBeerStyles.mockReturnValue({
         data: null,
         isLoading: true,
@@ -558,7 +558,7 @@ describe("BasicInfoForm", () => {
     });
 
     it("should show error state for beer styles", async () => {
-      const { useBeerStyles } = require("@src/hooks/useBeerStyles");
+      const { useBeerStyles } = require("@src/hooks/offlineV2");
       useBeerStyles.mockReturnValue({
         data: [],
         isLoading: false,

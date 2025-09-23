@@ -54,6 +54,46 @@ jest.mock("@contexts/CalculatorsContext", () => ({
 
 // ThemeContext is provided by testUtils
 
+// Mock React Query for ModalHeader dependency
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query");
+  return {
+    ...actual,
+    useQueryClient: jest.fn(() => ({
+      invalidateQueries: jest.fn(),
+      setQueryData: jest.fn(),
+      getQueryData: jest.fn(),
+      mount: jest.fn(),
+      unmount: jest.fn(),
+    })),
+    QueryClient: jest.fn(() => ({
+      invalidateQueries: jest.fn(),
+      setQueryData: jest.fn(),
+      getQueryData: jest.fn(),
+      mount: jest.fn(),
+      unmount: jest.fn(),
+    })),
+  };
+});
+
+// Mock ModalHeader component
+jest.mock("@src/components/ui/ModalHeader", () => ({
+  ModalHeader: ({ title, testID }: { title: string; testID: string }) => {
+    const React = require("react");
+    return React.createElement("View", { testID }, [
+      React.createElement("TouchableOpacity", {
+        testID: `${testID}-back-button`,
+        key: "back",
+      }),
+      React.createElement("Text", { key: "title" }, title),
+      React.createElement("TouchableOpacity", {
+        testID: `${testID}-home-button`,
+        key: "home",
+      }),
+    ]);
+  },
+}));
+
 // Mock calculator components
 jest.mock("@components/calculators/CalculatorCard", () => {
   const { View } = require("react-native");
@@ -64,15 +104,6 @@ jest.mock("@components/calculators/CalculatorCard", () => {
       >
         {children}
       </View>
-    ),
-  };
-});
-
-jest.mock("@components/calculators/CalculatorHeader", () => {
-  const { View } = require("react-native");
-  return {
-    CalculatorHeader: ({ title }: { title: string }) => (
-      <View testID="calculator-header">{title}</View>
     ),
   };
 });
@@ -135,7 +166,7 @@ describe("DilutionCalculatorScreen", () => {
 
     it("should render header with correct title", () => {
       const { getByTestId } = renderWithProviders(<DilutionCalculatorScreen />);
-      expect(getByTestId("calculator-header")).toBeTruthy();
+      expect(getByTestId("dilution-calculator-header")).toBeTruthy();
     });
 
     it("should render current beer input section", () => {

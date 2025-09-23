@@ -3,7 +3,7 @@ import { View, ScrollView } from "react-native";
 import { useCalculators } from "@contexts/CalculatorsContext";
 import { UnitConverter } from "@services/calculators/UnitConverter";
 import { CalculatorCard } from "@components/calculators/CalculatorCard";
-import { CalculatorHeader } from "@components/calculators/CalculatorHeader";
+import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { NumberInput } from "@components/calculators/NumberInput";
 import { UnitToggle, DropdownToggle } from "@components/calculators/UnitToggle";
 import { SingleResult } from "@components/calculators/ResultDisplay";
@@ -216,7 +216,7 @@ export default function UnitConverterScreen() {
         { backgroundColor: theme.colors.background },
       ]}
     >
-      <CalculatorHeader title="Unit Converter" />
+      <ModalHeader title="Unit Converter" testID="unit-converter-header" />
 
       <ScrollView style={calculatorScreenStyles.scrollContent}>
         <CalculatorCard title="Conversion Type">

@@ -95,11 +95,7 @@ describe("ImportBeerXMLScreen - State Management", () => {
     expect(getByText("Import BeerXML")).toBeTruthy();
 
     // Should have back button and select button with testIDs
-    expect(
-      getByTestId(
-        TEST_IDS.patterns.touchableOpacityAction("beerxml-import-back")
-      )
-    ).toBeTruthy();
+    expect(getByTestId("import-beerxml-header-back-button")).toBeTruthy();
     expect(getByTestId(TEST_IDS.beerxml.selectFileButton)).toBeTruthy();
   });
 
@@ -122,11 +118,7 @@ describe("ImportBeerXMLScreen - State Management", () => {
     const { getByTestId } = render(<ImportBeerXMLScreen />);
 
     // Should have file-upload and arrow-back icons via touchable buttons
-    expect(
-      getByTestId(
-        TEST_IDS.patterns.touchableOpacityAction("beerxml-import-back")
-      )
-    ).toBeTruthy();
+    expect(getByTestId("import-beerxml-header-back-button")).toBeTruthy();
     expect(getByTestId(TEST_IDS.beerxml.selectFileButton)).toBeTruthy();
   });
 });

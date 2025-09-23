@@ -32,23 +32,11 @@ import {
   GestureResponderEvent,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  UseMutationResult,
-} from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import ApiService from "@services/api/apiService";
-import {
-  useOfflineRecipes,
-  useOfflineDeleteRecipe,
-  useOfflineSyncStatus,
-  useOfflineSync,
-  useOfflineModifiedSync,
-  useAutoOfflineModifiedSync,
-} from "@src/hooks/useOfflineRecipes";
+import { useRecipes, useOfflineSync } from "@src/hooks/offlineV2";
 import OfflineRecipeService from "@services/offline/OfflineRecipeService";
 
 import { QUERY_KEYS } from "@services/api/queryClient";
@@ -69,51 +57,23 @@ import { useUserValidation } from "@utils/userValidation";
 
 /**
  * Pure helper function to generate sync status message
- * @param syncStatus - The sync status object containing pending sync counts
- * @param syncMutation - The mutation result for legacy sync operations
- * @param modifiedSyncMutation - The mutation result for flag-based sync operations
+ * @param pendingOperations - Number of pending operations
+ * @param isSyncing - Whether sync is currently in progress
  * @returns The appropriate sync status message string
  */
 function getSyncStatusMessage(
-  syncStatus:
-    | {
-        pendingSync?: number;
-        needsSync?: number;
-        pendingDeletions?: number;
-      }
-    | undefined,
-  syncMutation: UseMutationResult<any, Error, void, unknown>,
-  modifiedSyncMutation: UseMutationResult<any, Error, void, unknown>
+  pendingOperations: number,
+  isSyncing: boolean
 ): string {
-  if (syncMutation.isPending || modifiedSyncMutation.isPending) {
+  if (isSyncing) {
     return "Syncing...";
   }
 
-  if (syncMutation.isError || modifiedSyncMutation.isError) {
-    return "Sync failed - tap to retry";
-  }
-
-  // Use needsSync as the authoritative count to avoid double-counting
-  // (pendingSync recipes also have needsSync: true, so they'd be counted twice)
-  const totalChanges = syncStatus?.needsSync || 0;
-  const deletions = syncStatus?.pendingDeletions || 0;
-  const modifications = totalChanges - deletions;
-
-  if (totalChanges === 0) {
+  if (pendingOperations === 0) {
     return "All synced";
   }
 
-  let message = "";
-  if (modifications > 0) {
-    message += `${modifications} recipe${modifications !== 1 ? "s" : ""}`;
-  }
-  if (deletions > 0) {
-    if (message) {
-      message += ", ";
-    }
-    message += `${deletions} deletion${deletions !== 1 ? "s" : ""}`;
-  }
-  return `${message} need sync`;
+  return `${pendingOperations} change${pendingOperations !== 1 ? "s" : ""} need sync`;
 }
 
 /**
@@ -172,10 +132,10 @@ export default function RecipesScreen() {
       }
 
       // Trigger sync if online and there are pending changes
-      if (isConnected && (syncStatus?.needsSync || 0) > 0) {
+      if (isConnected && pendingOperations > 0) {
         try {
           console.log("🔄 Pull-to-refresh triggering sync...");
-          await modifiedSyncMutation.mutateAsync();
+          await syncMutation();
           console.log("✅ Pull-to-refresh sync completed");
         } catch (error) {
           console.warn("Pull-to-refresh sync failed:", error);
@@ -185,7 +145,12 @@ export default function RecipesScreen() {
 
       // Refresh the appropriate tab data
       if (activeTab === "my") {
-        await refetchMyRecipes();
+        // Use the new refresh method that hydrates cache from server
+        console.log(
+          "🔄 Pull-to-refresh calling refreshRecipes to hydrate cache..."
+        );
+        await refreshRecipes();
+        console.log("✅ Pull-to-refresh cache hydration completed");
       } else {
         await refetchPublicRecipes();
       }
@@ -199,8 +164,12 @@ export default function RecipesScreen() {
     data: offlineRecipes,
     isLoading: isLoadingMyRecipes,
     error: myRecipesError,
-    refetch: refetchMyRecipes,
-  } = useOfflineRecipes();
+    delete: deleteRecipe,
+    sync: _syncRecipes,
+    refresh: refreshRecipes,
+  } = useRecipes();
+
+  const { isConnected } = useNetwork();
 
   // Transform offline recipes to match expected format
   const myRecipesData = {
@@ -238,17 +207,9 @@ export default function RecipesScreen() {
 
   // Delete mutation with offline support
   const queryClient = useQueryClient();
-  const deleteMutation = useOfflineDeleteRecipe();
 
-  // Get sync status for UI and enable auto-sync
-  const { data: syncStatus } = useOfflineSyncStatus();
-  const syncMutation = useOfflineSync();
-  const modifiedSyncMutation = useOfflineModifiedSync();
-
-  // Enable automatic syncing when network comes back online (new approach only)
-  // useAutoOfflineSync(); // DISABLED: Legacy approach conflicts with tombstone system
-  useAutoOfflineModifiedSync(); // New approach for modified flags
-  const { isConnected } = useNetwork();
+  // Get sync status for UI
+  const { isSyncing, pendingOperations, sync: syncMutation } = useOfflineSync();
   const { isDeveloperMode, cleanupTombstones } = useDeveloper();
 
   // Clone mutation with enhanced validation
@@ -291,6 +252,13 @@ export default function RecipesScreen() {
         if (response?.data?.id) {
           queryClient.invalidateQueries({
             queryKey: [...QUERY_KEYS.RECIPE(response.data.id), "offline"],
+          });
+        }
+        // Also refresh offline V2 cache for "My" tab
+        if (!recipe.is_public) {
+          // We have refreshRecipes from useRecipes() in scope
+          refreshRecipes().catch(err => {
+            console.warn("Refresh after clone failed:", err);
           });
         }
       }, 1000); // 1 second delay
@@ -399,11 +367,11 @@ export default function RecipesScreen() {
     activeTab === "my" ? isLoadingMyRecipes : isLoadingPublicRecipes;
   const error = activeTab === "my" ? myRecipesError : publicRecipesError;
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     if (activeTab === "my") {
-      refetchMyRecipes();
+      await refreshRecipes();
     } else {
-      refetchPublicRecipes();
+      await refetchPublicRecipes();
     }
   };
 
@@ -484,8 +452,17 @@ export default function RecipesScreen() {
           {
             text: "Delete",
             style: "destructive",
-            onPress: () => {
-              deleteMutation.mutate(recipe.id);
+            onPress: async () => {
+              try {
+                await deleteRecipe(recipe.id);
+              } catch (err) {
+                console.error("Delete failed:", err);
+                Alert.alert(
+                  "Delete Failed",
+                  "Unable to delete recipe. Please try again.",
+                  [{ text: "OK" }]
+                );
+              }
             },
           },
         ]
@@ -702,54 +679,38 @@ export default function RecipesScreen() {
         </View>
 
         {/* Sync status and button for My Recipes */}
-        {activeTab === "my" && (syncStatus?.needsSync || 0) > 0 && (
+        {activeTab === "my" && pendingOperations > 0 && (
           <View style={styles.syncStatusContainer}>
             <View style={styles.syncInfo}>
               <MaterialIcons
-                name={syncMutation.isPending ? "sync" : "cloud-upload"}
+                name={isSyncing ? "sync" : "cloud-upload"}
                 size={16}
                 color={theme.colors.primary}
-                style={
-                  syncMutation.isPending
-                    ? { transform: [{ rotate: "45deg" }] }
-                    : {}
-                }
+                style={isSyncing ? { transform: [{ rotate: "45deg" }] } : {}}
               />
               <Text style={styles.syncText}>
-                {getSyncStatusMessage(
-                  syncStatus,
-                  syncMutation,
-                  modifiedSyncMutation
-                )}
+                {getSyncStatusMessage(pendingOperations, isSyncing)}
               </Text>
             </View>
-            {isConnected &&
-              !syncMutation.isPending &&
-              !modifiedSyncMutation.isPending && (
-                <TouchableOpacity
-                  onPress={() => {
-                    // Use new flag-based sync approach only (legacy disabled to prevent duplicates)
-                    modifiedSyncMutation.mutate(undefined, {
-                      onSuccess: () => {
-                        // Legacy sync disabled: conflicts with tombstone system
-                        // if ((syncStatus?.pendingSync || 0) > 0) {
-                        //   syncMutation.mutate();
-                        // }
-                      },
-                      onError: _error => {
-                        Alert.alert(
-                          "Sync Failed",
-                          "Unable to sync modified recipes. Please try again.",
-                          [{ text: "OK" }]
-                        );
-                      },
-                    });
-                  }}
-                  style={styles.syncButton}
-                >
-                  <Text style={styles.syncButtonText}>Sync Now</Text>
-                </TouchableOpacity>
-              )}
+            {isConnected && !isSyncing && (
+              <TouchableOpacity
+                onPress={async () => {
+                  try {
+                    await syncMutation();
+                  } catch (error) {
+                    console.error("Sync failed:", error);
+                    Alert.alert(
+                      "Sync Failed",
+                      "Unable to sync changes. Please try again.",
+                      [{ text: "OK" }]
+                    );
+                  }
+                }}
+                style={styles.syncButton}
+              >
+                <Text style={styles.syncButtonText}>Sync Now</Text>
+              </TouchableOpacity>
+            )}
 
             {/* DEV ONLY: Tombstone cleanup button */}
             {isDeveloperMode && (
@@ -869,8 +830,6 @@ export default function RecipesScreen() {
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      ) : currentRecipes.length === 0 ? (
-        renderEmptyState()
       ) : (
         <FlatList
           data={currentRecipes}
@@ -883,6 +842,7 @@ export default function RecipesScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={renderEmptyState}
         />
       )}
 

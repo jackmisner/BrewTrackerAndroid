@@ -3,7 +3,7 @@ import { View, ScrollView } from "react-native";
 import { useCalculators } from "@contexts/CalculatorsContext";
 import { HydrometerCorrectionCalculator } from "@services/calculators/HydrometerCorrectionCalculator";
 import { CalculatorCard } from "@components/calculators/CalculatorCard";
-import { CalculatorHeader } from "@components/calculators/CalculatorHeader";
+import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { NumberInput } from "@components/calculators/NumberInput";
 import { UnitToggle } from "@components/calculators/UnitToggle";
 import { SingleResult } from "@components/calculators/ResultDisplay";
@@ -189,7 +189,10 @@ export default function HydrometerCorrectionCalculatorScreen() {
         { backgroundColor: theme.colors.background },
       ]}
     >
-      <CalculatorHeader title="Hydrometer Correction" />
+      <ModalHeader
+        title="Hydrometer Correction"
+        testID="hydrometer-correction-header"
+      />
 
       <ScrollView style={calculatorScreenStyles.scrollContent}>
         <CalculatorCard title="Settings">

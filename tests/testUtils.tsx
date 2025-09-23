@@ -199,8 +199,8 @@ export const mockData = {
 
     return {
       id: `test-ingredient-${mockData._ingredientCounter}`,
-      ingredient_id: 1,
-      name: "Test Ingredient",
+      ingredient_id: mockData._ingredientCounter,
+      name: `Test Ingredient ${mockData._ingredientCounter}`,
       type,
       amount: 1,
       unit: type === "grain" ? "lb" : type === "hop" ? "oz" : "pkg",

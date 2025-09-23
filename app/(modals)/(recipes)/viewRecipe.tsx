@@ -8,10 +8,11 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import ApiService from "@services/api/apiService";
 import OfflineRecipeService from "@services/offline/OfflineRecipeService";
+import { QUERY_KEYS } from "@services/api/queryClient";
 import { Recipe } from "@src/types";
 import {
   RecipeVersionHistoryResponse,
@@ -22,6 +23,7 @@ import { useTheme } from "@contexts/ThemeContext";
 import { generateIngredientKey } from "@utils/keyUtils";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
+import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { formatHopTime, formatHopUsage } from "@src/utils/formatUtils";
 
 /**
@@ -32,6 +34,7 @@ import { formatHopTime, formatHopUsage } from "@src/utils/formatUtils";
 export default function ViewRecipeScreen() {
   const theme = useTheme();
   const styles = viewRecipeStyles(theme);
+  const queryClient = useQueryClient();
   // State for pull-to-refresh functionality
   const [refreshing, setRefreshing] = useState(false);
 
@@ -60,7 +63,7 @@ export default function ViewRecipeScreen() {
     error,
     refetch,
   } = useQuery<Recipe>({
-    queryKey: ["recipe", recipe_id], // Unique key per recipe
+    queryKey: QUERY_KEYS.RECIPE(recipe_id!), // Unique key per recipe
     queryFn: async () => {
       if (!recipe_id) {
         throw new Error("No recipe ID provided");
@@ -79,7 +82,7 @@ export default function ViewRecipeScreen() {
 
   // Query for version history - moved up to avoid conditional hook usage
   const { data: versionHistoryData } = useQuery<RecipeVersionHistoryResponse>({
-    queryKey: ["versionHistory", recipe_id],
+    queryKey: QUERY_KEYS.RECIPE_VERSIONS(recipe_id!),
     queryFn: async () => {
       if (!recipe_id) {
         throw new Error("No recipe ID provided");
@@ -147,6 +150,15 @@ export default function ViewRecipeScreen() {
         params: { recipe_id: recipe_id },
       });
     }
+  };
+
+  const handleHomeNavigation = () => {
+    // Invalidate dashboard cache to ensure fresh data
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD });
+
+    // Navigate directly to dashboard tab using explicit pathname
+    // This should provide smooth navigation without splash screen
+    router.push({ pathname: "/(tabs)" });
   };
 
   /**
@@ -373,41 +385,44 @@ export default function ViewRecipeScreen() {
   return (
     <View style={styles.container}>
       {/* Fixed Header with Navigation */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleGoBack}
-          testID={TEST_IDS.patterns.touchableOpacityAction("view-recipe-back")}
-        >
-          <MaterialIcons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {recipe.name || "Recipe Details"}
-        </Text>
-        {/* Action buttons */}
-        <View style={styles.headerActions}>
-          {(recipe.version && recipe.version > 1) || recipe.parent_recipe_id ? (
+      <ModalHeader
+        title={recipe.name || "Recipe Details"}
+        onBack={handleGoBack}
+        showHomeButton={false}
+        rightActions={
+          <View style={styles.headerActions}>
+            {(recipe.version && recipe.version > 1) ||
+            recipe.parent_recipe_id ? (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleViewVersionHistory}
+              >
+                <MaterialIcons name="timeline" size={22} color="#f4511e" />
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={handleViewVersionHistory}
+              onPress={handleEditRecipe}
             >
-              <MaterialIcons name="timeline" size={22} color="#f4511e" />
+              <MaterialIcons name="edit" size={22} color="#f4511e" />
             </TouchableOpacity>
-          ) : null}
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleEditRecipe}
-          >
-            <MaterialIcons name="edit" size={22} color="#f4511e" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleStartBrewing}
-          >
-            <MaterialIcons name="play-arrow" size={24} color="#f4511e" />
-          </TouchableOpacity>
-        </View>
-      </View>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleStartBrewing}
+            >
+              <MaterialIcons name="play-arrow" size={24} color="#f4511e" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, { marginLeft: 12 }]}
+              onPress={handleHomeNavigation}
+              testID="view-recipe-home"
+            >
+              <MaterialIcons name="home" size={24} color="#f4511e" />
+            </TouchableOpacity>
+          </View>
+        }
+        testID="view-recipe-header"
+      />
 
       {/* Scrollable Content */}
       <ScrollView

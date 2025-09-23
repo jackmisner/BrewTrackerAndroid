@@ -60,6 +60,24 @@ jest.mock("@contexts/CalculatorsContext", () => ({
 
 // ThemeContext is provided by renderWithProviders
 
+// Mock ModalHeader component
+jest.mock("@src/components/ui/ModalHeader", () => ({
+  ModalHeader: ({ title, testID }: { title: string; testID: string }) => {
+    const React = require("react");
+    return React.createElement("View", { testID }, [
+      React.createElement("TouchableOpacity", {
+        testID: `${testID}-back-button`,
+        key: "back",
+      }),
+      React.createElement("Text", { key: "title" }, title),
+      React.createElement("TouchableOpacity", {
+        testID: `${testID}-home-button`,
+        key: "home",
+      }),
+    ]);
+  },
+}));
+
 // Mock calculator components
 jest.mock("@components/calculators/CalculatorCard", () => {
   const { View } = require("react-native");
@@ -70,15 +88,6 @@ jest.mock("@components/calculators/CalculatorCard", () => {
       >
         {children}
       </View>
-    ),
-  };
-});
-
-jest.mock("@components/calculators/CalculatorHeader", () => {
-  const { View } = require("react-native");
-  return {
-    CalculatorHeader: ({ title }: { title: string }) => (
-      <View testID="calculator-header">{title}</View>
     ),
   };
 });
@@ -156,7 +165,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
       const { getByTestId } = renderWithProviders(
         <HydrometerCorrectionCalculatorScreen />
       );
-      expect(getByTestId("calculator-header")).toBeTruthy();
+      expect(getByTestId("hydrometer-correction-header")).toBeTruthy();
     });
 
     it("should render settings section", () => {

@@ -167,12 +167,13 @@ export default function DashboardScreen() {
         };
 
         // Cache the fresh data for offline use
-        if (!user?.id) {
+        const userIdForCache = user?.id;
+        if (!userIdForCache) {
           console.warn("Cannot cache dashboard data without user ID");
         } else {
           OfflineCacheService.cacheDashboardData(
             freshDashboardData,
-            user.id
+            userIdForCache
           ).catch(error => {
             console.warn("Failed to cache dashboard data:", error);
           });
@@ -313,6 +314,10 @@ export default function DashboardScreen() {
     onSuccess: (response, recipe) => {
       queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
       queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.DASHBOARD] });
+      // Ensure offline lists reflect the new clone
+      queryClient.invalidateQueries({
+        queryKey: [...QUERY_KEYS.RECIPES, "offline"],
+      });
       const cloneType = recipe.is_public ? "cloned" : "versioned";
       Alert.alert(
         "Recipe Cloned",

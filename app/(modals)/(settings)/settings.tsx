@@ -11,10 +11,12 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme, ThemeMode } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import { useDeveloper } from "@contexts/DeveloperContext";
-import { UnitSystem } from "@src/types";
+import { UnitSystem, STORAGE_KEYS_V2 } from "@src/types";
+import { StaticDataService } from "@services/offlineV2/StaticDataService";
 import { settingsStyles } from "@styles/modals/settingsStyles";
 import { TEST_IDS } from "@src/constants/testIDs";
 
@@ -51,6 +53,73 @@ export default function SettingsScreen() {
       "Coming Soon",
       `${feature} will be available in a future update.`,
       [{ text: "OK" }]
+    );
+  };
+
+  const handleClearStaticData = async () => {
+    Alert.alert(
+      "Clear Static Data",
+      "This will clear cached ingredients and beer styles. They will be re-downloaded when needed. Are you sure?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await StaticDataService.clearCache();
+
+              Alert.alert(
+                "Static Data Cleared",
+                "Cached ingredients and beer styles have been cleared.",
+                [{ text: "OK" }]
+              );
+            } catch (error) {
+              console.error("Error clearing static data:", error);
+              Alert.alert(
+                "Error",
+                "Failed to clear static data. Please try again.",
+                [{ text: "OK" }]
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleClearUserData = async () => {
+    Alert.alert(
+      "Clear User Data",
+      "This will clear offline recipes and pending sync operations. Any unsynced changes will be lost. Are you sure?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Clear user data cache (offline recipes)
+              await AsyncStorage.removeItem(STORAGE_KEYS_V2.USER_RECIPES);
+              await AsyncStorage.removeItem(STORAGE_KEYS_V2.PENDING_OPERATIONS);
+              await AsyncStorage.removeItem(STORAGE_KEYS_V2.SYNC_METADATA);
+
+              Alert.alert(
+                "User Data Cleared",
+                "Offline recipes and sync data have been cleared.",
+                [{ text: "OK" }]
+              );
+            } catch (error) {
+              console.error("Error clearing user data:", error);
+              Alert.alert(
+                "Error",
+                "Failed to clear user data. Please try again.",
+                [{ text: "OK" }]
+              );
+            }
+          },
+        },
+      ]
     );
   };
 
@@ -284,7 +353,29 @@ export default function SettingsScreen() {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => handlePlaceholderAction("Clear cache")}
+            onPress={handleClearStaticData}
+          >
+            <MaterialIcons
+              name="cached"
+              size={24}
+              color={themeContext.colors.textSecondary}
+            />
+            <View style={styles.menuContent}>
+              <Text style={styles.menuText}>Clear Static Data</Text>
+              <Text style={styles.menuSubtext}>
+                Ingredients and beer styles
+              </Text>
+            </View>
+            <MaterialIcons
+              name="chevron-right"
+              size={24}
+              color={themeContext.colors.textMuted}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleClearUserData}
           >
             <MaterialIcons
               name="clear-all"
@@ -292,8 +383,10 @@ export default function SettingsScreen() {
               color={themeContext.colors.textSecondary}
             />
             <View style={styles.menuContent}>
-              <Text style={styles.menuText}>Clear Cache</Text>
-              <Text style={styles.menuSubtext}>Free up storage space</Text>
+              <Text style={styles.menuText}>Clear User Data</Text>
+              <Text style={styles.menuSubtext}>
+                Offline recipes and sync data
+              </Text>
             </View>
             <MaterialIcons
               name="chevron-right"
