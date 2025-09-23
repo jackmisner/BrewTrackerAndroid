@@ -19,6 +19,7 @@ import { BrewSession, UpdateFermentationEntryRequest } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUserValidation } from "@utils/userValidation";
 import { editBrewSessionStyles } from "@styles/modals/editBrewSessionStyles";
+import { ModalHeader } from "@src/components/ui/ModalHeader";
 
 export default function EditFermentationEntryScreen() {
   const theme = useTheme();
@@ -282,28 +283,31 @@ export default function EditFermentationEntryScreen() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.headerButton} onPress={handleCancel}>
-          <MaterialIcons name="close" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Fermentation Entry</Text>
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            updateEntryMutation.isPending && styles.saveButtonDisabled,
-          ]}
-          onPress={handleSave}
-          disabled={updateEntryMutation.isPending}
-          testID="save-button"
-        >
-          {updateEntryMutation.isPending ? (
-            <ActivityIndicator size="small" color={theme.colors.primaryText} />
-          ) : (
-            <Text style={styles.saveButtonText}>Save</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      <ModalHeader
+        title="Edit Fermentation Entry"
+        testID="edit-fermentation-entry-header"
+        rightActions={
+          <TouchableOpacity
+            style={[
+              styles.saveButton,
+              updateEntryMutation.isPending && styles.saveButtonDisabled,
+            ]}
+            onPress={handleSave}
+            disabled={updateEntryMutation.isPending}
+            testID="save-button"
+          >
+            {updateEntryMutation.isPending ? (
+              <ActivityIndicator
+                size="small"
+                color={theme.colors.primaryText}
+              />
+            ) : (
+              <Text style={styles.saveButtonText}>Save</Text>
+            )}
+          </TouchableOpacity>
+        }
+        showHomeButton={false}
+      />
 
       {/* Validation Errors */}
       {validationErrors.length > 0 ? (

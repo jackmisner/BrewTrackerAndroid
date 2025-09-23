@@ -31,6 +31,7 @@ import { IngredientInput } from "@src/types";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { generateUniqueId } from "@utils/keyUtils";
 import { QUERY_KEYS } from "@services/api/queryClient";
+import { ModalHeader } from "@src/components/ui/ModalHeader";
 
 function coerceIngredientTime(input: unknown): number | undefined {
   if (input == null) {
@@ -302,20 +303,16 @@ export default function ImportReviewScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-          <MaterialIcons
-            name="arrow-back"
-            size={24}
-            color={theme.colors.text}
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Import Review</Text>
-        <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-          <MaterialIcons name="close" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-      </View>
+      <ModalHeader
+        title="Import Review"
+        testID="import-review-header"
+        rightActions={
+          <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+            <MaterialIcons name="close" size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+        }
+        showHomeButton={false}
+      />
 
       <ScrollView
         style={styles.scrollView}

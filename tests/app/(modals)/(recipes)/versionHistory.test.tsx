@@ -48,20 +48,46 @@ const mockCurrentRecipeQuery = {
   refetch: jest.fn().mockResolvedValue(undefined),
 } as unknown as jest.Mocked<UseQueryResult<any, Error>>;
 
-jest.mock("@tanstack/react-query", () => ({
-  useQuery: jest.fn().mockImplementation(config => {
-    // Return version history query for version history requests
-    if (config.queryKey[0] === "versionHistory") {
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query");
+  return {
+    ...actual,
+    useQuery: jest.fn().mockImplementation(config => {
+      // Return version history query for version history requests
+      // QUERY_KEYS.RECIPE_VERSIONS(id) returns ["recipes", id, "versions"]
+      if (
+        config.queryKey[0] === "recipes" &&
+        config.queryKey[2] === "versions"
+      ) {
+        return mockVersionHistoryQuery;
+      }
+      // Return current recipe query for recipe requests
+      // QUERY_KEYS.RECIPE(id) returns ["recipes", id]
+      if (config.queryKey[0] === "recipes" && config.queryKey.length === 2) {
+        return mockCurrentRecipeQuery;
+      }
+      // Default fallback
       return mockVersionHistoryQuery;
-    }
-    // Return current recipe query for recipe requests
-    if (config.queryKey[0] === "recipe") {
-      return mockCurrentRecipeQuery;
-    }
-    // Default fallback
-    return mockVersionHistoryQuery;
-  }),
-}));
+    }),
+    useQueryClient: jest.fn(() => ({
+      invalidateQueries: jest.fn(),
+      setQueryData: jest.fn(),
+      getQueryData: jest.fn(),
+      mount: jest.fn(),
+      unmount: jest.fn(),
+    })),
+    QueryClient: jest.fn().mockImplementation(() => ({
+      invalidateQueries: jest.fn(),
+      setQueryData: jest.fn(),
+      getQueryData: jest.fn(),
+      mount: jest.fn(),
+      unmount: jest.fn(),
+      getDefaultOptions: jest.fn(() => ({})),
+      setDefaultOptions: jest.fn(),
+      clear: jest.fn(),
+    })),
+  };
+});
 
 // Mock API Service
 const mockApiService = {
@@ -113,7 +139,7 @@ describe("VersionHistoryScreen", () => {
       expect(getByText("Version History")).toBeTruthy();
       expect(
         getByTestId(
-          TEST_IDS.patterns.touchableOpacityAction("version-history-back")
+          TEST_IDS.patterns.modalHeaderAction("version-history-header", "back")
         )
       ).toBeTruthy();
     });
@@ -355,7 +381,7 @@ describe("VersionHistoryScreen", () => {
 
       fireEvent.press(
         getByTestId(
-          TEST_IDS.patterns.touchableOpacityAction("version-history-back")
+          TEST_IDS.patterns.modalHeaderAction("version-history-header", "back")
         )
       );
 
@@ -553,7 +579,7 @@ describe("VersionHistoryScreen", () => {
       // Check that buttons are accessible
       expect(
         getByTestId(
-          TEST_IDS.patterns.touchableOpacityAction("version-history-back")
+          TEST_IDS.patterns.modalHeaderAction("version-history-header", "back")
         )
       ).toBeTruthy();
       expect(

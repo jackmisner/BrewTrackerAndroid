@@ -444,6 +444,9 @@ export default function EditRecipeScreen() {
       queryClient.invalidateQueries({
         queryKey: [...QUERY_KEYS.RECIPE(recipe_id)],
       });
+      queryClient.invalidateQueries({
+        queryKey: [...QUERY_KEYS.RECIPE_VERSIONS(recipe_id)],
+      });
       queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
       queryClient.invalidateQueries({
         queryKey: [...QUERY_KEYS.RECIPE(recipe_id), "offline"],
@@ -451,6 +454,7 @@ export default function EditRecipeScreen() {
       queryClient.invalidateQueries({
         queryKey: [...QUERY_KEYS.RECIPES, "offline"],
       });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD }); // Dashboard cache
 
       // Navigate back to the updated recipe view
       router.back();

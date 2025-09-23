@@ -168,11 +168,17 @@ export function detectEntityTypeFromUrl(url: string): EntityType | null {
       pattern: /\/beerxml\/(create-ingredients|match-ingredients)/i,
       entityType: "ingredient",
     },
+    // Auth endpoints that return user objects
+    {
+      pattern: /\/auth\/(profile|login|register|google)(\/|\?|$)/i,
+      entityType: "user",
+    },
     // Then general resources - allow query parameters
     { pattern: /\/recipes(\/|\?|$)/i, entityType: "recipe" },
     { pattern: /\/ingredients(\/|\?|$)/i, entityType: "ingredient" },
     { pattern: /\/brew-sessions(\/|\?|$)/i, entityType: "brewSession" },
     { pattern: /\/users(\/|\?|$)/i, entityType: "user" },
+    { pattern: /\/beer-styles(\/|\?|$)/i, entityType: "style" },
     { pattern: /\/styles(\/|\?|$)/i, entityType: "style" },
   ];
 

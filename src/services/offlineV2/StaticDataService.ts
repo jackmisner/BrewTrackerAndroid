@@ -325,26 +325,64 @@ export class StaticDataService {
    */
   private static async fetchAndCacheBeerStyles(): Promise<BeerStyle[]> {
     try {
+      console.log(
+        `[StaticDataService.fetchAndCacheBeerStyles] Starting fetch...`
+      );
+
       // Get version and data
       const [versionResponse, dataResponse] = await Promise.all([
         ApiService.beerStyles.getVersion(),
         ApiService.beerStyles.getAll(),
       ]);
 
-      const beerStylesData =
-        dataResponse.data.categories || dataResponse.data || [];
+      console.log(
+        `[StaticDataService.fetchAndCacheBeerStyles] API responses received - version: ${versionResponse?.data?.version}`
+      );
 
-      // Flatten categories into styles or use flat array directly
-      const allStyles: BeerStyle[] = [];
-      beerStylesData.forEach((item: any) => {
-        if (item.styles) {
-          // Item is a category with styles array
-          allStyles.push(...item.styles);
-        } else {
-          // Item is already a style
-          allStyles.push(item);
-        }
-      });
+      let beerStylesData = dataResponse.data?.categories || dataResponse.data;
+
+      // Handle different response formats
+      let allStyles: BeerStyle[] = [];
+
+      if (Array.isArray(beerStylesData)) {
+        // If it's already an array, process normally
+        console.log(
+          `[StaticDataService.fetchAndCacheBeerStyles] Processing array format with ${beerStylesData.length} items`
+        );
+        beerStylesData.forEach((item: any) => {
+          if (item.styles) {
+            // Item is a category with styles array
+            allStyles.push(...item.styles);
+          } else {
+            // Item is already a style
+            allStyles.push(item);
+          }
+        });
+      } else if (
+        typeof beerStylesData === "object" &&
+        beerStylesData !== null
+      ) {
+        // If it's an object with numeric keys (like "1", "2", etc.), convert to array
+        console.log(
+          `[StaticDataService.fetchAndCacheBeerStyles] Processing object format with keys: ${Object.keys(beerStylesData).length}`
+        );
+        const categories = Object.values(beerStylesData);
+        categories.forEach((category: any) => {
+          if (category.styles && Array.isArray(category.styles)) {
+            allStyles.push(...category.styles);
+          }
+        });
+      } else {
+        console.error(
+          `[StaticDataService.fetchAndCacheBeerStyles] Unexpected data format:`,
+          typeof beerStylesData,
+          beerStylesData
+        );
+        throw new OfflineError(
+          "Beer styles data is not in expected format",
+          "INVALID_DATA_FORMAT"
+        );
+      }
 
       // Cache the data
       const version = versionResponse.data.version;

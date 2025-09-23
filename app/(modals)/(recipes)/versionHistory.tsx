@@ -11,6 +11,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import ApiService from "@services/api/apiService";
+import { QUERY_KEYS } from "@services/api/queryClient";
 import { Recipe } from "@src/types";
 import {
   RecipeVersionHistoryResponse,
@@ -20,6 +21,7 @@ import {
 import { useTheme } from "@contexts/ThemeContext";
 import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
 import { TEST_IDS } from "@src/constants/testIDs";
+import { ModalHeader } from "@src/components/ui/ModalHeader";
 
 /**
  * Version History Screen
@@ -41,7 +43,7 @@ export default function VersionHistoryScreen() {
     error: versionsError,
     refetch: refetchVersions,
   } = useQuery<RecipeVersionHistoryResponse>({
-    queryKey: ["versionHistory", recipe_id],
+    queryKey: QUERY_KEYS.RECIPE_VERSIONS(recipe_id!),
     queryFn: async () => {
       if (!recipe_id) {
         throw new Error("No recipe ID provided");
@@ -67,7 +69,7 @@ export default function VersionHistoryScreen() {
     isLoading: isLoadingCurrent,
     refetch: refetchCurrent,
   } = useQuery<Recipe>({
-    queryKey: ["recipe", recipe_id],
+    queryKey: QUERY_KEYS.RECIPE(recipe_id!),
     queryFn: async () => {
       if (!recipe_id) {
         throw new Error("No recipe ID provided");
@@ -246,18 +248,7 @@ export default function VersionHistoryScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleGoBack}
-            testID={TEST_IDS.patterns.touchableOpacityAction(
-              "version-history-back"
-            )}
-          >
-            <MaterialIcons name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Version History</Text>
-        </View>
+        <ModalHeader title="Version History" testID="version-history-header" />
 
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#f4511e" />
@@ -271,18 +262,7 @@ export default function VersionHistoryScreen() {
   if (error) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleGoBack}
-            testID={TEST_IDS.patterns.touchableOpacityAction(
-              "version-history-back"
-            )}
-          >
-            <MaterialIcons name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Version History</Text>
-        </View>
+        <ModalHeader title="Version History" testID="version-history-header" />
 
         <View style={styles.errorContainer}>
           <MaterialIcons name="timeline" size={64} color="#ccc" />
@@ -312,18 +292,7 @@ export default function VersionHistoryScreen() {
   if (!versionHistoryData || versionList.length === 0) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleGoBack}
-            testID={TEST_IDS.patterns.touchableOpacityAction(
-              "version-history-back"
-            )}
-          >
-            <MaterialIcons name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Version History</Text>
-        </View>
+        <ModalHeader title="Version History" testID="version-history-header" />
 
         <View style={styles.errorContainer}>
           <MaterialIcons name="timeline" size={64} color="#ccc" />
@@ -348,18 +317,11 @@ export default function VersionHistoryScreen() {
   // Success state
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleGoBack}
-          testID={TEST_IDS.patterns.touchableOpacityAction(
-            "version-history-back"
-          )}
-        >
-          <MaterialIcons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Version History</Text>
-      </View>
+      <ModalHeader
+        title="Version History"
+        testID="version-history-header"
+        onBack={handleGoBack}
+      />
 
       <ScrollView
         style={styles.scrollView}

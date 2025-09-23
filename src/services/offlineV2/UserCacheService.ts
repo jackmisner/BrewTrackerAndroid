@@ -62,31 +62,52 @@ export class UserCacheService {
    */
   static async getRecipes(userId: string): Promise<Recipe[]> {
     try {
+      console.log(
+        `[UserCacheService.getRecipes] Getting recipes for user ID: "${userId}"`
+      );
+
       const cached = await this.getCachedRecipes(userId);
+      console.log(
+        `[UserCacheService.getRecipes] getCachedRecipes returned ${cached.length} items for user "${userId}"`
+      );
+
+      // If no cached recipes found, try to hydrate from server
+      if (cached.length === 0) {
+        console.log(
+          `[UserCacheService.getRecipes] No cached recipes found, attempting to hydrate from server...`
+        );
+        try {
+          await this.hydrateRecipesFromServer(userId);
+          // Try again after hydration
+          const hydratedCached = await this.getCachedRecipes(userId);
+          console.log(
+            `[UserCacheService.getRecipes] After hydration: ${hydratedCached.length} recipes cached`
+          );
+
+          return this.filterAndSortHydrated(hydratedCached);
+        } catch (hydrationError) {
+          console.warn(
+            `[UserCacheService.getRecipes] Failed to hydrate from server:`,
+            hydrationError
+          );
+          // Continue with empty cache
+        }
+      }
 
       // Filter out deleted items and return data
-      return cached
-        .filter(item => !item.isDeleted)
-        .map(item => item.data)
-        .sort((a, b) => {
-          // Handle both numeric timestamp strings and ISO date strings
-          const getTimestamp = (dateStr: string) => {
-            if (!dateStr) {
-              return 0;
-            }
-            const parsed = Date.parse(dateStr);
-            if (!isNaN(parsed)) {
-              return parsed;
-            }
-            // Fallback to treating it as a numeric timestamp string
-            const numericTimestamp = Number(dateStr);
-            return isNaN(numericTimestamp) ? 0 : numericTimestamp;
-          };
+      const filteredRecipes = cached.filter(item => !item.isDeleted);
+      console.log(
+        `[UserCacheService.getRecipes] After filtering out deleted: ${filteredRecipes.length} recipes`
+      );
 
-          const aTime = getTimestamp(a.updated_at || a.created_at || "");
-          const bTime = getTimestamp(b.updated_at || b.created_at || "");
-          return bTime - aTime; // Newest first (descending)
-        });
+      if (filteredRecipes.length > 0) {
+        const recipeIds = filteredRecipes.map(item => item.data.id);
+        console.log(
+          `[UserCacheService.getRecipes] Recipe IDs: [${recipeIds.join(", ")}]`
+        );
+      }
+
+      return this.filterAndSortHydrated(filteredRecipes);
     } catch (error) {
       console.error("Error getting recipes:", error);
       throw new OfflineError("Failed to get recipes", "RECIPES_ERROR", true);
@@ -105,7 +126,7 @@ export class UserCacheService {
       const currentUserId =
         recipe.user_id ??
         (await UserValidationService.getCurrentUserIdFromToken());
-      if (!currentUserId && !recipe.user_id) {
+      if (!currentUserId) {
         throw new OfflineError(
           "User ID is required for creating recipes",
           "AUTH_ERROR",
@@ -422,9 +443,165 @@ export class UserCacheService {
     }
   }
 
+  /**
+   * Refresh recipes from server (for pull-to-refresh)
+   */
+  static async refreshRecipesFromServer(userId: string): Promise<Recipe[]> {
+    try {
+      console.log(
+        `[UserCacheService.refreshRecipesFromServer] Refreshing recipes from server for user: "${userId}"`
+      );
+
+      // Always fetch fresh data from server
+      await this.hydrateRecipesFromServer(userId, true);
+
+      // Return fresh cached data
+      const refreshedRecipes = await this.getRecipes(userId);
+      console.log(
+        `[UserCacheService.refreshRecipesFromServer] Refresh completed, returning ${refreshedRecipes.length} recipes`
+      );
+
+      return refreshedRecipes;
+    } catch (error) {
+      console.error(
+        `[UserCacheService.refreshRecipesFromServer] Refresh failed:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Hydrate cache with recipes from server
+   */
+  private static async hydrateRecipesFromServer(
+    userId: string,
+    forceRefresh: boolean = false
+  ): Promise<void> {
+    try {
+      console.log(
+        `[UserCacheService.hydrateRecipesFromServer] Fetching recipes from server for user: "${userId}" (forceRefresh: ${forceRefresh})`
+      );
+
+      // Import the API service here to avoid circular dependencies
+      const { default: ApiService } = await import("@services/api/apiService");
+
+      // If force refresh, clear existing cache for this user first
+      if (forceRefresh) {
+        console.log(
+          `[UserCacheService.hydrateRecipesFromServer] Force refresh - clearing existing cache for user "${userId}"`
+        );
+        await this.clearUserRecipesFromCache(userId);
+      }
+
+      // Fetch user's recipes from server
+      const response = await ApiService.recipes.getAll(1, 100); // Get first 100 recipes
+      const serverRecipes = response.data?.recipes || [];
+
+      console.log(
+        `[UserCacheService.hydrateRecipesFromServer] Fetched ${serverRecipes.length} recipes from server`
+      );
+
+      if (serverRecipes.length === 0) {
+        console.log(
+          `[UserCacheService.hydrateRecipesFromServer] No server recipes found`
+        );
+        return;
+      }
+
+      // Convert server recipes to syncable items
+      const now = Date.now();
+      const syncableRecipes = serverRecipes.map(recipe => ({
+        id: recipe.id,
+        data: recipe,
+        lastModified: now,
+        syncStatus: "synced" as const,
+        needsSync: false,
+      }));
+
+      // Store all recipes in cache
+      for (const recipe of syncableRecipes) {
+        await this.addRecipeToCache(recipe);
+      }
+
+      console.log(
+        `[UserCacheService.hydrateRecipesFromServer] Successfully cached ${syncableRecipes.length} recipes`
+      );
+    } catch (error) {
+      console.error(
+        `[UserCacheService.hydrateRecipesFromServer] Failed to hydrate from server:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Clear all recipes for a specific user from cache
+   */
+  private static async clearUserRecipesFromCache(
+    userId: string
+  ): Promise<void> {
+    return await withKeyQueue(STORAGE_KEYS_V2.USER_RECIPES, async () => {
+      try {
+        const cached = await AsyncStorage.getItem(STORAGE_KEYS_V2.USER_RECIPES);
+        if (!cached) {
+          return;
+        }
+
+        const allRecipes: SyncableItem<Recipe>[] = JSON.parse(cached);
+        // Keep recipes for other users, remove recipes for this user
+        const filteredRecipes = allRecipes.filter(
+          item => item.data.user_id !== userId
+        );
+
+        await AsyncStorage.setItem(
+          STORAGE_KEYS_V2.USER_RECIPES,
+          JSON.stringify(filteredRecipes)
+        );
+        console.log(
+          `[UserCacheService.clearUserRecipesFromCache] Cleared recipes for user "${userId}", kept ${filteredRecipes.length} recipes for other users`
+        );
+      } catch (error) {
+        console.error(
+          `[UserCacheService.clearUserRecipesFromCache] Error:`,
+          error
+        );
+        throw error;
+      }
+    });
+  }
+
   // ============================================================================
   // Private Helper Methods
   // ============================================================================
+
+  /**
+   * Filter and sort hydrated cached items
+   */
+  private static filterAndSortHydrated<
+    T extends { updated_at?: string; created_at?: string },
+  >(hydratedCached: SyncableItem<T>[]): T[] {
+    return hydratedCached
+      .filter(item => !item.isDeleted)
+      .map(item => item.data)
+      .sort((a, b) => {
+        const getTimestamp = (dateStr: string) => {
+          if (!dateStr) {
+            return 0;
+          }
+          const parsed = Date.parse(dateStr);
+          if (!isNaN(parsed)) {
+            return parsed;
+          }
+          const numericTimestamp = Number(dateStr);
+          return isNaN(numericTimestamp) ? 0 : numericTimestamp;
+        };
+        const aTime = getTimestamp(a.updated_at || a.created_at || "");
+        const bTime = getTimestamp(b.updated_at || b.created_at || "");
+        return bTime - aTime; // Newest first
+      });
+  }
 
   /**
    * Get cached recipes for a user
@@ -434,12 +611,47 @@ export class UserCacheService {
   ): Promise<SyncableItem<Recipe>[]> {
     return await withKeyQueue(STORAGE_KEYS_V2.USER_RECIPES, async () => {
       try {
+        console.log(
+          `[UserCacheService.getCachedRecipes] Loading cache for user ID: "${userId}"`
+        );
+
         const cached = await AsyncStorage.getItem(STORAGE_KEYS_V2.USER_RECIPES);
         if (!cached) {
+          console.log(`[UserCacheService.getCachedRecipes] No cache found`);
           return [];
         }
+
         const allRecipes: SyncableItem<Recipe>[] = JSON.parse(cached);
-        return allRecipes.filter(item => item.data.user_id === userId);
+        console.log(
+          `[UserCacheService.getCachedRecipes] Total cached recipes found: ${allRecipes.length}`
+        );
+
+        // Log sample of all cached recipe user IDs for debugging
+        if (allRecipes.length > 0) {
+          const sampleUserIds = allRecipes.slice(0, 5).map(item => ({
+            id: item.data.id,
+            user_id: item.data.user_id,
+          }));
+          console.log(
+            `[UserCacheService.getCachedRecipes] Sample cached recipes:`,
+            sampleUserIds
+          );
+        }
+
+        const userRecipes = allRecipes.filter(item => {
+          const isMatch = item.data.user_id === userId;
+          if (!isMatch) {
+            console.log(
+              `[UserCacheService.getCachedRecipes] Recipe ${item.data.id} user_id "${item.data.user_id}" != target "${userId}"`
+            );
+          }
+          return isMatch;
+        });
+
+        console.log(
+          `[UserCacheService.getCachedRecipes] Filtered to ${userRecipes.length} recipes for user "${userId}"`
+        );
+        return userRecipes;
       } catch (e) {
         console.warn("Corrupt USER_RECIPES cache; resetting", e);
         await AsyncStorage.removeItem(STORAGE_KEYS_V2.USER_RECIPES);

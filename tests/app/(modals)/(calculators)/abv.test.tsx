@@ -74,6 +74,46 @@ jest.mock("@contexts/ThemeContext", () => ({
   }),
 }));
 
+// Mock React Query for ModalHeader dependency
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query");
+  return {
+    ...actual,
+    useQueryClient: jest.fn(() => ({
+      invalidateQueries: jest.fn(),
+      setQueryData: jest.fn(),
+      getQueryData: jest.fn(),
+      mount: jest.fn(),
+      unmount: jest.fn(),
+    })),
+    QueryClient: jest.fn(() => ({
+      invalidateQueries: jest.fn(),
+      setQueryData: jest.fn(),
+      getQueryData: jest.fn(),
+      mount: jest.fn(),
+      unmount: jest.fn(),
+    })),
+  };
+});
+
+// Mock ModalHeader component
+jest.mock("@src/components/ui/ModalHeader", () => ({
+  ModalHeader: ({ title, testID }: { title: string; testID: string }) => {
+    const React = require("react");
+    return React.createElement("View", { testID }, [
+      React.createElement("TouchableOpacity", {
+        testID: `${testID}-back-button`,
+        key: "back",
+      }),
+      React.createElement("Text", { key: "title" }, title),
+      React.createElement("TouchableOpacity", {
+        testID: `${testID}-home-button`,
+        key: "home",
+      }),
+    ]);
+  },
+}));
+
 // Mock calculator service
 jest.mock("@services/calculators/ABVCalculator", () => ({
   ABVCalculator: {

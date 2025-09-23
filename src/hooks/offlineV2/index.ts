@@ -17,3 +17,6 @@ export { useRecipes, useBrewSessions } from "./useUserData";
 
 // Sync management hooks
 export { useOfflineSync, useSyncStatus } from "./useOfflineSync";
+
+// Startup hydration hook
+export { useStartupHydration } from "./useStartupHydration";

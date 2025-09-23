@@ -47,6 +47,7 @@ import { ParametersForm } from "@src/components/recipes/RecipeForm/ParametersFor
 import { IngredientsForm } from "@src/components/recipes/RecipeForm/IngredientsForm";
 import { ReviewForm } from "@src/components/recipes/RecipeForm/ReviewForm";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
+import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { generateUniqueId } from "@utils/keyUtils";
 import { QUERY_KEYS } from "@services/api/queryClient";
@@ -264,6 +265,7 @@ export default function CreateRecipeScreen() {
       queryClient.invalidateQueries({
         queryKey: [...QUERY_KEYS.RECIPES, "offline"],
       }); // Offline recipes cache
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD }); // Dashboard cache
       // Prime the detail cache for immediate access
       queryClient.setQueryData(QUERY_KEYS.RECIPE(response.id), response);
       Alert.alert("Success", "Recipe created successfully!", [
@@ -444,13 +446,11 @@ export default function CreateRecipeScreen() {
   return (
     <KeyboardAvoidingView style={styles.container} behavior="padding">
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleCancel} style={styles.headerButton}>
-          <MaterialIcons name="close" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Recipe</Text>
-        <View style={styles.headerButton} />
-      </View>
+      <ModalHeader
+        title="Create Recipe"
+        onBack={handleCancel}
+        testID="create-recipe-header"
+      />
 
       {/* Progress Bar */}
       {renderProgressBar()}

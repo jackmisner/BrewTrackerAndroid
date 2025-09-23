@@ -20,7 +20,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { BoilTimerCalculator } from "@services/calculators/BoilTimerCalculator";
 import { NotificationService } from "@services/NotificationService";
 import { CalculatorCard } from "@components/calculators/CalculatorCard";
-import { CalculatorHeader } from "@components/calculators/CalculatorHeader";
+import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { NumberInput } from "@components/calculators/NumberInput";
 import { RecipeSelector } from "@components/boilTimer/RecipeSelector";
 import { TimerPersistenceService } from "@services/TimerPersistenceService";
@@ -742,7 +742,7 @@ export default function BoilTimerCalculatorScreen() {
       ]}
       testID={TEST_IDS.boilTimer.screen}
     >
-      <CalculatorHeader title="Boil Timer" />
+      <ModalHeader title="Boil Timer" testID="boil-timer-header" />
 
       <ScrollView
         style={calculatorScreenStyles.scrollContent}

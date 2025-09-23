@@ -769,10 +769,71 @@ const SUPPRESSED_ERROR_PATTERNS = [
   /Unexpected matchIngredients response shape/,
   /Error refreshing version history:/,
   /Refresh failed/,
+  // V2 Offline System errors
+  /Failed to fetch ingredients:/,
+  /Failed to get ingredients data/,
+  /Error loading ingredients:/,
+  /Failed to fetch beer styles:/,
+  /Failed to get beer styles data/,
+  /Error loading beer styles:/,
+  /Cannot read properties of undefined \(reading 'getVersion'\)/,
+  /Cannot read properties of undefined \(reading 'getAll'\)/,
+  /StaticDataService\./,
+  /fetchAndCacheIngredients/,
+  /fetchAndCacheBeerStyles/,
+  /OfflineError: Failed to get/,
+  /INGREDIENTS_ERROR/,
+  /BEER_STYLES_ERROR/,
+  /useStaticData\./,
+  /useIngredients/,
+  /useBeerStyles/,
+  // BoilTimer test errors (intentional test errors)
+  /Error loading recipe:/,
+  /Recipe load failed/,
+
+  // V2 Static Data test errors (intentional test errors)
+  /Error refreshing ingredients:/,
+  /Error checking for updates:/,
+  /Error clearing cache:/,
+  /Refresh failed/,
+  /Update check failed/,
+  /Clear cache failed/,
+
+  // V2 User Data test errors (intentional test errors)
+  /Error loading recipes:/,
+  /Failed to load recipes/,
+
+  // SplashScreen test errors (intentional test errors)
+  /Failed to initialize app data:/,
+  /Cannot read properties of undefined \(reading 'initializeCache'\)/,
+
+  // Legacy OfflineCacheService test errors (intentional test errors)
+  /Failed to load cached data:/,
+  /Failed to validate cache ownership:/,
+  /Failed to get cache status:/,
+  /Cannot read properties of undefined \(reading 'userId'\)/,
+  /Cannot read properties of undefined \(reading 'grain'\)/,
+  /Storage error/,
 ];
 
 const SUPPRESSED_WARN_PATTERNS = [
   /componentWillMount is deprecated/,
+  /Notification permissions not granted/,
+  // CalculatorsContext test warnings (intentional test warnings)
+  /Failed to load calculator state:/,
+  /SyntaxError: Unexpected token 'i', "invalid-json" is not valid JSON/,
+  /Storage error/,
+
+  // API test warnings (intentional test warnings)
+  /API failed, using cached beer styles:/,
+  /API metrics calculation failed, using offline calculation:/,
+  /Invalid recipe data/,
+  /Network error/,
+  /Corrupt USER_RECIPES cache; resetting Error: Storage error/,
+  /🔍 Non-standard recipe ID format detected: "valid-recipe" for recipe "Valid Recipe"/,
+  / 🧹 CLEANUP: Recipe missing fields: {/,
+  // JWT test warnings (intentional test warnings)
+  /Invalid JWT format: expected 3 parts/,
   /componentWillReceiveProps is deprecated/,
   /componentWillUpdate is deprecated/,
   /UNSAFE_componentWillMount is deprecated/,
@@ -791,6 +852,16 @@ const SUPPRESSED_WARN_PATTERNS = [
   /🍺 BeerXML Parse - No recipes found in response/,
   /🔍 Unknown response structure, returning empty list/,
   /Cannot read properties of undefined \(reading 'granted'\)/,
+  // V2 Offline System warnings
+  /Failed to fetch ingredients:/,
+  /Failed to fetch beer styles:/,
+  /Cache miss for ingredients:/,
+  /Cache miss for beer styles:/,
+  /Version check failed for ingredients:/,
+  /Version check failed for beer styles:/,
+  /Offline data unavailable:/,
+  /StaticDataService warning:/,
+  /UserCacheService warning:/,
 ];
 
 console.error = (...args) => {
@@ -843,4 +914,40 @@ console.warn = (...args) => {
 
   // Log all other warnings normally
   originalWarn.apply(console, args);
+};
+
+// Suppress debug console.log statements during tests
+const SUPPRESSED_LOG_PATTERNS = [
+  // Fermentation entry debug logs
+  /📊 Adding fermentation entry:/,
+
+  // Cache invalidation debug logs
+  /🔄 Invalidating offline recipes and dashboard cache/,
+
+  // JWT debug logs
+  /JWT Debug:/,
+];
+
+const originalLog = console.log;
+console.log = (...args) => {
+  let messageString = "";
+
+  if (args.length > 0) {
+    const message = args[0];
+    messageString =
+      typeof message === "string" ? message : message?.toString?.() || "";
+  }
+
+  if (messageString) {
+    // Check if this log matches any suppressed patterns
+    const shouldSuppress = SUPPRESSED_LOG_PATTERNS.some(pattern =>
+      pattern.test(messageString)
+    );
+    if (shouldSuppress) {
+      return;
+    }
+  }
+
+  // Log all other messages normally
+  originalLog.apply(console, args);
 };

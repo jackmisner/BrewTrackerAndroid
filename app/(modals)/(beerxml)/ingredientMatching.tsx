@@ -29,6 +29,7 @@ import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import BeerXMLService from "@services/beerxml/BeerXMLService";
 import { TEST_IDS } from "@constants/testIDs";
 import { generateUniqueId } from "@utils/keyUtils";
+import { ModalHeader } from "@src/components/ui/ModalHeader";
 
 interface MatchingState {
   step: "matching" | "reviewing" | "creating" | "finalizing";
@@ -338,13 +339,6 @@ export default function IngredientMatchingScreen() {
   };
 
   /**
-   * Navigate back
-   */
-  const handleGoBack = () => {
-    router.back();
-  };
-
-  /**
    * Render matching progress
    */
   const renderProgress = () => {
@@ -638,23 +632,10 @@ export default function IngredientMatchingScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleGoBack}
-          testID={TEST_IDS.patterns.touchableOpacityAction(
-            "ingredient-matching-back"
-          )}
-        >
-          <MaterialIcons
-            name="arrow-back"
-            size={24}
-            color={theme.colors.text}
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Ingredient Matching</Text>
-      </View>
+      <ModalHeader
+        title="Ingredient Matching"
+        testID="ingredient-matching-header"
+      />
 
       <ScrollView
         style={styles.scrollView}

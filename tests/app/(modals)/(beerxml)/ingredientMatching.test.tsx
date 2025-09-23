@@ -32,11 +32,29 @@ jest.mock("expo-router", () => ({
   })),
 }));
 
-jest.mock("@tanstack/react-query", () => ({
-  useQueryClient: jest.fn(() => ({
-    invalidateQueries: jest.fn(),
-  })),
-}));
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query");
+  return {
+    ...actual,
+    useQueryClient: jest.fn(() => ({
+      invalidateQueries: jest.fn(),
+      setQueryData: jest.fn(),
+      getQueryData: jest.fn(),
+      mount: jest.fn(),
+      unmount: jest.fn(),
+    })),
+    QueryClient: jest.fn().mockImplementation(() => ({
+      invalidateQueries: jest.fn(),
+      setQueryData: jest.fn(),
+      getQueryData: jest.fn(),
+      mount: jest.fn(),
+      unmount: jest.fn(),
+      getDefaultOptions: jest.fn(() => ({})),
+      setDefaultOptions: jest.fn(),
+      clear: jest.fn(),
+    })),
+  };
+});
 
 // Mock the BeerXML service with a more realistic implementation
 jest.mock("@services/beerxml/BeerXMLService", () => ({
@@ -81,7 +99,10 @@ describe("IngredientMatchingScreen", () => {
     const { getByTestId } = render(<IngredientMatchingScreen />);
     expect(
       getByTestId(
-        TEST_IDS.patterns.touchableOpacityAction("ingredient-matching-back")
+        TEST_IDS.patterns.modalHeaderAction(
+          "ingredient-matching-header",
+          "back"
+        )
       )
     ).toBeTruthy();
   });
@@ -117,7 +138,10 @@ describe("IngredientMatchingScreen", () => {
     // Check for touchable buttons with proper testIDs
     expect(
       getByTestId(
-        TEST_IDS.patterns.touchableOpacityAction("ingredient-matching-back")
+        TEST_IDS.patterns.modalHeaderAction(
+          "ingredient-matching-header",
+          "back"
+        )
       )
     ).toBeTruthy();
   });
@@ -126,7 +150,7 @@ describe("IngredientMatchingScreen", () => {
     const { getByTestId } = render(<IngredientMatchingScreen />);
     const { router } = require("expo-router");
     const backBtn = getByTestId(
-      TEST_IDS.patterns.touchableOpacityAction("ingredient-matching-back")
+      TEST_IDS.patterns.modalHeaderAction("ingredient-matching-header", "back")
     );
     fireEvent.press(backBtn);
     expect(router.back).toHaveBeenCalledTimes(1);
@@ -155,7 +179,10 @@ describe("IngredientMatchingScreen", () => {
       // Check all the TouchableOpacity components have proper testIDs
       expect(
         getByTestId(
-          TEST_IDS.patterns.touchableOpacityAction("ingredient-matching-back")
+          TEST_IDS.patterns.modalHeaderAction(
+            "ingredient-matching-header",
+            "back"
+          )
         )
       ).toBeTruthy();
     });
@@ -194,10 +221,13 @@ describe("IngredientMatchingScreen", () => {
     it("should use the correct testID patterns for all TouchableOpacity components", () => {
       const { getByTestId } = render(<IngredientMatchingScreen />);
 
-      // Test the new touchableOpacityAction pattern
+      // Test the new modalHeaderAction pattern
       expect(
         getByTestId(
-          TEST_IDS.patterns.touchableOpacityAction("ingredient-matching-back")
+          TEST_IDS.patterns.modalHeaderAction(
+            "ingredient-matching-header",
+            "back"
+          )
         )
       ).toBeTruthy();
     });
@@ -218,12 +248,9 @@ describe("IngredientMatchingScreen", () => {
       const scrollTestId = TEST_IDS.patterns.scrollAction(
         "ingredient-matching"
       );
-      const backButtonTestId = TEST_IDS.patterns.touchableOpacityAction(
-        "ingredient-matching-back"
-      );
+      const backButtonTestId = "ingredient-matching-header-back-button";
 
       expect(scrollTestId).toBe("ingredient-matching-scroll-view");
-      expect(backButtonTestId).toBe("ingredient-matching-back-button");
 
       expect(getByTestId(scrollTestId)).toBeTruthy();
       expect(getByTestId(backButtonTestId)).toBeTruthy();
