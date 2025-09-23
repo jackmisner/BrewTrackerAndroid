@@ -254,6 +254,13 @@ export default function RecipesScreen() {
             queryKey: [...QUERY_KEYS.RECIPE(response.data.id), "offline"],
           });
         }
+        // Also refresh offline V2 cache for "My" tab
+        if (!recipe.is_public) {
+          // We have refreshRecipes from useRecipes() in scope
+          refreshRecipes().catch(err => {
+            console.warn("Refresh after clone failed:", err);
+          });
+        }
       }, 1000); // 1 second delay
       const cloneType = recipe.is_public ? "cloned" : "versioned";
       Alert.alert(
@@ -360,11 +367,11 @@ export default function RecipesScreen() {
     activeTab === "my" ? isLoadingMyRecipes : isLoadingPublicRecipes;
   const error = activeTab === "my" ? myRecipesError : publicRecipesError;
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     if (activeTab === "my") {
-      refreshRecipes();
+      await refreshRecipes();
     } else {
-      refetchPublicRecipes();
+      await refetchPublicRecipes();
     }
   };
 

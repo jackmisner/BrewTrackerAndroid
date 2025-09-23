@@ -121,7 +121,8 @@ const convertIngredientToRecipeIngredient = (
     type: ingredient.type as IngredientType,
     amount: ingredient.amount || 0,
     unit: (ingredient.unit as IngredientUnit) || "oz",
-    instance_id: generateUniqueId("ing"),
+    // Defer actual instance_id assignment; created in createRecipeIngredientWithDefaults
+    instance_id: "",
   };
 };
 
@@ -240,8 +241,8 @@ export default function IngredientPickerScreen() {
 
         if (aCaramelMatch && bCaramelMatch) {
           // Both are caramel malts - sort by number
-          const aNum = parseInt(aCaramelMatch[1]);
-          const bNum = parseInt(bCaramelMatch[1]);
+          const aNum = parseInt(aCaramelMatch[1], 10);
+          const bNum = parseInt(bCaramelMatch[1], 10);
           return aNum - bNum;
         } else if (aCaramelMatch && !bCaramelMatch) {
           // Only a is caramel - check if b starts with caramel/crystal
@@ -264,8 +265,8 @@ export default function IngredientPickerScreen() {
 
         if (aCandiMatch && bCandiMatch) {
           // Both are candi syrups - sort by number
-          const aNum = parseInt(aCandiMatch[1]);
-          const bNum = parseInt(bCandiMatch[1]);
+          const aNum = parseInt(aCandiMatch[1], 10);
+          const bNum = parseInt(bCandiMatch[1], 10);
           return aNum - bNum;
         } else if (aCandiMatch && !bCandiMatch) {
           // Only a is candi syrup - check if b starts with 'candi' or 'd-'
@@ -537,7 +538,7 @@ export default function IngredientPickerScreen() {
         </View>
       ) : (
         <FlatList
-          data={filteredIngredients as Ingredient[]}
+          data={filteredIngredients}
           renderItem={renderIngredientItem}
           keyExtractor={(item, index) =>
             item.id?.toString() || `ingredient-${index}`

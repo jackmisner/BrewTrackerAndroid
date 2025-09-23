@@ -242,13 +242,13 @@ export default function EditFermentationEntryScreen() {
   if (isLoadingSession) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.headerButton} onPress={handleCancel}>
-            <MaterialIcons name="close" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Fermentation Entry</Text>
-          <View style={styles.saveButton} />
-        </View>
+        <ModalHeader
+          title="Edit Fermentation Entry"
+          testID="edit-fermentation-entry-header"
+          rightActions={<View style={styles.saveButton} />}
+          showHomeButton={false}
+          onBack={handleCancel}
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Loading entry...</Text>
@@ -260,13 +260,13 @@ export default function EditFermentationEntryScreen() {
   if (sessionError || !brewSessionData?.fermentation_data?.[entryIndex]) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.headerButton} onPress={handleCancel}>
-            <MaterialIcons name="close" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Fermentation Entry</Text>
-          <View style={styles.saveButton} testID="save-button" />
-        </View>
+        <ModalHeader
+          title="Edit Fermentation Entry"
+          testID="edit-fermentation-entry-header"
+          rightActions={<View style={styles.saveButton} testID="save-button" />}
+          showHomeButton={false}
+          onBack={handleCancel}
+        />
         <View style={styles.errorContainer}>
           <MaterialIcons name="error" size={64} color={theme.colors.error} />
           <Text style={styles.errorText}>Entry Not Found</Text>

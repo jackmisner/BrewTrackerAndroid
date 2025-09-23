@@ -141,9 +141,10 @@ export class StaticDataService {
       return {
         ingredients:
           !cachedIngredients ||
-          cachedIngredients !== ingredientsVersion.version,
+          String(cachedIngredients) !== String(ingredientsVersion.version),
         beerStyles:
-          !cachedBeerStyles || cachedBeerStyles !== beerStylesVersion.version,
+          !cachedBeerStyles ||
+          String(cachedBeerStyles) !== String(beerStylesVersion.version),
       };
     } catch (error) {
       console.warn("Failed to check for updates:", error);
@@ -301,15 +302,9 @@ export class StaticDataService {
         expires_never: true,
       };
 
-      await Promise.all([
-        AsyncStorage.setItem(
-          STORAGE_KEYS_V2.INGREDIENTS_DATA,
-          JSON.stringify(cachedData)
-        ),
-        AsyncStorage.setItem(
-          STORAGE_KEYS_V2.INGREDIENTS_VERSION,
-          String(version)
-        ),
+      await AsyncStorage.multiSet([
+        [STORAGE_KEYS_V2.INGREDIENTS_DATA, JSON.stringify(cachedData)],
+        [STORAGE_KEYS_V2.INGREDIENTS_VERSION, String(version)],
       ]);
 
       return ingredients;
@@ -328,9 +323,11 @@ export class StaticDataService {
    */
   private static async fetchAndCacheBeerStyles(): Promise<BeerStyle[]> {
     try {
-      console.log(
-        `[StaticDataService.fetchAndCacheBeerStyles] Starting fetch...`
-      );
+      if (__DEV__) {
+        console.log(
+          `[StaticDataService.fetchAndCacheBeerStyles] Starting fetch...`
+        );
+      }
 
       // Get version and data
       const [versionResponse, dataResponse] = await Promise.all([
@@ -338,9 +335,11 @@ export class StaticDataService {
         ApiService.beerStyles.getAll(),
       ]);
 
-      console.log(
-        `[StaticDataService.fetchAndCacheBeerStyles] API responses received - version: ${versionResponse?.data?.version}`
-      );
+      if (__DEV__) {
+        console.log(
+          `[StaticDataService.fetchAndCacheBeerStyles] API responses received - version: ${versionResponse?.data?.version}`
+        );
+      }
 
       let beerStylesData = dataResponse.data?.categories || dataResponse.data;
 
@@ -353,9 +352,15 @@ export class StaticDataService {
           `[StaticDataService.fetchAndCacheBeerStyles] Processing array format with ${beerStylesData.length} items`
         );
         beerStylesData.forEach((item: any) => {
-          if (item.styles) {
+          if (Array.isArray(item?.styles)) {
             // Item is a category with styles array
-            allStyles.push(...item.styles);
+            const catName = item.name ?? item.category;
+            allStyles.push(
+              ...item.styles.map((s: any) => ({
+                ...s,
+                category: s?.category ?? catName ?? s?.category,
+              }))
+            );
           } else {
             // Item is already a style
             allStyles.push(item);
@@ -366,13 +371,21 @@ export class StaticDataService {
         beerStylesData !== null
       ) {
         // If it's an object with numeric keys (like "1", "2", etc.), convert to array
-        console.log(
-          `[StaticDataService.fetchAndCacheBeerStyles] Processing object format with keys: ${Object.keys(beerStylesData).length}`
-        );
+        if (__DEV__) {
+          console.log(
+            `[StaticDataService.fetchAndCacheBeerStyles] Processing object format with keys: ${Object.keys(beerStylesData).length}`
+          );
+        }
         const categories = Object.values(beerStylesData);
         categories.forEach((category: any) => {
-          if (category.styles && Array.isArray(category.styles)) {
-            allStyles.push(...category.styles);
+          if (Array.isArray(category?.styles)) {
+            const catName = category.name ?? category.category;
+            allStyles.push(
+              ...category.styles.map((s: any) => ({
+                ...s,
+                category: s?.category ?? catName ?? s?.category,
+              }))
+            );
           }
         });
       } else {
@@ -396,15 +409,9 @@ export class StaticDataService {
         expires_never: true,
       };
 
-      await Promise.all([
-        AsyncStorage.setItem(
-          STORAGE_KEYS_V2.BEER_STYLES_DATA,
-          JSON.stringify(cachedData)
-        ),
-        AsyncStorage.setItem(
-          STORAGE_KEYS_V2.BEER_STYLES_VERSION,
-          String(version)
-        ),
+      await AsyncStorage.multiSet([
+        [STORAGE_KEYS_V2.BEER_STYLES_DATA, JSON.stringify(cachedData)],
+        [STORAGE_KEYS_V2.BEER_STYLES_VERSION, String(version)],
       ]);
 
       return allStyles;
@@ -495,7 +502,7 @@ export class StaticDataService {
       const cachedVersion = await this.getCachedVersion(dataType);
 
       // If version differs, update cache in background
-      if (cachedVersion !== versionResponse.data.version) {
+      if (String(cachedVersion) !== String(versionResponse.data.version)) {
         if (dataType === "ingredients") {
           await this.fetchAndCacheIngredients();
         } else {

@@ -258,7 +258,7 @@ function main() {
   try {
     bumpVersion(bumpType);
   } catch (error) {
-    exitWithError(error);
+    exitWithError(error.message || String(error));
   }
 }
 
