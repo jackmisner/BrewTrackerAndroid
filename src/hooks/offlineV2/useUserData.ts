@@ -162,7 +162,7 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
       // Update sync status
       const pending = await UserCacheService.getPendingOperationsCount();
       setPendingCount(pending);
-      setLastSync(Date.now())
+      setLastSync(Date.now());
     } catch (error) {
       console.error(`[useRecipes.refresh] Refresh failed:`, error);
       setError(
