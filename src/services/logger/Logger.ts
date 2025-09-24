@@ -268,15 +268,20 @@ export class Logger {
       if (!this.initialized) {
         await this.initialize();
       }
-
+      let dataField: string | undefined;
+      if (data !== undefined) {
+        try {
+          dataField = typeof data === "string" ? data : JSON.stringify(data);
+        } catch {
+          dataField = String(data);
+        }
+      }
       const logEntry: LogEntry = {
         timestamp: new Date().toISOString(),
         level,
         category,
         message,
-        ...(data && {
-          data: typeof data === "string" ? data : JSON.stringify(data),
-        }),
+        ...(dataField !== undefined && { data: dataField }),
       };
 
       const logLine = this.formatLogLine(logEntry);
@@ -348,7 +353,21 @@ export class Logger {
     try {
       const currentFile = this.getCurrentLogFile();
 
-      if (currentFile.exists && currentFile.size > this.MAX_LOG_SIZE) {
+      // Check if file exists first
+      if (!currentFile.exists) {
+        return;
+      }
+
+      // Get current file size, handling potential undefined values
+      let currentSize = 0;
+      try {
+        currentSize = currentFile.size || 0;
+      } catch (sizeError) {
+        console.warn("Failed to get file size for rotation check:", sizeError);
+        return; // Skip rotation if we can't determine size
+      }
+
+      if (currentSize > this.MAX_LOG_SIZE) {
         // Rename current file with timestamp
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
         if (!this.logDirectory) {
@@ -441,7 +460,7 @@ export class Logger {
         return "";
       }
 
-      return file.text();
+      return await file.text();
     } catch (error) {
       console.warn(`Failed to read log file ${filename}:`, error);
       return "";

@@ -143,7 +143,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
   );
 
   // Track previous connection state for background refresh detection
-  const previousConnectionState = useRef<boolean>(isConnected);
+  const previousOnlineState = useRef<boolean>(isConnected);
   const lastCacheRefresh = useRef<number>(0);
 
   // Initialize network monitoring on component mount
@@ -217,7 +217,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
     setNetworkDetails(details);
 
     // Background cache refresh when coming back online
-    const wasOffline = !previousConnectionState.current;
+    const wasOffline = !previousOnlineState.current;
     const isNowOnline = connected && (reachable ?? true);
     const shouldRefresh = wasOffline && isNowOnline;
 
@@ -232,7 +232,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
         wasOffline,
         isNowOnline,
         shouldRefresh,
-        previousConnectionState: previousConnectionState.current,
+        previousOnlineState: previousOnlineState.current,
       }
     );
 
@@ -308,8 +308,8 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
       }
     }
 
-    // Update previous connection state
-    previousConnectionState.current = connected;
+    // Update previous online state
+    previousOnlineState.current = isNowOnline;
 
     // Persist network state for offline handling
     try {
