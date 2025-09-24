@@ -28,6 +28,23 @@ jest.mock("@contexts/AuthContext", () => ({
   useAuth: jest.fn(),
 }));
 
+// Mock UnitContext hook
+jest.mock("@contexts/UnitContext", () => ({
+  useUnits: jest.fn(() => ({
+    temperatureUnit: "F",
+    volumeUnit: "gal",
+    weightUnit: "lb",
+    unitSystem: "imperial",
+    convertTemperature: jest.fn((temp: number) => temp),
+    convertVolume: jest.fn((vol: number) => vol),
+    convertWeight: jest.fn((weight: number) => weight),
+    setTemperatureUnit: jest.fn(),
+    setVolumeUnit: jest.fn(),
+    setWeightUnit: jest.fn(),
+    setUnitSystem: jest.fn(),
+  })),
+}));
+
 // Mock React Native Appearance
 jest.mock("react-native", () => ({
   Appearance: {
@@ -143,7 +160,10 @@ describe("useUserData hooks", () => {
 
       expect(result.current.data).toEqual([mockRecipe]);
       expect(result.current.error).toBeNull();
-      expect(mockUserCacheService.getRecipes).toHaveBeenCalledWith(mockUser.id);
+      expect(mockUserCacheService.getRecipes).toHaveBeenCalledWith(
+        mockUser.id,
+        "imperial"
+      );
     });
 
     it("should not load recipes when user is not authenticated", async () => {
@@ -508,7 +528,8 @@ describe("useUserData hooks", () => {
 
       await waitFor(() => {
         expect(mockUserCacheService.getRecipes).toHaveBeenCalledWith(
-          mockUser.id
+          mockUser.id,
+          "imperial"
         );
       });
     });

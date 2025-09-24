@@ -37,7 +37,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import ApiService from "@services/api/apiService";
 import { useRecipes, useOfflineSync } from "@src/hooks/offlineV2";
-import OfflineRecipeService from "@services/offline/OfflineRecipeService";
 
 import { QUERY_KEYS } from "@services/api/queryClient";
 import { useNetwork } from "@contexts/NetworkContext";
@@ -118,18 +117,7 @@ export default function RecipesScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      // Clean up stale cache data when online and refreshing
-      try {
-        const cleanup = await OfflineRecipeService.cleanupStaleData();
-        if (cleanup.removed > 0) {
-          console.log(
-            `Pull-to-refresh cleaned up ${cleanup.removed} stale recipes`
-          );
-        }
-      } catch (error) {
-        console.warn("Failed to cleanup stale data during refresh:", error);
-        // Don't let cleanup errors block the refresh
-      }
+      // Legacy cleanup no longer needed - V2 system handles cache management automatically
 
       // Trigger sync if online and there are pending changes
       if (isConnected && pendingOperations > 0) {

@@ -528,62 +528,7 @@ jest.mock("../src/components/NetworkStatusBanner", () => ({
   default: ({ onRetry }) => null,
 }));
 
-// Mock offline recipe hooks
-jest.mock("../src/hooks/useOfflineRecipes", () => ({
-  useOfflineRecipes: jest.fn(() => ({
-    data: [],
-    isLoading: false,
-    error: null,
-    refetch: jest.fn(),
-  })),
-  useOfflineRecipe: jest.fn(() => ({
-    data: null,
-    isLoading: false,
-    error: null,
-    refetch: jest.fn(),
-  })),
-  useOfflineCreateRecipe: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
-    error: null,
-  })),
-  useOfflineUpdateRecipe: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
-    error: null,
-  })),
-  useOfflineDeleteRecipe: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
-    error: null,
-  })),
-  useOfflineSyncStatus: jest.fn(() => ({
-    data: {
-      totalRecipes: 0,
-      pendingSync: 0,
-      conflicts: 0,
-      failedSync: 0,
-      lastSync: 0,
-    },
-    isLoading: false,
-    error: null,
-  })),
-  useOfflineSync: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
-    error: null,
-  })),
-  useAutoOfflineSync: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
-    error: null,
-  })),
-}));
+// Legacy offline hooks removed - now using V2 system
 
 // Handle unhandled promise rejections from test mocks
 const originalUnhandledRejection = process.listeners("unhandledRejection");
@@ -805,15 +750,9 @@ const SUPPRESSED_ERROR_PATTERNS = [
 
   // SplashScreen test errors (intentional test errors)
   /Failed to initialize app data:/,
-  /Cannot read properties of undefined \(reading 'initializeCache'\)/,
+  // initializeCache error pattern removed with legacy service
 
-  // Legacy OfflineCacheService test errors (intentional test errors)
-  /Failed to load cached data:/,
-  /Failed to validate cache ownership:/,
-  /Failed to get cache status:/,
-  /Cannot read properties of undefined \(reading 'userId'\)/,
-  /Cannot read properties of undefined \(reading 'grain'\)/,
-  /Storage error/,
+  // Legacy offline service errors removed
 ];
 
 const SUPPRESSED_WARN_PATTERNS = [

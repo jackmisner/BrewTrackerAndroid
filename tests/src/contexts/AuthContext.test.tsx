@@ -543,18 +543,12 @@ describe("AuthContext", () => {
       });
 
       expect(mockApiService.token.removeToken).toHaveBeenCalled();
-      // Expect two calls to multiRemove - first for basic keys, second for offline recipe keys
-      expect(mockAsyncStorage.multiRemove).toHaveBeenCalledTimes(2);
-      expect(mockAsyncStorage.multiRemove).toHaveBeenNthCalledWith(1, [
+      // Expect one call to multiRemove for basic keys
+      expect(mockAsyncStorage.multiRemove).toHaveBeenCalledTimes(1);
+      expect(mockAsyncStorage.multiRemove).toHaveBeenCalledWith([
         "userData",
         "userSettings",
         "cachedIngredients",
-      ]);
-      expect(mockAsyncStorage.multiRemove).toHaveBeenNthCalledWith(2, [
-        "offlineRecipes_user-123",
-        "offlineRecipes_user-123_pending",
-        "offlineRecipes_user-123_meta",
-        "offlineRecipes_user-123_pending_failed",
       ]);
       expect(result.current.user).toBeNull();
       expect(result.current.isAuthenticated).toBe(false);

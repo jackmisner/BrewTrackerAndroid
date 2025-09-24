@@ -29,10 +29,15 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
-import {
-  OfflineCacheService,
-  CacheProgress,
-} from "@services/offline/OfflineCacheService";
+import { StaticDataService } from "@services/offlineV2/StaticDataService";
+
+// V2 system progress interface
+interface CacheProgress {
+  step: string;
+  message: string;
+  percent: number;
+  isComplete: boolean;
+}
 
 interface Props {
   onComplete: (success: boolean) => void;
@@ -105,8 +110,41 @@ export function SplashScreen({ onComplete }: Props) {
 
   const initializeAppData = async () => {
     try {
-      await OfflineCacheService.initializeCache(progressUpdate => {
-        setProgress(progressUpdate);
+      // V2 system: Simple cache initialization without progress tracking
+      setProgress({
+        step: "network",
+        message: "Checking network connectivity...",
+        percent: 20,
+        isComplete: false,
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause for UX
+
+      setProgress({
+        step: "ingredients",
+        message: "Loading ingredients database...",
+        percent: 60,
+        isComplete: false,
+      });
+
+      // Initialize V2 static data cache
+      await StaticDataService.updateIngredientsCache();
+
+      setProgress({
+        step: "beer-styles",
+        message: "Loading beer styles...",
+        percent: 90,
+        isComplete: false,
+      });
+
+      await StaticDataService.updateBeerStylesCache();
+
+      // Complete initialization
+      setProgress({
+        step: "complete",
+        message: "Welcome to BrewTracker!",
+        percent: 100,
+        isComplete: true,
       });
     } catch (error) {
       console.error("Failed to initialize app data:", error);

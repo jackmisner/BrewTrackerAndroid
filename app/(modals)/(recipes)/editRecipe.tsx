@@ -14,7 +14,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
-import OfflineRecipeService from "@services/offline/OfflineRecipeService";
+import { useRecipes } from "@src/hooks/offlineV2";
 import { RecipeFormData, RecipeIngredient, Recipe } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
@@ -222,6 +222,7 @@ export default function EditRecipeScreen() {
   const { unitSystem } = useUnits();
   const styles = createRecipeStyles(theme);
   const queryClient = useQueryClient();
+  const { update: updateRecipeV2 } = useRecipes();
 
   // Get recipe_id from route parameters
   const { recipe_id } = useLocalSearchParams<{ recipe_id: string }>();
@@ -259,7 +260,10 @@ export default function EditRecipeScreen() {
   } = useQuery<Recipe>({
     queryKey: [...QUERY_KEYS.RECIPE(recipe_id)],
     queryFn: async () => {
-      const recipe = await OfflineRecipeService.getById(recipe_id);
+      const { UserCacheService } = await import(
+        "@services/offlineV2/UserCacheService"
+      );
+      const recipe = await UserCacheService.getRecipeById(recipe_id);
       if (!recipe) {
         throw new Error("Recipe not found");
       }
@@ -424,10 +428,7 @@ export default function EditRecipeScreen() {
           }),
       };
 
-      const updatedRecipe = await OfflineRecipeService.update(
-        recipe_id,
-        updateData
-      );
+      const updatedRecipe = await updateRecipeV2(recipe_id, updateData);
 
       return updatedRecipe;
     },
