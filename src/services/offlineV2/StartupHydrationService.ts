@@ -15,7 +15,10 @@ export class StartupHydrationService {
   /**
    * Perform startup hydration for authenticated user
    */
-  static async hydrateOnStartup(userId: string): Promise<void> {
+  static async hydrateOnStartup(
+    userId: string,
+    userUnitSystem: "imperial" | "metric" = "imperial"
+  ): Promise<void> {
     // Prevent multiple concurrent hydrations
     if (this.isHydrating || this.hasHydrated) {
       console.log(
@@ -32,7 +35,7 @@ export class StartupHydrationService {
     try {
       // Hydrate in parallel for better performance
       await Promise.allSettled([
-        this.hydrateUserData(userId),
+        this.hydrateUserData(userId, userUnitSystem),
         this.hydrateStaticData(),
       ]);
 
@@ -49,14 +52,17 @@ export class StartupHydrationService {
   /**
    * Hydrate user-specific data (recipes, brew sessions)
    */
-  private static async hydrateUserData(userId: string): Promise<void> {
+  private static async hydrateUserData(
+    userId: string,
+    userUnitSystem: "imperial" | "metric" = "imperial"
+  ): Promise<void> {
     try {
       console.log(`[StartupHydrationService] Hydrating user data...`);
 
       // Check if user already has cached recipes
       const existingRecipes = await UserCacheService.getRecipes(
         userId,
-        "imperial"
+        userUnitSystem
       );
 
       if (existingRecipes.length === 0) {

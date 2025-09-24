@@ -50,7 +50,7 @@ export class Logger {
         );
 
         if (!this.logDirectory.exists) {
-          this.logDirectory.create();
+          await this.logDirectory.create();
           console.log(
             "📍 Logger: Created log directory at",
             this.logDirectory.uri
@@ -75,7 +75,7 @@ export class Logger {
         );
 
         if (!this.logDirectory.exists) {
-          this.logDirectory.create();
+          await this.logDirectory.create();
           console.log(
             "📍 Logger: Created fallback log directory at",
             this.logDirectory.uri
@@ -382,24 +382,21 @@ export class Logger {
         return;
       }
 
-      const files = this.logDirectory.list();
+      const files = await this.logDirectory.list();
       const logFiles = files
         .filter(file => file.name.endsWith(".log"))
         .filter(file => file instanceof File) as File[];
-
       if (logFiles.length <= this.MAX_LOG_FILES) {
         return;
       }
-
       // Sort by creation time (newest first, so we delete oldest)
       logFiles.sort((a, b) => {
         // Use filename as a proxy for creation time since it includes date
         return b.name.localeCompare(a.name);
       });
-
       // Delete oldest files
       const filesToDelete = logFiles.slice(this.MAX_LOG_FILES);
-      await filesToDelete.forEach(file => file.delete());
+      await Promise.all(filesToDelete.map(file => file.delete()));
     } catch (error) {
       console.warn("Failed to cleanup old logs:", error);
     }
@@ -460,12 +457,11 @@ export class Logger {
         return;
       }
 
-      const files = this.logDirectory.list();
+      const files = await this.logDirectory.list();
       const logFiles = files.filter(
         file => file.name.endsWith(".log") && file instanceof File
       ) as File[];
-
-      await logFiles.forEach(file => file.delete());
+      await Promise.all(logFiles.map(file => file.delete()));
 
       this.info("Logger", "All log files cleared");
     } catch (error) {
@@ -487,11 +483,10 @@ export class Logger {
       let totalSize = 0;
 
       if (this.logDirectory) {
-        const fileObjects = this.logDirectory.list();
+        const fileObjects = await this.logDirectory.list();
         const logFiles = fileObjects.filter(
           file => file.name.endsWith(".log") && file instanceof File
         ) as File[];
-
         totalSize = logFiles.reduce((sum, file) => sum + (file.size || 0), 0);
       }
 

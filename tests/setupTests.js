@@ -50,55 +50,116 @@ jest.mock("expo-device", () => ({
 
 // Mock expo-file-system
 jest.mock("expo-file-system", () => ({
-  File: class MockFile {
-    constructor(path) {
-      this.path = path;
-      this._exists = false;
-      this._content = "";
-    }
-
-    get exists() {
-      return this._exists;
-    }
-
-    async create() {
-      this._exists = true;
-      this._content = "";
-      return this;
-    }
-
-    async write(content) {
-      this._content = content;
-      this._exists = true;
-    }
-
-    async text() {
-      return this._content;
-    }
-
-    async delete() {
-      this._exists = false;
-      this._content = "";
-    }
+  // Modern API methods
+  documentDirectory: "file://documents/",
+  cacheDirectory: "file://cache/",
+  bundleDirectory: "file://bundle/",
+  readAsStringAsync: jest.fn().mockResolvedValue("mock file content"),
+  writeAsStringAsync: jest.fn().mockResolvedValue(undefined),
+  getInfoAsync: jest.fn().mockResolvedValue({
+    exists: true,
+    isDirectory: false,
+    size: 1024,
+    modificationTime: Date.now(),
+  }),
+  deleteAsync: jest.fn().mockResolvedValue(undefined),
+  StorageAccessFramework: {
+    pickDirectoryAsync: jest.fn().mockResolvedValue({
+      uri: "content://mock-directory",
+      name: "MockDirectory",
+    }),
   },
-  Directory: class MockDirectory {
-    constructor(path) {
-      this.path = path;
-      this._exists = false;
-    }
 
-    get exists() {
-      return this._exists;
-    }
+  // Jest mock function that also works as constructor
+  File: jest.fn().mockImplementation(function MockFile(path, filename) {
+    this.path = path;
+    this.filename = filename;
+    // Construct URI to match expected format
+    const pathStr =
+      typeof path === "string" ? path : path?.uri || "file://cache";
+    const cleanPath = pathStr.endsWith("/") ? pathStr.slice(0, -1) : pathStr;
+    this.uri = `${cleanPath}/${filename || "mockfile.txt"}`;
+    this._exists = false;
+    this._content = "";
+    this.size = 0;
+    this.name = filename || "mockfile.txt";
 
-    async create() {
-      this._exists = true;
-      return this;
+    // Return an object with the File methods
+    return {
+      path: this.path,
+      filename: this.filename,
+      uri: this.uri,
+      size: this.size,
+      name: this.name,
+      _exists: this._exists,
+      _content: this._content,
+
+      get exists() {
+        return this._exists;
+      },
+
+      async create() {
+        this._exists = true;
+        this._content = "";
+        return this;
+      },
+
+      async write(content) {
+        this._content = content;
+        this._exists = true;
+        this.size = content.length;
+      },
+
+      async text() {
+        return this._content;
+      },
+
+      async delete() {
+        this._exists = false;
+        this._content = "";
+        this.size = 0;
+      },
+    };
+  }),
+
+  // Hybrid Directory mock - works as both constructor and has mock methods
+  Directory: Object.assign(
+    class MockDirectory {
+      constructor(path, dirname) {
+        this.path = path;
+        this.dirname = dirname;
+        this.uri =
+          typeof path === "string"
+            ? `${path}/${dirname || "mockdir"}`
+            : `${path}/${dirname || "mockdir"}`;
+        this._exists = false;
+        this._files = [];
+      }
+
+      get exists() {
+        return this._exists;
+      }
+
+      async create() {
+        this._exists = true;
+        return this;
+      }
+
+      async list() {
+        return this._files;
+      }
+    },
+    // Add mock methods for directory picker functionality
+    {
+      pickDirectoryAsync: jest.fn().mockResolvedValue({
+        uri: "content://mock-directory",
+        name: "MockDirectory",
+      }),
     }
-  },
+  ),
   Paths: {
-    document: "/mock/documents",
-    cache: "/mock/cache",
+    document: "file://documents",
+    cache: "file://cache",
   },
 }));
 
@@ -194,50 +255,6 @@ jest.mock("expo-media-library", () => ({
 jest.mock("expo-sharing", () => ({
   isAvailableAsync: jest.fn(),
   shareAsync: jest.fn(),
-}));
-
-jest.mock("expo-file-system", () => ({
-  documentDirectory: "file://documents/",
-  cacheDirectory: "file://cache/",
-  bundleDirectory: "file://bundle/",
-  readAsStringAsync: jest.fn().mockResolvedValue("mock file content"),
-  writeAsStringAsync: jest.fn().mockResolvedValue(undefined),
-  getInfoAsync: jest.fn().mockResolvedValue({
-    exists: true,
-    isDirectory: false,
-    size: 1024,
-    modificationTime: Date.now(),
-  }),
-  deleteAsync: jest.fn().mockResolvedValue(undefined),
-  StorageAccessFramework: {
-    pickDirectoryAsync: jest.fn().mockResolvedValue({
-      uri: "content://mock-directory",
-      name: "MockDirectory",
-    }),
-  },
-  // Legacy API classes for compatibility
-  File: jest.fn().mockImplementation((path, filename) => ({
-    uri:
-      typeof path === "string"
-        ? `${path}/${filename || "mockfile.txt"}`
-        : `${path}/${filename || "mockfile.txt"}`,
-    exists: true,
-    create: jest.fn().mockResolvedValue(undefined),
-    write: jest.fn().mockResolvedValue(undefined),
-    text: jest.fn().mockResolvedValue("mock file content"),
-    delete: jest.fn().mockResolvedValue(undefined),
-  })),
-  Directory: {
-    pickDirectoryAsync: jest.fn().mockResolvedValue({
-      uri: "content://mock-directory",
-      name: "MockDirectory",
-    }),
-  },
-  Paths: {
-    cache: "file://cache/",
-    document: "file://documents/",
-    bundle: "file://bundle/",
-  },
 }));
 
 jest.mock("expo-router", () => ({

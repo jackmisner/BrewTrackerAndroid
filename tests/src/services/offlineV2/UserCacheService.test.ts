@@ -139,16 +139,17 @@ describe("UserCacheService", () => {
     });
 
     it("should sort recipes by most recent update", async () => {
-      const olderRecipe: SyncableItem<Recipe> = {
+      const newerUpdatedRecipe: SyncableItem<Recipe> = {
         ...mockSyncableRecipe,
         id: "recipe-2",
         data: {
           ...mockRecipe,
           id: "recipe-2",
-          created_at: "1640995100000", // Earlier timestamp
+          updated_at: "1640995300000", // Later timestamp (newer)
         },
       };
-      const cachedRecipes = [olderRecipe, mockSyncableRecipe];
+      const cachedRecipes = [newerUpdatedRecipe, mockSyncableRecipe];
+
       mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedRecipes));
 
       const result = await UserCacheService.getRecipes(mockUserId, "imperial");
@@ -160,9 +161,6 @@ describe("UserCacheService", () => {
     it("recovers from storage error and returns []", async () => {
       mockAsyncStorage.getItem.mockRejectedValue(new Error("Storage error"));
 
-      await expect(
-        UserCacheService.getRecipes(mockUserId)
-      ).resolves.not.toThrow("Failed to get recipes");
       await expect(
         UserCacheService.getRecipes(mockUserId)
       ).resolves.toStrictEqual([]);

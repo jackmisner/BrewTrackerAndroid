@@ -36,7 +36,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STORAGE_KEYS } from "@services/config";
 import { StaticDataService } from "@services/offlineV2/StaticDataService";
 import { useDeveloper } from "./DeveloperContext";
-import UnifiedLogger from "@services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 /**
  * Network connection types supported by NetInfo

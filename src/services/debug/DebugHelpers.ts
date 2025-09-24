@@ -1,5 +1,5 @@
 import { UserCacheService } from "@services/offlineV2/UserCacheService";
-import UnifiedLogger from "@services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 import { Logger } from "@services/logger/Logger";
 
 /**
