@@ -81,36 +81,38 @@ jest.mock("expo-file-system", () => {
 
   const File = jest.fn().mockImplementation(function MockFile(path, filename) {
     const uri = join(path, filename);
-    let exists = false;
-    let content = "";
     return {
       uri,
       name: filename || "mockfile.txt",
       get exists() {
-        return exists;
+        return __fs.has(uri);
       },
       get size() {
-        const meta = __fs.get(uri);
-        return meta?.size ?? 0;
+        return __fs.get(uri)?.size ?? 0;
       },
       async create() {
-        exists = true;
-        content = "";
-        __fs.set(uri, { content, size: 0, mtime: now() });
+        if (!__fs.has(uri)) {
+          __fs.set(uri, { content: "", size: 0, mtime: now() });
+        }
         return this;
       },
       async write(c) {
-        content = c ?? "";
-        exists = true;
+        const content = c ?? "";
         __fs.set(uri, { content, size: content.length, mtime: now() });
       },
       async text() {
-        return content;
+        const meta = __fs.get(uri);
+        return meta?.content ?? "";
       },
       async delete() {
-        exists = false;
-        content = "";
         __fs.delete(uri);
+      },
+      // Aliases for "next" API-leaning ergonomics if referenced
+      async writeAsString(c) {
+        return this.write(c);
+      },
+      async readAsString() {
+        return this.text();
       },
     };
   });

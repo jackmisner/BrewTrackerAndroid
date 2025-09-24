@@ -1,5 +1,5 @@
 import Constants from "expo-constants";
-import type { LogLevel } from "./Logger";
+import type { LogLevel } from "@src/types";
 
 /**
  * Development Logger that sends logs to the host computer

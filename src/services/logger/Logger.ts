@@ -1,7 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { File, Directory, Paths } from "expo-file-system";
-
-export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR";
+import type { LogLevel } from "@src/types";
 
 interface LogEntry {
   timestamp: string;

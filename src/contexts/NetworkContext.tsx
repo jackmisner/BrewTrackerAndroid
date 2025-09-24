@@ -143,7 +143,9 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
   );
 
   // Track previous connection state for background refresh detection
-  const previousOnlineState = useRef<boolean>(isConnected);
+  const previousOnlineState = useRef<boolean>(
+    isConnected && (isInternetReachable ?? true)
+  );
   const lastCacheRefresh = useRef<number>(0);
 
   // Initialize network monitoring on component mount
@@ -235,6 +237,35 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
         previousOnlineState: previousOnlineState.current,
       }
     );
+    if (previousOnlineState.current !== isNowOnline) {
+      void UnifiedLogger.info(
+        "NetworkContext.handleStateChange",
+        "Network state change detected",
+        {
+          connected,
+          reachable,
+          type,
+          wasOffline,
+          isNowOnline,
+          shouldRefresh,
+          previousOnlineState: previousOnlineState.current,
+        }
+      );
+    } else {
+      void UnifiedLogger.debug(
+        "NetworkContext.handleStateChange",
+        "Network state change detected",
+        {
+          connected,
+          reachable,
+          type,
+          wasOffline,
+          isNowOnline,
+          shouldRefresh,
+          previousOnlineState: previousOnlineState.current,
+        }
+      );
+    }
 
     // Also refresh if it's been more than 4 hours since last refresh
     const timeSinceRefresh = Date.now() - lastCacheRefresh.current;
@@ -244,7 +275,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
     if (shouldRefresh || shouldPeriodicRefresh) {
       lastCacheRefresh.current = Date.now();
 
-      void UnifiedLogger.info(
+      void UnifiedLogger.debug(
         "NetworkContext.handleStateChange",
         "Triggering background refresh and sync",
         {
@@ -263,11 +294,23 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
           const failures = results.filter(
             result => result.status === "rejected"
           );
+          void UnifiedLogger[failures.length ? "warn" : "debug"](
+            "NetworkContext.backgroundRefresh",
+            failures.length
+              ? `Background cache refresh had ${failures.length} failures`
+              : "Background cache refresh completed",
+            { results }
+          );
           if (failures.length > 0) {
             console.warn("Background cache refresh had failures:", failures);
           }
         })
         .catch(error => {
+          void UnifiedLogger.error(
+            "NetworkContext.backgroundRefresh",
+            "Background cache refresh failed",
+            { error: error instanceof Error ? error.message : String(error) }
+          );
           console.warn("Background cache refresh failed:", error);
         });
 
@@ -281,20 +324,28 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
         // Import and trigger UserCacheService sync for pending operations
         import("@services/offlineV2/UserCacheService")
           .then(({ UserCacheService }) => {
-            return UserCacheService.syncPendingOperations().catch(error => {
-              void UnifiedLogger.error(
-                "NetworkContext.handleStateChange",
-                `Failed to sync pending operations when coming back online: ${error instanceof Error ? error.message : "Unknown error"}`,
-                {
-                  error:
-                    error instanceof Error ? error.message : "Unknown error",
-                }
-              );
-              console.warn(
-                "Background sync of pending operations failed:",
-                error
-              );
-            });
+            return UserCacheService.syncPendingOperations()
+              .then(result => {
+                void UnifiedLogger.info(
+                  "NetworkContext.handleStateChange",
+                  "Pending operations sync completed",
+                  { result }
+                );
+              })
+              .catch(error => {
+                void UnifiedLogger.error(
+                  "NetworkContext.handleStateChange",
+                  `Failed to sync pending operations when coming back online: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  {
+                    error:
+                      error instanceof Error ? error.message : "Unknown error",
+                  }
+                );
+                console.warn(
+                  "Background sync of pending operations failed:",
+                  error
+                );
+              });
           })
           .catch(error => {
             void UnifiedLogger.error(
