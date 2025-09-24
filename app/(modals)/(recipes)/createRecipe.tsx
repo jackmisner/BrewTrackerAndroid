@@ -38,9 +38,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
-import OfflineRecipeService from "@services/offline/OfflineRecipeService";
-import { OfflineRecipe } from "@src/types/offline";
-import { RecipeFormData, RecipeIngredient } from "@src/types";
+import { useRecipes } from "@src/hooks/offlineV2";
+import { RecipeFormData, RecipeIngredient, Recipe } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
 import { ParametersForm } from "@src/components/recipes/RecipeForm/ParametersForm";
@@ -153,6 +152,7 @@ export default function CreateRecipeScreen() {
   const { unitSystem } = useUnits();
   const queryClient = useQueryClient();
   const styles = createRecipeStyles(theme);
+  const { create: createRecipeV2 } = useRecipes();
 
   const [currentStep, setCurrentStep] = useState(RecipeStep.BASIC_INFO);
   const [recipeState, dispatch] = useReducer(
@@ -169,11 +169,7 @@ export default function CreateRecipeScreen() {
   } = useRecipeMetrics(recipeState);
 
   // Create recipe mutation
-  const createRecipeMutation = useMutation<
-    OfflineRecipe,
-    Error,
-    RecipeFormData
-  >({
+  const createRecipeMutation = useMutation<Recipe, Error, RecipeFormData>({
     mutationFn: async (recipeData: RecipeFormData) => {
       // Sanitize ingredients to ensure all numeric fields are valid and add ID mapping
       // Note: Adding explicit ID mapping as fallback - the API interceptor should handle this but seems to have issues with nested ingredients
@@ -250,7 +246,7 @@ export default function CreateRecipeScreen() {
       };
 
       try {
-        return await OfflineRecipeService.create(createData);
+        return await createRecipeV2(createData);
       } catch (error) {
         console.error("❌ Failed to create recipe:", error);
         const errorMessage =

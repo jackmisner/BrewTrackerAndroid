@@ -107,7 +107,7 @@ describe("UserCacheService", () => {
       const cachedRecipes = [mockSyncableRecipe];
       mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedRecipes));
 
-      const result = await UserCacheService.getRecipes(mockUserId);
+      const result = await UserCacheService.getRecipes(mockUserId, "imperial");
 
       expect(result).toEqual([mockRecipe]);
       expect(mockAsyncStorage.getItem).toHaveBeenCalledWith(
@@ -124,7 +124,7 @@ describe("UserCacheService", () => {
       const cachedRecipes = [mockSyncableRecipe, deletedRecipe];
       mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedRecipes));
 
-      const result = await UserCacheService.getRecipes(mockUserId);
+      const result = await UserCacheService.getRecipes(mockUserId, "imperial");
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe("recipe-1");
@@ -133,25 +133,26 @@ describe("UserCacheService", () => {
     it("should return empty array when no recipes cached", async () => {
       mockAsyncStorage.getItem.mockResolvedValue(null);
 
-      const result = await UserCacheService.getRecipes(mockUserId);
+      const result = await UserCacheService.getRecipes(mockUserId, "imperial");
 
       expect(result).toEqual([]);
     });
 
     it("should sort recipes by most recent update", async () => {
-      const olderRecipe: SyncableItem<Recipe> = {
+      const newerUpdatedRecipe: SyncableItem<Recipe> = {
         ...mockSyncableRecipe,
         id: "recipe-2",
         data: {
           ...mockRecipe,
           id: "recipe-2",
-          created_at: "1640995100000", // Earlier timestamp
+          updated_at: "1640995300000", // Later timestamp (newer)
         },
       };
-      const cachedRecipes = [olderRecipe, mockSyncableRecipe];
+      const cachedRecipes = [newerUpdatedRecipe, mockSyncableRecipe];
+
       mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedRecipes));
 
-      const result = await UserCacheService.getRecipes(mockUserId);
+      const result = await UserCacheService.getRecipes(mockUserId, "imperial");
 
       expect(result[0].id).toBe("recipe-2"); // Updated more recently
       expect(result[1].id).toBe("recipe-1"); // Updated less recently
@@ -160,9 +161,6 @@ describe("UserCacheService", () => {
     it("recovers from storage error and returns []", async () => {
       mockAsyncStorage.getItem.mockRejectedValue(new Error("Storage error"));
 
-      await expect(
-        UserCacheService.getRecipes(mockUserId)
-      ).resolves.not.toThrow("Failed to get recipes");
       await expect(
         UserCacheService.getRecipes(mockUserId)
       ).resolves.toStrictEqual([]);
@@ -346,6 +344,7 @@ describe("UserCacheService", () => {
         type: "create",
         entityType: "recipe",
         entityId: "temp-123",
+        userId: mockUserId,
         data: { name: "Test Recipe" },
         timestamp: Date.now(),
         retryCount: 0,
@@ -375,6 +374,7 @@ describe("UserCacheService", () => {
         type: "update",
         entityType: "recipe",
         entityId: "recipe-1",
+        userId: mockUserId,
         data: { name: "Updated Recipe" },
         timestamp: Date.now(),
         retryCount: 0,
@@ -404,6 +404,7 @@ describe("UserCacheService", () => {
         type: "delete",
         entityType: "recipe",
         entityId: "recipe-1",
+        userId: mockUserId,
         timestamp: Date.now(),
         retryCount: 0,
         maxRetries: 3,
@@ -429,6 +430,7 @@ describe("UserCacheService", () => {
         type: "create",
         entityType: "recipe",
         entityId: "temp-123",
+        userId: mockUserId,
         data: { name: "Test Recipe" },
         timestamp: Date.now(),
         retryCount: 0,
@@ -458,6 +460,7 @@ describe("UserCacheService", () => {
         type: "create",
         entityType: "recipe",
         entityId: "temp-123",
+        userId: mockUserId,
         data: { name: "Test Recipe" },
         timestamp: Date.now(),
         retryCount: 3,

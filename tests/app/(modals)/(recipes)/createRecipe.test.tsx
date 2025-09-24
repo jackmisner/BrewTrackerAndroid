@@ -1,8 +1,8 @@
 import React from "react";
-import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
+import { fireEvent, waitFor, act } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import CreateRecipeScreen from "../../../../app/(modals)/(recipes)/createRecipe";
-import { mockData, testUtils } from "../../../testUtils";
+import { renderWithProviders, mockData, testUtils } from "../../../testUtils";
 import { TEST_IDS } from "../../../../src/constants/testIDs";
 
 // Mock React Native
@@ -19,6 +19,11 @@ jest.mock("react-native", () => ({
   StyleSheet: {
     create: (styles: any) => styles,
     flatten: (styles: any) => styles,
+  },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
   },
 }));
 
@@ -51,13 +56,56 @@ jest.mock("@tanstack/react-query", () => {
   };
 });
 
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: jest.fn(),
-}));
+// Mock all context providers that testUtils imports
+jest.mock("@contexts/ThemeContext", () => {
+  const React = require("react");
+  return {
+    useTheme: jest.fn(),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
 
-jest.mock("@contexts/UnitContext", () => ({
-  useUnits: jest.fn(),
-}));
+jest.mock("@contexts/AuthContext", () => {
+  const React = require("react");
+  return {
+    useAuth: jest.fn(),
+    AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+jest.mock("@contexts/NetworkContext", () => {
+  const React = require("react");
+  return {
+    useNetwork: jest.fn(),
+    NetworkProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+jest.mock("@contexts/DeveloperContext", () => {
+  const React = require("react");
+  return {
+    useDeveloper: jest.fn(),
+    DeveloperProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+  };
+});
+
+jest.mock("@contexts/UnitContext", () => {
+  const React = require("react");
+  return {
+    useUnits: jest.fn(),
+    UnitProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+jest.mock("@contexts/CalculatorsContext", () => {
+  const React = require("react");
+  return {
+    useCalculators: jest.fn(),
+    CalculatorsProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+  };
+});
 
 jest.mock("@services/api/apiService", () => ({
   default: {
@@ -169,6 +217,17 @@ jest.mock("@src/hooks/useRecipeMetrics", () => ({
   useRecipeMetrics: jest.fn(),
 }));
 
+jest.mock("@hooks/offlineV2/useUserData", () => ({
+  useRecipes: jest.fn(() => ({
+    data: [],
+    isLoading: false,
+    error: null,
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  })),
+}));
+
 const mockTheme = {
   colors: {
     primary: "#007AFF",
@@ -195,6 +254,11 @@ const mockUseRecipeMetrics =
 // Setup mocks
 require("@contexts/ThemeContext").useTheme.mockReturnValue(mockTheme);
 require("@contexts/UnitContext").useUnits.mockReturnValue(mockUnits);
+require("@contexts/AuthContext").useAuth.mockReturnValue({
+  user: { id: "test-user-123" },
+  isAuthenticated: true,
+  getUserId: jest.fn().mockReturnValue("test-user-123"),
+});
 
 describe("CreateRecipeScreen", () => {
   const mockQueryClient = {
@@ -230,7 +294,9 @@ describe("CreateRecipeScreen", () => {
 
   describe("initial render", () => {
     it("should render the create recipe screen with correct initial state", () => {
-      const { getByText, getByTestId } = render(<CreateRecipeScreen />);
+      const { getByText, getByTestId } = renderWithProviders(
+        <CreateRecipeScreen />
+      );
 
       expect(getByText("Create Recipe")).toBeTruthy();
       expect(getByText("Basic Info")).toBeTruthy();
@@ -238,7 +304,9 @@ describe("CreateRecipeScreen", () => {
     });
 
     it("should show progress bar at 25% for first step", () => {
-      const { queryByText, queryByTestId } = render(<CreateRecipeScreen />);
+      const { queryByText, queryByTestId } = renderWithProviders(
+        <CreateRecipeScreen />
+      );
 
       // Verify step 1 is displayed (indicates 25% progress)
       expect(queryByText("Basic Info")).toBeTruthy();
@@ -257,7 +325,9 @@ describe("CreateRecipeScreen", () => {
 
   describe("step navigation", () => {
     it("should navigate to next step when Next button is pressed", () => {
-      const { getByText, getByTestId } = render(<CreateRecipeScreen />);
+      const { getByText, getByTestId } = renderWithProviders(
+        <CreateRecipeScreen />
+      );
 
       const nextButton = getByText("Next");
       fireEvent.press(nextButton);
@@ -267,7 +337,9 @@ describe("CreateRecipeScreen", () => {
     });
 
     it("should navigate to previous step when Previous button is pressed", () => {
-      const { getByText, getByTestId } = render(<CreateRecipeScreen />);
+      const { getByText, getByTestId } = renderWithProviders(
+        <CreateRecipeScreen />
+      );
 
       // Navigate to step 2 first
       const nextButton = getByText("Next");
@@ -282,7 +354,9 @@ describe("CreateRecipeScreen", () => {
     });
 
     it("should navigate through all steps correctly", () => {
-      const { getByText, getByTestId } = render(<CreateRecipeScreen />);
+      const { getByText, getByTestId } = renderWithProviders(
+        <CreateRecipeScreen />
+      );
 
       // Step 1 -> Step 2
       fireEvent.press(getByText("Next"));
@@ -301,14 +375,16 @@ describe("CreateRecipeScreen", () => {
     });
 
     it("should disable Previous button on first step", () => {
-      const { queryByText } = render(<CreateRecipeScreen />);
+      const { queryByText } = renderWithProviders(<CreateRecipeScreen />);
 
       // Previous button should not be visible on first step
       expect(queryByText("Back")).toBeNull();
     });
 
     it("should show Create Recipe button on final step", () => {
-      const { getByText, getAllByText } = render(<CreateRecipeScreen />);
+      const { getByText, getAllByText } = renderWithProviders(
+        <CreateRecipeScreen />
+      );
 
       // Navigate to final step
       fireEvent.press(getByText("Next")); // Step 2
@@ -322,7 +398,7 @@ describe("CreateRecipeScreen", () => {
 
   describe("form data management", () => {
     it("should maintain form data across steps", () => {
-      const { getByTestId } = render(<CreateRecipeScreen />);
+      const { getByTestId } = renderWithProviders(<CreateRecipeScreen />);
 
       // Verify form persistence by checking component structure once
       expect(getByTestId(TEST_IDS.forms.basicInfoForm)).toBeTruthy();
@@ -332,7 +408,7 @@ describe("CreateRecipeScreen", () => {
       const BasicInfoForm =
         require("@src/components/recipes/RecipeForm/BasicInfoForm").BasicInfoForm;
 
-      render(<CreateRecipeScreen />);
+      renderWithProviders(<CreateRecipeScreen />);
 
       // Verify BasicInfoForm was called with correct props
       expect(BasicInfoForm).toHaveBeenCalledWith(
@@ -359,7 +435,7 @@ describe("CreateRecipeScreen", () => {
         error: null,
       });
 
-      render(<CreateRecipeScreen />);
+      renderWithProviders(<CreateRecipeScreen />);
 
       // Metrics should be passed to forms
       expect(mockUseRecipeMetrics).toHaveBeenCalled();
@@ -372,7 +448,9 @@ describe("CreateRecipeScreen", () => {
         error: null,
       });
 
-      const { getByText, getByTestId } = render(<CreateRecipeScreen />);
+      const { getByText, getByTestId } = renderWithProviders(
+        <CreateRecipeScreen />
+      );
 
       // Navigate to the Review step (step 4) where metrics are displayed
       // Click Next 3 times to get to step 4
@@ -406,7 +484,7 @@ describe("CreateRecipeScreen", () => {
         error: new Error("Metrics calculation failed"),
       });
 
-      const { queryByText } = render(<CreateRecipeScreen />);
+      const { queryByText } = renderWithProviders(<CreateRecipeScreen />);
 
       // Verify component renders without crashing when metrics error occurs
       expect(queryByText("Basic Info")).toBeTruthy();
@@ -424,7 +502,7 @@ describe("CreateRecipeScreen", () => {
         error: null,
       });
 
-      render(<CreateRecipeScreen />);
+      renderWithProviders(<CreateRecipeScreen />);
 
       // Due to form validation complexity and mocked form components,
       // we verify that the mutation setup is correct
@@ -438,7 +516,7 @@ describe("CreateRecipeScreen", () => {
         error: null,
       });
 
-      const { getByText } = render(<CreateRecipeScreen />);
+      const { getByText } = renderWithProviders(<CreateRecipeScreen />);
 
       // Navigate to final step
       fireEvent.press(getByText("Next")); // Step 2
@@ -460,7 +538,7 @@ describe("CreateRecipeScreen", () => {
         error: null,
       });
 
-      render(<CreateRecipeScreen />);
+      renderWithProviders(<CreateRecipeScreen />);
 
       // Due to complex form validation and mocked components,
       // we verify the mutation callback structure is correct
@@ -476,7 +554,9 @@ describe("CreateRecipeScreen", () => {
         error: null,
       });
 
-      const { getByText, getAllByText } = render(<CreateRecipeScreen />);
+      const { getByText, getAllByText } = renderWithProviders(
+        <CreateRecipeScreen />
+      );
 
       // Navigate to final step and try to submit (will fail validation)
       fireEvent.press(getByText("Next")); // Step 2
@@ -497,14 +577,14 @@ describe("CreateRecipeScreen", () => {
 
   describe("navigation controls", () => {
     it("should navigate back when back button is pressed", () => {
-      const { getByText } = render(<CreateRecipeScreen />);
+      const { getByText } = renderWithProviders(<CreateRecipeScreen />);
 
       // Back button functionality should be available
       expect(mockRouter.back).toBeDefined();
     });
 
     it("should show confirmation dialog when leaving with unsaved changes", async () => {
-      const { getByText } = render(<CreateRecipeScreen />);
+      const { getByText } = renderWithProviders(<CreateRecipeScreen />);
 
       // Verify component renders the form correctly for unsaved changes scenario
       expect(getByText("Basic Info")).toBeTruthy();
@@ -515,7 +595,7 @@ describe("CreateRecipeScreen", () => {
 
   describe("form validation", () => {
     it("should validate form data before allowing progression", () => {
-      render(<CreateRecipeScreen />);
+      renderWithProviders(<CreateRecipeScreen />);
 
       // Form validation is handled by individual form components
       // We verify that correct props are passed to forms
@@ -532,7 +612,7 @@ describe("CreateRecipeScreen", () => {
     });
 
     it("should prevent submission with invalid data", () => {
-      const { queryByText } = render(<CreateRecipeScreen />);
+      const { queryByText } = renderWithProviders(<CreateRecipeScreen />);
 
       // Verify validation structure exists by checking form components
       expect(queryByText("Basic Info")).toBeTruthy();
@@ -543,7 +623,7 @@ describe("CreateRecipeScreen", () => {
 
   describe("responsive design", () => {
     it("should handle keyboard avoiding behavior", () => {
-      const { queryByText } = render(<CreateRecipeScreen />);
+      const { queryByText } = renderWithProviders(<CreateRecipeScreen />);
 
       // Verify component structure supports keyboard avoiding behavior
       expect(queryByText("Basic Info")).toBeTruthy();
@@ -551,7 +631,7 @@ describe("CreateRecipeScreen", () => {
     });
 
     it("should be scrollable on smaller screens", () => {
-      const { queryByText } = render(<CreateRecipeScreen />);
+      const { queryByText } = renderWithProviders(<CreateRecipeScreen />);
 
       // Verify component structure supports scrolling
       expect(queryByText("Basic Info")).toBeTruthy();
@@ -561,14 +641,14 @@ describe("CreateRecipeScreen", () => {
 
   describe("unit context integration", () => {
     it("should use unit preferences for form data", () => {
-      render(<CreateRecipeScreen />);
+      renderWithProviders(<CreateRecipeScreen />);
 
       expect(require("@contexts/UnitContext").useUnits).toHaveBeenCalled();
     });
 
     it("should pass unit preferences to form components", () => {
       // Navigate to parameters step to trigger ParametersForm render
-      const { getByText } = render(<CreateRecipeScreen />);
+      const { getByText } = renderWithProviders(<CreateRecipeScreen />);
       fireEvent.press(getByText("Next")); // Go to step 2 (Parameters)
 
       // Forms should receive recipe data
@@ -587,7 +667,7 @@ describe("CreateRecipeScreen", () => {
 
   describe("theme integration", () => {
     it("should use theme colors correctly", () => {
-      render(<CreateRecipeScreen />);
+      renderWithProviders(<CreateRecipeScreen />);
 
       expect(
         require("@styles/modals/createRecipeStyles").createRecipeStyles

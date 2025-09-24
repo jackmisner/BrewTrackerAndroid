@@ -34,8 +34,9 @@ import React, {
 import NetInfo, { NetInfoState } from "@react-native-community/netinfo";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STORAGE_KEYS } from "@services/config";
-import OfflineCacheService from "@services/offline/OfflineCacheService";
+import { StaticDataService } from "@services/offlineV2/StaticDataService";
 import { useDeveloper } from "./DeveloperContext";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 /**
  * Network connection types supported by NetInfo
@@ -142,7 +143,9 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
   );
 
   // Track previous connection state for background refresh detection
-  const previousConnectionState = useRef<boolean>(isConnected);
+  const previousOnlineState = useRef<boolean>(
+    isConnected && (isInternetReachable ?? true)
+  );
   const lastCacheRefresh = useRef<number>(0);
 
   // Initialize network monitoring on component mount
@@ -216,9 +219,53 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
     setNetworkDetails(details);
 
     // Background cache refresh when coming back online
-    const wasOffline = !previousConnectionState.current;
-    const isNowOnline = connected && reachable;
+    const wasOffline = !previousOnlineState.current;
+    const isNowOnline = connected && (reachable ?? true);
     const shouldRefresh = wasOffline && isNowOnline;
+
+    // Log network state changes
+    void UnifiedLogger.info(
+      "NetworkContext.handleStateChange",
+      "Network state change detected",
+      {
+        connected,
+        reachable,
+        type,
+        wasOffline,
+        isNowOnline,
+        shouldRefresh,
+        previousOnlineState: previousOnlineState.current,
+      }
+    );
+    if (previousOnlineState.current !== isNowOnline) {
+      void UnifiedLogger.info(
+        "NetworkContext.handleStateChange",
+        "Network state change detected",
+        {
+          connected,
+          reachable,
+          type,
+          wasOffline,
+          isNowOnline,
+          shouldRefresh,
+          previousOnlineState: previousOnlineState.current,
+        }
+      );
+    } else {
+      void UnifiedLogger.debug(
+        "NetworkContext.handleStateChange",
+        "Network state change detected",
+        {
+          connected,
+          reachable,
+          type,
+          wasOffline,
+          isNowOnline,
+          shouldRefresh,
+          previousOnlineState: previousOnlineState.current,
+        }
+      );
+    }
 
     // Also refresh if it's been more than 4 hours since last refresh
     const timeSinceRefresh = Date.now() - lastCacheRefresh.current;
@@ -227,14 +274,93 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
 
     if (shouldRefresh || shouldPeriodicRefresh) {
       lastCacheRefresh.current = Date.now();
-      // Trigger comprehensive background cache refresh (non-blocking)
-      OfflineCacheService.refreshAllCacheInBackground().catch(error => {
-        console.warn("Background cache refresh failed:", error);
-      });
+
+      void UnifiedLogger.debug(
+        "NetworkContext.handleStateChange",
+        "Triggering background refresh and sync",
+        {
+          shouldRefresh,
+          shouldPeriodicRefresh,
+          isComingBackOnline: shouldRefresh,
+        }
+      );
+
+      // Trigger comprehensive background cache refresh using V2 system (non-blocking)
+      Promise.allSettled([
+        StaticDataService.updateIngredientsCache(),
+        StaticDataService.updateBeerStylesCache(),
+      ])
+        .then(results => {
+          const failures = results.filter(
+            result => result.status === "rejected"
+          );
+          void UnifiedLogger[failures.length ? "warn" : "debug"](
+            "NetworkContext.backgroundRefresh",
+            failures.length
+              ? `Background cache refresh had ${failures.length} failures`
+              : "Background cache refresh completed",
+            { results }
+          );
+          if (failures.length > 0) {
+            console.warn("Background cache refresh had failures:", failures);
+          }
+        })
+        .catch(error => {
+          void UnifiedLogger.error(
+            "NetworkContext.backgroundRefresh",
+            "Background cache refresh failed",
+            { error: error instanceof Error ? error.message : String(error) }
+          );
+          console.warn("Background cache refresh failed:", error);
+        });
+
+      // **CRITICAL FIX**: Also trigger sync of pending operations when coming back online
+      if (shouldRefresh) {
+        void UnifiedLogger.info(
+          "NetworkContext.handleStateChange",
+          "Coming back online - triggering pending operations sync"
+        );
+
+        // Import and trigger UserCacheService sync for pending operations
+        import("@services/offlineV2/UserCacheService")
+          .then(({ UserCacheService }) => {
+            return UserCacheService.syncPendingOperations()
+              .then(result => {
+                void UnifiedLogger.info(
+                  "NetworkContext.handleStateChange",
+                  "Pending operations sync completed",
+                  { result }
+                );
+              })
+              .catch(error => {
+                void UnifiedLogger.error(
+                  "NetworkContext.handleStateChange",
+                  `Failed to sync pending operations when coming back online: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  {
+                    error:
+                      error instanceof Error ? error.message : "Unknown error",
+                  }
+                );
+                console.warn(
+                  "Background sync of pending operations failed:",
+                  error
+                );
+              });
+          })
+          .catch(error => {
+            void UnifiedLogger.error(
+              "NetworkContext.handleStateChange",
+              `Failed to import UserCacheService: ${error instanceof Error ? error.message : "Unknown error"}`,
+              {
+                error: error instanceof Error ? error.message : "Unknown error",
+              }
+            );
+          });
+      }
     }
 
-    // Update previous connection state
-    previousConnectionState.current = connected;
+    // Update previous online state
+    previousOnlineState.current = isNowOnline;
 
     // Persist network state for offline handling
     try {

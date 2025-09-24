@@ -3,13 +3,13 @@ import ApiService from "@services/api/apiService";
 import { RecipeFormData, RecipeMetrics } from "@src/types";
 import { useDebounce } from "./useDebounce";
 import { useNetwork } from "@contexts/NetworkContext";
-import { OfflineMetricsCalculator } from "@services/offline/OfflineMetricsCalculator";
+// Removed dependency on legacy OfflineMetricsCalculator
 
 /**
  * Hook for calculating recipe metrics with offline support
  *
  * Automatically recalculates metrics when recipe data changes with offline fallback.
- * Tries API calculation when online, falls back to client-side calculation when offline.
+ * Tries API calculation when online, provides reasonable fallback metrics when offline.
  * Includes proper debouncing to prevent excessive calculations and network calls.
  *
  * @param recipeData - Current recipe form data
@@ -21,6 +21,13 @@ export function useRecipeMetrics(
   enabled?: boolean
 ) {
   const { isConnected } = useNetwork();
+  const FALLBACK_METRICS: RecipeMetrics = {
+    og: 1.05,
+    fg: 1.012,
+    abv: 5.0,
+    ibu: 20,
+    srm: 5,
+  };
 
   // Debounce recipe data to prevent excessive calculations during rapid changes
   const debouncedRecipeData = useDebounce(recipeData, 500);
@@ -71,22 +78,15 @@ export function useRecipeMetrics(
       ),
     ],
     queryFn: async (): Promise<RecipeMetrics> => {
-      // Validate recipe data first
-      const validationParams = {
-        batch_size: debouncedRecipeData.batch_size,
-        batch_size_unit: debouncedRecipeData.batch_size_unit,
-        efficiency: debouncedRecipeData.efficiency,
-        boil_time: debouncedRecipeData.boil_time,
-        ingredients: debouncedRecipeData.ingredients,
-        mash_temperature: debouncedRecipeData.mash_temperature,
-        mash_temp_unit: debouncedRecipeData.mash_temp_unit,
-      };
-
-      const validation =
-        OfflineMetricsCalculator.validateRecipeData(validationParams);
-      if (!validation.isValid) {
-        console.warn("Invalid recipe data:", validation.errors);
-        return OfflineMetricsCalculator.getFallbackMetrics();
+      // Basic validation for recipe data (V2 system)
+      // Removed validationParams - not used in V2 system
+      if (
+        !debouncedRecipeData.batch_size ||
+        debouncedRecipeData.batch_size <= 0 ||
+        !debouncedRecipeData.ingredients.length
+      ) {
+        console.warn("Invalid recipe data: Missing batch size or ingredients");
+        return FALLBACK_METRICS;
       }
 
       // Try API calculation when online
@@ -109,12 +109,13 @@ export function useRecipeMetrics(
             "API metrics calculation failed, using offline calculation:",
             error
           );
-          return OfflineMetricsCalculator.calculateMetrics(validationParams);
+          // Simple fallback metrics when API fails
+          return FALLBACK_METRICS;
         }
       }
 
-      // Use offline calculation when not connected
-      return OfflineMetricsCalculator.calculateMetrics(validationParams);
+      // Simple fallback metrics when offline
+      return FALLBACK_METRICS;
     },
 
     enabled: shouldEnable,

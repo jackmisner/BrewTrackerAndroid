@@ -48,6 +48,18 @@ import {
 } from "@services/api/queryClient";
 import { useStartupHydration } from "@src/hooks/offlineV2";
 import Constants from "expo-constants";
+import "@services/debug/DebugHelpers"; // Load debug helpers for development
+
+// Test dev logging on app startup
+if (__DEV__) {
+  import("@services/logger/UnifiedLogger").then(({ UnifiedLogger }) => {
+    UnifiedLogger.info("App.Layout", "BrewTracker Android app started", {
+      buildVersion: Constants.nativeBuildVersion,
+      expoVersion: Constants.expoConfig?.version,
+      timestamp: new Date().toISOString(),
+    });
+  });
+}
 
 // Component to handle StatusBar with theme
 const ThemedStatusBar = () => {

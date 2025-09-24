@@ -22,10 +22,6 @@ const withConditionalNetworkSecurity = config => {
     );
   }
 
-  console.log(
-    `🔒 Configuring network security for environment: ${validEnvironment}`
-  );
-
   return withPlugins(config, [
     // Apply expo-build-properties with conditional configuration
     [
@@ -33,17 +29,11 @@ const withConditionalNetworkSecurity = config => {
       {
         android: (() => {
           if (validEnvironment !== "production") {
-            console.log(
-              "🚨 Development mode: Allowing cleartext traffic for local development"
-            );
             return {
               usesCleartextTraffic: true,
               networkSecurityConfig: "./android/network_security_config.xml",
             };
           } else {
-            console.log(
-              "🔒 Production mode: Cleartext traffic disabled for security"
-            );
             return {
               usesCleartextTraffic: false,
               networkSecurityConfig:

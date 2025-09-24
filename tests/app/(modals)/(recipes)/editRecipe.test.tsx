@@ -3,8 +3,30 @@
  */
 
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, waitFor } from "@testing-library/react-native";
+import { renderWithProviders } from "../../../testUtils";
+
+// Mock React Native
+jest.mock("react-native", () => ({
+  View: "View",
+  Text: "Text",
+  ScrollView: "ScrollView",
+  TouchableOpacity: "TouchableOpacity",
+  ActivityIndicator: "ActivityIndicator",
+  KeyboardAvoidingView: "KeyboardAvoidingView",
+  Alert: {
+    alert: jest.fn(),
+  },
+  StyleSheet: {
+    create: (styles: any) => styles,
+    flatten: (styles: any) => styles,
+  },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
+  },
+}));
 
 // Mock external dependencies
 jest.mock("expo-router", () => ({
@@ -18,37 +40,80 @@ jest.mock("expo-router", () => ({
   })),
 }));
 
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: () => ({
-    colors: {
-      primary: "#007AFF",
-      background: "#FFFFFF",
-      surface: "#F2F2F7",
-      text: "#000000",
-      textSecondary: "#666666",
-      border: "#C7C7CC",
-      success: "#34C759",
-      warning: "#FF9500",
-      error: "#FF3B30",
-    },
-    fonts: {
-      regular: { fontSize: 16, fontWeight: "400" },
-      medium: { fontSize: 16, fontWeight: "500" },
-      bold: { fontSize: 16, fontWeight: "700" },
-    },
-  }),
-}));
+// Mock all context providers that testUtils imports
+jest.mock("@contexts/ThemeContext", () => {
+  const React = require("react");
+  return {
+    useTheme: () => ({
+      colors: {
+        primary: "#007AFF",
+        background: "#FFFFFF",
+        surface: "#F2F2F7",
+        text: "#000000",
+        textSecondary: "#666666",
+        border: "#C7C7CC",
+        success: "#34C759",
+        warning: "#FF9500",
+        error: "#FF3B30",
+      },
+      fonts: {
+        regular: { fontSize: 16, fontWeight: "400" },
+        medium: { fontSize: 16, fontWeight: "500" },
+        bold: { fontSize: 16, fontWeight: "700" },
+      },
+    }),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
 
-jest.mock("@contexts/UnitContext", () => ({
-  useUnits: () => ({
-    weightUnit: "lb",
-    temperatureUnit: "F",
-    volumeUnit: "gal",
-    convertWeight: jest.fn(val => val),
-    convertTemperature: jest.fn(val => val),
-    convertVolume: jest.fn(val => val),
-  }),
-}));
+jest.mock("@contexts/AuthContext", () => {
+  const React = require("react");
+  return {
+    useAuth: jest.fn(),
+    AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+jest.mock("@contexts/NetworkContext", () => {
+  const React = require("react");
+  return {
+    useNetwork: jest.fn(),
+    NetworkProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+jest.mock("@contexts/DeveloperContext", () => {
+  const React = require("react");
+  return {
+    useDeveloper: jest.fn(),
+    DeveloperProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+  };
+});
+
+jest.mock("@contexts/UnitContext", () => {
+  const React = require("react");
+  return {
+    useUnits: () => ({
+      weightUnit: "lb",
+      temperatureUnit: "F",
+      volumeUnit: "gal",
+      convertWeight: jest.fn(val => val),
+      convertTemperature: jest.fn(val => val),
+      convertVolume: jest.fn(val => val),
+    }),
+    UnitProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+jest.mock("@contexts/CalculatorsContext", () => {
+  const React = require("react");
+  return {
+    useCalculators: jest.fn(),
+    CalculatorsProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+  };
+});
 
 jest.mock("@services/api/apiService", () => ({
   default: {
@@ -144,20 +209,15 @@ jest.mock("@styles/modals/createRecipeStyles", () => ({
 import EditRecipeScreen from "../../../../app/(modals)/(recipes)/editRecipe";
 const mockApiService = require("@services/api/apiService").default;
 
+// Setup Auth mock return values
+require("@contexts/AuthContext").useAuth.mockReturnValue({
+  user: { id: "test-user-123" },
+  isAuthenticated: true,
+  getUserId: jest.fn().mockReturnValue("test-user-123"),
+});
+
 describe("EditRecipeScreen", () => {
-  let queryClient: QueryClient;
-
-  const createWrapper = ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-
   beforeEach(() => {
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    });
     jest.clearAllMocks();
   });
 
@@ -174,11 +234,7 @@ describe("EditRecipeScreen", () => {
         },
       });
 
-      expect(() =>
-        render(<EditRecipeScreen />, {
-          wrapper: createWrapper,
-        })
-      ).not.toThrow();
+      expect(() => renderWithProviders(<EditRecipeScreen />)).not.toThrow();
     });
 
     it("should render basic screen structure", () => {
@@ -193,9 +249,7 @@ describe("EditRecipeScreen", () => {
         },
       });
 
-      const { getByText } = render(<EditRecipeScreen />, {
-        wrapper: createWrapper,
-      });
+      const { getByText } = renderWithProviders(<EditRecipeScreen />, {});
 
       // Should render the screen title
       expect(getByText("Edit Recipe")).toBeTruthy();
@@ -206,9 +260,7 @@ describe("EditRecipeScreen", () => {
         () => new Promise(resolve => setTimeout(() => resolve({ data: {} }), 0))
       );
 
-      const { getByText } = render(<EditRecipeScreen />, {
-        wrapper: createWrapper,
-      });
+      const { getByText } = renderWithProviders(<EditRecipeScreen />, {});
 
       // Should handle loading state gracefully
       await waitFor(() => {
@@ -222,9 +274,7 @@ describe("EditRecipeScreen", () => {
         new Error("Failed to fetch recipe")
       );
 
-      const { getByText } = render(<EditRecipeScreen />, {
-        wrapper: createWrapper,
-      });
+      const { getByText } = renderWithProviders(<EditRecipeScreen />, {});
 
       // Should not crash and should render some error state or loading state
       await waitFor(() => {
@@ -260,9 +310,7 @@ describe("EditRecipeScreen", () => {
         data: mockRecipe,
       });
 
-      const { getByText } = render(<EditRecipeScreen />, {
-        wrapper: createWrapper,
-      });
+      const { getByText } = renderWithProviders(<EditRecipeScreen />, {});
 
       // Should render the screen successfully
       // Should render the screen successfully
@@ -285,9 +333,7 @@ describe("EditRecipeScreen", () => {
         data: mockMinimalRecipe,
       });
 
-      const { getByText } = render(<EditRecipeScreen />, {
-        wrapper: createWrapper,
-      });
+      const { getByText } = renderWithProviders(<EditRecipeScreen />, {});
 
       // Should handle minimal recipe data without crashing
       await waitFor(() => {
@@ -312,11 +358,7 @@ describe("EditRecipeScreen", () => {
       });
 
       // Render the component
-      expect(() =>
-        render(<EditRecipeScreen />, {
-          wrapper: createWrapper,
-        })
-      ).not.toThrow();
+      expect(() => renderWithProviders(<EditRecipeScreen />)).not.toThrow();
 
       // Should have router methods available
       expect(mockRouter.back).toBeDefined();
@@ -381,9 +423,7 @@ describe("EditRecipeScreen", () => {
         },
       });
 
-      const { getByText } = render(<EditRecipeScreen />, {
-        wrapper: createWrapper,
-      });
+      const { getByText } = renderWithProviders(<EditRecipeScreen />, {});
 
       // Should render the screen title
       expect(getByText("Edit Recipe")).toBeTruthy();
@@ -418,11 +458,7 @@ describe("EditRecipeScreen", () => {
         },
       });
 
-      expect(() =>
-        render(<EditRecipeScreen />, {
-          wrapper: createWrapper,
-        })
-      ).not.toThrow();
+      expect(() => renderWithProviders(<EditRecipeScreen />)).not.toThrow();
 
       // Verify metrics hook was called
       expect(mockUseRecipeMetrics).toHaveBeenCalled();
@@ -446,11 +482,7 @@ describe("EditRecipeScreen", () => {
         },
       });
 
-      expect(() =>
-        render(<EditRecipeScreen />, {
-          wrapper: createWrapper,
-        })
-      ).not.toThrow();
+      expect(() => renderWithProviders(<EditRecipeScreen />)).not.toThrow();
     });
 
     it("should handle metrics error state", () => {
@@ -471,11 +503,7 @@ describe("EditRecipeScreen", () => {
         },
       });
 
-      expect(() =>
-        render(<EditRecipeScreen />, {
-          wrapper: createWrapper,
-        })
-      ).not.toThrow();
+      expect(() => renderWithProviders(<EditRecipeScreen />)).not.toThrow();
     });
   });
 

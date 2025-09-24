@@ -57,3 +57,4 @@ temp/*
 # typescript
 *.tsbuildinfo
 secrets/*
+dev-logs/*

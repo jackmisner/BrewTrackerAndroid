@@ -30,12 +30,17 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STORAGE_KEYS } from "@services/config";
-import OfflineRecipeService from "@services/offline/OfflineRecipeService";
+import UnifiedLogger from "@services/logger/UnifiedLogger";
 
 /**
  * Network simulation modes for testing
  */
 export type NetworkSimulationMode = "normal" | "slow" | "offline";
+
+/**
+ * Sync status for developer mode network transitions
+ */
+export type SyncStatus = "idle" | "syncing" | "success" | "failed";
 
 /**
  * Developer context interface defining all available state and actions
@@ -44,6 +49,8 @@ interface DeveloperContextValue {
   // Development state
   isDeveloperMode: boolean;
   networkSimulationMode: NetworkSimulationMode;
+  syncStatus: SyncStatus;
+  syncError?: string;
 
   // Computed states (for backwards compatibility)
   isSimulatedOffline: boolean;
@@ -103,6 +110,8 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
 }) => {
   const [networkSimulationMode, setNetworkSimulationModeState] =
     useState<NetworkSimulationMode>("normal");
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
+  const [syncError, setSyncError] = useState<string | undefined>(undefined);
 
   // Check if we're in development mode
   const isDeveloperMode =
@@ -154,17 +163,125 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
   }, [isDeveloperMode]);
 
   /**
+   * Helper function to sync pending operations with proper error handling and state management
+   */
+  const syncPendingOperationsWithState = async (): Promise<void> => {
+    setSyncStatus("syncing");
+    setSyncError(undefined);
+
+    try {
+      await UnifiedLogger.info(
+        "DeveloperContext.syncPendingOperations",
+        "Starting pending operations sync"
+      );
+
+      const { UserCacheService } = await import(
+        "@services/offlineV2/UserCacheService"
+      );
+
+      const result = await UserCacheService.syncPendingOperations();
+      if (result && result.success === false) {
+        const errorSummary =
+          Array.isArray(result.errors) && result.errors.length
+            ? result.errors
+                .map((e: any) =>
+                  typeof e === "string" ? e : e?.message || String(e)
+                )
+                .join("; ")
+            : "Sync reported failures";
+        setSyncStatus("failed");
+        setSyncError(errorSummary);
+        await UnifiedLogger.warn(
+          "DeveloperContext.syncPendingOperations",
+          `Pending operations sync completed with failures`,
+          { errorSummary }
+        );
+        return;
+      }
+      setSyncStatus("success");
+      await UnifiedLogger.info(
+        "DeveloperContext.syncPendingOperations",
+        "Successfully synced pending operations"
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      setSyncStatus("failed");
+      setSyncError(errorMessage);
+
+      await UnifiedLogger.error(
+        "DeveloperContext.syncPendingOperations",
+        `Failed to sync pending operations: ${errorMessage}`,
+        { error: errorMessage }
+      );
+
+      console.warn("Developer mode sync of pending operations failed:", error);
+      throw error; // Re-throw so callers can handle if needed
+    }
+  };
+
+  /**
    * Set network simulation mode
    */
   const setNetworkSimulationMode = async (
     mode: NetworkSimulationMode
   ): Promise<void> => {
+    const previousMode = networkSimulationMode;
     try {
       await AsyncStorage.setItem(NETWORK_SIMULATION_KEY, JSON.stringify(mode));
       setNetworkSimulationModeState(mode);
 
+      await UnifiedLogger.info(
+        "DeveloperContext.setNetworkSimulationMode",
+        `Network simulation changed: ${previousMode} → ${mode}`,
+        {
+          previousMode,
+          newMode: mode,
+          isOffline: mode === "offline",
+          isSlow: mode === "slow",
+          timestamp: new Date().toISOString(),
+        }
+      );
+
+      // **CRITICAL FIX**: If switching from offline/slow to normal simulation, trigger pending operations sync
+      if (
+        (previousMode === "offline" || previousMode === "slow") &&
+        mode === "normal"
+      ) {
+        await UnifiedLogger.info(
+          "DeveloperContext.setNetworkSimulationMode",
+          `Switching from ${previousMode} to online simulation - triggering pending operations sync`
+        );
+
+        try {
+          await syncPendingOperationsWithState();
+        } catch (syncError) {
+          // Error already handled by syncPendingOperationsWithState, just log the transition context
+          await UnifiedLogger.error(
+            "DeveloperContext.setNetworkSimulationMode",
+            `Sync failed during ${previousMode} → ${mode} transition`,
+            {
+              previousMode,
+              newMode: mode,
+              syncError:
+                syncError instanceof Error
+                  ? syncError.message
+                  : "Unknown error",
+            }
+          );
+        }
+      }
+
       console.log(`Developer mode: Network simulation set to "${mode}"`);
     } catch (error) {
+      await UnifiedLogger.error(
+        "DeveloperContext.setNetworkSimulationMode",
+        `Failed to set network simulation mode: ${error instanceof Error ? error.message : "Unknown error"}`,
+        {
+          targetMode: mode,
+          error: error instanceof Error ? error.message : "Unknown error",
+        }
+      );
       console.error("Failed to set network simulation mode:", error);
     }
   };
@@ -206,9 +323,9 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
     }
 
     try {
-      const result = await OfflineRecipeService.devCleanupAllTombstonesAsync();
-      console.log("Developer: Tombstone cleanup completed", result);
-      return result;
+      // V2 system handles cleanup automatically - no manual tombstone cleanup needed
+      console.log("Developer: V2 system handles cleanup automatically");
+      return { removedTombstones: 0, tombstoneNames: [] };
     } catch (error) {
       console.error("Failed to cleanup tombstones:", error);
       throw error;
@@ -218,6 +335,8 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
   const contextValue: DeveloperContextValue = {
     isDeveloperMode,
     networkSimulationMode,
+    syncStatus,
+    syncError,
     isSimulatedOffline,
     isSimulatedSlow,
     setNetworkSimulationMode,

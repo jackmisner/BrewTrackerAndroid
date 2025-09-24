@@ -121,6 +121,7 @@ export interface PendingOperation {
   type: "create" | "update" | "delete";
   entityType: "recipe" | "brew_session" | "fermentation_entry";
   entityId: string;
+  userId?: string;
   data?: any;
   timestamp: number;
   retryCount: number;
