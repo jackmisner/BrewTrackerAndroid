@@ -192,7 +192,10 @@ export class StaticDataService {
     try {
       await this.fetchAndCacheIngredients();
     } catch (error) {
-      console.warn("Failed to refresh ingredients after authentication:", error);
+      console.warn(
+        "Failed to refresh ingredients after authentication:",
+        error
+      );
       // Don't throw here, as this is a background operation
     }
   }
@@ -301,7 +304,9 @@ export class StaticDataService {
         // In this case, we can't fetch ingredients, so return empty array
         // but still cache the version info for when user logs in
         if (authError?.status === 401 || authError?.status === 403) {
-          console.warn("Cannot fetch ingredients: user not authenticated. Ingredients will be available after login.");
+          console.warn(
+            "Cannot fetch ingredients: user not authenticated. Ingredients will be available after login."
+          );
 
           // Cache empty data with version for now
           const version = versionResponse.data.version;
@@ -554,8 +559,13 @@ export class StaticDataService {
         } catch (error: any) {
           // For background version checks, if ingredients fail due to auth,
           // just log a warning and continue - don't throw error
-          if (dataType === "ingredients" && (error?.status === 401 || error?.status === 403)) {
-            console.warn("Background ingredients update failed: authentication required");
+          if (
+            dataType === "ingredients" &&
+            (error?.status === 401 || error?.status === 403)
+          ) {
+            console.warn(
+              "Background ingredients update failed: authentication required"
+            );
           } else {
             throw error;
           }

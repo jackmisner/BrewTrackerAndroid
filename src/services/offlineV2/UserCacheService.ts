@@ -312,7 +312,10 @@ export class UserCacheService {
       };
 
       // Sanitize recipe data for API consumption
-      const sanitizedRecipeData = this.sanitizeRecipeUpdatesForAPI({ ...recipe, user_id: newRecipe.user_id });
+      const sanitizedRecipeData = this.sanitizeRecipeUpdatesForAPI({
+        ...recipe,
+        user_id: newRecipe.user_id,
+      });
 
       // Create pending operation
       const operation: PendingOperation = {
@@ -1669,8 +1672,10 @@ export class UserCacheService {
           if (operation.entityType === "recipe") {
             // Debug log the exact data being sent to API
             if (__DEV__) {
-              console.log(`[UserCacheService.syncOperation] Sending UPDATE data to API for recipe ${operation.entityId}:`,
-                JSON.stringify(operation.data, null, 2));
+              console.log(
+                `[UserCacheService.syncOperation] Sending UPDATE data to API for recipe ${operation.entityId}:`,
+                JSON.stringify(operation.data, null, 2)
+              );
             }
             await ApiService.recipes.update(operation.entityId, operation.data);
           }
@@ -1949,19 +1954,27 @@ export class UserCacheService {
    * Sanitize recipe update data for API consumption
    * Ensures all fields are properly formatted and valid for backend validation
    */
-  private static sanitizeRecipeUpdatesForAPI(updates: Partial<Recipe>): Partial<Recipe> {
+  private static sanitizeRecipeUpdatesForAPI(
+    updates: Partial<Recipe>
+  ): Partial<Recipe> {
     const sanitized = { ...updates };
 
     // Debug logging to understand the data being sanitized
     if (__DEV__ && sanitized.ingredients) {
-      console.log('[UserCacheService.sanitizeRecipeUpdatesForAPI] Original ingredients:',
-        JSON.stringify(sanitized.ingredients.map(ing => ({
-          name: ing.name,
-          id: ing.id,
-          id_type: typeof ing.id,
-          ingredient_id: (ing as any).ingredient_id,
-          ingredient_id_type: typeof (ing as any).ingredient_id
-        })), null, 2));
+      console.log(
+        "[UserCacheService.sanitizeRecipeUpdatesForAPI] Original ingredients:",
+        JSON.stringify(
+          sanitized.ingredients.map(ing => ({
+            name: ing.name,
+            id: ing.id,
+            id_type: typeof ing.id,
+            ingredient_id: (ing as any).ingredient_id,
+            ingredient_id_type: typeof (ing as any).ingredient_id,
+          })),
+          null,
+          2
+        )
+      );
     }
 
     // Remove fields that shouldn't be updated via API
@@ -1979,7 +1992,10 @@ export class UserCacheService {
     if (sanitized.efficiency !== undefined && sanitized.efficiency !== null) {
       sanitized.efficiency = Number(sanitized.efficiency) || 0;
     }
-    if (sanitized.mash_temperature !== undefined && sanitized.mash_temperature !== null) {
+    if (
+      sanitized.mash_temperature !== undefined &&
+      sanitized.mash_temperature !== null
+    ) {
       sanitized.mash_temperature = Number(sanitized.mash_temperature) || 0;
     }
     if (sanitized.mash_time !== undefined && sanitized.mash_time !== null) {
@@ -1992,17 +2008,27 @@ export class UserCacheService {
         const sanitizedIngredient = { ...ingredient };
 
         // Ensure amount is a valid number
-        if (sanitizedIngredient.amount !== undefined && sanitizedIngredient.amount !== null) {
+        if (
+          sanitizedIngredient.amount !== undefined &&
+          sanitizedIngredient.amount !== null
+        ) {
           sanitizedIngredient.amount = Number(sanitizedIngredient.amount) || 0;
         }
 
         // Ensure time is a valid integer
-        if (sanitizedIngredient.time !== undefined && sanitizedIngredient.time !== null) {
-          sanitizedIngredient.time = Math.floor(Number(sanitizedIngredient.time)) || 0;
+        if (
+          sanitizedIngredient.time !== undefined &&
+          sanitizedIngredient.time !== null
+        ) {
+          sanitizedIngredient.time =
+            Math.floor(Number(sanitizedIngredient.time)) || 0;
         }
 
         // Sanitize optional numeric fields
-        if (sanitizedIngredient.potential !== undefined && sanitizedIngredient.potential !== null) {
+        if (
+          sanitizedIngredient.potential !== undefined &&
+          sanitizedIngredient.potential !== null
+        ) {
           const potentialNum = Number(sanitizedIngredient.potential);
           if (!isNaN(potentialNum)) {
             sanitizedIngredient.potential = potentialNum;
@@ -2011,7 +2037,10 @@ export class UserCacheService {
           }
         }
 
-        if (sanitizedIngredient.color !== undefined && sanitizedIngredient.color !== null) {
+        if (
+          sanitizedIngredient.color !== undefined &&
+          sanitizedIngredient.color !== null
+        ) {
           const colorNum = Number(sanitizedIngredient.color);
           if (!isNaN(colorNum)) {
             sanitizedIngredient.color = colorNum;
@@ -2020,7 +2049,10 @@ export class UserCacheService {
           }
         }
 
-        if (sanitizedIngredient.alpha_acid !== undefined && sanitizedIngredient.alpha_acid !== null) {
+        if (
+          sanitizedIngredient.alpha_acid !== undefined &&
+          sanitizedIngredient.alpha_acid !== null
+        ) {
           const alphaAcidNum = Number(sanitizedIngredient.alpha_acid);
           if (!isNaN(alphaAcidNum)) {
             sanitizedIngredient.alpha_acid = alphaAcidNum;
@@ -2029,7 +2061,10 @@ export class UserCacheService {
           }
         }
 
-        if (sanitizedIngredient.attenuation !== undefined && sanitizedIngredient.attenuation !== null) {
+        if (
+          sanitizedIngredient.attenuation !== undefined &&
+          sanitizedIngredient.attenuation !== null
+        ) {
           const attenuationNum = Number(sanitizedIngredient.attenuation);
           if (!isNaN(attenuationNum)) {
             sanitizedIngredient.attenuation = attenuationNum;
@@ -2040,28 +2075,38 @@ export class UserCacheService {
 
         // Handle ingredient_id field - ensure it's a valid ObjectID or remove it
         // Check both 'id' and 'ingredient_id' fields as they might be used differently
-        const ingredientIdValue = (sanitizedIngredient as any).ingredient_id || sanitizedIngredient.id;
+        const ingredientIdValue =
+          (sanitizedIngredient as any).ingredient_id || sanitizedIngredient.id;
 
         // Always remove ingredient_id first to start clean
         delete (sanitizedIngredient as any).ingredient_id;
 
         if (ingredientIdValue) {
           // Check if it's a valid ObjectID format (24 character hex string)
-          if (typeof ingredientIdValue === 'string' &&
-              ingredientIdValue.length === 24 &&
-              /^[0-9a-fA-F]{24}$/.test(ingredientIdValue)) {
+          if (
+            typeof ingredientIdValue === "string" &&
+            ingredientIdValue.length === 24 &&
+            /^[0-9a-fA-F]{24}$/.test(ingredientIdValue)
+          ) {
             // Valid ObjectID, set it for the backend
             (sanitizedIngredient as any).ingredient_id = ingredientIdValue;
           } else {
-            console.warn(`[UserCacheService.sanitizeRecipeUpdatesForAPI] Invalid ingredient_id removed: "${ingredientIdValue}" for ingredient: ${sanitizedIngredient.name}`);
+            console.warn(
+              `[UserCacheService.sanitizeRecipeUpdatesForAPI] Invalid ingredient_id removed: "${ingredientIdValue}" for ingredient: ${sanitizedIngredient.name}`
+            );
             // Invalid ObjectID - don't set ingredient_id field
             // The backend should handle ingredients without ingredient_id
           }
         }
 
         // Additional cleanup - remove any numeric ingredient_id values that might slip through
-        if ((sanitizedIngredient as any).ingredient_id === 1 || (sanitizedIngredient as any).ingredient_id === "1") {
-          console.warn(`[UserCacheService.sanitizeRecipeUpdatesForAPI] Removing invalid numeric ingredient_id "1" for ingredient: ${sanitizedIngredient.name}`);
+        if (
+          (sanitizedIngredient as any).ingredient_id === 1 ||
+          (sanitizedIngredient as any).ingredient_id === "1"
+        ) {
+          console.warn(
+            `[UserCacheService.sanitizeRecipeUpdatesForAPI] Removing invalid numeric ingredient_id "1" for ingredient: ${sanitizedIngredient.name}`
+          );
           delete (sanitizedIngredient as any).ingredient_id;
         }
 
@@ -2085,8 +2130,10 @@ export class UserCacheService {
 
     // Debug logging to see the sanitized result
     if (__DEV__ && sanitized.ingredients) {
-      console.log('[UserCacheService.sanitizeRecipeUpdatesForAPI] Sanitized ingredients (FULL):',
-        JSON.stringify(sanitized.ingredients, null, 2));
+      console.log(
+        "[UserCacheService.sanitizeRecipeUpdatesForAPI] Sanitized ingredients (FULL):",
+        JSON.stringify(sanitized.ingredients, null, 2)
+      );
     }
 
     return sanitized;

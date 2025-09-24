@@ -28,4 +28,4 @@ export * from "./recipe";
 export * from "./brewSession";
 export * from "./api";
 export * from "./offlineV2";
-export * from "./logger"
+export * from "./logger";
