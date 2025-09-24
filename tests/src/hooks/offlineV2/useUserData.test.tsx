@@ -28,22 +28,11 @@ jest.mock("@contexts/AuthContext", () => ({
   useAuth: jest.fn(),
 }));
 
-// Mock UnitContext hook
-jest.mock("@contexts/UnitContext", () => ({
-  useUnits: jest.fn(() => ({
-    temperatureUnit: "F",
-    volumeUnit: "gal",
-    weightUnit: "lb",
-    unitSystem: "imperial",
-    convertTemperature: jest.fn((temp: number) => temp),
-    convertVolume: jest.fn((vol: number) => vol),
-    convertWeight: jest.fn((weight: number) => weight),
-    setTemperatureUnit: jest.fn(),
-    setVolumeUnit: jest.fn(),
-    setWeightUnit: jest.fn(),
-    setUnitSystem: jest.fn(),
-  })),
-}));
+// Mock UnitContext hook with shared utility
+jest.mock(
+  "@contexts/UnitContext",
+  () => require("../../../utils/unitContextMock").unitContextMock
+);
 
 // Mock React Native Appearance
 jest.mock("react-native", () => ({

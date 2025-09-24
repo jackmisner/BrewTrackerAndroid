@@ -15,6 +15,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import { useRecipes } from "@src/hooks/offlineV2";
+import { useAuth } from "@contexts/AuthContext";
 import { RecipeFormData, RecipeIngredient, Recipe } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
@@ -223,6 +224,7 @@ export default function EditRecipeScreen() {
   const styles = createRecipeStyles(theme);
   const queryClient = useQueryClient();
   const { update: updateRecipeV2 } = useRecipes();
+  const { getUserId } = useAuth();
 
   // Get recipe_id from route parameters
   const { recipe_id } = useLocalSearchParams<{ recipe_id: string }>();
@@ -258,12 +260,17 @@ export default function EditRecipeScreen() {
     isLoading: loadingRecipe,
     error: loadError,
   } = useQuery<Recipe>({
-    queryKey: [...QUERY_KEYS.RECIPE(recipe_id)],
+    queryKey: [...QUERY_KEYS.RECIPE(recipe_id), unitSystem],
     queryFn: async () => {
+      const userId = await getUserId();
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
       const { UserCacheService } = await import(
         "@services/offlineV2/UserCacheService"
       );
-      const recipe = await UserCacheService.getRecipeById(recipe_id);
+      const recipes = await UserCacheService.getRecipes(userId, unitSystem);
+      const recipe = recipes.find(r => r.id === recipe_id);
       if (!recipe) {
         throw new Error("Recipe not found");
       }

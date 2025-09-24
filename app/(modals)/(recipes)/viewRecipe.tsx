@@ -82,7 +82,10 @@ export default function ViewRecipeScreen() {
 
         // Try to get from V2 cache first including deleted recipes
         const { recipe: cachedRecipe, isDeleted } =
-          await UserCacheService.getRecipeByIdIncludingDeleted(recipe_id);
+          await UserCacheService.getRecipeByIdIncludingDeleted(
+            recipe_id,
+            userId
+          );
         if (cachedRecipe) {
           console.log(
             `Found recipe ${recipe_id} in V2 cache${isDeleted ? " (deleted)" : ""}`
@@ -117,7 +120,7 @@ export default function ViewRecipeScreen() {
             // Try V2 cache again after migration
             if (migrationResult.migrated > 0) {
               const allRecipesAfterMigration =
-                await UserCacheService.getRecipes(userId);
+                await UserCacheService.getRecipes(userId, unitSystem);
               const migratedRecipe = allRecipesAfterMigration.find(
                 r => r.id === recipe_id
               );

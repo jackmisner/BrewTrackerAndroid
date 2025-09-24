@@ -179,8 +179,25 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
         "@services/offlineV2/UserCacheService"
       );
 
-      await UserCacheService.syncPendingOperations();
-
+      const result = await UserCacheService.syncPendingOperations();
+      if (result && result.success === false) {
+        const errorSummary =
+          Array.isArray(result.errors) && result.errors.length
+            ? result.errors
+                .map((e: any) =>
+                  typeof e === "string" ? e : e?.message || String(e)
+                )
+                .join("; ")
+            : "Sync reported failures";
+        setSyncStatus("failed");
+        setSyncError(errorSummary);
+        await UnifiedLogger.warn(
+          "DeveloperContext.syncPendingOperations",
+          `Pending operations sync completed with failures`,
+          { errorSummary }
+        );
+        return;
+      }
       setSyncStatus("success");
       await UnifiedLogger.info(
         "DeveloperContext.syncPendingOperations",

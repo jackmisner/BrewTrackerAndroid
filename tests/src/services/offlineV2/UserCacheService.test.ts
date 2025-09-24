@@ -107,7 +107,7 @@ describe("UserCacheService", () => {
       const cachedRecipes = [mockSyncableRecipe];
       mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedRecipes));
 
-      const result = await UserCacheService.getRecipes(mockUserId);
+      const result = await UserCacheService.getRecipes(mockUserId, "imperial");
 
       expect(result).toEqual([mockRecipe]);
       expect(mockAsyncStorage.getItem).toHaveBeenCalledWith(
@@ -124,7 +124,7 @@ describe("UserCacheService", () => {
       const cachedRecipes = [mockSyncableRecipe, deletedRecipe];
       mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedRecipes));
 
-      const result = await UserCacheService.getRecipes(mockUserId);
+      const result = await UserCacheService.getRecipes(mockUserId, "imperial");
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe("recipe-1");
@@ -133,7 +133,7 @@ describe("UserCacheService", () => {
     it("should return empty array when no recipes cached", async () => {
       mockAsyncStorage.getItem.mockResolvedValue(null);
 
-      const result = await UserCacheService.getRecipes(mockUserId);
+      const result = await UserCacheService.getRecipes(mockUserId, "imperial");
 
       expect(result).toEqual([]);
     });
@@ -151,7 +151,7 @@ describe("UserCacheService", () => {
       const cachedRecipes = [olderRecipe, mockSyncableRecipe];
       mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedRecipes));
 
-      const result = await UserCacheService.getRecipes(mockUserId);
+      const result = await UserCacheService.getRecipes(mockUserId, "imperial");
 
       expect(result[0].id).toBe("recipe-2"); // Updated more recently
       expect(result[1].id).toBe("recipe-1"); // Updated less recently

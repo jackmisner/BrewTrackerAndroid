@@ -218,7 +218,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
 
     // Background cache refresh when coming back online
     const wasOffline = !previousConnectionState.current;
-    const isNowOnline = connected && reachable;
+    const isNowOnline = connected && (reachable ?? true);
     const shouldRefresh = wasOffline && isNowOnline;
 
     // Log network state changes

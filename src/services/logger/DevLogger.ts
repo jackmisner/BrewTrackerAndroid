@@ -6,9 +6,19 @@ import type { LogLevel } from "./Logger";
  * Uses network requests to write logs to the development server
  */
 export class DevLogger {
-  private static readonly HOST_LOG_ENDPOINT = process.env.HOST_LOG_ENDPOINT
-    ? process.env.HOST_LOG_ENDPOINT
-    : "http://192.168.0.10:3001/dev-logs";
+  private static resolveHostEndpoint(): string {
+    const env =
+      (process.env?.HOST_LOG_ENDPOINT as string | undefined) || undefined;
+    if (env) {
+      return env;
+    }
+    const hostUri = Constants.expoConfig?.hostUri; // e.g., "192.168.0.5:8081"
+    if (hostUri) {
+      const host = hostUri.split(":")[0];
+      return `http://${host}:3001/dev-logs`;
+    }
+    return "http://localhost:3001/dev-logs";
+  }
   private static readonly FETCH_TIMEOUT = 3000; // 3 seconds
   private static enabled: boolean = __DEV__;
 
@@ -63,7 +73,8 @@ export class DevLogger {
 
       try {
         // Try to send to development log server with timeout
-        await fetch(this.HOST_LOG_ENDPOINT, {
+        const endpoint = this.resolveHostEndpoint();
+        await fetch(endpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

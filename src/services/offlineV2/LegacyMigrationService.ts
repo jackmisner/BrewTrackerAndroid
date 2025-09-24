@@ -10,6 +10,7 @@ import { UserCacheService } from "./UserCacheService";
 import { Recipe } from "@src/types";
 import { OfflineRecipe } from "@src/types/offline";
 import { STORAGE_KEYS } from "@services/config";
+import { generateUniqueId } from "@utils/keyUtils";
 
 export interface MigrationResult {
   migrated: number;
@@ -48,7 +49,10 @@ export class LegacyMigrationService {
       }
 
       // Get existing V2 recipes to avoid duplicates
-      const existingV2Recipes = await UserCacheService.getRecipes(userId);
+      const existingV2Recipes = await UserCacheService.getRecipes(
+        userId,
+        userUnitSystem
+      );
       const existingIds = new Set(existingV2Recipes.map(r => r.id));
 
       console.log(
@@ -101,6 +105,23 @@ export class LegacyMigrationService {
       }
 
       console.log(`[LegacyMigration] Migration completed:`, result);
+
+      // Clear legacy recipes after successful migration
+      if (result.migrated > 0) {
+        try {
+          await this.clearLegacyRecipes(userId);
+          console.log(
+            `[LegacyMigration] Successfully cleared legacy recipes after migration`
+          );
+        } catch (clearError) {
+          console.error(
+            `[LegacyMigration] Failed to clear legacy recipes after migration:`,
+            clearError
+          );
+          // Don't fail the entire migration if cleanup fails
+        }
+      }
+
       return result;
     } catch (error) {
       console.error(`[LegacyMigration] Migration failed:`, error);
@@ -149,7 +170,7 @@ export class LegacyMigrationService {
   ): Recipe {
     // Create base recipe from legacy data
     const v2Recipe: Recipe = {
-      id: legacyRecipe.id,
+      id: legacyRecipe.id || legacyRecipe.tempId || generateUniqueId("recipe"),
       user_id: userId,
       name: legacyRecipe.name,
       description: legacyRecipe.description || "",

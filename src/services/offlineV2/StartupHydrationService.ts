@@ -54,7 +54,10 @@ export class StartupHydrationService {
       console.log(`[StartupHydrationService] Hydrating user data...`);
 
       // Check if user already has cached recipes
-      const existingRecipes = await UserCacheService.getRecipes(userId);
+      const existingRecipes = await UserCacheService.getRecipes(
+        userId,
+        "imperial"
+      );
 
       if (existingRecipes.length === 0) {
         console.log(

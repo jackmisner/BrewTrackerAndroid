@@ -61,7 +61,10 @@ export class UserCacheService {
   /**
    * Get a specific recipe by ID
    */
-  static async getRecipeById(recipeId: string): Promise<Recipe | null> {
+  static async getRecipeById(
+    recipeId: string,
+    userId?: string
+  ): Promise<Recipe | null> {
     try {
       // For now, get the user ID from all cached recipes
       // In practice, this method should receive userId as parameter
@@ -73,11 +76,11 @@ export class UserCacheService {
       const allRecipes: SyncableItem<Recipe>[] = JSON.parse(cached);
       const recipeItem = allRecipes.find(
         item =>
-          item.id === recipeId ||
-          item.data.id === recipeId ||
-          item.tempId === recipeId
+          (item.id === recipeId ||
+            item.data.id === recipeId ||
+            item.tempId === recipeId) &&
+          item.data.user_id === userId
       );
-
       if (!recipeItem || recipeItem.isDeleted) {
         return null;
       }
@@ -94,7 +97,8 @@ export class UserCacheService {
    * Useful for viewing recipes that may have been soft-deleted
    */
   static async getRecipeByIdIncludingDeleted(
-    recipeId: string
+    recipeId: string,
+    userId: string
   ): Promise<{ recipe: Recipe | null; isDeleted: boolean }> {
     try {
       const cached = await AsyncStorage.getItem(STORAGE_KEYS_V2.USER_RECIPES);
@@ -105,9 +109,10 @@ export class UserCacheService {
       const allRecipes: SyncableItem<Recipe>[] = JSON.parse(cached);
       const recipeItem = allRecipes.find(
         item =>
-          item.id === recipeId ||
-          item.data.id === recipeId ||
-          item.tempId === recipeId
+          (item.id === recipeId ||
+            item.data.id === recipeId ||
+            item.tempId === recipeId) &&
+          (!userId || item.data.user_id === userId)
       );
 
       if (!recipeItem) {
@@ -1303,8 +1308,9 @@ export class UserCacheService {
 
       const allOperations: PendingOperation[] = JSON.parse(pendingData);
       const filteredOperations = allOperations.filter(op => {
-        // Keep operations that don't belong to this user
-        return op.userId !== userId;
+        // Keep only operations that clearly belong to other users.
+        // Legacy ops had no userId; treat them as current user's data and remove.
+        return op.userId && op.userId !== userId;
       });
 
       await AsyncStorage.setItem(

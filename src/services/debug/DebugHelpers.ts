@@ -175,7 +175,7 @@ export class DebugHelpers {
    */
   static async setLogLevel(level: "DEBUG" | "INFO" | "WARN" | "ERROR") {
     console.log(`📊 Setting log level to: ${level}`);
-    return await Logger.setLogLevel(level);
+    return await UnifiedLogger.setLogLevel(level);
   }
 
   /**
@@ -185,7 +185,7 @@ export class DebugHelpers {
     console.log(
       `${enabled ? "✅" : "❌"} ${enabled ? "Enabling" : "Disabling"} logger`
     );
-    return await Logger.setEnabled(enabled);
+    return await UnifiedLogger.setEnabled(enabled);
   }
 }
 

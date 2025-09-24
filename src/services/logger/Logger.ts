@@ -25,6 +25,7 @@ export class Logger {
   private static enabled: boolean = true;
   private static initialized: boolean = false;
   private static logDirectory: Directory | null = null;
+  private static writePromise: Promise<void> = Promise.resolve();
 
   /**
    * Initialize the logger - creates log directory and loads settings
@@ -281,19 +282,28 @@ export class Logger {
       const logLine = this.formatLogLine(logEntry);
       const logFile = this.getCurrentLogFile();
 
-      // Append to the log file using async File API
-      try {
-        if (logFile.exists) {
-          const existingContent = await logFile.text();
+      // Serialize writes by chaining onto the write promise
+      this.writePromise = this.writePromise.then(async () => {
+        try {
+          let existingContent = "";
+
+          // Read existing content if file exists, otherwise create it
+          if (logFile.exists) {
+            existingContent = await logFile.text();
+          } else {
+            await logFile.create();
+          }
+
+          // Write combined content atomically
           await logFile.write(existingContent + logLine);
-        } else {
-          await logFile.create();
-          await logFile.write(logLine);
+        } catch (fileError) {
+          console.warn("Failed to append to log file:", fileError);
+          throw fileError;
         }
-      } catch (fileError) {
-        console.warn("Failed to write to log file:", fileError);
-        throw fileError;
-      }
+      });
+
+      // Wait for the write to complete
+      await this.writePromise;
 
       // Check if we need to rotate logs
       await this.rotateLogsIfNeeded();
@@ -350,7 +360,7 @@ export class Logger {
         );
 
         try {
-          currentFile.move(rotatedFile);
+          await currentFile.move(rotatedFile);
         } catch (moveError) {
           console.warn("Failed to rotate log file:", moveError);
         }
@@ -389,7 +399,7 @@ export class Logger {
 
       // Delete oldest files
       const filesToDelete = logFiles.slice(this.MAX_LOG_FILES);
-      filesToDelete.forEach(file => file.delete());
+      await filesToDelete.forEach(file => file.delete());
     } catch (error) {
       console.warn("Failed to cleanup old logs:", error);
     }
@@ -408,7 +418,7 @@ export class Logger {
         return [];
       }
 
-      const files = this.logDirectory.list();
+      const files = await this.logDirectory.list();
       return files
         .filter(file => file.name.endsWith(".log"))
         .map(file => file.name)
@@ -455,7 +465,7 @@ export class Logger {
         file => file.name.endsWith(".log") && file instanceof File
       ) as File[];
 
-      logFiles.forEach(file => file.delete());
+      await logFiles.forEach(file => file.delete());
 
       this.info("Logger", "All log files cleared");
     } catch (error) {

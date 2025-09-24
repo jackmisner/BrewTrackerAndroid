@@ -73,11 +73,14 @@ import {
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
 import { QUERY_KEYS } from "@services/api/queryClient";
+import { useUnits } from "@contexts/UnitContext";
+
 export default function DashboardScreen() {
   const { user } = useAuth();
   const theme = useTheme();
   const styles = dashboardStyles(theme);
   const [refreshing, setRefreshing] = useState(false);
+  const { unitSystem } = useUnits();
 
   // Pagination defaults
   const PAGE = 1;
@@ -175,7 +178,7 @@ export default function DashboardScreen() {
           // V2 system: Try to get cached recipes for fallback dashboard
           const cachedRecipes = await UserCacheService.getRecipes(
             user.id,
-            "imperial"
+            unitSystem
           );
           if (cachedRecipes && cachedRecipes.length > 0) {
             console.log(

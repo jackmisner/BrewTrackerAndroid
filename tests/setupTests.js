@@ -48,6 +48,60 @@ jest.mock("expo-device", () => ({
   getDeviceId: jest.fn().mockResolvedValue("dfyt4uf"),
 }));
 
+// Mock expo-file-system
+jest.mock("expo-file-system", () => ({
+  File: class MockFile {
+    constructor(path) {
+      this.path = path;
+      this._exists = false;
+      this._content = "";
+    }
+
+    get exists() {
+      return this._exists;
+    }
+
+    async create() {
+      this._exists = true;
+      this._content = "";
+      return this;
+    }
+
+    async write(content) {
+      this._content = content;
+      this._exists = true;
+    }
+
+    async text() {
+      return this._content;
+    }
+
+    async delete() {
+      this._exists = false;
+      this._content = "";
+    }
+  },
+  Directory: class MockDirectory {
+    constructor(path) {
+      this.path = path;
+      this._exists = false;
+    }
+
+    get exists() {
+      return this._exists;
+    }
+
+    async create() {
+      this._exists = true;
+      return this;
+    }
+  },
+  Paths: {
+    document: "/mock/documents",
+    cache: "/mock/cache",
+  },
+}));
+
 jest.mock("@react-native-async-storage/async-storage", () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
@@ -187,6 +241,12 @@ jest.mock("expo-file-system", () => ({
 }));
 
 jest.mock("expo-router", () => ({
+  router: {
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+    canGoBack: jest.fn(() => false),
+  },
   useRouter: () => ({
     push: jest.fn(),
     replace: jest.fn(),
