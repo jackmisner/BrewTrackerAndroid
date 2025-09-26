@@ -47,6 +47,8 @@ export class DevLogger {
       return;
     }
 
+    const endpoint = this.resolveHostEndpoint();
+
     try {
       const logEntry = {
         timestamp: new Date().toISOString(),
@@ -73,7 +75,6 @@ export class DevLogger {
 
       try {
         // Try to send to development log server with timeout
-        const endpoint = this.resolveHostEndpoint();
         await fetch(endpoint, {
           method: "POST",
           headers: {
@@ -85,8 +86,16 @@ export class DevLogger {
       } finally {
         clearTimeout(timeoutId);
       }
-    } catch {
-      // Silently fail if dev server isn't running or request times out - don't spam console
+    } catch (error) {
+      // In development, log connection issues to help debug logger problems
+      if (__DEV__ && level === "ERROR") {
+        console.warn(
+          `[DevLogger] Failed to send ${level} log to dev server:`,
+          error instanceof Error ? error.message : error,
+          `\nEndpoint: ${endpoint}`
+        );
+      }
+      // For non-error levels, silently fail to avoid spam
     }
   }
 
@@ -150,6 +159,26 @@ export class DevLogger {
    */
   static isEnabled(): boolean {
     return this.enabled && __DEV__;
+  }
+
+  /**
+   * Get current endpoint configuration for debugging
+   */
+  static getEndpointInfo(): {
+    endpoint: string;
+    hostUri: string | undefined;
+    envEndpoint: string | undefined;
+    enabled: boolean;
+  } {
+    const hostUri = Constants.expoConfig?.hostUri;
+    const envEndpoint = process.env?.HOST_LOG_ENDPOINT as string | undefined;
+
+    return {
+      endpoint: this.resolveHostEndpoint(),
+      hostUri,
+      envEndpoint,
+      enabled: this.enabled && __DEV__,
+    };
   }
 }
 

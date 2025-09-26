@@ -49,15 +49,23 @@ import {
 import { useStartupHydration } from "@src/hooks/offlineV2";
 import Constants from "expo-constants";
 import "@services/debug/DebugHelpers"; // Load debug helpers for development
+import { UnifiedLogger } from "@services/logger/UnifiedLogger"; // Import synchronously to ensure early initialization
 
 // Test dev logging on app startup
 if (__DEV__) {
-  import("@services/logger/UnifiedLogger").then(({ UnifiedLogger }) => {
-    UnifiedLogger.info("App.Layout", "BrewTracker Android app started", {
-      buildVersion: Constants.nativeBuildVersion,
-      expoVersion: Constants.expoConfig?.version,
-      timestamp: new Date().toISOString(),
-    });
+  UnifiedLogger.info("App.Layout", "BrewTracker Android app started", {
+    buildVersion: Constants.nativeBuildVersion,
+    expoVersion: Constants.expoConfig?.version,
+    timestamp: new Date().toISOString(),
+  });
+
+  // Also import DevLogger to test endpoint configuration
+  import("@services/logger/DevLogger").then(({ DevLogger }) => {
+    const endpointInfo = DevLogger.getEndpointInfo();
+    console.log("🔧 DevLogger Endpoint Configuration:", endpointInfo);
+
+    // Test a dev log immediately
+    DevLogger.info("App.Layout", "Testing DevLogger endpoint", endpointInfo);
   });
 }
 

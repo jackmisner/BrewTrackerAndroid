@@ -22,9 +22,15 @@ const mockLogger = Logger as jest.Mocked<typeof Logger>;
 const mockAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
 
 // Mock console methods
-const mockConsoleLog = jest.spyOn(console, "log").mockImplementation();
-const mockConsoleError = jest.spyOn(console, "error").mockImplementation();
-const mockConsoleWarn = jest.spyOn(console, "warn").mockImplementation();
+const mockConsoleLog = jest
+  .spyOn(console, "log")
+  .mockImplementation(() => undefined);
+const mockConsoleError = jest
+  .spyOn(console, "error")
+  .mockImplementation(() => undefined);
+const mockConsoleWarn = jest
+  .spyOn(console, "warn")
+  .mockImplementation(() => undefined);
 
 describe("DebugHelpers", () => {
   beforeEach(() => {
@@ -520,15 +526,12 @@ describe("DebugHelpers", () => {
       mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
       mockUserCacheService.isSyncInProgress.mockReturnValue(false);
 
-      // The actual implementation uses JSON.parse on empty string which throws an error
-      // Since empty string is truthy, it tries to parse it, causing the error case
+      // Empty strings are truthy so JSON.parse("") is called, which throws an error
       mockAsyncStorage.getItem
         .mockResolvedValueOnce("") // Empty string causes JSON.parse to fail
         .mockResolvedValueOnce(""); // Empty string causes JSON.parse to fail
 
       const result = await DebugHelpers.debugSyncState();
-
-      // Since JSON.parse("") throws, this should trigger the error case
       expect(result).toEqual({
         error: expect.any(String),
       });

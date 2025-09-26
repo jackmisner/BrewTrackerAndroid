@@ -16,21 +16,27 @@ export class OfflineMetricsCalculator {
     const grains = recipeData.ingredients.filter(ing => ing.type === "grain");
     const hops = recipeData.ingredients.filter(ing => ing.type === "hop");
 
+    // Convert batch size to gallons for all calculations
+    const batchSizeGallons = this.convertToGallons(
+      recipeData.batch_size,
+      recipeData.batch_size_unit
+    );
+
     // Calculate metrics
     const og = this.calculateOG(
       grains,
-      recipeData.batch_size,
+      batchSizeGallons,
       recipeData.efficiency
     );
-    const fg = this.calculateFG(og, grains);
+    const fg = this.calculateFG(og, recipeData.ingredients);
     const abv = this.calculateABV(og, fg);
     const ibu = this.calculateIBU(
       hops,
-      recipeData.batch_size,
+      batchSizeGallons,
       og,
       recipeData.boil_time
     );
-    const srm = this.calculateSRM(grains, recipeData.batch_size);
+    const srm = this.calculateSRM(grains, batchSizeGallons);
 
     return {
       og: Math.round(og * 1000) / 1000, // Round to 3 decimal places
@@ -58,8 +64,8 @@ export class OfflineMetricsCalculator {
     for (const grain of grains) {
       // Get potential (extract potential) - default to 35 if not specified
       const potential = grain.potential || 35;
-      // Convert amount to pounds if needed (assuming lbs for now)
-      const amountLbs = grain.amount || 0;
+      // Convert amount to pounds based on unit
+      const amountLbs = this.convertToPounds(grain.amount || 0, grain.unit);
 
       // Calculate gravity points: (potential * amount * efficiency) / batch_size
       const gravityPoints =
@@ -74,14 +80,18 @@ export class OfflineMetricsCalculator {
   /**
    * Calculate Final Gravity (FG)
    */
-  private static calculateFG(og: number, grains: RecipeIngredient[]): number {
-    // Calculate average attenuation from yeast/grains
+  private static calculateFG(
+    og: number,
+    ingredients: RecipeIngredient[]
+  ): number {
+    // Calculate average attenuation from yeast
+    const yeasts = ingredients.filter(ing => ing.type === "yeast");
     let totalAttenuation = 0;
     let attenuationCount = 0;
 
-    for (const grain of grains) {
-      if (grain.attenuation && grain.attenuation > 0) {
-        totalAttenuation += grain.attenuation;
+    for (const yeast of yeasts) {
+      if (yeast.attenuation && yeast.attenuation > 0) {
+        totalAttenuation += yeast.attenuation;
         attenuationCount++;
       }
     }
@@ -120,8 +130,13 @@ export class OfflineMetricsCalculator {
     let totalIBU = 0;
 
     for (const hop of hops) {
+      // Skip dry hops - they don't contribute to IBU
+      if (hop.use === "dry-hop" || (hop.time !== undefined && hop.time <= 0)) {
+        continue;
+      }
       const alphaAcid = hop.alpha_acid || 5; // Default 5% AA
-      const amountOz = hop.amount || 0;
+      // Convert hop amount to ounces for IBU calculation
+      const amountOz = this.convertToOunces(hop.amount || 0, hop.unit);
       const hopTime = hop.time || boilTime; // Use boil time if hop time not specified
 
       // Calculate utilization based on boil time and gravity
@@ -163,7 +178,8 @@ export class OfflineMetricsCalculator {
 
     for (const grain of grains) {
       const colorLovibond = grain.color || 2; // Default to 2L if not specified
-      const amountLbs = grain.amount || 0;
+      // Convert grain amount to pounds for SRM calculation
+      const amountLbs = this.convertToPounds(grain.amount || 0, grain.unit);
 
       // MCU = (Color in Lovibond * Amount in lbs) / Batch Size in gallons
       const mcu = (colorLovibond * amountLbs) / batchSizeGallons;
@@ -203,5 +219,86 @@ export class OfflineMetricsCalculator {
       isValid: errors.length === 0,
       errors,
     };
+  }
+
+  /**
+   * Convert batch size to gallons
+   */
+  private static convertToGallons(size: number, unit?: string): number {
+    if (!unit) {
+      return size;
+    }
+
+    switch (unit.toLowerCase()) {
+      case "l":
+      case "liter":
+      case "liters":
+        return size * 0.264172; // 1 liter = 0.264172 gallons
+      case "gal":
+      case "gallon":
+      case "gallons":
+      default:
+        return size; // Default to gallons
+    }
+  }
+
+  /**
+   * Convert ingredient amount to pounds
+   */
+  private static convertToPounds(amount: number, unit?: string): number {
+    if (!unit) {
+      return amount;
+    } // Default to pounds if no unit specified
+
+    switch (unit.toLowerCase()) {
+      case "kg":
+      case "kilogram":
+      case "kilograms":
+        return amount * 2.20462; // 1 kg = 2.20462 lbs
+      case "g":
+      case "gram":
+      case "grams":
+        return amount / 453.592; // 1 lb = 453.592 grams
+      case "oz":
+      case "ounce":
+      case "ounces":
+        return amount / 16; // 1 lb = 16 oz
+      case "lb":
+      case "lbs":
+      case "pound":
+      case "pounds":
+      default:
+        return amount; // Default to pounds
+    }
+  }
+
+  /**
+   * Convert hop amount to ounces
+   */
+  private static convertToOunces(amount: number, unit?: string): number {
+    if (!unit) {
+      return amount;
+    } // Default to ounces if no unit specified
+
+    switch (unit.toLowerCase()) {
+      case "g":
+      case "gram":
+      case "grams":
+        return amount / 28.3495; // 1 oz = 28.3495 grams
+      case "lb":
+      case "lbs":
+      case "pound":
+      case "pounds":
+        return amount * 16; // 1 lb = 16 oz
+      case "kg":
+      case "kilogram":
+      case "kilograms":
+        return amount * 35.274; // 1 kg = 35.274 oz
+      case "oz":
+      case "ounce":
+      case "ounces":
+      default:
+        return amount; // Default to ounces
+    }
   }
 }

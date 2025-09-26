@@ -6,10 +6,22 @@ import { StartupHydrationService } from "@services/offlineV2/StartupHydrationSer
 import { UserCacheService } from "@services/offlineV2/UserCacheService";
 import { StaticDataService } from "@services/offlineV2/StaticDataService";
 
-// Mock the dependencies
-jest.mock("@services/offlineV2/UserCacheService");
-jest.mock("@services/offlineV2/StaticDataService");
-
+jest.mock("@services/offlineV2/UserCacheService", () => ({
+  __esModule: true,
+  UserCacheService: {
+    getRecipes: jest.fn(),
+  },
+}));
+jest.mock("@services/offlineV2/StaticDataService", () => ({
+  __esModule: true,
+  StaticDataService: {
+    getCacheStats: jest.fn(),
+    getIngredients: jest.fn(),
+    getBeerStyles: jest.fn(),
+    updateIngredientsCache: jest.fn(),
+    updateBeerStylesCache: jest.fn(),
+  },
+}));
 const mockUserCacheService = UserCacheService as jest.Mocked<
   typeof UserCacheService
 >;
@@ -289,7 +301,7 @@ describe("StartupHydrationService", () => {
       expect(status.hasHydrated).toBe(false);
     });
 
-    it("should track hydration in progress", () => {
+    it("should track hydration in progress", async () => {
       // Mock a long-running operation
       mockUserCacheService.getRecipes.mockImplementation(
         () => new Promise(resolve => setTimeout(() => resolve([]), 100))
@@ -310,12 +322,14 @@ describe("StartupHydrationService", () => {
       });
 
       // Start hydration
-      StartupHydrationService.hydrateOnStartup(mockUserId);
+      const hydrationPromise =
+        StartupHydrationService.hydrateOnStartup(mockUserId);
 
       // Check status immediately
       const status = StartupHydrationService.getHydrationStatus();
       expect(status.isHydrating).toBe(true);
       expect(status.hasHydrated).toBe(false);
+      await hydrationPromise;
     });
   });
 

@@ -204,9 +204,19 @@ export const FermentationData: React.FC<FermentationDataProps> = ({
           {renderHeader()}
           <FlatList
             data={fermentationData}
-            keyExtractor={(item, index) =>
-              `${item.entry_date || item.date || "unknown"}-${index}`
-            }
+            keyExtractor={(item, index) => {
+              // Create a unique key using multiple identifying factors from FermentationEntry
+              const date = item.entry_date || item.date || `no-date-${index}`;
+              const gravity = item.gravity || "no-gravity";
+              const temp = item.temperature || "no-temp";
+              const ph = item.ph || "no-ph";
+              const notes =
+                (item.notes || "")
+                  .substring(0, 20)
+                  .replace(/[^a-zA-Z0-9]/g, "") || "no-notes";
+              // Use a combination of all available properties plus index for uniqueness
+              return `fermentation-${date}-${gravity}-${temp}-${ph}-${notes}-${index}`;
+            }}
             renderItem={renderEntry}
             scrollEnabled={false}
             style={styles.list}

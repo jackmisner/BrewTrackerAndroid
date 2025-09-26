@@ -27,6 +27,7 @@ import { TEST_IDS } from "@src/constants/testIDs";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
 import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { formatHopTime, formatHopUsage } from "@src/utils/formatUtils";
+import { isTempId } from "@utils/recipeUtils";
 
 /**
  * Displays detailed information about a specific brewing recipe, including metrics, ingredients, and instructions.
@@ -149,9 +150,6 @@ export default function ViewRecipeScreen() {
     retry: 1,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
-
-  // Helper to check if recipe ID is temporary
-  const isTempId = (id: string) => id?.startsWith("temp_");
 
   // Query for version history - moved up to avoid conditional hook usage
   const { data: versionHistoryData } =

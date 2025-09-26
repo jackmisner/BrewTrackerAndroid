@@ -15,6 +15,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { UserValidationService } from "@utils/userValidation";
 import UnifiedLogger from "@services/logger/UnifiedLogger";
+import { isTempId } from "@utils/recipeUtils";
 import {
   SyncableItem,
   PendingOperation,
@@ -58,29 +59,35 @@ export class UserCacheService {
   // ============================================================================
 
   /**
-   * Get a specific recipe by ID
+   * Get a specific recipe by ID with enforced user scoping
    */
   static async getRecipeById(
     recipeId: string,
     userId?: string
   ): Promise<Recipe | null> {
     try {
-      // For now, get the user ID from all cached recipes
-      // In practice, this method should receive userId as parameter
-      const cached = await AsyncStorage.getItem(STORAGE_KEYS_V2.USER_RECIPES);
-      if (!cached) {
+      // Require userId for security - prevent cross-user data access
+      if (!userId) {
+        console.warn(
+          `[UserCacheService.getRecipeById] User ID is required for security`
+        );
         return null;
       }
 
-      const allRecipes: SyncableItem<Recipe>[] = JSON.parse(cached);
-      const recipeItem = allRecipes.find(
+      // Use the existing getCachedRecipes method which already filters by user
+      const userRecipes = await this.getCachedRecipes(userId);
+
+      // Find the recipe by matching ID and confirm user ownership
+      const recipeItem = userRecipes.find(
         item =>
           (item.id === recipeId ||
             item.data.id === recipeId ||
             item.tempId === recipeId) &&
-          (!userId || item.data.user_id === userId)
+          item.data.user_id === userId &&
+          !item.isDeleted
       );
-      if (!recipeItem || recipeItem.isDeleted) {
+
+      if (!recipeItem) {
         return null;
       }
 
@@ -921,7 +928,7 @@ export class UserCacheService {
       // Find recipes with temp IDs that have no corresponding pending operation
       const stuckRecipes = cached.filter(recipe => {
         // Has temp ID but no needsSync flag or no corresponding pending operation
-        const hasTempId = recipe.id.startsWith("temp_");
+        const hasTempId = isTempId(recipe.id);
         const hasNeedSync = recipe.needsSync;
         const hasPendingOp = pendingOps.some(
           op =>
@@ -1796,14 +1803,34 @@ export class UserCacheService {
 
         case "update":
           if (operation.entityType === "recipe") {
-            // Debug log the exact data being sent to API
-            if (__DEV__) {
-              console.log(
-                `[UserCacheService.syncOperation] Sending UPDATE data to API for recipe ${operation.entityId}:`,
-                JSON.stringify(operation.data, null, 2)
+            // Check if this is a temp ID - if so, treat as CREATE instead of UPDATE
+            const isTempId = operation.entityId.startsWith("temp_");
+
+            if (isTempId) {
+              // Convert UPDATE with temp ID to CREATE operation
+              if (__DEV__) {
+                console.log(
+                  `[UserCacheService.syncOperation] Converting UPDATE with temp ID ${operation.entityId} to CREATE operation:`,
+                  JSON.stringify(operation.data, null, 2)
+                );
+              }
+              const response = await ApiService.recipes.create(operation.data);
+              if (response && response.data && response.data.id) {
+                return { realId: response.data.id };
+              }
+            } else {
+              // Normal UPDATE operation for real MongoDB IDs
+              if (__DEV__) {
+                console.log(
+                  `[UserCacheService.syncOperation] Sending UPDATE data to API for recipe ${operation.entityId}:`,
+                  JSON.stringify(operation.data, null, 2)
+                );
+              }
+              await ApiService.recipes.update(
+                operation.entityId,
+                operation.data
               );
             }
-            await ApiService.recipes.update(operation.entityId, operation.data);
           }
           break;
 

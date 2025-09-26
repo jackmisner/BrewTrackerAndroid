@@ -23,10 +23,13 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 
 // Mock ApiService
 jest.mock("@services/api/apiService", () => ({
-  recipes: {
-    create: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
+  __esModule: true,
+  default: {
+    recipes: {
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
   },
 }));
 

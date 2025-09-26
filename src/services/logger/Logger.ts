@@ -8,6 +8,9 @@ interface LogEntry {
   category: string;
   message: string;
   data?: any;
+  stack?: string;
+  correlationId?: string;
+  component?: string;
 }
 
 /**
@@ -25,6 +28,7 @@ export class Logger {
   private static initialized: boolean = false;
   private static logDirectory: Directory | null = null;
   private static writePromise: Promise<void> = Promise.resolve();
+  private static correlationCounter: number = 0;
 
   /**
    * Initialize the logger - creates log directory and loads settings
@@ -167,6 +171,36 @@ export class Logger {
   }
 
   /**
+   * Generate correlation ID for tracking related log entries
+   */
+  static generateCorrelationId(): string {
+    return `${Date.now()}-${++this.correlationCounter}`;
+  }
+
+  /**
+   * Get clean stack trace with React Native specific filtering
+   */
+  private static getStackTrace(): string {
+    try {
+      const error = new Error();
+      const stack = error.stack || "";
+
+      // Filter out Logger internal calls and common React Native noise
+      const stackLines = stack
+        .split("\n")
+        .filter(line => !line.includes("Logger.ts"))
+        .filter(line => !line.includes("at Object.log"))
+        .filter(line => !line.includes("at console."))
+        .filter(line => !line.includes("node_modules"))
+        .slice(0, 5); // Limit to 5 most relevant lines
+
+      return stackLines.join("\n");
+    } catch (error) {
+      return `Stack trace unavailable: ${error}`;
+    }
+  }
+
+  /**
    * Log a debug message
    */
   static async debug(
@@ -211,7 +245,143 @@ export class Logger {
   }
 
   /**
-   * Core logging method
+   * Enhanced error logging with automatic stack trace capture
+   */
+  static async errorWithStack(
+    category: string,
+    message: string,
+    error?: Error | any,
+    options?: {
+      correlationId?: string;
+      component?: string;
+      includeStack?: boolean;
+    }
+  ): Promise<void> {
+    const {
+      correlationId = this.generateCorrelationId(),
+      component,
+      includeStack = true,
+    } = options || {};
+
+    let errorData: any = error;
+    let stackTrace: string | undefined;
+
+    // Handle Error objects specially
+    if (error instanceof Error) {
+      errorData = {
+        name: error.name,
+        message: error.message,
+        ...(includeStack && error.stack ? { stack: error.stack } : {}),
+        ...(error.cause ? { cause: error.cause } : {}),
+      };
+      if (includeStack && error.stack) {
+        stackTrace = error.stack;
+      }
+    } else if (includeStack) {
+      stackTrace = this.getStackTrace();
+    }
+
+    await this.logWithContext("ERROR", category, message, {
+      data: errorData,
+      stack: stackTrace,
+      correlationId,
+      component,
+    });
+  }
+
+  /**
+   * Performance timing logger
+   */
+  static async timing(
+    category: string,
+    operation: string,
+    durationMs: number,
+    correlationId?: string
+  ): Promise<void> {
+    await this.logWithContext("INFO", category, `⏱️ ${operation}`, {
+      data: { duration_ms: durationMs },
+      correlationId,
+    });
+  }
+
+  /**
+   * User action tracking
+   */
+  static async userAction(
+    action: string,
+    details?: any,
+    component?: string
+  ): Promise<void> {
+    await this.logWithContext("INFO", "user-action", `👆 ${action}`, {
+      data: details,
+      component,
+      correlationId: this.generateCorrelationId(),
+    });
+  }
+
+  /**
+   * Enhanced logging method with context support
+   */
+  private static async logWithContext(
+    level: LogLevel,
+    category: string,
+    message: string,
+    context?: {
+      data?: any;
+      stack?: string;
+      correlationId?: string;
+      component?: string;
+    }
+  ): Promise<void> {
+    if (!this.enabled || !this.shouldLog(level)) {
+      return;
+    }
+
+    const { data, stack, correlationId, component } = context || {};
+
+    // Enhanced console logging with context
+    const contextParts: string[] = [];
+    if (correlationId) {
+      contextParts.push(`ID:${correlationId}`);
+    }
+    if (component) {
+      contextParts.push(`@${component}`);
+    }
+
+    const consoleMessage = contextParts.length
+      ? `[${category}] ${message} (${contextParts.join(" ")})`
+      : `[${category}] ${message}`;
+
+    switch (level) {
+      case "DEBUG":
+        console.log(consoleMessage, data);
+        if (stack) {
+          console.log("Stack:", stack);
+        }
+        break;
+      case "INFO":
+        console.log(consoleMessage, data);
+        break;
+      case "WARN":
+        console.warn(consoleMessage, data);
+        if (stack) {
+          console.warn("Stack:", stack);
+        }
+        break;
+      case "ERROR":
+        console.error(consoleMessage, data);
+        if (stack) {
+          console.error("Stack:", stack);
+        }
+        break;
+    }
+
+    // Write to file with enhanced context
+    await this.writeToFileWithContext(level, category, message, context);
+  }
+
+  /**
+   * Core logging method (backward compatibility)
    */
   private static async log(
     level: LogLevel,
@@ -219,29 +389,7 @@ export class Logger {
     message: string,
     data?: any
   ): Promise<void> {
-    if (!this.enabled || !this.shouldLog(level)) {
-      return;
-    }
-
-    // Always log to console for immediate feedback
-    const consoleMessage = `[${category}] ${message}`;
-    switch (level) {
-      case "DEBUG":
-        console.log(consoleMessage, data);
-        break;
-      case "INFO":
-        console.log(consoleMessage, data);
-        break;
-      case "WARN":
-        console.warn(consoleMessage, data);
-        break;
-      case "ERROR":
-        console.error(consoleMessage, data);
-        break;
-    }
-
-    // Write to file (fire and forget)
-    void this.writeToFile(level, category, message, data);
+    await this.logWithContext(level, category, message, { data });
   }
 
   /**
@@ -255,18 +403,26 @@ export class Logger {
   }
 
   /**
-   * Write log entry to file
+   * Enhanced file writing with context support
    */
-  private static async writeToFile(
+  private static async writeToFileWithContext(
     level: LogLevel,
     category: string,
     message: string,
-    data?: any
+    context?: {
+      data?: any;
+      stack?: string;
+      correlationId?: string;
+      component?: string;
+    }
   ): Promise<void> {
     try {
       if (!this.initialized) {
         await this.initialize();
       }
+
+      const { data, stack, correlationId, component } = context || {};
+
       let dataField: string | undefined;
       if (data !== undefined) {
         try {
@@ -275,12 +431,16 @@ export class Logger {
           dataField = String(data);
         }
       }
+
       const logEntry: LogEntry = {
         timestamp: new Date().toISOString(),
         level,
         category,
         message,
         ...(dataField !== undefined && { data: dataField }),
+        ...(stack && { stack }),
+        ...(correlationId && { correlationId }),
+        ...(component && { component }),
       };
 
       const logLine = this.formatLogLine(logEntry);
@@ -317,21 +477,44 @@ export class Logger {
   }
 
   /**
-   * Format log entry as a single line
+   * Legacy file writing method (backward compatibility)
+   */
+  private static async writeToFile(
+    level: LogLevel,
+    category: string,
+    message: string,
+    data?: any
+  ): Promise<void> {
+    await this.writeToFileWithContext(level, category, message, { data });
+  }
+
+  /**
+   * Format log entry as a single line with enhanced context
    */
   private static formatLogLine(entry: LogEntry): string {
-    const parts = [
-      entry.timestamp,
-      `[${entry.level}]`,
-      `[${entry.category}]`,
-      entry.message,
-    ];
+    const parts = [entry.timestamp, `[${entry.level}]`];
+
+    // Add context information
+    if (entry.correlationId) {
+      parts.push(`[ID:${entry.correlationId}]`);
+    }
+    if (entry.component) {
+      parts.push(`[@${entry.component}]`);
+    }
+
+    parts.push(`[${entry.category}]`, entry.message);
 
     if (entry.data) {
       parts.push(`DATA: ${entry.data}`);
     }
 
-    return parts.join(" ") + "\n";
+    // Add stack trace if present (on separate lines for readability)
+    let logLine = parts.join(" ");
+    if (entry.stack) {
+      logLine += `\nSTACK: ${entry.stack}`;
+    }
+
+    return logLine + "\n";
   }
 
   /**

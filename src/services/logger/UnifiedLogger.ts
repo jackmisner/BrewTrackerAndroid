@@ -23,29 +23,27 @@ export class UnifiedLogger {
       return;
     }
 
-    // Only intercept in device mode to avoid duplicate dev logging
-    if (!this.useDevLogger) {
-      // Store the original console.error
-      this.originalConsoleError = console.error;
+    // Always intercept console.error in both dev and production modes
+    // Store the original console.error
+    this.originalConsoleError = console.error;
 
-      // Override console.error to also write to dedicated error log file
-      console.error = (...args: any[]) => {
-        // Allow callers to suppress forwarding (prevents recursion/duplication)
-        if (this.suppressForward) {
-          this.originalConsoleError.apply(console, args);
-          return;
-        }
-        // Call the original console.error first
+    // Override console.error to also write to unified logger
+    console.error = (...args: any[]) => {
+      // Allow callers to suppress forwarding (prevents recursion/duplication)
+      if (this.suppressForward) {
         this.originalConsoleError.apply(console, args);
+        return;
+      }
+      // Call the original console.error first
+      this.originalConsoleError.apply(console, args);
 
-        // Extract message and data for logging
-        const message = args.length > 0 ? String(args[0]) : "Unknown error";
-        const data = args.length > 1 ? args.slice(1) : undefined;
+      // Extract message and data for logging
+      const message = args.length > 0 ? String(args[0]) : "Unknown error";
+      const data = args.length > 1 ? args.slice(1) : undefined;
 
-        // Log to appropriate error system (fire and forget)
-        void this.logConsoleError(message, data);
-      };
-    }
+      // Log to appropriate error system (fire and forget)
+      void this.logConsoleError(message, data);
+    };
 
     this.initialized = true;
   }
@@ -217,8 +215,15 @@ export class UnifiedLogger {
       } finally {
         clearTimeout(timeoutId);
       }
-    } catch {
-      // Silently fail if dev server isn't running
+    } catch (error) {
+      // In development, show connection issues for ERROR level logs
+      if (__DEV__ && level === "ERROR") {
+        this.originalConsoleError?.(
+          `[UnifiedLogger] Failed to send ${level} to dev server:`,
+          error instanceof Error ? error.message : error
+        );
+      }
+      // For other levels, silently fail to avoid spam
     }
   }
 

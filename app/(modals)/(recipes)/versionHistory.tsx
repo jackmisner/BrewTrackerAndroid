@@ -22,6 +22,7 @@ import { useTheme } from "@contexts/ThemeContext";
 import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { ModalHeader } from "@src/components/ui/ModalHeader";
+import { isTempId } from "@utils/recipeUtils";
 
 /**
  * Version History Screen
@@ -35,9 +36,6 @@ export default function VersionHistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { recipe_id } = useLocalSearchParams<{ recipe_id: string }>();
-
-  // Helper to check if recipe ID is temporary
-  const isTempId = (id: string) => id?.startsWith("temp_");
 
   // Query for version history
   const {
@@ -126,7 +124,10 @@ export default function VersionHistoryScreen() {
     }
 
     // Use type guards to handle different response shapes
-    if (isEnhancedVersionHistoryResponse(versionHistoryData)) {
+    if (
+      versionHistoryData &&
+      isEnhancedVersionHistoryResponse(versionHistoryData)
+    ) {
       const versions = versionHistoryData.all_versions.map(version => ({
         id: version.recipe_id,
         name: version.name,
@@ -146,7 +147,7 @@ export default function VersionHistoryScreen() {
         name: currentRecipe?.name || "Current Version",
         version: versionHistoryData.current_version,
         isCurrent: true,
-        unit_system: currentRecipe?.unit_system || "imperial",
+        unit_system: currentRecipe?.unit_system || "metric",
         isRoot: !versionHistoryData.parent_recipe,
         isAvailable: true,
       });
@@ -249,7 +250,7 @@ export default function VersionHistoryScreen() {
             ) : null}
           </View>
           <Text style={styles.versionDate}>
-            {versionItem.unit_system || "imperial"}
+            {versionItem.unit_system || "metric"}
           </Text>
         </View>
 
