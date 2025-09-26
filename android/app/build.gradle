@@ -92,8 +92,8 @@ android {
         applicationId 'com.brewtracker.android'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 109
-        versionName "2.0.16"
+        versionCode 110
+        versionName "2.0.17"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }

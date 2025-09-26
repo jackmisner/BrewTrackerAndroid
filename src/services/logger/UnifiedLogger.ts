@@ -52,10 +52,19 @@ export class UnifiedLogger {
    * Resolve the development server host URI dynamically
    */
   private static resolveHostUri(): string {
-    // Check environment variable first
-    const envHost = process.env.DEV_LOG_HOST;
+    // Check environment variables first
+    const envEndpoint = process.env.HOST_LOG_ENDPOINT as string | undefined;
+    if (envEndpoint) {
+      try {
+        const u = new URL(envEndpoint);
+        return u.hostname || "localhost";
+      } catch {
+        return String(envEndpoint).split(":")[0];
+      }
+    }
+    const envHost = process.env.DEV_LOG_HOST as string | undefined;
     if (envHost) {
-      return envHost;
+      return String(envHost).split(":")[0];
     }
     try {
       // Try to get from Expo Constants
@@ -231,34 +240,6 @@ export class UnifiedLogger {
         );
       }
       // For other levels, silently fail to avoid spam
-    }
-  }
-
-  /**
-   * Write directly to device log (bypasses Logger to avoid recursion)
-   */
-  private static async writeToDeviceLog(
-    level: LogLevel,
-    category: string,
-    message: string,
-    data?: string
-  ): Promise<void> {
-    try {
-      const timestamp = new Date().toISOString();
-      const logLine = `${timestamp} [${level}] [${category}] ${message}${data ? ` DATA: ${data}` : ""}\n`;
-
-      // Simple AsyncStorage fallback for console errors
-      const AsyncStorage = await import(
-        "@react-native-async-storage/async-storage"
-      );
-      const existingLogs =
-        (await AsyncStorage.default.getItem("console_errors")) || "";
-      await AsyncStorage.default.setItem(
-        "console_errors",
-        existingLogs + logLine
-      );
-    } catch {
-      // Silently fail
     }
   }
 

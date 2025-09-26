@@ -52,7 +52,7 @@ import { UnifiedLogger } from "@services/logger/UnifiedLogger"; // Import synchr
 
 // Test dev logging on app startup
 if (__DEV__) {
-  import("@services/debug/DebugHelpers"); // Load debug helpers for development
+  void import("@services/debug/DebugHelpers"); // Load debug helpers for development
   UnifiedLogger.info("App.Layout", "BrewTracker Android app started", {
     buildVersion: Constants.nativeBuildVersion,
     expoVersion: Constants.expoConfig?.version,

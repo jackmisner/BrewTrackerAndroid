@@ -516,7 +516,17 @@ api.interceptors.request.use(
       const isOffline = await DeveloperModeManager.isSimulatedOffline();
       if (isOffline) {
         // Allow auth requests to pass through even in simulated offline mode
-        const isAuthRequest = config.url?.startsWith("/auth/");
+        const isAuthRequest = (() => {
+          if (!config.url) {
+            return false;
+          }
+          try {
+            const url = new URL(config.url, API_CONFIG.BASE_URL);
+            return url.pathname.startsWith("/auth/");
+          } catch {
+            return config.url.startsWith("/auth/");
+          }
+        })();
         if (!isAuthRequest) {
           // Simulate network error to properly trigger offline behavior for non-auth requests
           const offlineError = new Error("Network request failed");
