@@ -515,11 +515,15 @@ api.interceptors.request.use(
     if (__DEV__) {
       const isOffline = await DeveloperModeManager.isSimulatedOffline();
       if (isOffline) {
-        // Simulate network error to properly trigger offline behavior
-        const offlineError = new Error("Network request failed");
-        (offlineError as any).code = "NETWORK_ERROR";
-        (offlineError as any).message = "Simulated offline mode enabled";
-        throw offlineError;
+        // Allow auth requests to pass through even in simulated offline mode
+        const isAuthRequest = config.url?.startsWith("/auth/");
+        if (!isAuthRequest) {
+          // Simulate network error to properly trigger offline behavior for non-auth requests
+          const offlineError = new Error("Network request failed");
+          (offlineError as any).code = "NETWORK_ERROR";
+          (offlineError as any).message = "Simulated offline mode enabled";
+          throw offlineError;
+        }
       }
     }
 

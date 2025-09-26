@@ -57,29 +57,25 @@ export class UnifiedLogger {
     if (envHost) {
       return envHost;
     }
-
     try {
       // Try to get from Expo Constants
       const debuggerHost = (Constants.manifest2 as any)?.debuggerHost;
       if (debuggerHost) {
-        return debuggerHost;
+        return String(debuggerHost).split(":")[0];
       }
-
       const packagerHost = (Constants.expoConfig as any)?.packagerOpts?.hostUri;
       if (packagerHost) {
-        return packagerHost;
+        return String(packagerHost).split(":")[0];
       }
-
       // Fallback to window.location.host if available (web)
       if (typeof window !== "undefined" && window.location?.host) {
-        return window.location.host;
+        return window.location.host.split(":")[0];
       }
     } catch {
       // Silently ignore resolution errors
     }
-
     // Final fallback
-    return "192.168.0.10:3001";
+    return "localhost";
   }
 
   /**
@@ -159,7 +155,18 @@ export class UnifiedLogger {
       try {
         // Call the unified logger's core method while interception is disabled
         if (this.useDevLogger) {
-          await DevLogger.error(category, message, formattedData);
+          let dataStr: string | undefined;
+          try {
+            dataStr =
+              formattedData == null
+                ? undefined
+                : typeof formattedData === "string"
+                  ? formattedData
+                  : JSON.stringify(formattedData);
+          } catch {
+            dataStr = String(formattedData);
+          }
+          await this.sendToDevServer(_level, category, message, dataStr);
         } else {
           await Logger.error(category, message, formattedData);
         }
@@ -205,8 +212,8 @@ export class UnifiedLogger {
       const timeoutId = setTimeout(() => controller.abort(), 3000);
 
       try {
-        const hostUri = this.getHostUri();
-        await fetch(`http://${hostUri}/dev-logs`, {
+        const host = this.getHostUri();
+        await fetch(`http://${host}:3001/dev-logs`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(logEntry),

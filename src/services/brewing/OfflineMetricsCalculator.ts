@@ -14,6 +14,9 @@ export class OfflineMetricsCalculator {
   static calculateMetrics(recipeData: RecipeFormData): RecipeMetrics {
     // Extract ingredients by type
     const grains = recipeData.ingredients.filter(ing => ing.type === "grain");
+    const fermentables = recipeData.ingredients.filter(
+      ing => ing.type === "grain" || ing.type === "other"
+    );
     const hops = recipeData.ingredients.filter(ing => ing.type === "hop");
 
     // Convert batch size to gallons for all calculations
@@ -24,7 +27,7 @@ export class OfflineMetricsCalculator {
 
     // Calculate metrics
     const og = this.calculateOG(
-      grains,
+      fermentables,
       batchSizeGallons,
       recipeData.efficiency
     );
@@ -90,7 +93,7 @@ export class OfflineMetricsCalculator {
     let attenuationCount = 0;
 
     for (const yeast of yeasts) {
-      if (yeast.attenuation && yeast.attenuation > 0) {
+      if (yeast.attenuation !== undefined && yeast.attenuation >= 0) {
         totalAttenuation += yeast.attenuation;
         attenuationCount++;
       }
@@ -134,7 +137,7 @@ export class OfflineMetricsCalculator {
       if (hop.use === "dry-hop" || (hop.time !== undefined && hop.time <= 0)) {
         continue;
       }
-      const alphaAcid = hop.alpha_acid || 5; // Default 5% AA
+      const alphaAcid = hop.alpha_acid ?? 5; // Default 5% AA
       // Convert hop amount to ounces for IBU calculation
       const amountOz = this.convertToOunces(hop.amount || 0, hop.unit);
       const hopTime = hop.time || boilTime; // Use boil time if hop time not specified

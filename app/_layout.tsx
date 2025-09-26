@@ -48,11 +48,11 @@ import {
 } from "@services/api/queryClient";
 import { useStartupHydration } from "@src/hooks/offlineV2";
 import Constants from "expo-constants";
-import "@services/debug/DebugHelpers"; // Load debug helpers for development
 import { UnifiedLogger } from "@services/logger/UnifiedLogger"; // Import synchronously to ensure early initialization
 
 // Test dev logging on app startup
 if (__DEV__) {
+  import("@services/debug/DebugHelpers"); // Load debug helpers for development
   UnifiedLogger.info("App.Layout", "BrewTracker Android app started", {
     buildVersion: Constants.nativeBuildVersion,
     expoVersion: Constants.expoConfig?.version,
