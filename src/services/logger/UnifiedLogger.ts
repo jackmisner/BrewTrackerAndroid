@@ -57,9 +57,10 @@ export class UnifiedLogger {
     if (envEndpoint) {
       try {
         const u = new URL(envEndpoint);
-        return u.hostname || "localhost";
+        return u.origin;
       } catch {
-        return String(envEndpoint).split(":")[0];
+        // If not parseable as URL, return original string and let downstream handle it
+        return String(envEndpoint);
       }
     }
     const envHost = process.env.DEV_LOG_HOST as string | undefined;
@@ -164,18 +165,9 @@ export class UnifiedLogger {
       try {
         // Call the unified logger's core method while interception is disabled
         if (this.useDevLogger) {
-          let dataStr: string | undefined;
-          try {
-            dataStr =
-              formattedData == null
-                ? undefined
-                : typeof formattedData === "string"
-                  ? formattedData
-                  : JSON.stringify(formattedData);
-          } catch {
-            dataStr = String(formattedData);
-          }
-          await this.sendToDevServer(_level, category, message, dataStr);
+          // When useDevLogger is true, DevLogger.error already handles dev server logging
+          // Skip forwarding to prevent duplicate logs
+          return;
         } else {
           await Logger.error(category, message, formattedData);
         }
@@ -221,8 +213,12 @@ export class UnifiedLogger {
       const timeoutId = setTimeout(() => controller.abort(), 3000);
 
       try {
-        const host = this.getHostUri();
-        await fetch(`http://${host}:3001/dev-logs`, {
+        const hostUri = this.getHostUri();
+        // Check if hostUri is already a full origin (contains protocol)
+        const endpoint = hostUri.includes("://")
+          ? `${hostUri}/dev-logs`
+          : `http://${hostUri}:3001/dev-logs`;
+        await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(logEntry),

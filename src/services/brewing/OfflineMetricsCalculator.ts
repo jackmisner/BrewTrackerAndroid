@@ -56,21 +56,24 @@ export class OfflineMetricsCalculator {
    * Calculate Original Gravity (OG)
    */
   private static calculateOG(
-    grains: RecipeIngredient[],
+    fermentables: RecipeIngredient[],
     batchSizeGallons: number,
     efficiency: number
   ): number {
-    if (grains.length === 0) {
+    if (fermentables.length === 0) {
       return 1.0;
     } // Neutral baseline when no fermentables
 
     let totalGravityPoints = 0;
 
-    for (const grain of grains) {
+    for (const fermentable of fermentables) {
       // Get potential (extract potential) - default to 35 if not specified
-      const potential = grain.potential ?? 35;
+      const potential = fermentable.potential ?? 35;
       // Convert amount to pounds based on unit
-      const amountLbs = this.convertToPounds(grain.amount || 0, grain.unit);
+      const amountLbs = this.convertToPounds(
+        fermentable.amount ?? 0,
+        fermentable.unit
+      );
 
       // Calculate gravity points: (potential * amount * efficiency) / batch_size
       const gravityPoints =
@@ -141,8 +144,10 @@ export class OfflineMetricsCalculator {
       }
       const alphaAcid = hop.alpha_acid ?? 5; // Default 5% AA
       // Convert hop amount to ounces for IBU calculation
-      const amountOz = this.convertToOunces(hop.amount || 0, hop.unit);
-      const hopTime = hop.time ?? boilTime; // Use boil time if hop time not specified
+      const amountOz = this.convertToOunces(hop.amount ?? 0, hop.unit);
+      const use = hop.use?.toLowerCase();
+      const hopTime =
+        use === "whirlpool" || use === "flameout" ? 0 : (hop.time ?? boilTime); // Default to boil time only for boil additions
 
       // Calculate utilization based on boil time and gravity
       const utilization = this.calculateHopUtilization(hopTime, og);
@@ -184,7 +189,7 @@ export class OfflineMetricsCalculator {
     for (const grain of grains) {
       const colorLovibond = grain.color ?? 2; // Default to 2L if not specified
       // Convert grain amount to pounds for SRM calculation
-      const amountLbs = this.convertToPounds(grain.amount || 0, grain.unit);
+      const amountLbs = this.convertToPounds(grain.amount ?? 0, grain.unit);
 
       // MCU = (Color in Lovibond * Amount in lbs) / Batch Size in gallons
       const mcu = (colorLovibond * amountLbs) / batchSizeGallons;
@@ -271,6 +276,10 @@ export class OfflineMetricsCalculator {
     }
 
     switch (unit.toLowerCase()) {
+      case "ml":
+      case "milliliter":
+      case "milliliters":
+        return size * 0.000264172; // 1 mL = 0.000264172 gallons
       case "l":
       case "liter":
       case "litre":
