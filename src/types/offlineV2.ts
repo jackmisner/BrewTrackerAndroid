@@ -248,6 +248,7 @@ export interface UseUserDataReturn<T> {
   create: (item: Partial<T>) => Promise<T>;
   update: (id: string, updates: Partial<T>) => Promise<T>;
   delete: (id: string) => Promise<void>;
+  clone: (id: string) => Promise<T>;
   sync: () => Promise<SyncResult>;
   refresh: () => Promise<void>;
 }

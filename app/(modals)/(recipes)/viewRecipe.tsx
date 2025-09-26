@@ -150,6 +150,9 @@ export default function ViewRecipeScreen() {
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
+  // Helper to check if recipe ID is temporary
+  const isTempId = (id: string) => id?.startsWith("temp_");
+
   // Query for version history - moved up to avoid conditional hook usage
   const { data: versionHistoryData } =
     useQuery<RecipeVersionHistoryResponse | null>({
@@ -158,12 +161,22 @@ export default function ViewRecipeScreen() {
         if (!recipe_id) {
           throw new Error("No recipe ID provided");
         }
+
+        // Skip API call for temporary IDs - version history doesn't exist for offline recipes
+        if (isTempId(recipe_id)) {
+          console.log(
+            "🔍 View Recipe - Skipping version history API call for temp ID:",
+            recipe_id
+          );
+          return null; // Return null to indicate no version history available for offline recipes
+        }
+
         try {
           const response =
             await ApiService.recipes.getVersionHistory(recipe_id);
           return response.data;
         } catch (error) {
-          // For offline mode, return null instead of failing
+          // For online recipes, return null instead of failing
           console.warn(
             `Failed to fetch version history for recipe ${recipe_id}:`,
             error
@@ -171,7 +184,7 @@ export default function ViewRecipeScreen() {
           return null; // Return null to indicate no version history available
         }
       },
-      enabled: !!recipe_id && !!recipeData, // Only run when we have recipe data
+      enabled: !!recipe_id && !!recipeData && !isTempId(recipe_id || ""), // Skip for temp IDs
       retry: 1,
       staleTime: 1000 * 60 * 5,
     });

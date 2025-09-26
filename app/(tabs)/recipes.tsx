@@ -153,6 +153,7 @@ export default function RecipesScreen() {
     isLoading: isLoadingMyRecipes,
     error: myRecipesError,
     delete: deleteRecipe,
+    clone: cloneRecipe,
     sync: _syncRecipes,
     refresh: refreshRecipes,
   } = useRecipes();
@@ -200,7 +201,7 @@ export default function RecipesScreen() {
   const { isSyncing, pendingOperations, sync: syncMutation } = useOfflineSync();
   const { isDeveloperMode, cleanupTombstones } = useDeveloper();
 
-  // Clone mutation with enhanced validation
+  // Clone mutation with offline support
   const cloneMutation = useMutation({
     mutationKey: ["recipes", "clone"],
     mutationFn: async (recipe: Recipe) => {
@@ -209,6 +210,12 @@ export default function RecipesScreen() {
         throw new Error("Recipe must have a valid user ID");
       }
 
+      // For offline mode or user's own recipes, use offline cloning
+      if (!isConnected) {
+        return cloneRecipe(recipe.id);
+      }
+
+      // For online public recipes, use API cloning
       if (recipe.is_public) {
         // Public recipe cloning
         const author = recipe.username || recipe.original_author || "Unknown";
@@ -229,6 +236,9 @@ export default function RecipesScreen() {
       }
     },
     onSuccess: (response, recipe) => {
+      // Handle different response types - offline returns Recipe directly, API returns AxiosResponse
+      const clonedRecipe = "data" in response ? response.data : response;
+
       // Add a small delay to ensure server has processed the clone before refreshing
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
@@ -237,9 +247,10 @@ export default function RecipesScreen() {
         queryClient.invalidateQueries({
           queryKey: [...QUERY_KEYS.RECIPES, "offline"],
         });
-        if (response?.data?.id) {
+
+        if (clonedRecipe?.id) {
           queryClient.invalidateQueries({
-            queryKey: [...QUERY_KEYS.RECIPE(response.data.id), "offline"],
+            queryKey: [...QUERY_KEYS.RECIPE(clonedRecipe.id), "offline"],
           });
         }
         // Also refresh offline V2 cache for "My" tab
@@ -258,10 +269,12 @@ export default function RecipesScreen() {
           {
             text: "View Clone",
             onPress: () => {
-              router.push({
-                pathname: "/(modals)/(recipes)/viewRecipe",
-                params: { recipe_id: response.data.id },
-              });
+              if (clonedRecipe?.id) {
+                router.push({
+                  pathname: "/(modals)/(recipes)/viewRecipe",
+                  params: { recipe_id: clonedRecipe.id },
+                });
+              }
             },
           },
           { text: "OK" },

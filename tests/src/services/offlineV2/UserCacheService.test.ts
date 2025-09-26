@@ -547,4 +547,229 @@ describe("UserCacheService", () => {
       );
     });
   });
+
+  describe("getRecipeById", () => {
+    it("should return recipe by ID", async () => {
+      const cachedRecipes = [mockSyncableRecipe];
+      mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedRecipes));
+
+      const result = await UserCacheService.getRecipeById(
+        "recipe-1",
+        mockUserId
+      );
+
+      expect(result).toEqual(mockRecipe);
+    });
+
+    it("should return null when recipe not found", async () => {
+      mockAsyncStorage.getItem.mockResolvedValue("[]");
+
+      const result = await UserCacheService.getRecipeById(
+        "nonexistent",
+        mockUserId
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it("should return null when recipe is deleted", async () => {
+      const deletedRecipe: SyncableItem<Recipe> = {
+        ...mockSyncableRecipe,
+        isDeleted: true,
+      };
+      mockAsyncStorage.getItem.mockResolvedValue(
+        JSON.stringify([deletedRecipe])
+      );
+
+      const result = await UserCacheService.getRecipeById(
+        "recipe-1",
+        mockUserId
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it("should return null when no cache exists", async () => {
+      mockAsyncStorage.getItem.mockResolvedValue(null);
+
+      const result = await UserCacheService.getRecipeById(
+        "recipe-1",
+        mockUserId
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it("should handle storage errors gracefully", async () => {
+      mockAsyncStorage.getItem.mockRejectedValue(new Error("Storage error"));
+
+      const result = await UserCacheService.getRecipeById(
+        "recipe-1",
+        mockUserId
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it("should find recipe by tempId", async () => {
+      const tempRecipe: SyncableItem<Recipe> = {
+        ...mockSyncableRecipe,
+        tempId: "temp-123",
+      };
+      mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify([tempRecipe]));
+
+      const result = await UserCacheService.getRecipeById(
+        "temp-123",
+        mockUserId
+      );
+
+      expect(result).toEqual(mockRecipe);
+    });
+  });
+
+  describe("getRecipeByIdIncludingDeleted", () => {
+    it("should return recipe and deletion status", async () => {
+      const cachedRecipes = [mockSyncableRecipe];
+      mockAsyncStorage.getItem.mockResolvedValue(JSON.stringify(cachedRecipes));
+
+      const result = await UserCacheService.getRecipeByIdIncludingDeleted(
+        "recipe-1",
+        mockUserId
+      );
+
+      expect(result).toEqual({
+        recipe: mockRecipe,
+        isDeleted: false,
+      });
+    });
+
+    it("should return deleted recipe with correct status", async () => {
+      const deletedRecipe: SyncableItem<Recipe> = {
+        ...mockSyncableRecipe,
+        isDeleted: true,
+      };
+      mockAsyncStorage.getItem.mockResolvedValue(
+        JSON.stringify([deletedRecipe])
+      );
+
+      const result = await UserCacheService.getRecipeByIdIncludingDeleted(
+        "recipe-1",
+        mockUserId
+      );
+
+      expect(result).toEqual({
+        recipe: mockRecipe,
+        isDeleted: true,
+      });
+    });
+
+    it("should return null for non-existent recipe", async () => {
+      mockAsyncStorage.getItem.mockResolvedValue("[]");
+
+      const result = await UserCacheService.getRecipeByIdIncludingDeleted(
+        "nonexistent",
+        mockUserId
+      );
+
+      expect(result).toEqual({
+        recipe: null,
+        isDeleted: false,
+      });
+    });
+
+    it("should handle no cache gracefully", async () => {
+      mockAsyncStorage.getItem.mockResolvedValue(null);
+
+      const result = await UserCacheService.getRecipeByIdIncludingDeleted(
+        "recipe-1",
+        mockUserId
+      );
+
+      expect(result).toEqual({
+        recipe: null,
+        isDeleted: false,
+      });
+    });
+
+    it("should handle storage errors gracefully", async () => {
+      mockAsyncStorage.getItem.mockRejectedValue(new Error("Storage error"));
+
+      const result = await UserCacheService.getRecipeByIdIncludingDeleted(
+        "recipe-1",
+        mockUserId
+      );
+
+      expect(result).toEqual({
+        recipe: null,
+        isDeleted: false,
+      });
+    });
+  });
+
+  describe("createRecipe with improved coverage", () => {
+    it("should handle missing user_id by getting from token", async () => {
+      mockAsyncStorage.getItem
+        .mockResolvedValueOnce("[]") // existing recipes
+        .mockResolvedValueOnce("[]"); // pending operations
+
+      const recipeData = {
+        name: "New Recipe",
+        description: "A new test recipe",
+        // user_id is missing - should get from token
+      };
+
+      const result = await UserCacheService.createRecipe(recipeData);
+
+      expect(result.user_id).toBe(mockUserId);
+      expect(mockUserValidation.getCurrentUserIdFromToken).toHaveBeenCalled();
+    });
+
+    it("should throw error when no user ID available", async () => {
+      mockUserValidation.getCurrentUserIdFromToken.mockResolvedValue(null);
+
+      const recipeData = { name: "New Recipe" };
+
+      await expect(UserCacheService.createRecipe(recipeData)).rejects.toThrow(
+        "Failed to create recipe"
+      );
+    });
+
+    it("should handle storage errors during creation", async () => {
+      mockAsyncStorage.getItem.mockRejectedValue(new Error("Storage error"));
+
+      const recipeData = { name: "New Recipe", user_id: mockUserId };
+
+      await expect(UserCacheService.createRecipe(recipeData)).rejects.toThrow(
+        "Failed to create recipe"
+      );
+    });
+  });
+
+  describe("updateRecipe with improved coverage", () => {
+    it("should handle missing user_id by getting from token", async () => {
+      const cachedRecipes = [mockSyncableRecipe];
+      mockAsyncStorage.getItem
+        .mockResolvedValueOnce(JSON.stringify(cachedRecipes)) // getCachedRecipes
+        .mockResolvedValueOnce("[]") // getPendingOperations for addPendingOperation
+        .mockResolvedValueOnce(JSON.stringify(cachedRecipes)) // updateRecipeInCache read
+        .mockResolvedValueOnce("[]"); // addPendingOperation read
+
+      const updates = { name: "Updated Recipe" };
+
+      const result = await UserCacheService.updateRecipe("recipe-1", updates);
+
+      expect(result.name).toBe("Updated Recipe");
+      expect(mockUserValidation.getCurrentUserIdFromToken).toHaveBeenCalled();
+    });
+
+    it("should throw error when no user ID available", async () => {
+      mockUserValidation.getCurrentUserIdFromToken.mockResolvedValue(null);
+
+      const updates = { name: "Updated Recipe" };
+
+      await expect(
+        UserCacheService.updateRecipe("recipe-1", updates)
+      ).rejects.toThrow("User ID is required for updating recipes");
+    });
+  });
 });

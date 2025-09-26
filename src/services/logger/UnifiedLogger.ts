@@ -1,6 +1,7 @@
 import { Logger } from "./Logger";
 import { DevLogger } from "./DevLogger";
 import type { LogLevel } from "@src/types";
+import Constants from "expo-constants";
 
 /**
  * Unified Logger that automatically chooses the best logging strategy
@@ -11,6 +12,8 @@ export class UnifiedLogger {
   private static useDevLogger = __DEV__;
   private static originalConsoleError: typeof console.error;
   private static initialized = false;
+  private static suppressForward = false;
+  private static hostUri: string | null = null;
 
   /**
    * Initialize console.error interception
@@ -20,23 +23,100 @@ export class UnifiedLogger {
       return;
     }
 
-    // Store the original console.error
-    this.originalConsoleError = console.error;
+    // Only intercept in device mode to avoid duplicate dev logging
+    if (!this.useDevLogger) {
+      // Store the original console.error
+      this.originalConsoleError = console.error;
 
-    // Override console.error to also write to dedicated error log file
-    console.error = (...args: any[]) => {
-      // Call the original console.error first
-      this.originalConsoleError.apply(console, args);
+      // Override console.error to also write to dedicated error log file
+      console.error = (...args: any[]) => {
+        // Allow callers to suppress forwarding (prevents recursion/duplication)
+        if (this.suppressForward) {
+          this.originalConsoleError.apply(console, args);
+          return;
+        }
+        // Call the original console.error first
+        this.originalConsoleError.apply(console, args);
 
-      // Extract message and data for logging
-      const message = args.length > 0 ? String(args[0]) : "Unknown error";
-      const data = args.length > 1 ? args.slice(1) : undefined;
+        // Extract message and data for logging
+        const message = args.length > 0 ? String(args[0]) : "Unknown error";
+        const data = args.length > 1 ? args.slice(1) : undefined;
 
-      // Log to appropriate error system (fire and forget)
-      void this.logConsoleError(message, data);
-    };
+        // Log to appropriate error system (fire and forget)
+        void this.logConsoleError(message, data);
+      };
+    }
 
     this.initialized = true;
+  }
+
+  /**
+   * Resolve the development server host URI dynamically
+   */
+  private static resolveHostUri(): string {
+    // Check environment variable first
+    const envHost = process.env.DEV_LOG_HOST;
+    if (envHost) {
+      return envHost;
+    }
+
+    try {
+      // Try to get from Expo Constants
+      const debuggerHost = (Constants.manifest2 as any)?.debuggerHost;
+      if (debuggerHost) {
+        return debuggerHost;
+      }
+
+      const packagerHost = (Constants.expoConfig as any)?.packagerOpts?.hostUri;
+      if (packagerHost) {
+        return packagerHost;
+      }
+
+      // Fallback to window.location.host if available (web)
+      if (typeof window !== "undefined" && window.location?.host) {
+        return window.location.host;
+      }
+    } catch {
+      // Silently ignore resolution errors
+    }
+
+    // Final fallback
+    return "192.168.0.10:3001";
+  }
+
+  /**
+   * Get the resolved host URI, with caching
+   */
+  private static getHostUri(): string {
+    if (this.hostUri === null) {
+      this.hostUri = this.resolveHostUri();
+    }
+    return this.hostUri;
+  }
+
+  /**
+   * Get device info dynamically from Constants
+   */
+  private static getDeviceInfo(): { platform: string; buildTime: string } {
+    try {
+      const platform =
+        Constants.platform?.os || Constants.platform?.name || "android";
+      const version =
+        Constants.expoConfig?.version ||
+        (Constants.manifest as any)?.version ||
+        "unknown";
+      const buildTime = process.env.BUILD_TIME || version;
+
+      return {
+        platform,
+        buildTime,
+      };
+    } catch {
+      return {
+        platform: "android",
+        buildTime: "unknown",
+      };
+    }
   }
 
   /**
@@ -50,49 +130,56 @@ export class UnifiedLogger {
   }
 
   /**
-   * Log console.error directly to log files (bypass console.error)
+   * Log console.error directly to unified logger (with recursive interception prevention)
    */
   private static async logConsoleError(
     message: string,
     data?: any[]
   ): Promise<void> {
     try {
+      // Capture timestamp immediately
+      const _timestamp = new Date().toISOString();
+
       // Format data for logging
-      let formattedData: string | undefined;
+      let formattedData: any = undefined;
       if (data && data.length > 0) {
         try {
-          formattedData = data
-            .map((item: any) =>
-              typeof item === "string" ? item : JSON.stringify(item)
-            )
-            .join(" ");
+          formattedData = data.length === 1 ? data[0] : data;
         } catch {
           formattedData = data.map((item: any) => String(item)).join(" ");
         }
       }
 
-      // Write directly to log files/servers without using logger methods
-      // that would call console.error again
-      if (this.useDevLogger) {
-        // Send directly to dev server without using DevLogger.error
-        await this.sendToDevServer(
-          "ERROR",
-          "CONSOLE_ERROR",
-          message,
-          formattedData
-        );
-      } else {
-        // Write directly to device log without using Logger.error
-        await this.writeToDeviceLog(
-          "ERROR",
-          "CONSOLE_ERROR",
-          message,
-          formattedData
-        );
+      // Construct log payload
+      const _level: LogLevel = "ERROR";
+      const category = "device";
+
+      // Temporarily disable interception to prevent recursive calls
+      const wasInterceptionSuppressed = this.suppressForward;
+      this.suppressForward = true;
+
+      try {
+        // Call the unified logger's core method while interception is disabled
+        if (this.useDevLogger) {
+          await DevLogger.error(category, message, formattedData);
+        } else {
+          await Logger.error(category, message, formattedData);
+        }
+      } finally {
+        // Atomically restore the interception flag
+        this.suppressForward = wasInterceptionSuppressed;
       }
-    } catch (error) {
+    } catch (internalError) {
+      // Swallow internal failures to avoid throwing from device logging
       // Use original console.error to avoid infinite recursion
-      this.originalConsoleError?.("Failed to log console error:", error);
+      try {
+        this.originalConsoleError?.(
+          "Failed to forward console error to unified logger:",
+          internalError
+        );
+      } catch {
+        // Even the original console.error failed - completely swallow
+      }
     }
   }
 
@@ -112,10 +199,7 @@ export class UnifiedLogger {
         category,
         message,
         data,
-        deviceInfo: {
-          platform: "android",
-          buildTime: "2.0.11", // Could get from Constants if needed
-        },
+        deviceInfo: this.getDeviceInfo(),
       };
 
       // Send directly to dev server (copied from DevLogger)
@@ -123,7 +207,8 @@ export class UnifiedLogger {
       const timeoutId = setTimeout(() => controller.abort(), 3000);
 
       try {
-        await fetch("http://192.168.0.10:3001/dev-logs", {
+        const hostUri = this.getHostUri();
+        await fetch(`http://${hostUri}/dev-logs`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(logEntry),
@@ -147,15 +232,19 @@ export class UnifiedLogger {
     data?: string
   ): Promise<void> {
     try {
-      // This would require importing Logger internals or duplicating file writing logic
-      // For now, just write a simplified version that won't cause recursion
       const timestamp = new Date().toISOString();
-      const _logLine = `${timestamp} [${level}] [${category}] ${message}${data ? ` DATA: ${data}` : ""}\n`;
+      const logLine = `${timestamp} [${level}] [${category}] ${message}${data ? ` DATA: ${data}` : ""}\n`;
 
-      // We could write to a simple error log file here, but for now just skip
-      // to avoid the complexity of duplicating Logger's file writing logic
-
-      // Alternative: Just store in memory or AsyncStorage as a simple fallback
+      // Simple AsyncStorage fallback for console errors
+      const AsyncStorage = await import(
+        "@react-native-async-storage/async-storage"
+      );
+      const existingLogs =
+        (await AsyncStorage.default.getItem("console_errors")) || "";
+      await AsyncStorage.default.setItem(
+        "console_errors",
+        existingLogs + logLine
+      );
     } catch {
       // Silently fail
     }
@@ -263,7 +352,7 @@ export class UnifiedLogger {
     if (this.useDevLogger) {
       return {
         loggerType: "dev",
-        logDir: "http://192.168.0.10:3001/logs",
+        logDir: `http://${this.getHostUri()}/logs`,
         settings: {
           enabled: DevLogger.isEnabled(),
           devMode: true,

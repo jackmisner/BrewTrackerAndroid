@@ -13,7 +13,6 @@
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import ApiService from "@services/api/apiService";
 import { UserValidationService } from "@utils/userValidation";
 import UnifiedLogger from "@services/logger/UnifiedLogger";
 import {
@@ -79,7 +78,7 @@ export class UserCacheService {
           (item.id === recipeId ||
             item.data.id === recipeId ||
             item.tempId === recipeId) &&
-          item.data.user_id === userId
+          (!userId || item.data.user_id === userId)
       );
       if (!recipeItem || recipeItem.isDeleted) {
         return null;
@@ -533,6 +532,48 @@ export class UserCacheService {
 
       const now = Date.now();
 
+      // Check if there's a pending CREATE operation for this recipe
+      const pendingOps = await this.getPendingOperations();
+      const existingCreateOp = pendingOps.find(
+        op =>
+          op.type === "create" &&
+          op.entityType === "recipe" &&
+          op.entityId === id
+      );
+
+      if (existingCreateOp) {
+        // Recipe was created offline and is being deleted offline - cancel both operations
+        await UnifiedLogger.info(
+          "UserCacheService.deleteRecipe",
+          `Canceling offline create+delete operations for recipe ${id}`,
+          {
+            createOperationId: existingCreateOp.id,
+            recipeId: id,
+            recipeName: existingItem.data.name,
+            cancelBothOperations: true,
+          }
+        );
+
+        // Remove the create operation and the recipe from cache entirely
+        await Promise.all([
+          this.removePendingOperation(existingCreateOp.id),
+          this.removeItemFromCache(id),
+        ]);
+
+        await UnifiedLogger.info(
+          "UserCacheService.deleteRecipe",
+          `Successfully canceled offline operations for recipe ${id}`,
+          {
+            canceledCreateOp: existingCreateOp.id,
+            removedFromCache: true,
+            noSyncRequired: true,
+          }
+        );
+
+        return; // Exit early - no sync needed
+      }
+
+      // Recipe exists on server - proceed with normal deletion (tombstone + delete operation)
       // Mark as deleted (tombstone)
       const deletedItem: SyncableItem<Recipe> = {
         ...existingItem,
@@ -557,11 +598,12 @@ export class UserCacheService {
 
       await UnifiedLogger.info(
         "UserCacheService.deleteRecipe",
-        `Created delete operation for recipe ${id}`,
+        `Created delete operation for synced recipe ${id}`,
         {
           operationId: operation.id,
           entityId: id,
           recipeName: existingItem.data.name || "Unknown",
+          requiresServerSync: true,
         }
       );
 
@@ -596,6 +638,91 @@ export class UserCacheService {
         throw error;
       }
       throw new OfflineError("Failed to delete recipe", "DELETE_ERROR", true);
+    }
+  }
+
+  /**
+   * Clone a recipe with offline support
+   */
+  static async cloneRecipe(recipeId: string, userId?: string): Promise<Recipe> {
+    try {
+      const currentUserId =
+        userId ?? (await UserValidationService.getCurrentUserIdFromToken());
+      if (!currentUserId) {
+        throw new OfflineError(
+          "User ID is required for cloning recipes",
+          "AUTH_ERROR",
+          false
+        );
+      }
+
+      await UnifiedLogger.info(
+        "UserCacheService.cloneRecipe",
+        `Starting recipe clone for user ${currentUserId}`,
+        {
+          userId: currentUserId,
+          recipeId,
+          timestamp: new Date().toISOString(),
+        }
+      );
+
+      // Get the recipe to clone
+      const cached = await this.getCachedRecipes(currentUserId);
+      const recipeToClone = cached.find(
+        item => item.id === recipeId || item.data.id === recipeId
+      );
+
+      if (!recipeToClone) {
+        throw new OfflineError("Recipe not found", "NOT_FOUND", false);
+      }
+
+      // Create cloned recipe data
+      const originalRecipe = recipeToClone.data;
+      const now = Date.now();
+      const tempId = `temp_${now}_${Math.random().toString(36).substr(2, 9)}`;
+
+      const clonedRecipeData: Recipe = {
+        ...originalRecipe,
+        id: tempId,
+        name: `${originalRecipe.name} (Copy)`,
+        user_id: currentUserId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_public: false, // Cloned recipes are always private initially
+        is_owner: true,
+        username: undefined,
+        original_author:
+          originalRecipe.username || originalRecipe.original_author,
+        version: 1,
+      };
+
+      // Create the cloned recipe using the existing create method
+      const clonedRecipe = await this.createRecipe(clonedRecipeData);
+
+      await UnifiedLogger.info(
+        "UserCacheService.cloneRecipe",
+        `Recipe cloned successfully`,
+        {
+          userId: currentUserId,
+          originalRecipeId: recipeId,
+          clonedRecipeId: clonedRecipe.id,
+          clonedRecipeName: clonedRecipe.name,
+        }
+      );
+
+      return clonedRecipe;
+    } catch (error) {
+      console.error("Error cloning recipe:", error);
+      if (error instanceof OfflineError) {
+        throw error;
+      }
+      throw new OfflineError(
+        `Failed to clone recipe: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        "CLONE_ERROR",
+        true
+      );
     }
   }
 
@@ -794,7 +921,7 @@ export class UserCacheService {
       // Find recipes with temp IDs that have no corresponding pending operation
       const stuckRecipes = cached.filter(recipe => {
         // Has temp ID but no needsSync flag or no corresponding pending operation
-        const hasTempId = recipe.id.startsWith("temp_") || recipe.tempId;
+        const hasTempId = recipe.id.startsWith("temp_");
         const hasNeedSync = recipe.needsSync;
         const hasPendingOp = pendingOps.some(
           op =>
@@ -1004,10 +1131,7 @@ export class UserCacheService {
           // Create a new pending operation for this recipe
           const operation: PendingOperation = {
             id: `fix_${recipe.id}_${Date.now()}`,
-            type:
-              recipe.tempId && !recipe.id.startsWith("temp_")
-                ? "update"
-                : "create",
+            type: "create",
             entityType: "recipe",
             entityId: recipe.id,
             userId: recipe.data.user_id,
@@ -1658,6 +1782,8 @@ export class UserCacheService {
     operation: PendingOperation
   ): Promise<{ realId?: string }> {
     try {
+      const { default: ApiService } = await import("@services/api/apiService");
+
       switch (operation.type) {
         case "create":
           if (operation.entityType === "recipe") {
@@ -2002,126 +2128,90 @@ export class UserCacheService {
       sanitized.mash_time = Number(sanitized.mash_time) || 0;
     }
 
-    // Sanitize ingredients array
+    // Sanitize ingredients array to match BrewTracker frontend format exactly
     if (sanitized.ingredients && Array.isArray(sanitized.ingredients)) {
       sanitized.ingredients = sanitized.ingredients.map(ingredient => {
-        const sanitizedIngredient = { ...ingredient };
+        // Extract the correct ingredient_id from either ingredient_id or complex id
+        let ingredientId = (ingredient as any).ingredient_id;
 
-        // Ensure amount is a valid number
+        // If no ingredient_id but we have a complex id, try to extract it
         if (
-          sanitizedIngredient.amount !== undefined &&
-          sanitizedIngredient.amount !== null
+          !ingredientId &&
+          ingredient.id &&
+          typeof ingredient.id === "string"
         ) {
-          sanitizedIngredient.amount = Number(sanitizedIngredient.amount) || 0;
+          // Try to extract ingredient_id from complex id format like "grain-687a59172023723cb876ba97-none-0"
+          const parts = ingredient.id.split("-");
+          if (parts.length >= 2) {
+            const potentialId = parts[1];
+            // Validate it looks like an ObjectID (24 hex characters)
+            if (/^[a-fA-F0-9]{24}$/.test(potentialId)) {
+              ingredientId = potentialId;
+            }
+          }
         }
 
-        // Ensure time is a valid integer
+        // Create clean ingredient object following BrewTracker frontend format exactly
+        // Only include fields that the backend expects, excluding UI-specific fields
+        const sanitizedIngredient: any = {};
+
+        // Only add ingredient_id if it's a valid ObjectID
         if (
-          sanitizedIngredient.time !== undefined &&
-          sanitizedIngredient.time !== null
+          ingredientId &&
+          typeof ingredientId === "string" &&
+          /^[a-fA-F0-9]{24}$/.test(ingredientId)
         ) {
-          sanitizedIngredient.time =
-            Math.floor(Number(sanitizedIngredient.time)) || 0;
+          sanitizedIngredient.ingredient_id = ingredientId;
         }
 
-        // Sanitize optional numeric fields
+        // Required fields
+        sanitizedIngredient.name = ingredient.name || "";
+        sanitizedIngredient.type = ingredient.type || "grain";
+        sanitizedIngredient.amount = Number(ingredient.amount) || 0;
+        sanitizedIngredient.unit = ingredient.unit || "lb";
+        sanitizedIngredient.use = ingredient.use || "mash";
+        sanitizedIngredient.time = Math.floor(Number(ingredient.time)) || 0;
+
+        // Optional fields - only add if they exist and are valid
         if (
-          sanitizedIngredient.potential !== undefined &&
-          sanitizedIngredient.potential !== null
+          ingredient.potential !== undefined &&
+          ingredient.potential !== null
         ) {
-          const potentialNum = Number(sanitizedIngredient.potential);
+          const potentialNum = Number(ingredient.potential);
           if (!isNaN(potentialNum)) {
             sanitizedIngredient.potential = potentialNum;
-          } else {
-            delete sanitizedIngredient.potential;
           }
         }
 
-        if (
-          sanitizedIngredient.color !== undefined &&
-          sanitizedIngredient.color !== null
-        ) {
-          const colorNum = Number(sanitizedIngredient.color);
+        if (ingredient.color !== undefined && ingredient.color !== null) {
+          const colorNum = Number(ingredient.color);
           if (!isNaN(colorNum)) {
             sanitizedIngredient.color = colorNum;
-          } else {
-            delete sanitizedIngredient.color;
           }
         }
 
+        if (ingredient.grain_type) {
+          sanitizedIngredient.grain_type = ingredient.grain_type;
+        }
+
         if (
-          sanitizedIngredient.alpha_acid !== undefined &&
-          sanitizedIngredient.alpha_acid !== null
+          ingredient.alpha_acid !== undefined &&
+          ingredient.alpha_acid !== null
         ) {
-          const alphaAcidNum = Number(sanitizedIngredient.alpha_acid);
+          const alphaAcidNum = Number(ingredient.alpha_acid);
           if (!isNaN(alphaAcidNum)) {
             sanitizedIngredient.alpha_acid = alphaAcidNum;
-          } else {
-            delete sanitizedIngredient.alpha_acid;
           }
         }
 
         if (
-          sanitizedIngredient.attenuation !== undefined &&
-          sanitizedIngredient.attenuation !== null
+          ingredient.attenuation !== undefined &&
+          ingredient.attenuation !== null
         ) {
-          const attenuationNum = Number(sanitizedIngredient.attenuation);
+          const attenuationNum = Number(ingredient.attenuation);
           if (!isNaN(attenuationNum)) {
             sanitizedIngredient.attenuation = attenuationNum;
-          } else {
-            delete sanitizedIngredient.attenuation;
           }
-        }
-
-        // Handle ingredient_id field - ensure it's a valid ObjectID or remove it
-        // Check both 'id' and 'ingredient_id' fields as they might be used differently
-        const ingredientIdValue =
-          (sanitizedIngredient as any).ingredient_id || sanitizedIngredient.id;
-
-        // Always remove ingredient_id first to start clean
-        delete (sanitizedIngredient as any).ingredient_id;
-
-        if (ingredientIdValue) {
-          // Check if it's a valid ObjectID format (24 character hex string)
-          if (
-            typeof ingredientIdValue === "string" &&
-            ingredientIdValue.length === 24 &&
-            /^[0-9a-fA-F]{24}$/.test(ingredientIdValue)
-          ) {
-            // Valid ObjectID, set it for the backend
-            (sanitizedIngredient as any).ingredient_id = ingredientIdValue;
-          } else {
-            console.warn(
-              `[UserCacheService.sanitizeRecipeUpdatesForAPI] Invalid ingredient_id removed: "${ingredientIdValue}" for ingredient: ${sanitizedIngredient.name}`
-            );
-            // Invalid ObjectID - don't set ingredient_id field
-            // The backend should handle ingredients without ingredient_id
-          }
-        }
-
-        // Additional cleanup - remove any numeric ingredient_id values that might slip through
-        if (
-          (sanitizedIngredient as any).ingredient_id === 1 ||
-          (sanitizedIngredient as any).ingredient_id === "1"
-        ) {
-          console.warn(
-            `[UserCacheService.sanitizeRecipeUpdatesForAPI] Removing invalid numeric ingredient_id "1" for ingredient: ${sanitizedIngredient.name}`
-          );
-          delete (sanitizedIngredient as any).ingredient_id;
-        }
-
-        // Ensure required string fields are present
-        if (!sanitizedIngredient.name) {
-          sanitizedIngredient.name = "";
-        }
-        if (!sanitizedIngredient.type) {
-          sanitizedIngredient.type = "grain";
-        }
-        if (!sanitizedIngredient.unit) {
-          sanitizedIngredient.unit = "lb";
-        }
-        if (!sanitizedIngredient.use) {
-          sanitizedIngredient.use = "mash";
         }
 
         return sanitizedIngredient;

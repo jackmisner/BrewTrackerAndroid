@@ -134,6 +134,23 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
     return result;
   }, [loadData]);
 
+  const clone = useCallback(
+    async (id: string): Promise<Recipe> => {
+      const userId = await getUserIdForOperations();
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+
+      const clonedRecipe = await UserCacheService.cloneRecipe(id, userId);
+
+      // Refresh data
+      await loadData(false);
+
+      return clonedRecipe;
+    },
+    [getUserIdForOperations, loadData]
+  );
+
   const refresh = useCallback(async (): Promise<void> => {
     const userIdForCache = await getUserIdForOperations();
     if (!userIdForCache) {
@@ -232,6 +249,7 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
     create,
     update,
     delete: deleteRecipe,
+    clone,
     sync,
     refresh,
   };
@@ -292,6 +310,13 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
     };
   }, []);
 
+  const clone = useCallback(async (_id: string): Promise<BrewSession> => {
+    // TODO: Implement brew session cloning when UserCacheService supports it
+    throw new Error(
+      "Brew session cloning not yet implemented in UserCacheService"
+    );
+  }, []);
+
   const refresh = useCallback(async (): Promise<void> => {
     // TODO: Implement when UserCacheService supports brew sessions
     // For now, do nothing since brew sessions are not implemented
@@ -307,6 +332,7 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
     create,
     update,
     delete: deleteSession,
+    clone,
     sync,
     refresh,
   };

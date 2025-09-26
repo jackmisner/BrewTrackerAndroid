@@ -3,7 +3,7 @@ import ApiService from "@services/api/apiService";
 import { RecipeFormData, RecipeMetrics } from "@src/types";
 import { useDebounce } from "./useDebounce";
 import { useNetwork } from "@contexts/NetworkContext";
-// Removed dependency on legacy OfflineMetricsCalculator
+import { OfflineMetricsCalculator } from "@services/brewing/OfflineMetricsCalculator";
 
 /**
  * Hook for calculating recipe metrics with offline support
@@ -85,7 +85,6 @@ export function useRecipeMetrics(
         debouncedRecipeData.batch_size <= 0 ||
         !debouncedRecipeData.ingredients.length
       ) {
-        console.warn("Invalid recipe data: Missing batch size or ingredients");
         return FALLBACK_METRICS;
       }
 
@@ -109,13 +108,44 @@ export function useRecipeMetrics(
             "API metrics calculation failed, using offline calculation:",
             error
           );
-          // Simple fallback metrics when API fails
+
+          // Try offline calculation instead of fallback values
+          try {
+            const validation =
+              OfflineMetricsCalculator.validateRecipeData(debouncedRecipeData);
+            if (validation.isValid) {
+              const calculatedMetrics =
+                OfflineMetricsCalculator.calculateMetrics(debouncedRecipeData);
+              return calculatedMetrics;
+            }
+          } catch (offlineError) {
+            console.error("Offline calculation also failed:", offlineError);
+          }
+
+          // Only use fallback if everything fails
           return FALLBACK_METRICS;
         }
       }
 
-      // Simple fallback metrics when offline
-      return FALLBACK_METRICS;
+      // Calculate metrics offline using brewing formulas
+      try {
+        const validation =
+          OfflineMetricsCalculator.validateRecipeData(debouncedRecipeData);
+        if (!validation.isValid) {
+          console.warn(
+            "Invalid recipe data for offline calculation:",
+            validation.errors
+          );
+          return FALLBACK_METRICS;
+        }
+
+        const calculatedMetrics =
+          OfflineMetricsCalculator.calculateMetrics(debouncedRecipeData);
+        return calculatedMetrics;
+      } catch (error) {
+        console.error("Offline metrics calculation failed:", error);
+        return FALLBACK_METRICS;
+      }
     },
 
     enabled: shouldEnable,

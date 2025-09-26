@@ -130,7 +130,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
 }) => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(
-    initialUnitSystem || "imperial"
+    initialUnitSystem || "metric"
   );
   const [loading, setLoading] = useState<boolean>(!initialUnitSystem);
   const [error, setError] = useState<string | null>(null);
@@ -208,7 +208,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
             try {
               const freshSettings = await ApiService.user.getSettings();
               const freshUnits: UnitSystem =
-                freshSettings.data.settings.preferred_units || "imperial";
+                freshSettings.data.settings.preferred_units || "metric";
               if (isMounted && freshUnits !== preferredUnits) {
                 setUnitSystem(freshUnits);
               }

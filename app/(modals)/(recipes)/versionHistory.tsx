@@ -36,6 +36,9 @@ export default function VersionHistoryScreen() {
 
   const { recipe_id } = useLocalSearchParams<{ recipe_id: string }>();
 
+  // Helper to check if recipe ID is temporary
+  const isTempId = (id: string) => id?.startsWith("temp_");
+
   // Query for version history
   const {
     data: versionHistoryData,
@@ -49,6 +52,15 @@ export default function VersionHistoryScreen() {
         throw new Error("No recipe ID provided");
       }
 
+      // Skip API call for temporary IDs - version history doesn't exist for offline recipes
+      if (isTempId(recipe_id)) {
+        console.log(
+          "🔍 Version History - Skipping API call for temp ID:",
+          recipe_id
+        );
+        throw new Error("Version history not available for offline recipes");
+      }
+
       try {
         const response = await ApiService.recipes.getVersionHistory(recipe_id);
 
@@ -58,7 +70,7 @@ export default function VersionHistoryScreen() {
         throw error;
       }
     },
-    enabled: !!recipe_id,
+    enabled: !!recipe_id && !isTempId(recipe_id || ""),
     retry: 1,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
@@ -74,10 +86,20 @@ export default function VersionHistoryScreen() {
       if (!recipe_id) {
         throw new Error("No recipe ID provided");
       }
+
+      // Skip API call for temporary IDs - use offline cache instead
+      if (isTempId(recipe_id)) {
+        console.log(
+          "🔍 Version History - Skipping recipe API call for temp ID:",
+          recipe_id
+        );
+        throw new Error("Recipe not available from API for offline recipes");
+      }
+
       const response = await ApiService.recipes.getById(recipe_id);
       return response.data;
     },
-    enabled: !!recipe_id,
+    enabled: !!recipe_id && !isTempId(recipe_id || ""),
     retry: 1,
     staleTime: 1000 * 60 * 5,
   });

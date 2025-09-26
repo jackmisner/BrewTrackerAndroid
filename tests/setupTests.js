@@ -133,7 +133,10 @@ jest.mock("expo-file-system", () => {
       const prefix = this.uri.endsWith("/") ? this.uri : this.uri + "/";
       return Array.from(__fs.keys())
         .filter(u => u.startsWith(prefix))
-        .map(u => u.slice(prefix.length));
+        .map(u => {
+          const filename = u.slice(prefix.length);
+          return new File(this.uri, filename);
+        });
     }
   }
 
@@ -166,6 +169,9 @@ jest.mock("expo-file-system", () => {
     },
   };
 });
+
+// Mock expo-file-system/next alias (for next API compatibility)
+jest.mock("expo-file-system/next", () => jest.requireMock("expo-file-system"));
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   getItem: jest.fn(),
