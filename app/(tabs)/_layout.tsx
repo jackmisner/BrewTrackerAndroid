@@ -1,3 +1,35 @@
+/**
+ * Tab Layout Component
+ *
+ * Main navigation layout for the BrewTracker app using Expo Router tabs.
+ * Provides bottom tab navigation between the core app sections with
+ * themed styling and network status integration.
+ *
+ * Features:
+ * - Five main tabs: Dashboard, Recipes, Brewing, Utilities, Profile
+ * - Themed tab bar with adaptive colors
+ * - Material Icons for consistent visual design
+ * - Network status indicator in header
+ * - Responsive tab bar height and padding
+ * - Active/inactive state styling
+ *
+ * Navigation Structure:
+ * - Dashboard (index): Home screen with overview
+ * - Recipes: Recipe management and browsing
+ * - Brewing: Brew session tracking and fermentation
+ * - Utilities: Calculator tools and utilities
+ * - Profile: User settings and account management
+ *
+ * @example
+ * This layout is automatically used by Expo Router for the /(tabs) group
+ * ```typescript
+ * // Files in app/(tabs)/ automatically use this layout
+ * app/(tabs)/index.tsx     // Dashboard tab
+ * app/(tabs)/recipes.tsx   // Recipes tab
+ * app/(tabs)/utilities.tsx // Utilities tab
+ * ```
+ */
+
 import React from "react";
 import { Tabs } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";

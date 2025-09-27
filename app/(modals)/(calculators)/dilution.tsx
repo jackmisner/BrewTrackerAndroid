@@ -1,3 +1,31 @@
+/**
+ * Dilution Calculator Screen
+ *
+ * Calculator screen for diluting beer by determining how much water to add
+ * to reduce gravity from current level to target level. Essential for
+ * adjusting beer strength and volume during brewing process.
+ *
+ * Features:
+ * - Current gravity, target gravity, and volume inputs
+ * - Real-time calculation of water needed and final volume
+ * - Input validation with error handling
+ * - Themed calculator card layout
+ * - Modal header with navigation
+ * - Auto-calculation on input changes
+ * - State management via CalculatorsContext
+ *
+ * Calculations:
+ * - Water needed = (Current Volume × (Current Gravity - Target Gravity)) / (Target Gravity - 1.000)
+ * - Final volume = Current Volume + Water needed
+ * - Validates that target gravity is less than current gravity
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push('/(modals)/(calculators)/dilution');
+ * ```
+ */
+
 import React, { useEffect, useCallback } from "react";
 import { View, ScrollView } from "react-native";
 import { useCalculators } from "@contexts/CalculatorsContext";

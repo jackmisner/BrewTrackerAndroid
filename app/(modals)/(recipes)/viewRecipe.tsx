@@ -67,7 +67,7 @@ export default function ViewRecipeScreen() {
     isLoading,
     error,
     refetch,
-  } = useQuery<Recipe>({
+  } = useQuery<Recipe | null>({
     queryKey: QUERY_KEYS.RECIPE(recipe_id!), // Unique key per recipe
     queryFn: async () => {
       if (!recipe_id) {
@@ -92,7 +92,8 @@ export default function ViewRecipeScreen() {
             `Found recipe ${recipe_id} in V2 cache${isDeleted ? " (deleted)" : ""}`
           );
           if (isDeleted) {
-            throw new Error(`Recipe was deleted`);
+            console.log(`Recipe ${recipe_id} was deleted`);
+            return null;
           }
           return cachedRecipe;
         }
@@ -140,7 +141,8 @@ export default function ViewRecipeScreen() {
           );
         }
 
-        throw new Error(`Recipe with ID ${recipe_id} not found`);
+        console.log(`Recipe with ID ${recipe_id} not found in V2 cache or legacy system`);
+        return null;
       } catch (error) {
         console.error(`Failed to load recipe ${recipe_id}:`, error);
         throw error;

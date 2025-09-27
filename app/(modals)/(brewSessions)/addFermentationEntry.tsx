@@ -1,3 +1,44 @@
+/**
+ * Add Fermentation Entry Screen
+ *
+ * Modal screen for adding fermentation data points to brew sessions.
+ * Allows users to record gravity readings, temperature, and notes
+ * to track fermentation progress over time.
+ *
+ * Features:
+ * - Brew session context loading and display
+ * - Date/time picker for entry timestamp
+ * - Specific gravity input with validation
+ * - Temperature recording with unit awareness
+ * - Optional notes for observations
+ * - Form validation with brewing-appropriate ranges
+ * - Real-time API integration with React Query
+ * - Loading states and error handling
+ * - Navigation back to brew session details
+ * - Keyboard-aware layout
+ * - Test ID support for automated testing
+ *
+ * Data Validation:
+ * - Gravity: 0.990-1.200 range (covers fermentation span)
+ * - Temperature: Reasonable brewing temperature ranges
+ * - Date: Cannot be in the future
+ * - Required fields: gravity, date
+ *
+ * Flow:
+ * 1. User navigates from brew session details
+ * 2. Brew session context is loaded
+ * 3. User enters fermentation data
+ * 4. Form validation ensures data quality
+ * 5. Submit creates fermentation entry via API
+ * 6. Success navigates back with cache invalidation
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push('/(modals)/(brewSessions)/addFermentationEntry?brewSessionId=123');
+ * ```
+ */
+
 import React, { useState } from "react";
 import {
   View,
@@ -10,7 +51,9 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -41,7 +84,6 @@ export default function AddFermentationEntryScreen() {
   const [entryDate, setEntryDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [isAuthorizing, setIsAuthorizing] = useState(false);
 
   // Fetch brew session data to get temperature unit
   const { data: brewSession } = useQuery<BrewSession>({
@@ -79,14 +121,17 @@ export default function AddFermentationEntryScreen() {
 
   const validateForm = (): boolean => {
     const errors: string[] = [];
-
+    // Date must not be in the future
+    if (entryDate > new Date()) {
+      errors.push("Entry date cannot be in the future");
+    }
     // Gravity validation
     if (!formData.gravity.trim()) {
       errors.push("Gravity is required");
     } else {
       const gravity = parseFloat(formData.gravity);
-      if (isNaN(gravity) || gravity < 0.8 || gravity > 1.2) {
-        errors.push("Gravity must be between 0.800 and 1.200");
+      if (isNaN(gravity) || gravity < 0.99 || gravity > 1.2) {
+        errors.push("Gravity must be between 0.990 and 1.200");
       }
     }
 
@@ -131,11 +176,11 @@ export default function AddFermentationEntryScreen() {
       return;
     }
 
-    // Block re-entrancy during auth check or in-flight mutation
-    if (isAuthorizing || addEntryMutation.isPending) {
+    // Block re-entrancy during in-flight mutation
+    if (addEntryMutation.isPending) {
       return;
     }
-    setIsAuthorizing(true);
+
     try {
       // Validate user permissions for fermentation entry creation
       if (!brewSession?.user_id) {
@@ -180,13 +225,15 @@ export default function AddFermentationEntryScreen() {
         ...(formData.notes.trim() && { notes: formData.notes.trim() }),
       };
 
-      // Log fermentation entry creation for security monitoring
-      console.log("📊 Adding fermentation entry:", {
-        brewSessionId,
-        brewSessionName: brewSession?.name,
-        hasBrewSessionUserId: !!brewSession?.user_id,
-        entryDate: entryData.entry_date,
-      });
+      // Dev-only diagnostics (avoid PII in production)
+      if (__DEV__) {
+        console.log("📊 Adding fermentation entry:", {
+          brewSessionId,
+          brewSessionName: brewSession?.name,
+          hasBrewSessionUserId: !!brewSession?.user_id,
+          entryDate: entryData.entry_date,
+        });
+      }
 
       try {
         await addEntryMutation.mutateAsync(entryData);
@@ -194,11 +241,14 @@ export default function AddFermentationEntryScreen() {
         // Handled by onError in the mutation options
       }
     } finally {
-      setIsAuthorizing(false);
+      // no-op
     }
   };
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
+  const handleDateChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date
+  ) => {
     setShowDatePicker(false);
     if (selectedDate) {
       setEntryDate(selectedDate);
@@ -227,7 +277,7 @@ export default function AddFermentationEntryScreen() {
               addEntryMutation.isPending && styles.saveButtonDisabled,
             ]}
             onPress={handleSave}
-            disabled={addEntryMutation.isPending || isAuthorizing}
+            disabled={addEntryMutation.isPending}
             testID={TEST_IDS.buttons.saveButton}
           >
             {addEntryMutation.isPending ? (

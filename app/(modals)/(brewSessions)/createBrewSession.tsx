@@ -1,3 +1,38 @@
+/**
+ * Create Brew Session Screen
+ *
+ * Modal screen for creating new brew sessions from recipes. Allows users to
+ * start tracking fermentation for a specific recipe with customizable brew
+ * date and optional notes. Integrates with recipe data and validation.
+ *
+ * Features:
+ * - Recipe selection via URL parameter or query
+ * - Recipe details display with formatted metrics
+ * - Brew date selection with date picker
+ * - Optional brew notes input
+ * - Form validation with user validation hooks
+ * - Real-time API integration with React Query
+ * - Loading states and error handling
+ * - Navigation back to brew sessions list
+ * - Keyboard-aware layout
+ * - Test ID support for automated testing
+ *
+ * Flow:
+ * 1. User navigates from recipe or brew sessions list
+ * 2. Recipe is loaded and displayed (if ID provided)
+ * 3. User selects brew date (defaults to today)
+ * 4. User optionally adds brew notes
+ * 5. Form validation ensures required fields
+ * 6. Submit creates brew session via API
+ * 7. Success navigates back to brew sessions list
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push('/(modals)/(brewSessions)/createBrewSession?recipeId=123');
+ * ```
+ */
+
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -34,6 +69,26 @@ function toLocalISODateString(d: Date) {
   const day = String(d.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+
+const parseIsoDate = (iso: string) => {
+  if (!iso) {
+    return new Date();
+  }
+  const [datePart] = iso.split("T");
+  const [year, month, day] = (datePart ?? "").split("-").map(Number);
+  if (
+    typeof year === "number" &&
+    !Number.isNaN(year) &&
+    typeof month === "number" &&
+    !Number.isNaN(month)
+  ) {
+    const safeDay = typeof day === "number" && !Number.isNaN(day) ? day : 1;
+    return new Date(year, month - 1, safeDay);
+  }
+  const fallback = new Date(iso);
+  return Number.isNaN(fallback.getTime()) ? new Date() : fallback;
+};
+const formatBrewDate = (iso: string) => parseIsoDate(iso).toLocaleDateString();
 
 /**
  * Screen for creating a new brew session from a selected recipe.
@@ -454,7 +509,7 @@ export default function CreateBrewSessionScreen() {
               testID={TEST_IDS.patterns.touchableOpacityAction("date-picker")}
             >
               <Text style={styles.datePickerText}>
-                {new Date(formData.brew_date).toLocaleDateString()}
+                {formatBrewDate(formData.brew_date)}
               </Text>
               <MaterialIcons
                 name="date-range"
@@ -464,7 +519,7 @@ export default function CreateBrewSessionScreen() {
             </TouchableOpacity>
             {showDatePicker ? (
               <DateTimePicker
-                value={new Date(formData.brew_date)}
+                value={parseIsoDate(formData.brew_date)}
                 mode="date"
                 display="default"
                 onChange={handleDateChange}

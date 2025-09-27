@@ -413,7 +413,7 @@ describe("AddFermentationEntryScreen", () => {
 
       // Assert validation error is displayed
       expect(
-        queryByText(/Gravity must be between 0.800 and 1.200/i)
+        queryByText(/Gravity must be between 0.990 and 1.200/i)
       ).toBeTruthy();
 
       // Test valid gravity value
@@ -424,7 +424,7 @@ describe("AddFermentationEntryScreen", () => {
       fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
       // Validation error should be cleared
       expect(
-        queryByText(/Gravity must be between 0.800 and 1.200/i)
+        queryByText(/Gravity must be between 0.990 and 1.200/i)
       ).toBeFalsy();
     });
 

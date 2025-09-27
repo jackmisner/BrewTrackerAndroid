@@ -1,3 +1,41 @@
+/**
+ * Settings Screen
+ *
+ * Comprehensive app settings and preferences management screen. Provides
+ * centralized control over app behavior, appearance, units, caching, and
+ * developer features. Includes data management capabilities and cache controls.
+ *
+ * Features:
+ * - Theme selection (light, dark, system)
+ * - Unit system preferences (metric, imperial)
+ * - Cache management and data clearing
+ * - Static data cache statistics and controls
+ * - Developer mode features and network simulation
+ * - App version and build information
+ * - Settings persistence across app restarts
+ * - Loading states and error handling
+ * - Confirmation dialogs for destructive actions
+ *
+ * Settings Categories:
+ * - **Appearance**: Theme mode selection with system preference detection
+ * - **Units**: Measurement system preferences for recipes and calculations
+ * - **Data**: Cache management, static data refresh, and storage clearing
+ * - **Developer**: Advanced features for testing and debugging
+ * - **About**: App version, build info, and system information
+ *
+ * State Management:
+ * - Theme: ThemeContext with AsyncStorage persistence
+ * - Units: UnitContext with preference synchronization
+ * - Developer: DeveloperContext with feature flags
+ * - Cache: StaticDataService for offline data management
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push('/(modals)/(settings)/settings');
+ * ```
+ */
+
 import React from "react";
 import {
   View,

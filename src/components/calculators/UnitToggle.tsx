@@ -1,16 +1,77 @@
+/**
+ * UnitToggle and DropdownToggle Components
+ *
+ * Flexible unit selection components for calculator screens. UnitToggle
+ * provides a segmented control style for 2-3 options, while DropdownToggle
+ * offers a modal picker for larger option sets.
+ *
+ * Features:
+ * - Segmented control design with active state highlighting
+ * - Modal dropdown with search and selection capabilities
+ * - Optional labels and descriptions for options
+ * - Disabled state support
+ * - Themed styling with adaptive colors
+ * - Test ID integration for automated testing
+ * - Touch-friendly design with proper hit targets
+ *
+ * @example
+ * UnitToggle for temperature units:
+ * ```typescript
+ * <UnitToggle
+ *   label="Temperature Unit"
+ *   value={tempUnit}
+ *   onChange={setTempUnit}
+ *   options={[
+ *     { label: "°F", value: "f", description: "Fahrenheit" },
+ *     { label: "°C", value: "c", description: "Celsius" }
+ *   ]}
+ * />
+ * ```
+ *
+ * @example
+ * DropdownToggle for formula selection:
+ * ```typescript
+ * <DropdownToggle
+ *   label="Calculation Method"
+ *   value={formula}
+ *   onChange={setFormula}
+ *   options={[
+ *     { label: "Simple", value: "simple", description: "Standard formula" },
+ *     { label: "Advanced", value: "advanced", description: "More accurate" }
+ *   ]}
+ * />
+ * ```
+ */
+
 import React from "react";
-import { View, Text, TouchableOpacity, ViewStyle } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ViewStyle,
+  StyleProp,
+} from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { TEST_IDS } from "@constants/testIDs";
 import { unitToggleStyles } from "@styles/components/calculators/unitToggleStyles";
 
+/**
+ * Props for the UnitToggle component
+ * @interface UnitToggleProps
+ */
 interface UnitToggleProps {
+  /** Currently selected value */
   value: string;
-  options: Array<{ label: string; value: string; description?: string }>;
+  /** Array of selectable options with labels and values */
+  options: { label: string; value: string; description?: string }[];
+  /** Callback fired when selection changes */
   onChange: (value: string) => void;
-  style?: ViewStyle;
+  /** Additional styles for the container */
+  style?: StyleProp<ViewStyle>;
+  /** Optional label displayed above the toggle */
   label?: string;
+  /** Whether the component is disabled */
   disabled?: boolean;
 }
 
@@ -90,9 +151,9 @@ export function UnitToggle({
 
 interface DropdownToggleProps {
   value: string;
-  options: Array<{ label: string; value: string; description?: string }>;
+  options: { label: string; value: string; description?: string }[];
   onChange: (value: string) => void;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   label?: string;
   placeholder?: string;
   disabled?: boolean;

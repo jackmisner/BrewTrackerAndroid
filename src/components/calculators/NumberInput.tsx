@@ -1,3 +1,54 @@
+/**
+ * NumberInput Component
+ *
+ * Advanced numeric input component designed for calculator screens and forms
+ * requiring precise numeric input with validation, step controls, and units.
+ * Supports both hard and soft validation modes for flexible user experience.
+ *
+ * Features:
+ * - Numeric input with automatic formatting and validation
+ * - Step up/down controls with configurable precision
+ * - Unit display with optional toggle functionality
+ * - Hard validation: Enforces min/max bounds at input level
+ * - Soft validation: Allows input with warning messages
+ * - Normal range warnings for values outside typical ranges
+ * - Error and helper text display with color coding
+ * - Themed styling with border color feedback
+ * - Disabled state support
+ * - Test ID integration for automated testing
+ *
+ * @example
+ * Basic usage:
+ * ```typescript
+ * <NumberInput
+ *   label="Temperature"
+ *   value={temperature}
+ *   onChangeText={setTemperature}
+ *   unit="°F"
+ *   min={32}
+ *   max={212}
+ *   step={1}
+ *   precision={1}
+ * />
+ * ```
+ *
+ * @example
+ * Soft validation with warning ranges:
+ * ```typescript
+ * <NumberInput
+ *   label="Gravity"
+ *   value={gravity}
+ *   onChangeText={setGravity}
+ *   validationMode="soft"
+ *   min={1.000}
+ *   max={1.150}
+ *   normalMin={1.020}
+ *   normalMax={1.120}
+ *   warningText="OG outside typical brewing range (1.020-1.120). Valid for low/no-alcohol brewing."
+ * />
+ * ```
+ */
+
 import React from "react";
 import {
   View,
@@ -11,22 +62,49 @@ import { useTheme } from "@contexts/ThemeContext";
 import { TEST_IDS } from "@constants/testIDs";
 import { numberInputStyles } from "@styles/components/calculators/numberInputStyles";
 
+/**
+ * Props for the NumberInput component
+ * @interface NumberInputProps
+ */
 interface NumberInputProps {
+  /** Input label displayed above the field */
   label: string;
+  /** Current input value as string */
   value: string;
+  /** Callback fired when input value changes */
   onChangeText: (text: string) => void;
+  /** Placeholder text for empty input */
   placeholder?: string;
+  /** Unit label displayed as button (e.g., "°F", "gal") */
   unit?: string;
+  /** Callback fired when unit button is pressed (enables unit toggle) */
   onUnitPress?: () => void;
+  /** Minimum allowed value (enforced based on validationMode) */
   min?: number;
+  /** Maximum allowed value (enforced based on validationMode) */
   max?: number;
+  /** Step increment for +/- buttons (default: 0.1) */
   step?: number;
+  /** Decimal precision for display (default: 2) */
   precision?: number;
+  /** Additional styles for the container */
   style?: ViewStyle;
+  /** Whether the input is disabled */
   disabled?: boolean;
+  /** Helper text displayed below input when no errors */
   helperText?: string;
+  /** Error message displayed below input (overrides helperText) */
   error?: string;
+  /** Test ID for automated testing */
   testID?: string;
+  /** Validation mode: "hard" enforces bounds immediately, "soft" allows input with warnings */
+  validationMode?: "hard" | "soft";
+  /** Lower bound for "normal" range (triggers warning in soft mode) */
+  normalMin?: number;
+  /** Upper bound for "normal" range (triggers warning in soft mode) */
+  normalMax?: number;
+  /** Custom warning message for out-of-normal range values */
+  warningText?: string;
 }
 
 export function NumberInput({
@@ -45,9 +123,29 @@ export function NumberInput({
   helperText,
   error,
   testID,
+  validationMode = "hard",
+  normalMin,
+  normalMax,
+  warningText,
 }: NumberInputProps) {
   const theme = useTheme();
 
+  /**
+   * Truncates a number to specified precision without rounding
+   * @param num - Number to truncate
+   * @param precision - Number of decimal places
+   * @returns Truncated number as string
+   */
+  const truncateToFixedPrecision = (num: number, precision: number): string => {
+    const factor = Math.pow(10, precision);
+    const truncated = Math.trunc(num * factor) / factor;
+    return truncated.toFixed(precision);
+  };
+
+  /**
+   * Increases the input value by the step amount
+   * Respects min/max bounds and precision settings
+   */
   const handleStepUp = () => {
     const currentValue = parseFloat(value);
     const base = Number.isFinite(currentValue) ? currentValue : (min ?? 0);
@@ -60,9 +158,14 @@ export function NumberInput({
     onChangeText(clamped.toFixed(precision));
   };
 
+  /**
+   * Decreases the input value by the step amount
+   * Respects min/max bounds and precision settings
+   */
   const handleStepDown = () => {
-    const currentValue = parseFloat(value) || 0;
-    const next = currentValue - step;
+    const currentValue = parseFloat(value);
+    const base = Number.isFinite(currentValue) ? currentValue : (min ?? 0);
+    const next = base - step;
     const rounded = Number(next.toFixed(precision)); // round first
     const clamped = Math.max(
       min ?? -Infinity,
@@ -71,6 +174,11 @@ export function NumberInput({
     onChangeText(clamped.toFixed(precision));
   };
 
+  /**
+   * Handles text input changes with validation and cleaning
+   * Removes invalid characters and applies validation based on mode
+   * @param text - Raw input text from TextInput
+   */
   const handleTextChange = (text: string) => {
     // Remove non-numeric characters, allowing only valid number patterns
     let cleanedText = text.replace(/[^\d.-]/g, "");
@@ -89,24 +197,87 @@ export function NumberInput({
       cleanedText = cleanedText.replace(/-/g, "");
     }
 
-    // Enforce min/max bounds at input level
-    if (cleanedText && cleanedText !== "-" && cleanedText !== ".") {
-      const numValue = parseFloat(cleanedText);
-      if (isFinite(numValue)) {
-        if (min !== undefined && numValue < min) {
-          cleanedText = min.toString();
-        } else if (max !== undefined && numValue > max) {
-          cleanedText = max.toString();
+    // Apply validation based on mode
+    if (validationMode === "hard") {
+      // Hard mode: Enforce min/max bounds at input level (original behavior)
+      if (cleanedText && cleanedText !== "-" && cleanedText !== ".") {
+        const numValue = parseFloat(cleanedText);
+        if (Number.isFinite(numValue)) {
+          if (min !== undefined && numValue < min) {
+            cleanedText = truncateToFixedPrecision(min, precision);
+          } else if (max !== undefined && numValue > max) {
+            cleanedText = truncateToFixedPrecision(max, precision);
+          }
         }
       }
     }
+    // Soft mode: Allow all input, warnings will be shown below
 
     onChangeText(cleanedText);
   };
 
-  const inputBorderColor = error
-    ? theme.colors.error
-    : theme.colors.borderLight;
+  /**
+   * Determines the current validation state and message
+   * Returns error/warning state based on validation mode and ranges
+   * @returns Validation state object or null if no issues
+   */
+  const getValidationState = () => {
+    if (error) {
+      return { type: "error", message: error };
+    }
+
+    if (validationMode === "soft" && value && value !== "-" && value !== ".") {
+      const numValue = parseFloat(value);
+      if (isFinite(numValue)) {
+        // Check absolute bounds (still enforce absolute limits)
+        if (min !== undefined && numValue < min) {
+          return {
+            type: "error",
+            message: `Value must be at least ${(min as number).toFixed(precision)}`,
+          };
+        }
+        if (max !== undefined && numValue > max) {
+          return {
+            type: "error",
+            message: `Value must be no more than ${(max as number).toFixed(precision)}`,
+          };
+        }
+
+        // Check normal range (show warnings)
+        if (normalMin !== undefined && numValue < normalMin) {
+          return {
+            type: "warning",
+            message:
+              warningText ||
+              (normalMax !== undefined
+                ? `Value below typical range (${normalMin.toFixed(precision)} - ${normalMax.toFixed(precision)})`
+                : `Value below typical minimum (${normalMin.toFixed(precision)})`),
+          };
+        }
+        if (normalMax !== undefined && numValue > normalMax) {
+          return {
+            type: "warning",
+            message:
+              warningText ||
+              (normalMin !== undefined
+                ? `Value above typical range (${normalMin.toFixed(precision)} - ${normalMax.toFixed(precision)})`
+                : `Value above typical maximum (${normalMax.toFixed(precision)})`),
+          };
+        }
+      }
+    }
+
+    return null;
+  };
+
+  const validationState = getValidationState();
+
+  const inputBorderColor =
+    validationState?.type === "error"
+      ? theme.colors.error
+      : validationState?.type === "warning"
+        ? theme.colors.warning
+        : theme.colors.borderLight;
 
   return (
     <View style={[numberInputStyles.container, style]}>
@@ -218,15 +389,25 @@ export function NumberInput({
         </View>
       </View>
 
-      {error && (
+      {validationState && (
         <Text
-          style={[numberInputStyles.helperText, { color: theme.colors.error }]}
+          style={[
+            numberInputStyles.helperText,
+            {
+              color:
+                validationState.type === "error"
+                  ? theme.colors.error
+                  : validationState.type === "warning"
+                    ? theme.colors.warning
+                    : theme.colors.textSecondary,
+            },
+          ]}
         >
-          {error}
+          {validationState.message}
         </Text>
       )}
 
-      {helperText && !error && (
+      {helperText && !validationState && (
         <Text
           style={[
             numberInputStyles.helperText,

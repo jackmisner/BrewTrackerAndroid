@@ -1,3 +1,36 @@
+/**
+ * Strike Water Calculator Screen
+ *
+ * Mash strike water temperature calculator that determines the correct
+ * water temperature needed to achieve target mash temperature when
+ * combined with grain. Essential for all-grain brewing processes.
+ *
+ * Features:
+ * - Grain weight input with multiple unit support (lb, kg, oz)
+ * - Target mash temperature with °F/°C conversion
+ * - Grain temperature input for accuracy
+ * - Water-to-grain ratio selection with presets
+ * - Real-time strike temperature calculation
+ * - Mash thermal mass calculations
+ * - Input validation with brewing-appropriate ranges
+ * - Themed calculator card layout
+ * - Modal header with navigation
+ * - Auto-calculation on input changes
+ * - State management via CalculatorsContext
+ *
+ * Calculations:
+ * - Strike temp = (Target temp - (Grain temp × 0.4)) / (1 - 0.4)
+ * - Accounts for thermal mass of grain and mash tun
+ * - Water ratio affects heat transfer efficiency
+ * - Typical ranges: Strike temp 165-212°F, target mash 148-158°F
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push('/(modals)/(calculators)/strikeWater');
+ * ```
+ */
+
 import React, { useEffect, useCallback } from "react";
 import { View, ScrollView } from "react-native";
 import { useCalculators } from "@contexts/CalculatorsContext";
@@ -14,17 +47,26 @@ import { useTheme } from "@contexts/ThemeContext";
 import { UnitConverter } from "@/src/services/calculators/UnitConverter";
 import { calculatorScreenStyles } from "@styles/modals/calculators/calculatorScreenStyles";
 
+/**
+ * Temperature unit options for the calculator
+ */
 const TEMP_UNIT_OPTIONS = [
   { label: "°F", value: "f" as const, description: "Fahrenheit" },
   { label: "°C", value: "c" as const, description: "Celsius" },
 ];
 
+/**
+ * Weight unit options for grain measurement
+ */
 const WEIGHT_UNIT_OPTIONS = [
   { label: "lb", value: "lb", description: "Pounds" },
   { label: "kg", value: "kg", description: "Kilograms" },
   { label: "oz", value: "oz", description: "Ounces" },
 ];
 
+/**
+ * Common water-to-grain ratio presets for mashing
+ */
 const WATER_RATIOS = [
   { label: "1.0 qt/lb", value: "1.0", description: "Thick mash" },
   {

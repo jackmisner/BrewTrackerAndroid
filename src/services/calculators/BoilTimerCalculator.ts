@@ -1,31 +1,87 @@
+/**
+ * Boil Timer Calculator
+ *
+ * Advanced brewing timer that converts recipes into structured boil schedules
+ * with hop addition timing, alerts, and progress tracking. Handles complex
+ * hop scheduling logic and ingredient timing calculations.
+ *
+ * Features:
+ * - Recipe-to-timer conversion with automatic schedule generation
+ * - Hop addition timing with countdown calculations
+ * - Multiple ingredient type support (hops, additions, finings)
+ * - Real-time progress tracking with completion states
+ * - Alert scheduling for time-critical additions
+ * - Flexible timer duration with recipe-specific boil times
+ * - State persistence for timer continuation across app sessions
+ *
+ * Calculations:
+ * - Hop timing: Converts recipe hop times to boil countdown format
+ * - Schedule sorting: Orders additions by time for logical presentation
+ * - Duration handling: Manages total boil time vs. addition timing
+ * - Progress tracking: Calculates completion percentages and remaining time
+ *
+ * @example
+ * Converting recipe to timer schedule:
+ *
+ */
+
 import { Recipe, RecipeIngredient } from "@src/types";
 
+/**
+ * Individual hop addition timing and metadata
+ * @interface HopAddition
+ */
 export interface HopAddition {
+  /** Time in minutes when hop should be added (countdown from boil start) */
   time: number;
+  /** Hop variety name */
   name: string;
+  /** Amount to add */
   amount: number;
+  /** Unit of measurement (oz, g, etc.) */
   unit: string;
+  /** Whether this addition has been completed */
   added?: boolean;
+  /** Hop usage type (boil, whirlpool, dry-hop) */
   use?: string;
+  /** Alpha acid percentage for IBU calculations */
   alpha_acid?: number;
+  /** Whether an alert has been scheduled for this addition */
+  alertScheduled?: boolean;
 }
 
+/**
+ * Complete boil timer schedule with all ingredients
+ * @interface BoilTimerResult
+ */
 export interface BoilTimerResult {
+  /** Total boil duration in minutes */
   duration: number;
+  /** Ordered list of hop additions */
   hopSchedule: HopAddition[];
-  otherSchedule: Array<{
+  /** Other ingredient additions (finings, etc.) */
+  otherSchedule: {
     time: number;
     description: string;
     added?: boolean;
-  }>;
+  }[];
 }
 
+/**
+ * Recipe timer data with alert management
+ * @interface RecipeTimerData
+ */
 export interface RecipeTimerData {
+  /** Source recipe identifier */
   recipeId: string;
+  /** Recipe name for display */
   recipeName: string;
+  /** Beer style for context */
   recipeStyle: string;
+  /** Total boil time in minutes */
   boilTime: number;
-  hopAlerts: Array<{
+  /** Hop alerts with completion tracking */
+  hopAlerts: {
     time: number;
     name: string;
     amount: number;
@@ -34,14 +90,20 @@ export interface RecipeTimerData {
     alertScheduled: boolean;
     use?: string;
     alpha_acid?: number;
-  }>;
+  }[];
 }
 
+/**
+ * Boil Timer Calculator Class
+ *
+ * Handles conversion of brewing recipes into structured timer schedules
+ * with precise timing calculations and ingredient management.
+ */
 export class BoilTimerCalculator {
   public static calculate(
     duration: number,
     hopAdditions: HopAddition[] = [],
-    otherAdditions: Array<{ time: number; description: string }> = []
+    otherAdditions: { time: number; description: string }[] = []
   ): BoilTimerResult {
     if (duration <= 0) {
       throw new Error("Duration must be greater than 0");
@@ -52,6 +114,7 @@ export class BoilTimerCalculator {
       hopSchedule: hopAdditions.map(hop => ({
         ...hop,
         added: false,
+        alertScheduled: false,
       })),
       otherSchedule: otherAdditions.map(addition => ({
         ...addition,
@@ -86,7 +149,7 @@ export class BoilTimerCalculator {
   /**
    * Extract and validate hop schedule from recipe ingredients
    */
-  public static getHopSchedule(recipe: Recipe): Array<{
+  public static getHopSchedule(recipe: Recipe): {
     time: number;
     name: string;
     amount: number;
@@ -95,7 +158,7 @@ export class BoilTimerCalculator {
     alertScheduled: boolean;
     use?: string;
     alpha_acid?: number;
-  }> {
+  }[] {
     // Filter hop ingredients
     const hopIngredients = recipe.ingredients.filter(
       (ingredient: RecipeIngredient) => ingredient.type === "hop"
@@ -141,11 +204,11 @@ export class BoilTimerCalculator {
   /**
    * Generate automatic boil additions for common brewing additives
    */
-  public static getDefaultBoilAdditions(boilTime: number): Array<{
+  public static getDefaultBoilAdditions(boilTime: number): {
     time: number;
     description: string;
     added: boolean;
-  }> {
+  }[] {
     const additions = [];
 
     // Add whirlfloc/irish moss at 15min if boil is long enough
@@ -180,13 +243,21 @@ export class BoilTimerCalculator {
    * Calculate when to alert for hop additions (30 seconds before)
    */
   public static getHopAlertTimes(
-    hopSchedule: HopAddition[]
+    hopSchedule: HopAddition[],
+    boilDuration: number = 60
   ): Map<number, HopAddition[]> {
     const alertMap = new Map<number, HopAddition[]>();
+    const boilDurationSeconds = boilDuration * 60;
 
     hopSchedule.forEach(hop => {
-      // Alert 30 seconds before addition time
-      const alertTime = hop.time * 60 + 30; // Convert to seconds and add 30 second buffer
+      // Alert 30 seconds before the countdown reaches the hop addition time
+      let alertTime = hop.time * 60 + 30;
+
+      // Clamp alerts that would exceed the boil duration to the start of boil
+      // This handles cases where hop.time equals boilDuration (start-of-boil additions)
+      if (alertTime > boilDurationSeconds) {
+        alertTime = boilDurationSeconds;
+      }
 
       if (!alertMap.has(alertTime)) {
         alertMap.set(alertTime, []);

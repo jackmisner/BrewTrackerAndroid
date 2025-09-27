@@ -1,3 +1,31 @@
+/**
+ * FermentationChart Component
+ *
+ * Interactive chart component that visualizes fermentation progress over time.
+ * Displays gravity readings and temperature data in line charts with
+ * responsive design and modal enlargement capabilities.
+ *
+ * Features:
+ * - Dual charts: Specific gravity and temperature over time
+ * - Responsive chart sizing based on screen dimensions
+ * - Modal view for enlarged chart display
+ * - Unit-aware temperature display (°F/°C)
+ * - Touch interactions for data point details
+ * - Real-time data updates with forced chart remounting
+ * - Target gravity reference lines
+ * - Themed styling with color adaptation
+ *
+ * @example
+ * Basic usage:
+ * ```typescript
+ * <FermentationChart
+ *   entries={fermentationEntries}
+ *   recipe={recipe}
+ *   refreshKey={Date.now()}
+ * />
+ * ```
+ */
+
 import React from "react";
 import { View, Text, TouchableOpacity, Modal, Pressable } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
@@ -8,7 +36,10 @@ import { useScreenDimensions } from "@contexts/ScreenDimensionsContext";
 import { formatGravity } from "@utils/formatUtils";
 import { fermentationChartStyles } from "@styles/components/charts/fermentationChartStyles";
 
-// Chart wrapper component that forces complete remount
+/**
+ * Chart wrapper component that forces complete remount for data updates
+ * Addresses react-native-gifted-charts refresh issues
+ */
 const ChartWrapper: React.FC<{
   children: React.ReactNode;
   refreshKey: string | number;
@@ -20,7 +51,10 @@ const ChartWrapper: React.FC<{
   );
 };
 
-// Reusable chart section component to eliminate duplication
+/**
+ * Reusable chart section component with title and content area
+ * Provides consistent layout for individual chart displays
+ */
 const ChartSection: React.FC<{
   title: string;
   children: React.ReactNode;
@@ -111,9 +145,17 @@ const chartUtils = {
       adjustedMinValue = 0.995; // Provide space below for labels when readings are low
     }
 
+    // Ensure minimum range for visualization
+    const finalMaxValue = maxValue + padding;
+    if (finalMaxValue - adjustedMinValue < 0.01) {
+      return {
+        minValue: adjustedMinValue,
+        maxValue: adjustedMinValue + 0.01,
+      };
+    }
     return {
       minValue: adjustedMinValue,
-      maxValue: maxValue + padding,
+      maxValue: finalMaxValue,
     };
   },
 
@@ -180,6 +222,22 @@ const chartUtils = {
 
     return { ...baseConfig, ...additionalConfig };
   },
+};
+
+const isValidTemperatureEntry = (entry: any): boolean => {
+  if (!entry || typeof entry !== "object") {
+    return false;
+  }
+
+  if (!("value" in entry) || entry.value == null) {
+    return false;
+  }
+
+  if (!Number.isFinite(entry.value)) {
+    return false;
+  }
+
+  return !("hideDataPoint" in entry && entry.hideDataPoint === true);
 };
 
 interface FermentationChartProps {
@@ -255,7 +313,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
       // Safety check for undefined/null/NaN values
       if (value === null || value === undefined || isNaN(value)) {
-        return `0${symbol}`;
+        return "—";
       }
 
       return `${value.toFixed(precision)}${symbol}`;
@@ -439,9 +497,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
   const chartKeys = React.useMemo(() => {
     // Include width calculation details for more granular cache busting
     const calculatedWidth = Math.floor(chartWidth); // Include actual calculated width
-    const timestamp = Date.now(); // Add timestamp for guaranteed uniqueness on dimension changes
-
-    const baseKey = `${chartRefreshKey}-${screenDimensions.width}x${screenDimensions.height}-w${calculatedWidth}-${screenDimensions.isSmallScreen ? "small" : "large"}-${timestamp}`;
+    const baseKey = `${chartRefreshKey}-${screenDimensions.width}x${screenDimensions.height}-w${calculatedWidth}-${screenDimensions.isSmallScreen ? "small" : "large"}`;
 
     return {
       combined: `combined-${baseKey}`,
@@ -756,13 +812,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     // Remove trailing entries that have no temperature value (this works perfectly)
     while (tempData.length > 0) {
       const lastEntry = tempData[tempData.length - 1];
-      if (
-        !("value" in lastEntry) ||
-        (!lastEntry.value &&
-          lastEntry.value !== 0 &&
-          "hideDataPoint" in lastEntry &&
-          lastEntry.hideDataPoint === true)
-      ) {
+      if (!isValidTemperatureEntry(lastEntry)) {
         tempData.pop();
       } else {
         break;
@@ -773,20 +823,15 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     let startIndex = 0;
     for (let i = 0; i < tempData.length; i++) {
       const entry = tempData[i];
-      if (
-        !("value" in entry) ||
-        (!entry.value &&
-          entry.value !== 0 &&
-          "hideDataPoint" in entry &&
-          entry.hideDataPoint === true)
-      ) {
+      if (!isValidTemperatureEntry(entry)) {
         startIndex++;
       } else {
         break; // Found first valid entry
       }
     }
 
-    return { data: tempData, startIndex };
+    const trimmedData = startIndex > 0 ? tempData.slice(startIndex) : tempData;
+    return { data: trimmedData, startIndex };
   }, [combinedChartData.temperature]);
 
   // Separate chart data: simple filtering of only valid temperature entries
@@ -894,7 +939,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
         if (typeof value === "number" && !isNaN(value)) {
           labels.push(formatSessionTemperature(value, 0));
         } else {
-          labels.push("0°C"); // Fallback label
+          labels.push(`0${getSessionTemperatureSymbol()}`); // Fallback label
         }
       }
       return labels;

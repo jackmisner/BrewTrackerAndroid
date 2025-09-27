@@ -1,3 +1,34 @@
+/**
+ * Profile Tab Screen
+ *
+ * User profile and account management screen that displays user information,
+ * app settings navigation, and account actions. Provides access to user settings,
+ * help documentation, and logout functionality.
+ *
+ * Features:
+ * - User profile display with avatar, username, and email
+ * - Email verification status indicator
+ * - Navigation to settings, help, and about sections
+ * - Ko-fi donation link with external browser handling
+ * - Secure logout with confirmation dialog
+ * - Pull-to-refresh functionality
+ * - App version information
+ *
+ * Navigation:
+ * - Settings: Opens app settings modal
+ * - Help & Support: Placeholder for help system
+ * - About: Placeholder for app information
+ * - Donate: Opens Ko-fi page in browser or external app
+ * - Sign Out: Confirms logout and redirects to login
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * // Accessed via tab navigation
+ * <Tabs.Screen name="profile" component={ProfileScreen} />
+ * ```
+ */
+
 import React, { useState } from "react";
 import {
   View,
