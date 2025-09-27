@@ -1,3 +1,45 @@
+/**
+ * Edit Fermentation Entry Screen
+ *
+ * Modal screen for editing existing fermentation data points in brew sessions.
+ * Provides form interface for modifying gravity readings, temperature, notes,
+ * and timestamps with comprehensive validation and error handling.
+ *
+ * Features:
+ * - Pre-populated form with existing fermentation entry data
+ * - Date/time picker for entry timestamp modification
+ * - Specific gravity input with brewing-appropriate validation
+ * - Temperature recording with unit conversion support
+ * - Notes field for fermentation observations
+ * - Form validation preventing invalid data entry
+ * - Real-time API integration with React Query
+ * - Loading states and comprehensive error handling
+ * - Navigation back to brew session details
+ * - Keyboard-aware layout for mobile input
+ * - Optimistic updates with rollback on failure
+ *
+ * Data Validation:
+ * - Gravity: 0.990-1.200 range (covers full fermentation span)
+ * - Temperature: Reasonable brewing/fermentation temperature ranges
+ * - Date: Cannot be in the future, must be valid timestamp
+ * - Required fields: gravity, date (temperature and notes optional)
+ *
+ * Flow:
+ * 1. User navigates from fermentation entry context menu
+ * 2. Existing entry data is loaded and pre-populated
+ * 3. User modifies fermentation data as needed
+ * 4. Form validation ensures data quality and consistency
+ * 5. Submit updates fermentation entry via API
+ * 6. Success navigates back with cache invalidation
+ * 7. Error states provide user feedback and retry options
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push('/(modals)/(brewSessions)/editFermentationEntry?brewSessionId=123&entryId=456');
+ * ```
+ */
+
 import React, { useState, useEffect } from "react";
 import {
   View,

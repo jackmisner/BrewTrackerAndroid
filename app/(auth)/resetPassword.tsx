@@ -1,3 +1,35 @@
+/**
+ * Reset Password Screen
+ *
+ * Password reset completion screen that allows users to set a new password using
+ * a reset token from their email. Includes comprehensive password validation,
+ * strength checking, and confirmation matching.
+ *
+ * Features:
+ * - Token validation from URL parameters
+ * - Real-time password strength analysis using zxcvbn
+ * - Password confirmation matching with visual feedback
+ * - Secure password toggle visibility
+ * - Comprehensive form validation with error messages
+ * - Success screen after successful password reset
+ * - Navigation back to login or request new reset link
+ * - Test ID support for automated testing
+ *
+ * Flow:
+ * 1. User accesses via reset link with token parameter
+ * 2. Token is validated on component mount
+ * 3. User enters new password with real-time strength feedback
+ * 4. Password confirmation is validated for matching
+ * 5. Submit triggers password reset API with token
+ * 6. Success shows confirmation with navigation to login
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push('/(auth)/resetPassword?token=abc123');
+ * ```
+ */
+
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -39,6 +71,12 @@ const ResetPasswordScreen: React.FC = () => {
     }
   }, [token]);
 
+  /**
+   * Evaluates password strength using the zxcvbn library
+   * Maps zxcvbn scores (0-4) to simplified strength levels
+   * @param password - Password to evaluate
+   * @returns Strength level: "weak", "medium", or "strong"
+   */
   const getPasswordStrength = (password: string): string => {
     if (!password) {
       return "";
@@ -65,10 +103,20 @@ const ResetPasswordScreen: React.FC = () => {
     }
   };
 
+  /**
+   * Validates if password meets minimum strength requirements
+   * @param password - Password to validate
+   * @returns True if password is strong enough, false otherwise
+   */
   const isPasswordValid = (password: string): boolean => {
     return getPasswordStrength(password) === "strong";
   };
 
+  /**
+   * Handles password reset form submission with comprehensive validation
+   * Validates token, password strength, confirmation matching, and whitespace
+   * @throws {Error} When validation fails or API request fails
+   */
   const handleResetPassword = async (): Promise<void> => {
     if (!token) {
       Alert.alert(

@@ -1,3 +1,35 @@
+/**
+ * ABV Calculator Screen
+ *
+ * Alcohol by volume calculator with support for different gravity units and
+ * calculation formulas. Provides both simple and advanced ABV calculation
+ * methods with unit conversion between specific gravity, Plato, and Brix.
+ *
+ * Features:
+ * - Original gravity (OG) and final gravity (FG) inputs
+ * - Multiple gravity unit support (SG, °Plato, °Brix)
+ * - Simple and advanced ABV calculation formulas
+ * - Real-time unit conversion and calculation
+ * - Soft validation with brewing-appropriate ranges
+ * - Input validation with error handling
+ * - Themed calculator card layout
+ * - Modal header with navigation
+ * - Auto-calculation on input changes
+ * - State management via CalculatorsContext
+ *
+ * Calculations:
+ * - Simple: (OG - FG) × 131.25
+ * - Advanced: More accurate formula for higher gravities using corrections
+ * - Unit conversions between SG, Plato, and Brix scales
+ * - Typical ranges: OG 1.020-1.120, FG 1.000-1.030
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push('/(modals)/(calculators)/abv');
+ * ```
+ */
+
 import React, { useEffect, useCallback } from "react";
 import { View, ScrollView } from "react-native";
 import { useCalculators } from "@contexts/CalculatorsContext";
@@ -13,6 +45,9 @@ import {
 import { useTheme } from "@contexts/ThemeContext";
 import { calculatorScreenStyles } from "@styles/modals/calculators/calculatorScreenStyles";
 
+/**
+ * Available ABV calculation formulas
+ */
 const FORMULA_OPTIONS = [
   {
     label: "Simple",
@@ -26,6 +61,9 @@ const FORMULA_OPTIONS = [
   },
 ];
 
+/**
+ * Supported gravity unit types for input and display
+ */
 const UNIT_TYPE_OPTIONS = [
   {
     label: "SG",
@@ -374,6 +412,11 @@ export default function ABVCalculatorScreen() {
             placeholder={`e.g., ${abv.unitType === "sg" ? "1.010" : "2.5"}`}
             unit={getUnitLabel()}
             validationMode="soft"
+            helperText={
+              abv.unitType === "brix"
+                ? "FG in Brix requires alcohol correction. Convert to SG or use a corrected value."
+                : undefined
+            }
             min={abv.unitType === "sg" ? 1.0 : 0}
             max={abv.unitType === "sg" ? 1.05 : 15}
             normalMin={abv.unitType === "sg" ? 1.005 : 1}

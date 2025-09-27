@@ -1,3 +1,33 @@
+/**
+ * Unit Converter Calculator Screen
+ *
+ * Comprehensive unit conversion calculator for brewing measurements.
+ * Supports conversion between metric and imperial units across weight,
+ * volume, and temperature categories essential for brewing recipes.
+ *
+ * Features:
+ * - Category selection (Weight, Volume, Temperature)
+ * - Dynamic unit options based on selected category
+ * - From/to unit selection with descriptive labels
+ * - Real-time conversion calculations
+ * - Input validation with error handling
+ * - Themed calculator card layout
+ * - Modal header with navigation
+ * - Auto-calculation on input or unit changes
+ * - State management via CalculatorsContext
+ *
+ * Supported Conversions:
+ * - Weight: grams, kilograms, ounces, pounds
+ * - Volume: milliliters, liters, fluid ounces, cups, pints, quarts, gallons
+ * - Temperature: Fahrenheit, Celsius, Kelvin
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push('/(modals)/(calculators)/unitConverter');
+ * ```
+ */
+
 import React, { useEffect, useCallback } from "react";
 import { View, ScrollView } from "react-native";
 import { useCalculators } from "@contexts/CalculatorsContext";
@@ -10,12 +40,18 @@ import { SingleResult } from "@components/calculators/ResultDisplay";
 import { useTheme } from "@contexts/ThemeContext";
 import { calculatorScreenStyles } from "@styles/modals/calculators/calculatorScreenStyles";
 
+/**
+ * Available conversion categories
+ */
 const CONVERSION_CATEGORIES = [
   { label: "Weight", value: "weight" as const },
   { label: "Volume", value: "volume" as const },
   { label: "Temperature", value: "temperature" as const },
 ];
 
+/**
+ * Weight unit options for conversion
+ */
 const WEIGHT_UNITS = [
   { label: "g", value: "g", description: "Grams" },
   { label: "kg", value: "kg", description: "Kilograms" },
@@ -23,6 +59,9 @@ const WEIGHT_UNITS = [
   { label: "lb", value: "lb", description: "Pounds" },
 ];
 
+/**
+ * Volume unit options for conversion
+ */
 const VOLUME_UNITS = [
   { label: "ml", value: "ml", description: "Milliliters" },
   { label: "L", value: "l", description: "Liters" },
@@ -33,6 +72,9 @@ const VOLUME_UNITS = [
   { label: "gal", value: "gal", description: "Gallons" },
 ];
 
+/**
+ * Temperature unit options for conversion
+ */
 const TEMPERATURE_UNITS = [
   { label: "°F", value: "f", description: "Fahrenheit" },
   { label: "°C", value: "c", description: "Celsius" },

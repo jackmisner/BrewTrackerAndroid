@@ -1,3 +1,31 @@
+/**
+ * FermentationChart Component
+ *
+ * Interactive chart component that visualizes fermentation progress over time.
+ * Displays gravity readings and temperature data in line charts with
+ * responsive design and modal enlargement capabilities.
+ *
+ * Features:
+ * - Dual charts: Specific gravity and temperature over time
+ * - Responsive chart sizing based on screen dimensions
+ * - Modal view for enlarged chart display
+ * - Unit-aware temperature display (°F/°C)
+ * - Touch interactions for data point details
+ * - Real-time data updates with forced chart remounting
+ * - Target gravity reference lines
+ * - Themed styling with color adaptation
+ *
+ * @example
+ * Basic usage:
+ * ```typescript
+ * <FermentationChart
+ *   entries={fermentationEntries}
+ *   recipe={recipe}
+ *   refreshKey={Date.now()}
+ * />
+ * ```
+ */
+
 import React from "react";
 import { View, Text, TouchableOpacity, Modal, Pressable } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
@@ -8,7 +36,10 @@ import { useScreenDimensions } from "@contexts/ScreenDimensionsContext";
 import { formatGravity } from "@utils/formatUtils";
 import { fermentationChartStyles } from "@styles/components/charts/fermentationChartStyles";
 
-// Chart wrapper component that forces complete remount
+/**
+ * Chart wrapper component that forces complete remount for data updates
+ * Addresses react-native-gifted-charts refresh issues
+ */
 const ChartWrapper: React.FC<{
   children: React.ReactNode;
   refreshKey: string | number;
@@ -20,7 +51,10 @@ const ChartWrapper: React.FC<{
   );
 };
 
-// Reusable chart section component to eliminate duplication
+/**
+ * Reusable chart section component with title and content area
+ * Provides consistent layout for individual chart displays
+ */
 const ChartSection: React.FC<{
   title: string;
   children: React.ReactNode;

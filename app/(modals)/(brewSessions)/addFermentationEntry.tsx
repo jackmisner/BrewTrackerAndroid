@@ -1,3 +1,44 @@
+/**
+ * Add Fermentation Entry Screen
+ *
+ * Modal screen for adding fermentation data points to brew sessions.
+ * Allows users to record gravity readings, temperature, and notes
+ * to track fermentation progress over time.
+ *
+ * Features:
+ * - Brew session context loading and display
+ * - Date/time picker for entry timestamp
+ * - Specific gravity input with validation
+ * - Temperature recording with unit awareness
+ * - Optional notes for observations
+ * - Form validation with brewing-appropriate ranges
+ * - Real-time API integration with React Query
+ * - Loading states and error handling
+ * - Navigation back to brew session details
+ * - Keyboard-aware layout
+ * - Test ID support for automated testing
+ *
+ * Data Validation:
+ * - Gravity: 0.990-1.200 range (covers fermentation span)
+ * - Temperature: Reasonable brewing temperature ranges
+ * - Date: Cannot be in the future
+ * - Required fields: gravity, date
+ *
+ * Flow:
+ * 1. User navigates from brew session details
+ * 2. Brew session context is loaded
+ * 3. User enters fermentation data
+ * 4. Form validation ensures data quality
+ * 5. Submit creates fermentation entry via API
+ * 6. Success navigates back with cache invalidation
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push('/(modals)/(brewSessions)/addFermentationEntry?brewSessionId=123');
+ * ```
+ */
+
 import React, { useState } from "react";
 import {
   View,

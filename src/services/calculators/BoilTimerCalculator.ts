@@ -1,18 +1,70 @@
+/**
+ * Boil Timer Calculator
+ *
+ * Advanced brewing timer that converts recipes into structured boil schedules
+ * with hop addition timing, alerts, and progress tracking. Handles complex
+ * hop scheduling logic and ingredient timing calculations.
+ *
+ * Features:
+ * - Recipe-to-timer conversion with automatic schedule generation
+ * - Hop addition timing with countdown calculations
+ * - Multiple ingredient type support (hops, additions, finings)
+ * - Real-time progress tracking with completion states
+ * - Alert scheduling for time-critical additions
+ * - Flexible timer duration with recipe-specific boil times
+ * - State persistence for timer continuation across app sessions
+ *
+ * Calculations:
+ * - Hop timing: Converts recipe hop times to boil countdown format
+ * - Schedule sorting: Orders additions by time for logical presentation
+ * - Duration handling: Manages total boil time vs. addition timing
+ * - Progress tracking: Calculates completion percentages and remaining time
+ *
+ * @example
+ * Converting recipe to timer schedule:
+ * ```typescript
+ * const recipe: Recipe = { /* recipe data * / };
+ * const timerData = BoilTimerCalculator.fromRecipe(recipe);
+ *
+ * // Start timer with schedule
+ * const result = BoilTimerCalculator.calculateBoilSchedule(timerData);
+ * console.log(result.hopSchedule); // Ordered hop additions
+ * ```
+ */
+
 import { Recipe, RecipeIngredient } from "@src/types";
 
+/**
+ * Individual hop addition timing and metadata
+ * @interface HopAddition
+ */
 export interface HopAddition {
+  /** Time in minutes when hop should be added (countdown from boil start) */
   time: number;
+  /** Hop variety name */
   name: string;
+  /** Amount to add */
   amount: number;
+  /** Unit of measurement (oz, g, etc.) */
   unit: string;
+  /** Whether this addition has been completed */
   added?: boolean;
+  /** Hop usage type (boil, whirlpool, dry-hop) */
   use?: string;
+  /** Alpha acid percentage for IBU calculations */
   alpha_acid?: number;
 }
 
+/**
+ * Complete boil timer schedule with all ingredients
+ * @interface BoilTimerResult
+ */
 export interface BoilTimerResult {
+  /** Total boil duration in minutes */
   duration: number;
+  /** Ordered list of hop additions */
   hopSchedule: HopAddition[];
+  /** Other ingredient additions (finings, etc.) */
   otherSchedule: Array<{
     time: number;
     description: string;
@@ -20,11 +72,20 @@ export interface BoilTimerResult {
   }>;
 }
 
+/**
+ * Recipe timer data with alert management
+ * @interface RecipeTimerData
+ */
 export interface RecipeTimerData {
+  /** Source recipe identifier */
   recipeId: string;
+  /** Recipe name for display */
   recipeName: string;
+  /** Beer style for context */
   recipeStyle: string;
+  /** Total boil time in minutes */
   boilTime: number;
+  /** Hop alerts with completion tracking */
   hopAlerts: Array<{
     time: number;
     name: string;
@@ -37,6 +98,12 @@ export interface RecipeTimerData {
   }>;
 }
 
+/**
+ * Boil Timer Calculator Class
+ *
+ * Handles conversion of brewing recipes into structured timer schedules
+ * with precise timing calculations and ingredient management.
+ */
 export class BoilTimerCalculator {
   public static calculate(
     duration: number,
