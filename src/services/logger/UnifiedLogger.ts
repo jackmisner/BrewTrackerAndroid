@@ -165,9 +165,19 @@ export class UnifiedLogger {
       try {
         // Call the unified logger's core method while interception is disabled
         if (this.useDevLogger) {
-          // When useDevLogger is true, DevLogger.error already handles dev server logging
-          // Skip forwarding to prevent duplicate logs
-          return;
+          let dataPayload: string | undefined;
+          if (formattedData !== undefined) {
+            if (typeof formattedData === "string") {
+              dataPayload = formattedData;
+            } else {
+              try {
+                dataPayload = JSON.stringify(formattedData);
+              } catch {
+                dataPayload = String(formattedData);
+              }
+            }
+          }
+          await this.sendToDevServer(_level, category, message, dataPayload);
         } else {
           await Logger.error(category, message, formattedData);
         }
@@ -339,9 +349,17 @@ export class UnifiedLogger {
     settings: { enabled: boolean; devMode: boolean };
   }> {
     if (this.useDevLogger) {
+      const hostUri = this.getHostUri();
+      // Normalize the host URI - if it lacks a scheme, prefix with http://
+      const normalizedHost = hostUri.includes("://")
+        ? hostUri
+        : `http://${hostUri}`;
+      const url = new URL(normalizedHost);
+      const logDir = `${url.origin}/logs`;
+
       return {
         loggerType: "dev",
-        logDir: `http://${this.getHostUri()}/logs`,
+        logDir,
         settings: {
           enabled: DevLogger.isEnabled(),
           devMode: true,

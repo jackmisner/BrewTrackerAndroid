@@ -138,16 +138,24 @@ export class OfflineMetricsCalculator {
     let totalIBU = 0;
 
     for (const hop of hops) {
-      // Skip dry hops - they don't contribute to IBU
-      if (hop.use === "dry-hop" || (hop.time !== undefined && hop.time <= 0)) {
-        continue;
-      }
-      const alphaAcid = hop.alpha_acid ?? 5; // Default 5% AA
-      // Convert hop amount to ounces for IBU calculation
-      const amountOz = this.convertToOunces(hop.amount ?? 0, hop.unit);
       const use = hop.use?.toLowerCase();
       const hopTime =
-        use === "whirlpool" || use === "flameout" ? 0 : (hop.time ?? boilTime); // Default to boil time only for boil additions
+        use === "whirlpool" || use === "flameout"
+          ? (hop.time ?? 0) // only force 0 when time is missing
+          : (hop.time ?? boilTime); // default to boil time for boil additions
+
+      // Skip non-bittering additions
+      if (
+        use === "dry-hop" ||
+        use === "dry hop" ||
+        use === "dryhop" ||
+        hopTime <= 0
+      ) {
+        continue;
+      }
+      const alphaAcid = hop.alpha_acid ?? 5; // Default 5% AA (allow 0)
+      // Convert hop amount to ounces for IBU calculation
+      const amountOz = this.convertToOunces(hop.amount ?? 0, hop.unit);
 
       // Calculate utilization based on boil time and gravity
       const utilization = this.calculateHopUtilization(hopTime, og);
