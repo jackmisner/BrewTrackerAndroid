@@ -196,53 +196,6 @@ export default function ABVCalculatorScreen() {
     });
   };
 
-  const handleUnitTypeChange = (newUnitType: string) => {
-    const oldUnitType = abv.unitType;
-    const newUnit = newUnitType as typeof abv.unitType;
-
-    // Convert existing values if they exist and units are different
-    let convertedOG = abv.originalGravity;
-    let convertedFG = abv.finalGravity;
-
-    if (oldUnitType !== newUnit) {
-      try {
-        if (abv.originalGravity && abv.originalGravity !== "") {
-          const ogValue = parseFloat(abv.originalGravity);
-          if (isFinite(ogValue)) {
-            convertedOG = convertGravityValue(
-              ogValue,
-              oldUnitType,
-              newUnit
-            ).toString();
-          }
-        }
-
-        if (abv.finalGravity && abv.finalGravity !== "") {
-          const fgValue = parseFloat(abv.finalGravity);
-          if (isFinite(fgValue)) {
-            convertedFG = convertGravityValue(
-              fgValue,
-              oldUnitType,
-              newUnit
-            ).toString();
-          }
-        }
-      } catch (error) {
-        console.warn("Unit conversion failed:", error);
-        // If conversion fails, keep original values
-      }
-    }
-
-    dispatch({
-      type: "SET_ABV",
-      payload: {
-        unitType: newUnit,
-        originalGravity: convertedOG,
-        finalGravity: convertedFG,
-      },
-    });
-  };
-
   const getPlaceholderText = () => {
     switch (abv.unitType) {
       case "sg":
@@ -267,6 +220,52 @@ export default function ABVCalculatorScreen() {
       default:
         return "";
     }
+  };
+
+  const handleUnitTypeChange = (newUnitType: string) => {
+    const oldUnitType = abv.unitType;
+    const newUnit = newUnitType as typeof abv.unitType;
+
+    // Convert existing values if they exist and units are different
+    let convertedOG = abv.originalGravity;
+    let convertedFG = abv.finalGravity;
+
+    if (oldUnitType !== newUnit) {
+      try {
+        if (abv.originalGravity && abv.originalGravity !== "") {
+          const ogValue = parseFloat(abv.originalGravity);
+          if (isFinite(ogValue)) {
+            convertedOG = convertGravityValue(
+              ogValue,
+              oldUnitType,
+              newUnit
+            ).toString();
+          }
+        }
+        if (abv.finalGravity && abv.finalGravity !== "") {
+          const fgValue = parseFloat(abv.finalGravity);
+          if (isFinite(fgValue)) {
+            convertedFG = convertGravityValue(
+              fgValue,
+              oldUnitType,
+              newUnit
+            ).toString();
+          }
+        }
+      } catch (error) {
+        console.warn("Unit conversion failed:", error);
+        // Bail out to keep unit/value pairs consistent
+        return;
+      }
+    }
+    dispatch({
+      type: "SET_ABV",
+      payload: {
+        unitType: newUnit,
+        originalGravity: convertedOG,
+        finalGravity: convertedFG,
+      },
+    });
   };
 
   // Calculate additional metrics if we have a result

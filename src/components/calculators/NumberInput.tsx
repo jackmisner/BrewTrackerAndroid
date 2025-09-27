@@ -70,8 +70,9 @@ export function NumberInput({
   };
 
   const handleStepDown = () => {
-    const currentValue = parseFloat(value) || 0;
-    const next = currentValue - step;
+    const currentValue = parseFloat(value);
+    const base = Number.isFinite(currentValue) ? currentValue : (min ?? 0);
+    const next = base - step;
     const rounded = Number(next.toFixed(precision)); // round first
     const clamped = Math.max(
       min ?? -Infinity,
@@ -103,11 +104,11 @@ export function NumberInput({
       // Hard mode: Enforce min/max bounds at input level (original behavior)
       if (cleanedText && cleanedText !== "-" && cleanedText !== ".") {
         const numValue = parseFloat(cleanedText);
-        if (isFinite(numValue)) {
+        if (Number.isFinite(numValue)) {
           if (min !== undefined && numValue < min) {
-            cleanedText = min.toString();
+            cleanedText = min.toFixed(precision);
           } else if (max !== undefined && numValue > max) {
-            cleanedText = max.toString();
+            cleanedText = max.toFixed(precision);
           }
         }
       }
@@ -143,7 +144,9 @@ export function NumberInput({
             type: "warning",
             message:
               warningText ||
-              `Value below typical range (${normalMin} - ${normalMax || ""})`,
+              (normalMax !== undefined
+                ? `Value below typical range (${normalMin.toFixed(precision)} - ${normalMax.toFixed(precision)})`
+                : `Value below typical minimum (${normalMin.toFixed(precision)})`),
           };
         }
         if (normalMax !== undefined && numValue > normalMax) {
@@ -151,7 +154,9 @@ export function NumberInput({
             type: "warning",
             message:
               warningText ||
-              `Value above typical range (${normalMin || ""} - ${normalMax})`,
+              (normalMin !== undefined
+                ? `Value above typical range (${normalMin.toFixed(precision)} - ${normalMax.toFixed(precision)})`
+                : `Value above typical maximum (${normalMax.toFixed(precision)})`),
           };
         }
       }
