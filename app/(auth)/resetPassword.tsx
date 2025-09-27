@@ -30,7 +30,7 @@
  * ```
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -48,6 +48,8 @@ import { useAuth } from "@contexts/AuthContext";
 import { loginStyles } from "@styles/auth/loginStyles";
 import { TEST_IDS } from "@src/constants/testIDs";
 
+type Strength = "" | "weak" | "medium" | "strong";
+
 const ResetPasswordScreen: React.FC = () => {
   const { resetPassword, isLoading, error, clearError } = useAuth();
   const searchParams = useLocalSearchParams<{ token?: string | string[] }>();
@@ -64,13 +66,16 @@ const ResetPasswordScreen: React.FC = () => {
     useState<boolean>(false);
   const [success, setSuccess] = useState<boolean>(false);
 
+  const warnedMissingToken = React.useRef(false);
+
   useEffect(() => {
-    if (!token) {
+    if (!token && !warnedMissingToken.current) {
       Alert.alert(
         "Invalid Reset Link",
         "No reset token provided. Please use the link from your email.",
         [{ text: "OK", onPress: () => router.replace("/(auth)/login") }]
       );
+      warnedMissingToken.current = true;
     }
   }, [token]);
 
@@ -80,7 +85,7 @@ const ResetPasswordScreen: React.FC = () => {
    * @param password - Password to evaluate
    * @returns Strength level: "weak", "medium", or "strong"
    */
-  const getPasswordStrength = (password: string): string => {
+  const getPasswordStrength = (password: string): Strength => {
     if (!password) {
       return "";
     }
@@ -111,10 +116,7 @@ const ResetPasswordScreen: React.FC = () => {
    * @param password - Password to validate
    * @returns True if password is strong enough, false otherwise
    */
-  const isPasswordValid = (
-    password: string,
-    strength?: ReturnType<typeof getPasswordStrength>
-  ): boolean => {
+  const isPasswordValid = (password: string, strength?: Strength): boolean => {
     const trimmed = password.trim();
     if (trimmed.length < 8) {
       return false;
@@ -140,6 +142,9 @@ const ResetPasswordScreen: React.FC = () => {
    * @throws {Error} When validation fails or API request fails
    */
   const handleResetPassword = async (): Promise<void> => {
+    if (isLoading) {
+      return;
+    }
     if (!token) {
       Alert.alert(
         "Error",
@@ -203,7 +208,10 @@ const ResetPasswordScreen: React.FC = () => {
     formData.newPassword &&
     formData.confirmPassword &&
     formData.newPassword === formData.confirmPassword;
-  const passwordStrength = getPasswordStrength(formData.newPassword);
+  const passwordStrength = useMemo(
+    () => getPasswordStrength(formData.newPassword),
+    [formData.newPassword]
+  );
 
   if (success) {
     return (
@@ -301,6 +309,10 @@ const ResetPasswordScreen: React.FC = () => {
               <TouchableOpacity
                 style={loginStyles.passwordToggle}
                 onPress={() => setShowPassword(!showPassword)}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  showPassword ? "Hide password" : "Show password"
+                }
               >
                 <MaterialIcons
                   name={showPassword ? "visibility" : "visibility-off"}
@@ -360,6 +372,10 @@ const ResetPasswordScreen: React.FC = () => {
               <TouchableOpacity
                 style={loginStyles.passwordToggle}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  showConfirmPassword ? "Hide password" : "Show password"
+                }
               >
                 <MaterialIcons
                   name={showConfirmPassword ? "visibility" : "visibility-off"}
@@ -387,7 +403,7 @@ const ResetPasswordScreen: React.FC = () => {
               disabled={
                 isLoading ||
                 !passwordsMatch ||
-                !isPasswordValid(formData.newPassword)
+                !isPasswordValid(formData.newPassword, passwordStrength)
               }
               testID={TEST_IDS.auth.resetPasswordButton}
             >

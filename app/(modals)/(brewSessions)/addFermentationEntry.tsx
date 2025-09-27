@@ -84,7 +84,6 @@ export default function AddFermentationEntryScreen() {
   const [entryDate, setEntryDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [_isAuthorizing, setIsAuthorizing] = useState(false);
 
   // Fetch brew session data to get temperature unit
   const { data: brewSession } = useQuery<BrewSession>({
@@ -122,14 +121,17 @@ export default function AddFermentationEntryScreen() {
 
   const validateForm = (): boolean => {
     const errors: string[] = [];
-
+    // Date must not be in the future
+    if (entryDate > new Date()) {
+      errors.push("Entry date cannot be in the future");
+    }
     // Gravity validation
     if (!formData.gravity.trim()) {
       errors.push("Gravity is required");
     } else {
       const gravity = parseFloat(formData.gravity);
-      if (isNaN(gravity) || gravity < 0.8 || gravity > 1.2) {
-        errors.push("Gravity must be between 0.800 and 1.200");
+      if (isNaN(gravity) || gravity < 0.99 || gravity > 1.2) {
+        errors.push("Gravity must be between 0.990 and 1.200");
       }
     }
 
@@ -223,13 +225,15 @@ export default function AddFermentationEntryScreen() {
         ...(formData.notes.trim() && { notes: formData.notes.trim() }),
       };
 
-      // Log fermentation entry creation for security monitoring
-      console.log("📊 Adding fermentation entry:", {
-        brewSessionId,
-        brewSessionName: brewSession?.name,
-        hasBrewSessionUserId: !!brewSession?.user_id,
-        entryDate: entryData.entry_date,
-      });
+      // Dev-only diagnostics (avoid PII in production)
+      if (__DEV__) {
+        console.log("📊 Adding fermentation entry:", {
+          brewSessionId,
+          brewSessionName: brewSession?.name,
+          hasBrewSessionUserId: !!brewSession?.user_id,
+          entryDate: entryData.entry_date,
+        });
+      }
 
       try {
         await addEntryMutation.mutateAsync(entryData);
@@ -237,7 +241,7 @@ export default function AddFermentationEntryScreen() {
         // Handled by onError in the mutation options
       }
     } finally {
-      setIsAuthorizing(false);
+      // no-op
     }
   };
 

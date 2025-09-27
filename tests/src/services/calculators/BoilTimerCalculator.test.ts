@@ -266,13 +266,13 @@ describe("BoilTimerCalculator", () => {
 
       const alertMap = BoilTimerCalculator.getHopAlertTimes(hopSchedule);
 
-      // 60min hop: alert at 60*60+30 = 3630 seconds
-      // 15min hop: alert at 15*60+30 = 930 seconds
-      // 0min hop: alert at 0*60+30 = 30 seconds
+      // 60min hop: alert at 60*60-30 = 3570 seconds (30 seconds before)
+      // 15min hop: alert at 15*60-30 = 870 seconds (30 seconds before)
+      // 0min hop: alert at Math.max(0, 0*60-30) = 0 seconds (can't be negative)
       expect(alertMap.size).toBe(3);
-      expect(alertMap.has(3630)).toBe(true);
-      expect(alertMap.has(930)).toBe(true);
-      expect(alertMap.has(30)).toBe(true);
+      expect(alertMap.has(3570)).toBe(true);
+      expect(alertMap.has(870)).toBe(true);
+      expect(alertMap.has(0)).toBe(true);
     });
 
     it("should group multiple hops at same time", () => {
@@ -284,8 +284,8 @@ describe("BoilTimerCalculator", () => {
       const alertMap = BoilTimerCalculator.getHopAlertTimes(hopSchedule);
 
       expect(alertMap.size).toBe(1);
-      expect(alertMap.has(930)).toBe(true); // 15*60+30
-      expect(alertMap.get(930)?.length).toBe(2);
+      expect(alertMap.has(870)).toBe(true); // 15*60-30 (30 seconds before)
+      expect(alertMap.get(870)?.length).toBe(2);
     });
 
     it("should handle empty hop schedule", () => {

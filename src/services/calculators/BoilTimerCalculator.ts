@@ -22,14 +22,7 @@
  *
  * @example
  * Converting recipe to timer schedule:
- * ```typescript
- * const recipe: Recipe = { /* recipe data * / };
- * const timerData = BoilTimerCalculator.fromRecipe(recipe);
  *
- * // Start timer with schedule
- * const result = BoilTimerCalculator.calculateBoilSchedule(timerData);
- * console.log(result.hopSchedule); // Ordered hop additions
- * ```
  */
 
 import { Recipe, RecipeIngredient } from "@src/types";
@@ -256,7 +249,7 @@ export class BoilTimerCalculator {
 
     hopSchedule.forEach(hop => {
       // Alert 30 seconds before addition time
-      const alertTime = hop.time * 60 + 30; // Convert to seconds and add 30 second buffer
+      const alertTime = Math.max(0, hop.time * 60 - 30); // Convert to seconds and subtract 30-second buffer
 
       if (!alertMap.has(alertTime)) {
         alertMap.set(alertTime, []);

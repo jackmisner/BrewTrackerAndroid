@@ -131,6 +131,18 @@ export function NumberInput({
   const theme = useTheme();
 
   /**
+   * Truncates a number to specified precision without rounding
+   * @param num - Number to truncate
+   * @param precision - Number of decimal places
+   * @returns Truncated number as string
+   */
+  const truncateToFixedPrecision = (num: number, precision: number): string => {
+    const factor = Math.pow(10, precision);
+    const truncated = Math.trunc(num * factor) / factor;
+    return truncated.toFixed(precision);
+  };
+
+  /**
    * Increases the input value by the step amount
    * Respects min/max bounds and precision settings
    */
@@ -192,9 +204,9 @@ export function NumberInput({
         const numValue = parseFloat(cleanedText);
         if (Number.isFinite(numValue)) {
           if (min !== undefined && numValue < min) {
-            cleanedText = min.toFixed(precision);
+            cleanedText = truncateToFixedPrecision(min, precision);
           } else if (max !== undefined && numValue > max) {
-            cleanedText = max.toFixed(precision);
+            cleanedText = truncateToFixedPrecision(max, precision);
           }
         }
       }

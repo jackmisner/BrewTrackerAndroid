@@ -7,7 +7,7 @@
  *
  * Features:
  * - Theme selection (light, dark, system)
- * - Unit system preferences (metric, imperial, mixed)
+ * - Unit system preferences (metric, imperial)
  * - Cache management and data clearing
  * - Static data cache statistics and controls
  * - Developer mode features and network simulation

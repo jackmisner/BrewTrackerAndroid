@@ -417,7 +417,7 @@ export default function ABVCalculatorScreen() {
                 ? "FG in Brix requires alcohol correction. Convert to SG or use a corrected value."
                 : undefined
             }
-            min={abv.unitType === "sg" ? 1.0 : 0}
+            min={abv.unitType === "sg" ? 0.99 : 0}
             max={abv.unitType === "sg" ? 1.05 : 15}
             normalMin={abv.unitType === "sg" ? 1.005 : 1}
             normalMax={abv.unitType === "sg" ? 1.025 : 8}

@@ -76,8 +76,14 @@ const parseIsoDate = (iso: string) => {
   }
   const [datePart] = iso.split("T");
   const [year, month, day] = (datePart ?? "").split("-").map(Number);
-  if (!Number.isNaN(year) && !Number.isNaN(month) && !Number.isNaN(day)) {
-    return new Date(year, month - 1, day);
+  if (
+    typeof year === "number" &&
+    !Number.isNaN(year) &&
+    typeof month === "number" &&
+    !Number.isNaN(month)
+  ) {
+    const safeDay = typeof day === "number" && !Number.isNaN(day) ? day : 1;
+    return new Date(year, month - 1, safeDay);
   }
   const fallback = new Date(iso);
   return Number.isNaN(fallback.getTime()) ? new Date() : fallback;

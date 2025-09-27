@@ -35,7 +35,6 @@
  *   value={5.8}
  *   unit="%"
  *   precision={1}
- *   highlight={true}
  *   icon="local-bar"
  * />
  * ```

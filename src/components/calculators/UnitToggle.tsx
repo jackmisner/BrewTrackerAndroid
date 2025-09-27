@@ -44,7 +44,13 @@
  */
 
 import React from "react";
-import { View, Text, TouchableOpacity, ViewStyle } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ViewStyle,
+  StyleProp,
+} from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { TEST_IDS } from "@constants/testIDs";
@@ -58,11 +64,11 @@ interface UnitToggleProps {
   /** Currently selected value */
   value: string;
   /** Array of selectable options with labels and values */
-  options: Array<{ label: string; value: string; description?: string }>;
+  options: { label: string; value: string; description?: string }[];
   /** Callback fired when selection changes */
   onChange: (value: string) => void;
   /** Additional styles for the container */
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   /** Optional label displayed above the toggle */
   label?: string;
   /** Whether the component is disabled */
@@ -145,9 +151,9 @@ export function UnitToggle({
 
 interface DropdownToggleProps {
   value: string;
-  options: Array<{ label: string; value: string; description?: string }>;
+  options: { label: string; value: string; description?: string }[];
   onChange: (value: string) => void;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   label?: string;
   placeholder?: string;
   disabled?: boolean;

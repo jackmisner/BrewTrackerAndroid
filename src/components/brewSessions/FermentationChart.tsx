@@ -225,12 +225,19 @@ const chartUtils = {
 };
 
 const isValidTemperatureEntry = (entry: any): boolean => {
-  return (
-    "value" in entry &&
-    entry.value != null &&
-    entry.value !== 0 &&
-    !("hideDataPoint" in entry && entry.hideDataPoint === true)
-  );
+  if (!entry || typeof entry !== "object") {
+    return false;
+  }
+
+  if (!("value" in entry) || entry.value == null) {
+    return false;
+  }
+
+  if (!Number.isFinite(entry.value)) {
+    return false;
+  }
+
+  return !("hideDataPoint" in entry && entry.hideDataPoint === true);
 };
 
 interface FermentationChartProps {
@@ -306,7 +313,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
       // Safety check for undefined/null/NaN values
       if (value === null || value === undefined || isNaN(value)) {
-        return `0${symbol}`;
+        return "—";
       }
 
       return `${value.toFixed(precision)}${symbol}`;
@@ -490,9 +497,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
   const chartKeys = React.useMemo(() => {
     // Include width calculation details for more granular cache busting
     const calculatedWidth = Math.floor(chartWidth); // Include actual calculated width
-    const timestamp = Date.now(); // Add timestamp for guaranteed uniqueness on dimension changes
-
-    const baseKey = `${chartRefreshKey}-${screenDimensions.width}x${screenDimensions.height}-w${calculatedWidth}-${screenDimensions.isSmallScreen ? "small" : "large"}-${timestamp}`;
+    const baseKey = `${chartRefreshKey}-${screenDimensions.width}x${screenDimensions.height}-w${calculatedWidth}-${screenDimensions.isSmallScreen ? "small" : "large"}`;
 
     return {
       combined: `combined-${baseKey}`,
@@ -818,13 +823,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     let startIndex = 0;
     for (let i = 0; i < tempData.length; i++) {
       const entry = tempData[i];
-      if (
-        !("value" in entry) ||
-        (!entry.value &&
-          entry.value !== 0 &&
-          "hideDataPoint" in entry &&
-          entry.hideDataPoint === true)
-      ) {
+      if (!isValidTemperatureEntry(entry)) {
         startIndex++;
       } else {
         break; // Found first valid entry
@@ -940,7 +939,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
         if (typeof value === "number" && !isNaN(value)) {
           labels.push(formatSessionTemperature(value, 0));
         } else {
-          labels.push("0°C"); // Fallback label
+          labels.push(`0${getSessionTemperatureSymbol()}`); // Fallback label
         }
       }
       return labels;
