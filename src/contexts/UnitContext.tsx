@@ -130,7 +130,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
 }) => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(
-    initialUnitSystem || "imperial"
+    initialUnitSystem || "metric"
   );
   const [loading, setLoading] = useState<boolean>(!initialUnitSystem);
   const [error, setError] = useState<string | null>(null);
@@ -165,7 +165,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
               if (isAuthenticated) {
                 const fresh = await ApiService.user.getSettings();
                 const freshUnits: UnitSystem =
-                  fresh.data.settings.preferred_units || "imperial";
+                  fresh.data.settings.preferred_units || "metric";
                 if (isMounted) {
                   setUnitSystem(freshUnits);
                 }
@@ -175,7 +175,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
                 );
               } else {
                 if (isMounted) {
-                  setUnitSystem("imperial");
+                  setUnitSystem("metric");
                 }
               }
             } catch (bgError: any) {
@@ -186,7 +186,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
                 );
               }
               if (isMounted) {
-                setUnitSystem("imperial");
+                setUnitSystem("metric");
               }
             }
             if (isMounted) {
@@ -195,7 +195,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
             return;
           }
           const preferredUnits: UnitSystem =
-            settings.preferred_units || "imperial";
+            settings.preferred_units || "metric";
           if (isMounted) {
             setUnitSystem(preferredUnits);
           }
@@ -208,7 +208,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
             try {
               const freshSettings = await ApiService.user.getSettings();
               const freshUnits: UnitSystem =
-                freshSettings.data.settings.preferred_units || "imperial";
+                freshSettings.data.settings.preferred_units || "metric";
               if (isMounted && freshUnits !== preferredUnits) {
                 setUnitSystem(freshUnits);
               }
@@ -231,7 +231,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
         if (isAuthenticated) {
           const settings = await ApiService.user.getSettings();
           const preferredUnits: UnitSystem =
-            settings.data.settings.preferred_units || "imperial";
+            settings.data.settings.preferred_units || "metric";
           if (isMounted) {
             setUnitSystem(preferredUnits);
           }
@@ -243,7 +243,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
         } else {
           // Use default for unauthenticated users
           if (isMounted) {
-            setUnitSystem("imperial");
+            setUnitSystem("metric");
           }
         }
       } catch (err: any) {
@@ -252,8 +252,8 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
           console.warn("Failed to load unit preferences, using default:", err);
         }
         if (isMounted) {
-          setUnitSystem("imperial");
-        } // Fallback to imperial
+          setUnitSystem("metric");
+        } // Fallback to metric
       } finally {
         if (isMounted) {
           setLoading(false);

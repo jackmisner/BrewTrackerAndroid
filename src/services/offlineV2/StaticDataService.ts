@@ -183,6 +183,23 @@ export class StaticDataService {
     }
   }
 
+  /**
+   * Force refresh ingredients after user authentication
+   * This is useful when the user logs in and we need to fetch ingredients
+   * that were previously unavailable due to auth requirements
+   */
+  static async refreshIngredientsAfterAuth(): Promise<void> {
+    try {
+      await this.fetchAndCacheIngredients();
+    } catch (error) {
+      console.warn(
+        "Failed to refresh ingredients after authentication:",
+        error
+      );
+      // Don't throw here, as this is a background operation
+    }
+  }
+
   // ============================================================================
   // Cache Management
   // ============================================================================
@@ -275,11 +292,41 @@ export class StaticDataService {
    */
   private static async fetchAndCacheIngredients(): Promise<Ingredient[]> {
     try {
-      // Get version and data
-      const [versionResponse, dataResponse] = await Promise.all([
-        ApiService.ingredients.getVersion(),
-        ApiService.ingredients.getAll(),
-      ]);
+      // Get version first (doesn't require auth)
+      const versionResponse = await ApiService.ingredients.getVersion();
+
+      // Try to get data - this requires authentication
+      let dataResponse;
+      try {
+        dataResponse = await ApiService.ingredients.getAll();
+      } catch (authError: any) {
+        // If we get a 401/403 error, it means user is not authenticated
+        // In this case, we can't fetch ingredients, so return empty array
+        // but still cache the version info for when user logs in
+        if (authError?.status === 401 || authError?.status === 403) {
+          console.warn(
+            "Cannot fetch ingredients: user not authenticated. Ingredients will be available after login."
+          );
+
+          // Cache empty data with version for now
+          const version = versionResponse.data.version;
+          const cachedData: CachedStaticData<Ingredient> = {
+            data: [],
+            version,
+            cached_at: Date.now(),
+            expires_never: true,
+          };
+
+          await AsyncStorage.multiSet([
+            [STORAGE_KEYS_V2.INGREDIENTS_DATA, JSON.stringify(cachedData)],
+            [STORAGE_KEYS_V2.INGREDIENTS_VERSION, String(version)],
+          ]);
+
+          return [];
+        }
+        // Re-throw non-auth errors
+        throw authError;
+      }
 
       // Handle the response structure - response.data might be an array or have ingredients property
       let ingredients: any[] = [];
@@ -503,10 +550,25 @@ export class StaticDataService {
 
       // If version differs, update cache in background
       if (String(cachedVersion) !== String(versionResponse.data.version)) {
-        if (dataType === "ingredients") {
-          await this.fetchAndCacheIngredients();
-        } else {
-          await this.fetchAndCacheBeerStyles();
+        try {
+          if (dataType === "ingredients") {
+            await this.fetchAndCacheIngredients();
+          } else {
+            await this.fetchAndCacheBeerStyles();
+          }
+        } catch (error: any) {
+          // For background version checks, if ingredients fail due to auth,
+          // just log a warning and continue - don't throw error
+          if (
+            dataType === "ingredients" &&
+            (error?.status === 401 || error?.status === 403)
+          ) {
+            console.warn(
+              "Background ingredients update failed: authentication required"
+            );
+          } else {
+            throw error;
+          }
         }
       }
     } catch (error) {

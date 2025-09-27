@@ -16,6 +16,7 @@ import {
   isTokenExpiringSoon,
   getTokenTimeRemaining,
   validateJWTStructure,
+  debugJWTToken,
   JWTPayload,
 } from "@src/utils/jwtUtils";
 
@@ -212,6 +213,22 @@ describe("jwtUtils", () => {
       const result = extractUserIdFromJWT(token);
 
       expect(result).toBeNull(); // Empty string is falsy
+    });
+
+    it("should handle exception during token processing silently", () => {
+      // Force an exception by mocking decodeJWTPayload to throw
+      const originalDecode = decodeJWTPayload;
+      jest
+        .spyOn(require("@src/utils/jwtUtils"), "decodeJWTPayload")
+        .mockImplementationOnce(() => {
+          throw new Error("Forced error for testing");
+        });
+
+      const result = extractUserIdFromJWT("any-token");
+      expect(result).toBeNull();
+
+      // Restore original function
+      jest.restoreAllMocks();
     });
   });
 
@@ -564,6 +581,103 @@ describe("jwtUtils", () => {
         expect(result).toEqual(results[0]); // All results should be identical
         expect(result).toMatchObject(validPayload);
       });
+    });
+  });
+
+  describe("debugJWTToken", () => {
+    // Store original __DEV__ value
+    const originalDev = (global as any).__DEV__;
+
+    afterEach(() => {
+      // Restore original __DEV__ value
+      (global as any).__DEV__ = originalDev;
+      jest.restoreAllMocks();
+    });
+
+    it("should not log anything when not in development mode", () => {
+      (global as any).__DEV__ = false;
+      const consoleSpy = jest
+        .spyOn(console, "log")
+        .mockImplementation(() => {});
+
+      const token = createJWT(validPayload);
+      debugJWTToken(token);
+
+      expect(consoleSpy).not.toHaveBeenCalled();
+    });
+
+    it("should log JWT debug information in development mode", () => {
+      (global as any).__DEV__ = true;
+      const consoleSpy = jest
+        .spyOn(console, "log")
+        .mockImplementation(() => {});
+
+      const token = createJWT(validPayload);
+      debugJWTToken(token);
+
+      expect(consoleSpy).toHaveBeenCalledWith("=== JWT Token Debug ===");
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Full payload:",
+        expect.objectContaining(validPayload)
+      );
+      expect(consoleSpy).toHaveBeenCalledWith("Available user ID fields:");
+      expect(consoleSpy).toHaveBeenCalledWith("  sub: user123");
+      expect(consoleSpy).toHaveBeenCalledWith("  user_id: user123");
+      expect(consoleSpy).toHaveBeenCalledWith("Extracted User ID:", "user123");
+      expect(consoleSpy).toHaveBeenCalledWith("======================");
+    });
+
+    it("should handle invalid token in development mode", () => {
+      (global as any).__DEV__ = true;
+      const consoleSpy = jest
+        .spyOn(console, "log")
+        .mockImplementation(() => {});
+
+      debugJWTToken("invalid-token");
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "JWT Debug: Invalid token format/payload"
+      );
+    });
+
+    it("should handle token that causes parsing exception", () => {
+      (global as any).__DEV__ = true;
+      const consoleSpy = jest
+        .spyOn(console, "log")
+        .mockImplementation(() => {});
+
+      // Create an invalid token that will cause atob to throw (invalid base64)
+      const invalidBase64Token =
+        "header.!!!invalid-base64-characters!!.signature";
+
+      debugJWTToken(invalidBase64Token);
+
+      // Check that it handled the error gracefully (might show invalid format message)
+      expect(consoleSpy).toHaveBeenCalled();
+    });
+
+    it("should log only available user ID fields", () => {
+      (global as any).__DEV__ = true;
+      const consoleSpy = jest
+        .spyOn(console, "log")
+        .mockImplementation(() => {});
+
+      const payloadWithLimitedFields = {
+        user_id: "user456",
+        email: "test@example.com",
+        // No sub, id, userId, or uid fields
+      };
+
+      const token = createJWT(payloadWithLimitedFields);
+      debugJWTToken(token);
+
+      expect(consoleSpy).toHaveBeenCalledWith("=== JWT Token Debug ===");
+      expect(consoleSpy).toHaveBeenCalledWith("  user_id: user456");
+      expect(consoleSpy).toHaveBeenCalledWith("Extracted User ID:", "user456");
+      expect(consoleSpy).toHaveBeenCalledWith("======================");
+
+      // Should not log sub field since it doesn't exist
+      expect(consoleSpy).not.toHaveBeenCalledWith("  sub: user456");
     });
   });
 });

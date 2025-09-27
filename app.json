@@ -3,7 +3,7 @@
     "name": "BrewTracker",
     "slug": "brewtracker-android",
     "orientation": "portrait",
-    "version": "2.0.7",
+    "version": "2.0.18",
     "icon": "./assets/images/BrewTrackerAndroidLogo.png",
     "scheme": "brewtracker",
     "userInterfaceStyle": "automatic",
@@ -16,7 +16,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.brewtracker.android",
-      "versionCode": 100,
+      "versionCode": 111,
       "permissions": [
         "CAMERA",
         "VIBRATE",
@@ -57,7 +57,7 @@
       }
     },
     "owner": "jackmisner",
-    "runtimeVersion": "2.0.7",
+    "runtimeVersion": "2.0.18",
     "updates": {
       "url": "https://u.expo.dev/edf222a8-b532-4d12-9b69-4e7fbb1d41c2"
     }

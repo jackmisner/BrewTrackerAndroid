@@ -9,12 +9,14 @@ import { useState, useEffect, useCallback } from "react";
 import { UserCacheService } from "@services/offlineV2/UserCacheService";
 import { UseUserDataReturn, SyncResult, Recipe, BrewSession } from "@src/types";
 import { useAuth } from "@contexts/AuthContext";
+import { useUnits } from "@contexts/UnitContext";
 
 /**
  * Hook for managing recipes with offline capabilities
  */
 export function useRecipes(): UseUserDataReturn<Recipe> {
   const { getUserId } = useAuth();
+  const { unitSystem } = useUnits();
   const [data, setData] = useState<Recipe[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,11 +50,7 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
         }
         setError(null);
 
-        console.log(
-          `[useRecipes.loadData] Loading recipes for user ID: "${userId}"`
-        );
-
-        const recipes = await UserCacheService.getRecipes(userId);
+        const recipes = await UserCacheService.getRecipes(userId, unitSystem);
         console.log(
           `[useRecipes.loadData] UserCacheService returned ${recipes.length} recipes`
         );
@@ -68,7 +66,7 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
         setIsLoading(false);
       }
     },
-    [getUserIdForOperations]
+    [getUserIdForOperations, unitSystem]
   );
 
   const create = useCallback(
@@ -136,28 +134,49 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
     return result;
   }, [loadData]);
 
-  const refresh = useCallback(async (): Promise<void> => {
-    try {
-      const userIdForCache = await getUserIdForOperations();
-      if (!userIdForCache) {
-        console.log(`[useRecipes.refresh] No user ID found for refresh`);
-        return;
+  const clone = useCallback(
+    async (id: string): Promise<Recipe> => {
+      const userId = await getUserIdForOperations();
+      if (!userId) {
+        throw new Error("User not authenticated");
       }
 
+      const clonedRecipe = await UserCacheService.cloneRecipe(id, userId);
+
+      // Refresh data
+      await loadData(false);
+
+      return clonedRecipe;
+    },
+    [getUserIdForOperations, loadData]
+  );
+
+  const refresh = useCallback(async (): Promise<void> => {
+    const userIdForCache = await getUserIdForOperations();
+    if (!userIdForCache) {
+      console.log(`[useRecipes.refresh] No user ID found for refresh`);
+      return;
+    }
+
+    try {
       setIsLoading(true);
-      setError(null);
+      // Don't clear error state immediately - preserve it if refresh fails
+      // setError(null);
 
       console.log(
         `[useRecipes.refresh] Refreshing recipes from server for user: "${userIdForCache}"`
       );
 
-      const refreshedRecipes =
-        await UserCacheService.refreshRecipesFromServer(userIdForCache);
+      const refreshedRecipes = await UserCacheService.refreshRecipesFromServer(
+        userIdForCache,
+        unitSystem
+      );
       console.log(
         `[useRecipes.refresh] Refresh completed, got ${refreshedRecipes.length} recipes`
       );
 
       setData(refreshedRecipes);
+      setError(null); // Only clear error on successful refresh
 
       // Update sync status
       const pending = await UserCacheService.getPendingOperationsCount();
@@ -165,13 +184,45 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
       setLastSync(Date.now());
     } catch (error) {
       console.error(`[useRecipes.refresh] Refresh failed:`, error);
-      setError(
-        error instanceof Error ? error.message : "Failed to refresh recipes"
+
+      // Don't set error state for refresh failures - preserve offline cache
+      // Instead, try to load existing offline data to ensure offline-created recipes are available
+      console.log(
+        `[useRecipes.refresh] Refresh failed, loading offline cache to preserve data`
       );
+
+      try {
+        const offlineRecipes = await UserCacheService.getRecipes(
+          userIdForCache,
+          unitSystem
+        );
+        console.log(
+          `[useRecipes.refresh] Loaded ${offlineRecipes.length} recipes from offline cache`
+        );
+        setData(offlineRecipes);
+
+        // Update sync status to reflect pending operations
+        const pending = await UserCacheService.getPendingOperationsCount();
+        setPendingCount(pending);
+
+        // Don't update error state - let existing cache be shown
+        console.log(
+          `[useRecipes.refresh] Preserved offline cache despite refresh failure`
+        );
+      } catch (cacheError) {
+        console.error(
+          `[useRecipes.refresh] Failed to load offline cache:`,
+          cacheError
+        );
+        // Only set error if we can't even load offline cache
+        setError(
+          error instanceof Error ? error.message : "Failed to refresh recipes"
+        );
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [getUserIdForOperations]);
+  }, [getUserIdForOperations, unitSystem]);
 
   // Load data on mount and when user changes
   useEffect(() => {
@@ -198,6 +249,7 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
     create,
     update,
     delete: deleteRecipe,
+    clone,
     sync,
     refresh,
   };
@@ -258,6 +310,13 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
     };
   }, []);
 
+  const clone = useCallback(async (_id: string): Promise<BrewSession> => {
+    // TODO: Implement brew session cloning when UserCacheService supports it
+    throw new Error(
+      "Brew session cloning not yet implemented in UserCacheService"
+    );
+  }, []);
+
   const refresh = useCallback(async (): Promise<void> => {
     // TODO: Implement when UserCacheService supports brew sessions
     // For now, do nothing since brew sessions are not implemented
@@ -273,6 +332,7 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
     create,
     update,
     delete: deleteSession,
+    clone,
     sync,
     refresh,
   };

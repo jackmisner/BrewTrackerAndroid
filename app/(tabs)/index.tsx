@@ -39,7 +39,7 @@
  * @testing_notes
  * - Covered by integration tests for data loading states (loading, error, success) and menu actions
  */
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -56,8 +56,7 @@ import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
-import OfflineRecipeService from "@services/offline/OfflineRecipeService";
-import OfflineCacheService from "@services/offline/OfflineCacheService";
+import { UserCacheService } from "@services/offlineV2/UserCacheService";
 import { NetworkStatusBanner } from "@src/components/NetworkStatusBanner";
 import ApiService from "@services/api/apiService";
 import BeerXMLService from "@services/beerxml/BeerXMLService";
@@ -74,11 +73,14 @@ import {
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
 import { QUERY_KEYS } from "@services/api/queryClient";
+import { useUnits } from "@contexts/UnitContext";
+
 export default function DashboardScreen() {
   const { user } = useAuth();
   const theme = useTheme();
   const styles = dashboardStyles(theme);
   const [refreshing, setRefreshing] = useState(false);
+  const { unitSystem } = useUnits();
 
   // Pagination defaults
   const PAGE = 1;
@@ -90,35 +92,11 @@ export default function DashboardScreen() {
   const recipeContextMenu = useContextMenu<Recipe>();
   const brewSessionContextMenu = useContextMenu<BrewSession>();
 
-  // Cleanup cooldown tracking
-  const CLEANUP_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
-  const lastCleanupTimeRef = useRef(0);
-
   // Handle pull to refresh
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      // Clean up stale cache data when online and refreshing
-      try {
-        const now = Date.now();
-        if (now - lastCleanupTimeRef.current < CLEANUP_COOLDOWN_MS) {
-          console.log("Skipping cleanup due to cooldown");
-        } else {
-          const cleanup = await OfflineRecipeService.cleanupStaleData();
-          if (cleanup.removed > 0) {
-            console.log(
-              `Dashboard refresh cleaned up ${cleanup.removed} stale recipes`
-            );
-          }
-          lastCleanupTimeRef.current = now;
-        }
-      } catch (error) {
-        console.warn(
-          "Failed to cleanup stale data during dashboard refresh:",
-          error
-        );
-        // Don't let cleanup errors block the refresh
-      }
+      // Legacy cleanup no longer needed - V2 system handles cache management automatically
 
       // Refresh dashboard data
       await refetch();
@@ -166,17 +144,14 @@ export default function DashboardScreen() {
           active_brew_sessions: activeBrewSessions.slice(0, 3),
         };
 
-        // Cache the fresh data for offline use
+        // Cache the fresh data for offline use using V2 system
         const userIdForCache = user?.id;
         if (!userIdForCache) {
           console.warn("Cannot cache dashboard data without user ID");
         } else {
-          OfflineCacheService.cacheDashboardData(
-            freshDashboardData,
-            userIdForCache
-          ).catch(error => {
-            console.warn("Failed to cache dashboard data:", error);
-          });
+          // V2 system doesn't need explicit dashboard data caching
+          // User recipes are cached automatically through UserCacheService operations
+          console.log("Dashboard data refreshed - using V2 caching system");
         }
 
         return {
@@ -193,23 +168,41 @@ export default function DashboardScreen() {
           console.error("Dashboard data fetch error:", error);
         }
 
-        // Try to get cached data when API fails
+        // Try to get cached data when API fails using V2 system
         try {
           if (!user?.id) {
             console.warn("Cannot load cached dashboard data without user ID");
             throw error; // Rethrow original error
           }
-          const cachedData = await OfflineCacheService.getCachedDashboardData(
-            user?.id
+
+          // V2 system: Try to get cached recipes for fallback dashboard
+          const cachedRecipes = await UserCacheService.getRecipes(
+            user.id,
+            unitSystem
           );
-          if (cachedData) {
-            console.log("Using cached dashboard data due to API error");
+          if (cachedRecipes && cachedRecipes.length > 0) {
+            console.log(
+              "Using cached recipes for fallback dashboard due to API error"
+            );
+            const fallbackDashboardData = {
+              user_stats: {
+                total_recipes: cachedRecipes.length,
+                public_recipes: 0, // Cannot determine from cached data
+                total_brew_sessions: 0, // V2 system doesn't cache brew sessions yet
+                active_brew_sessions: 0,
+              },
+              recent_recipes: cachedRecipes.slice(0, 3),
+              active_brew_sessions: [],
+            };
             return {
-              data: cachedData,
+              data: fallbackDashboardData,
             };
           }
         } catch (cacheError) {
-          console.warn("Failed to load cached dashboard data:", cacheError);
+          console.warn(
+            "Failed to load cached data for dashboard fallback:",
+            cacheError
+          );
         }
 
         throw error;
@@ -841,7 +834,7 @@ export default function DashboardScreen() {
           <Text style={styles.sectionTitle}>Recent Recipes</Text>
           <View style={styles.verticalList}>
             {recentRecipes
-              .filter(recipe => recipe && recipe.name)
+              .filter((recipe: Recipe) => recipe && recipe.name)
               .map(renderRecentRecipe)}
           </View>
         </View>

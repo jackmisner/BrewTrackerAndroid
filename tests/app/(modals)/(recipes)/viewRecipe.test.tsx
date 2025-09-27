@@ -1,7 +1,7 @@
 import React from "react";
-import { render, fireEvent, waitFor, act } from "@testing-library/react-native";
+import { fireEvent, waitFor, act } from "@testing-library/react-native";
 import ViewRecipeScreen from "../../../../app/(modals)/(recipes)/viewRecipe";
-import { mockData, testUtils } from "../../../testUtils";
+import { renderWithProviders, mockData, testUtils } from "../../../testUtils";
 import { TEST_IDS } from "@src/constants/testIDs";
 
 // Mock React Native
@@ -18,6 +18,11 @@ jest.mock("react-native", () => ({
   StyleSheet: {
     create: (styles: any) => styles,
     flatten: (styles: any) => styles,
+  },
+  Appearance: {
+    getColorScheme: jest.fn(() => "light"),
+    addChangeListener: jest.fn(),
+    removeChangeListener: jest.fn(),
   },
 }));
 
@@ -58,9 +63,56 @@ jest.mock("@services/api/apiService", () => ({
   },
 }));
 
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: jest.fn(),
-}));
+// Mock all context providers that testUtils imports
+jest.mock("@contexts/ThemeContext", () => {
+  const React = require("react");
+  return {
+    useTheme: jest.fn(),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+jest.mock("@contexts/AuthContext", () => {
+  const React = require("react");
+  return {
+    useAuth: jest.fn(),
+    AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+jest.mock("@contexts/NetworkContext", () => {
+  const React = require("react");
+  return {
+    useNetwork: jest.fn(),
+    NetworkProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+jest.mock("@contexts/DeveloperContext", () => {
+  const React = require("react");
+  return {
+    useDeveloper: jest.fn(),
+    DeveloperProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+  };
+});
+
+jest.mock("@contexts/UnitContext", () => {
+  const React = require("react");
+  return {
+    useUnits: jest.fn(),
+    UnitProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+jest.mock("@contexts/CalculatorsContext", () => {
+  const React = require("react");
+  return {
+    useCalculators: jest.fn(),
+    CalculatorsProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+  };
+});
 
 jest.mock("@styles/modals/viewRecipeStyles", () => ({
   viewRecipeStyles: jest.fn(() => ({
@@ -136,6 +188,17 @@ const mockUseLocalSearchParams = require("expo-router").useLocalSearchParams;
 
 // Setup mocks
 require("@contexts/ThemeContext").useTheme.mockReturnValue(mockTheme);
+require("@contexts/AuthContext").useAuth.mockReturnValue({
+  user: { id: "test-user-123" },
+  isAuthenticated: true,
+  getUserId: jest.fn().mockReturnValue("test-user-123"),
+});
+require("@contexts/UnitContext").useUnits.mockReturnValue({
+  unitSystem: "imperial",
+  temperatureUnit: "F",
+  volumeUnit: "gal",
+  weightUnit: "lb",
+});
 
 describe("ViewRecipeScreen", () => {
   beforeEach(() => {
@@ -153,7 +216,7 @@ describe("ViewRecipeScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { getByText } = render(<ViewRecipeScreen />);
+      const { getByText } = renderWithProviders(<ViewRecipeScreen />);
 
       expect(getByText("Loading recipe...")).toBeTruthy();
     });
@@ -168,7 +231,7 @@ describe("ViewRecipeScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { getByText } = render(<ViewRecipeScreen />);
+      const { getByText } = renderWithProviders(<ViewRecipeScreen />);
 
       expect(getByText("Failed to Load Recipe")).toBeTruthy();
       expect(getByText("Network error")).toBeTruthy();
@@ -183,7 +246,7 @@ describe("ViewRecipeScreen", () => {
         refetch: mockRefetch,
       });
 
-      const { getByText } = render(<ViewRecipeScreen />);
+      const { getByText } = renderWithProviders(<ViewRecipeScreen />);
       const retryButton = getByText("Try Again");
 
       fireEvent.press(retryButton);
@@ -214,7 +277,9 @@ describe("ViewRecipeScreen", () => {
     });
 
     it("should display recipe information correctly", () => {
-      const { getAllByText, getByText } = render(<ViewRecipeScreen />);
+      const { getAllByText, getByText } = renderWithProviders(
+        <ViewRecipeScreen />
+      );
 
       expect(getAllByText("Test IPA Recipe").length).toBeGreaterThan(0);
       expect(getByText("American IPA")).toBeTruthy();
@@ -222,7 +287,7 @@ describe("ViewRecipeScreen", () => {
     });
 
     it("should display brewing metrics", () => {
-      render(<ViewRecipeScreen />);
+      renderWithProviders(<ViewRecipeScreen />);
 
       // BrewingMetricsDisplay component should be rendered
       // Since it's mocked, we just verify the component renders without error
@@ -259,7 +324,7 @@ describe("ViewRecipeScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { getByText } = render(<ViewRecipeScreen />);
+      const { getByText } = renderWithProviders(<ViewRecipeScreen />);
 
       expect(getByText("Grains & Malts")).toBeTruthy();
       expect(getByText("Pale Malt")).toBeTruthy();
@@ -300,7 +365,7 @@ describe("ViewRecipeScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { getByText } = render(<ViewRecipeScreen />);
+      const { getByText } = renderWithProviders(<ViewRecipeScreen />);
 
       expect(getByText("Hops")).toBeTruthy();
       expect(getByText("Cascade")).toBeTruthy();
@@ -329,7 +394,7 @@ describe("ViewRecipeScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { getByText } = render(<ViewRecipeScreen />);
+      const { getByText } = renderWithProviders(<ViewRecipeScreen />);
 
       expect(getByText("Yeast")).toBeTruthy();
       expect(getByText("Safale US-05")).toBeTruthy();
@@ -356,7 +421,7 @@ describe("ViewRecipeScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { getByText } = render(<ViewRecipeScreen />);
+      const { getByText } = renderWithProviders(<ViewRecipeScreen />);
 
       expect(getByText("Other")).toBeTruthy();
       expect(getByText("Gypsum")).toBeTruthy();
@@ -374,7 +439,7 @@ describe("ViewRecipeScreen", () => {
     });
 
     it("should navigate back when back button is pressed", () => {
-      const { getByTestId } = render(<ViewRecipeScreen />);
+      const { getByTestId } = renderWithProviders(<ViewRecipeScreen />);
 
       // Find the back button using testID (from ModalHeader component)
       const backButton = getByTestId(
@@ -389,14 +454,14 @@ describe("ViewRecipeScreen", () => {
     });
 
     it("should navigate to edit recipe when edit action is pressed", () => {
-      render(<ViewRecipeScreen />);
+      renderWithProviders(<ViewRecipeScreen />);
 
       // Edit button is an icon button in the header - test that navigation is configured
       expect(mockRouter.push).toBeDefined();
     });
 
     it("should navigate to start brew session when start brewing is pressed", () => {
-      const { getByText } = render(<ViewRecipeScreen />);
+      const { getByText } = renderWithProviders(<ViewRecipeScreen />);
       const startBrewButton = getByText("Start Brewing");
 
       fireEvent.press(startBrewButton);
@@ -418,7 +483,7 @@ describe("ViewRecipeScreen", () => {
         refetch: mockRefetch,
       });
 
-      const { getByTestId } = render(<ViewRecipeScreen />);
+      const { getByTestId } = renderWithProviders(<ViewRecipeScreen />);
 
       // Find the ScrollView and trigger its RefreshControl onRefresh
       const scrollView = getByTestId(
@@ -451,7 +516,7 @@ describe("ViewRecipeScreen", () => {
     });
 
     it("should not display empty ingredient sections", () => {
-      const { queryByText } = render(<ViewRecipeScreen />);
+      const { queryByText } = renderWithProviders(<ViewRecipeScreen />);
 
       // Empty sections should not be displayed
       expect(queryByText("Grains & Malts")).toBeNull();
@@ -470,7 +535,7 @@ describe("ViewRecipeScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { getByText } = render(<ViewRecipeScreen />);
+      const { getByText } = renderWithProviders(<ViewRecipeScreen />);
 
       expect(getByText("Brewing Instructions")).toBeTruthy();
       expect(
@@ -491,7 +556,7 @@ describe("ViewRecipeScreen", () => {
         refetch: jest.fn(),
       });
 
-      const { getByText } = render(<ViewRecipeScreen />);
+      const { getByText } = renderWithProviders(<ViewRecipeScreen />);
 
       expect(getByText("Failed to Load Recipe")).toBeTruthy();
     });
@@ -522,7 +587,7 @@ describe("ViewRecipeScreen", () => {
         refetch: jest.fn(),
       });
 
-      render(<ViewRecipeScreen />);
+      renderWithProviders(<ViewRecipeScreen />);
 
       expect(
         require("@src/utils/formatUtils").formatHopTime
@@ -542,7 +607,7 @@ describe("ViewRecipeScreen", () => {
         refetch: jest.fn(),
       });
 
-      render(<ViewRecipeScreen />);
+      renderWithProviders(<ViewRecipeScreen />);
 
       expect(
         require("@styles/modals/viewRecipeStyles").viewRecipeStyles

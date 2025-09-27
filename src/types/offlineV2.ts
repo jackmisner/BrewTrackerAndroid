@@ -121,6 +121,7 @@ export interface PendingOperation {
   type: "create" | "update" | "delete";
   entityType: "recipe" | "brew_session" | "fermentation_entry";
   entityId: string;
+  userId?: string;
   data?: any;
   timestamp: number;
   retryCount: number;
@@ -247,6 +248,7 @@ export interface UseUserDataReturn<T> {
   create: (item: Partial<T>) => Promise<T>;
   update: (id: string, updates: Partial<T>) => Promise<T>;
   delete: (id: string) => Promise<void>;
+  clone: (id: string) => Promise<T>;
   sync: () => Promise<SyncResult>;
   refresh: () => Promise<void>;
 }

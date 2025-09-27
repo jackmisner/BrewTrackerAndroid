@@ -40,8 +40,7 @@ import ApiService from "@services/api/apiService";
 import { STORAGE_KEYS } from "@services/config";
 import { extractUserIdFromJWT, debugJWTToken } from "@utils/jwtUtils";
 import { cacheUtils } from "@services/api/queryClient";
-import OfflineRecipeService from "@services/offline/OfflineRecipeService";
-import OfflineCacheService from "@services/offline/OfflineCacheService";
+import { StaticDataService } from "@services/offlineV2/StaticDataService";
 
 /**
  * Authentication context interface defining all available state and actions
@@ -169,11 +168,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         setUser(apiUser);
       }
 
-      // Cache ingredients since user is authenticated (don't block initialization)
-      OfflineCacheService.cacheIngredientsAfterAuth()
+      // Cache ingredients since user is authenticated using V2 system (don't block initialization)
+      StaticDataService.updateIngredientsCache()
         .then(() => {
           // Log cache status for debugging
-          OfflineCacheService.logCacheStatus();
+          StaticDataService.getCacheStats()
+            .then(stats => {
+              console.log("V2 Cache Status:", stats);
+            })
+            .catch(error => console.warn("Failed to get cache stats:", error));
         })
         .catch(error => {
           console.warn(
@@ -226,11 +229,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
       setUser(userData);
 
-      // Cache ingredients now that user is authenticated
-      OfflineCacheService.cacheIngredientsAfterAuth()
+      // Cache ingredients now that user is authenticated using V2 system
+      StaticDataService.updateIngredientsCache()
         .then(() => {
           // Log cache status for debugging
-          OfflineCacheService.logCacheStatus();
+          StaticDataService.getCacheStats()
+            .then(stats => {
+              console.log("V2 Cache Status:", stats);
+            })
+            .catch(error => console.warn("Failed to get cache stats:", error));
         })
         .catch(error => {
           console.warn("Failed to cache ingredients after login:", error);
@@ -320,7 +327,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       await cacheUtils.clearUserPersistedCache(userId);
 
       // Clear user-scoped offline data
-      await OfflineRecipeService.clearUserData(userId);
+      const { UserCacheService } = await import(
+        "@services/offlineV2/UserCacheService"
+      );
+      await UserCacheService.clearUserData(userId);
     } catch (error: any) {
       console.error("Logout failed:", error);
       // Even if logout fails, clear local state and cache
@@ -329,7 +339,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       // Clear persisted cache without user ID as fallback
       await cacheUtils.clearAllPersistedCache();
       // Clear all offline data as fallback
-      await OfflineRecipeService.clearUserData();
+      const { UserCacheService } = await import(
+        "@services/offlineV2/UserCacheService"
+      );
+      await UserCacheService.clearUserData();
     } finally {
       setIsLoading(false);
     }

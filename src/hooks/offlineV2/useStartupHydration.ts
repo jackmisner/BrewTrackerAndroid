@@ -41,10 +41,6 @@ export function useStartupHydration(): UseStartupHydrationReturn {
         return;
       }
 
-      console.log(
-        `[useStartupHydration] Starting hydration for authenticated user`
-      );
-
       try {
         setIsHydrating(true);
         setError(null);
@@ -56,7 +52,6 @@ export function useStartupHydration(): UseStartupHydrationReturn {
         if (!isCancelled) {
           setHasHydrated(true);
           setLastUserID(userId);
-          console.log(`[useStartupHydration] Hydration completed successfully`);
         }
       } catch (hydrationError) {
         console.error(

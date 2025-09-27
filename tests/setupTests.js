@@ -48,6 +48,131 @@ jest.mock("expo-device", () => ({
   getDeviceId: jest.fn().mockResolvedValue("dfyt4uf"),
 }));
 
+// Mock expo-file-system
+jest.mock("expo-file-system", () => {
+  // Simple in-memory FS keyed by URI
+  const __fs = new Map(); // uri -> { content: string, size: number, mtime: number }
+  const now = () => Date.now();
+  const normalizeBase = p =>
+    (typeof p === "string" ? p : p?.uri || "file://cache").replace(/\/$/, "");
+  const join = (base, name = "mockfile.txt") =>
+    `${normalizeBase(base)}/${name}`;
+
+  const readAsStringAsync = jest.fn(async uri => {
+    const meta = __fs.get(uri);
+    return meta?.content ?? "";
+  });
+  const writeAsStringAsync = jest.fn(async (uri, content) => {
+    const text = content ?? "";
+    __fs.set(uri, { content: text, size: text.length, mtime: now() });
+  });
+  const getInfoAsync = jest.fn(async uri => {
+    const meta = __fs.get(uri);
+    return {
+      exists: !!meta,
+      isDirectory: false,
+      size: meta?.size ?? 0,
+      modificationTime: meta?.mtime ?? now(),
+    };
+  });
+  const deleteAsync = jest.fn(async uri => {
+    __fs.delete(uri);
+  });
+
+  const File = jest.fn().mockImplementation(function MockFile(path, filename) {
+    const uri = join(path, filename);
+    return {
+      uri,
+      name: filename || "mockfile.txt",
+      get exists() {
+        return __fs.has(uri);
+      },
+      get size() {
+        return __fs.get(uri)?.size ?? 0;
+      },
+      async create() {
+        if (!__fs.has(uri)) {
+          __fs.set(uri, { content: "", size: 0, mtime: now() });
+        }
+        return this;
+      },
+      async write(c) {
+        const content = c ?? "";
+        __fs.set(uri, { content, size: content.length, mtime: now() });
+      },
+      async text() {
+        const meta = __fs.get(uri);
+        return meta?.content ?? "";
+      },
+      async delete() {
+        __fs.delete(uri);
+      },
+      // Aliases for "next" API-leaning ergonomics if referenced
+      async writeAsString(c) {
+        return this.write(c);
+      },
+      async readAsString() {
+        return this.text();
+      },
+    };
+  });
+
+  class MockDirectory {
+    constructor(path, dirname) {
+      this.uri = join(path, dirname || "mockdir");
+      this._exists = false;
+    }
+    get exists() {
+      return this._exists;
+    }
+    async create() {
+      this._exists = true;
+      return this;
+    }
+    async list() {
+      const prefix = this.uri.endsWith("/") ? this.uri : this.uri + "/";
+      return Array.from(__fs.keys())
+        .filter(u => u.startsWith(prefix))
+        .map(u => {
+          const filename = u.slice(prefix.length);
+          return new File(this.uri, filename);
+        });
+    }
+  }
+
+  return {
+    // Modern/legacy fields
+    documentDirectory: "file://documents/",
+    cacheDirectory: "file://cache/",
+    bundleDirectory: "file://bundle/",
+    readAsStringAsync,
+    writeAsStringAsync,
+    getInfoAsync,
+    deleteAsync,
+    StorageAccessFramework: {
+      pickDirectoryAsync: jest.fn().mockResolvedValue({
+        uri: "content://mock-directory",
+        name: "MockDirectory",
+      }),
+    },
+    File,
+    Directory: Object.assign(MockDirectory, {
+      pickDirectoryAsync: jest.fn().mockResolvedValue({
+        uri: "content://mock-directory",
+        name: "MockDirectory",
+      }),
+    }),
+    // Keep app-specific Paths shape
+    Paths: {
+      document: "file://documents",
+      cache: "file://cache",
+    },
+  };
+});
+
+// Mock expo-file-system/next alias (for next API compatibility)
+jest.mock("expo-file-system/next", () => jest.requireMock("expo-file-system"));
+
 jest.mock("@react-native-async-storage/async-storage", () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
@@ -142,51 +267,13 @@ jest.mock("expo-sharing", () => ({
   shareAsync: jest.fn(),
 }));
 
-jest.mock("expo-file-system", () => ({
-  documentDirectory: "file://documents/",
-  cacheDirectory: "file://cache/",
-  bundleDirectory: "file://bundle/",
-  readAsStringAsync: jest.fn().mockResolvedValue("mock file content"),
-  writeAsStringAsync: jest.fn().mockResolvedValue(undefined),
-  getInfoAsync: jest.fn().mockResolvedValue({
-    exists: true,
-    isDirectory: false,
-    size: 1024,
-    modificationTime: Date.now(),
-  }),
-  deleteAsync: jest.fn().mockResolvedValue(undefined),
-  StorageAccessFramework: {
-    pickDirectoryAsync: jest.fn().mockResolvedValue({
-      uri: "content://mock-directory",
-      name: "MockDirectory",
-    }),
-  },
-  // Legacy API classes for compatibility
-  File: jest.fn().mockImplementation((path, filename) => ({
-    uri:
-      typeof path === "string"
-        ? `${path}/${filename || "mockfile.txt"}`
-        : `${path}/${filename || "mockfile.txt"}`,
-    exists: true,
-    create: jest.fn().mockResolvedValue(undefined),
-    write: jest.fn().mockResolvedValue(undefined),
-    text: jest.fn().mockResolvedValue("mock file content"),
-    delete: jest.fn().mockResolvedValue(undefined),
-  })),
-  Directory: {
-    pickDirectoryAsync: jest.fn().mockResolvedValue({
-      uri: "content://mock-directory",
-      name: "MockDirectory",
-    }),
-  },
-  Paths: {
-    cache: "file://cache/",
-    document: "file://documents/",
-    bundle: "file://bundle/",
-  },
-}));
-
 jest.mock("expo-router", () => ({
+  router: {
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+    canGoBack: jest.fn(() => false),
+  },
   useRouter: () => ({
     push: jest.fn(),
     replace: jest.fn(),
@@ -528,62 +615,7 @@ jest.mock("../src/components/NetworkStatusBanner", () => ({
   default: ({ onRetry }) => null,
 }));
 
-// Mock offline recipe hooks
-jest.mock("../src/hooks/useOfflineRecipes", () => ({
-  useOfflineRecipes: jest.fn(() => ({
-    data: [],
-    isLoading: false,
-    error: null,
-    refetch: jest.fn(),
-  })),
-  useOfflineRecipe: jest.fn(() => ({
-    data: null,
-    isLoading: false,
-    error: null,
-    refetch: jest.fn(),
-  })),
-  useOfflineCreateRecipe: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
-    error: null,
-  })),
-  useOfflineUpdateRecipe: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
-    error: null,
-  })),
-  useOfflineDeleteRecipe: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
-    error: null,
-  })),
-  useOfflineSyncStatus: jest.fn(() => ({
-    data: {
-      totalRecipes: 0,
-      pendingSync: 0,
-      conflicts: 0,
-      failedSync: 0,
-      lastSync: 0,
-    },
-    isLoading: false,
-    error: null,
-  })),
-  useOfflineSync: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
-    error: null,
-  })),
-  useAutoOfflineSync: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isPending: false,
-    error: null,
-  })),
-}));
+// Legacy offline hooks removed - now using V2 system
 
 // Handle unhandled promise rejections from test mocks
 const originalUnhandledRejection = process.listeners("unhandledRejection");
@@ -805,15 +837,9 @@ const SUPPRESSED_ERROR_PATTERNS = [
 
   // SplashScreen test errors (intentional test errors)
   /Failed to initialize app data:/,
-  /Cannot read properties of undefined \(reading 'initializeCache'\)/,
+  // initializeCache error pattern removed with legacy service
 
-  // Legacy OfflineCacheService test errors (intentional test errors)
-  /Failed to load cached data:/,
-  /Failed to validate cache ownership:/,
-  /Failed to get cache status:/,
-  /Cannot read properties of undefined \(reading 'userId'\)/,
-  /Cannot read properties of undefined \(reading 'grain'\)/,
-  /Storage error/,
+  // Legacy offline service errors removed
 ];
 
 const SUPPRESSED_WARN_PATTERNS = [

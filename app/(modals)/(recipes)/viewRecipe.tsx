@@ -11,7 +11,9 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import ApiService from "@services/api/apiService";
-import OfflineRecipeService from "@services/offline/OfflineRecipeService";
+import { UserCacheService } from "@services/offlineV2/UserCacheService";
+import { useAuth } from "@contexts/AuthContext";
+import { useUnits } from "@contexts/UnitContext";
 import { QUERY_KEYS } from "@services/api/queryClient";
 import { Recipe } from "@src/types";
 import {
@@ -25,6 +27,7 @@ import { TEST_IDS } from "@src/constants/testIDs";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
 import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { formatHopTime, formatHopUsage } from "@src/utils/formatUtils";
+import { isTempId } from "@utils/recipeUtils";
 
 /**
  * Displays detailed information about a specific brewing recipe, including metrics, ingredients, and instructions.
@@ -35,6 +38,8 @@ export default function ViewRecipeScreen() {
   const theme = useTheme();
   const styles = viewRecipeStyles(theme);
   const queryClient = useQueryClient();
+  const { getUserId } = useAuth();
+  const { unitSystem } = useUnits();
   // State for pull-to-refresh functionality
   const [refreshing, setRefreshing] = useState(false);
 
@@ -68,12 +73,78 @@ export default function ViewRecipeScreen() {
       if (!recipe_id) {
         throw new Error("No recipe ID provided");
       }
-      // Use OfflineRecipeService to handle both real and temporary IDs
-      const recipe = await OfflineRecipeService.getById(recipe_id);
-      if (!recipe) {
+
+      try {
+        // Get user ID for V2 cache lookup
+        const userId = await getUserId();
+        if (!userId) {
+          throw new Error("User not authenticated");
+        }
+
+        // Try to get from V2 cache first including deleted recipes
+        const { recipe: cachedRecipe, isDeleted } =
+          await UserCacheService.getRecipeByIdIncludingDeleted(
+            recipe_id,
+            userId
+          );
+        if (cachedRecipe) {
+          console.log(
+            `Found recipe ${recipe_id} in V2 cache${isDeleted ? " (deleted)" : ""}`
+          );
+          if (isDeleted) {
+            throw new Error(`Recipe was deleted`);
+          }
+          return cachedRecipe;
+        }
+
+        // If not found in V2 cache, check if there are legacy recipes to migrate
+        try {
+          const { LegacyMigrationService } = await import(
+            "@services/offlineV2/LegacyMigrationService"
+          );
+          const legacyCount =
+            await LegacyMigrationService.getLegacyRecipeCount(userId);
+
+          if (legacyCount > 0) {
+            console.log(
+              `Recipe ${recipe_id} not found in V2 cache, attempting legacy migration`
+            );
+
+            // Attempt migration
+            const migrationResult =
+              await LegacyMigrationService.migrateLegacyRecipesToV2(
+                userId,
+                unitSystem
+              );
+            console.log(`Legacy migration result:`, migrationResult);
+
+            // Try V2 cache again after migration
+            if (migrationResult.migrated > 0) {
+              const allRecipesAfterMigration =
+                await UserCacheService.getRecipes(userId, unitSystem);
+              const migratedRecipe = allRecipesAfterMigration.find(
+                r => r.id === recipe_id
+              );
+              if (migratedRecipe) {
+                console.log(
+                  `Found recipe ${recipe_id} in V2 cache after migration`
+                );
+                return migratedRecipe;
+              }
+            }
+          }
+        } catch (migrationError) {
+          console.warn(
+            `Legacy migration failed for recipe ${recipe_id}:`,
+            migrationError
+          );
+        }
+
         throw new Error(`Recipe with ID ${recipe_id} not found`);
+      } catch (error) {
+        console.error(`Failed to load recipe ${recipe_id}:`, error);
+        throw error;
       }
-      return recipe;
     },
     enabled: !!recipe_id, // Only run query if recipe_id exists
     retry: 1,
@@ -81,19 +152,40 @@ export default function ViewRecipeScreen() {
   });
 
   // Query for version history - moved up to avoid conditional hook usage
-  const { data: versionHistoryData } = useQuery<RecipeVersionHistoryResponse>({
-    queryKey: QUERY_KEYS.RECIPE_VERSIONS(recipe_id!),
-    queryFn: async () => {
-      if (!recipe_id) {
-        throw new Error("No recipe ID provided");
-      }
-      const response = await ApiService.recipes.getVersionHistory(recipe_id);
-      return response.data;
-    },
-    enabled: !!recipe_id && !!recipeData, // Only run when we have recipe data
-    retry: 1,
-    staleTime: 1000 * 60 * 5,
-  });
+  const { data: versionHistoryData } =
+    useQuery<RecipeVersionHistoryResponse | null>({
+      queryKey: QUERY_KEYS.RECIPE_VERSIONS(recipe_id!),
+      queryFn: async () => {
+        if (!recipe_id) {
+          throw new Error("No recipe ID provided");
+        }
+
+        // Skip API call for temporary IDs - version history doesn't exist for offline recipes
+        if (isTempId(recipe_id)) {
+          console.log(
+            "🔍 View Recipe - Skipping version history API call for temp ID:",
+            recipe_id
+          );
+          return null; // Return null to indicate no version history available for offline recipes
+        }
+
+        try {
+          const response =
+            await ApiService.recipes.getVersionHistory(recipe_id);
+          return response.data;
+        } catch (error) {
+          // For online recipes, return null instead of failing
+          console.warn(
+            `Failed to fetch version history for recipe ${recipe_id}:`,
+            error
+          );
+          return null; // Return null to indicate no version history available
+        }
+      },
+      enabled: !!recipe_id && !!recipeData && !isTempId(recipe_id || ""), // Skip for temp IDs
+      retry: 1,
+      staleTime: 1000 * 60 * 5,
+    });
 
   /**
    * Pull-to-refresh handler

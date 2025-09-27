@@ -81,18 +81,18 @@ describe("UnitContext", () => {
   });
 
   describe("UnitProvider initialization", () => {
-    it("should initialize with imperial system by default", () => {
+    it("should initialize with metric system by default", () => {
       const wrapper = createWrapper();
       const { result } = renderHook(() => useUnits(), { wrapper });
 
-      expect(result.current.unitSystem).toBe("imperial");
+      expect(result.current.unitSystem).toBe("metric");
     });
 
     it("should initialize with provided unit system", () => {
-      const wrapper = createWrapper("metric");
+      const wrapper = createWrapper("imperial");
       const { result } = renderHook(() => useUnits(), { wrapper });
 
-      expect(result.current.unitSystem).toBe("metric");
+      expect(result.current.unitSystem).toBe("imperial");
       expect(result.current.loading).toBe(false);
     });
 

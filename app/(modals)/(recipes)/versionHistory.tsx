@@ -22,6 +22,7 @@ import { useTheme } from "@contexts/ThemeContext";
 import { viewRecipeStyles } from "@styles/modals/viewRecipeStyles";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { ModalHeader } from "@src/components/ui/ModalHeader";
+import { isTempId } from "@utils/recipeUtils";
 
 /**
  * Version History Screen
@@ -49,6 +50,15 @@ export default function VersionHistoryScreen() {
         throw new Error("No recipe ID provided");
       }
 
+      // Skip API call for temporary IDs - version history doesn't exist for offline recipes
+      if (isTempId(recipe_id)) {
+        console.log(
+          "🔍 Version History - Skipping API call for temp ID:",
+          recipe_id
+        );
+        throw new Error("Version history not available for offline recipes");
+      }
+
       try {
         const response = await ApiService.recipes.getVersionHistory(recipe_id);
 
@@ -58,7 +68,7 @@ export default function VersionHistoryScreen() {
         throw error;
       }
     },
-    enabled: !!recipe_id,
+    enabled: !!recipe_id && !isTempId(recipe_id || ""),
     retry: 1,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
@@ -74,10 +84,20 @@ export default function VersionHistoryScreen() {
       if (!recipe_id) {
         throw new Error("No recipe ID provided");
       }
+
+      // Skip API call for temporary IDs - use offline cache instead
+      if (isTempId(recipe_id)) {
+        console.log(
+          "🔍 Version History - Skipping recipe API call for temp ID:",
+          recipe_id
+        );
+        throw new Error("Recipe not available from API for offline recipes");
+      }
+
       const response = await ApiService.recipes.getById(recipe_id);
       return response.data;
     },
-    enabled: !!recipe_id,
+    enabled: !!recipe_id && !isTempId(recipe_id || ""),
     retry: 1,
     staleTime: 1000 * 60 * 5,
   });
@@ -104,7 +124,10 @@ export default function VersionHistoryScreen() {
     }
 
     // Use type guards to handle different response shapes
-    if (isEnhancedVersionHistoryResponse(versionHistoryData)) {
+    if (
+      versionHistoryData &&
+      isEnhancedVersionHistoryResponse(versionHistoryData)
+    ) {
       const versions = versionHistoryData.all_versions.map(version => ({
         id: version.recipe_id,
         name: version.name,
@@ -124,7 +147,7 @@ export default function VersionHistoryScreen() {
         name: currentRecipe?.name || "Current Version",
         version: versionHistoryData.current_version,
         isCurrent: true,
-        unit_system: currentRecipe?.unit_system || "imperial",
+        unit_system: currentRecipe?.unit_system || "metric",
         isRoot: !versionHistoryData.parent_recipe,
         isAvailable: true,
       });
@@ -227,7 +250,7 @@ export default function VersionHistoryScreen() {
             ) : null}
           </View>
           <Text style={styles.versionDate}>
-            {versionItem.unit_system || "imperial"}
+            {versionItem.unit_system || "metric"}
           </Text>
         </View>
 
