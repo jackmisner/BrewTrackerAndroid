@@ -65,7 +65,6 @@ export class UnifiedLogger {
         }
       }
     }
-    }
     const envHost = process.env.DEV_LOG_HOST as string | undefined;
     if (envHost) {
       return String(envHost).split(":")[0];
