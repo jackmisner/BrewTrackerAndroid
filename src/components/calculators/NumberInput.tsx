@@ -27,6 +27,11 @@ interface NumberInputProps {
   helperText?: string;
   error?: string;
   testID?: string;
+  // New validation modes
+  validationMode?: "hard" | "soft"; // hard = immediate clamp, soft = allow input with warnings
+  normalMin?: number; // warning threshold for "normal" range
+  normalMax?: number; // warning threshold for "normal" range
+  warningText?: string; // custom warning message for out-of-normal range
 }
 
 export function NumberInput({
@@ -45,6 +50,10 @@ export function NumberInput({
   helperText,
   error,
   testID,
+  validationMode = "hard",
+  normalMin,
+  normalMax,
+  warningText,
 }: NumberInputProps) {
   const theme = useTheme();
 
@@ -89,24 +98,76 @@ export function NumberInput({
       cleanedText = cleanedText.replace(/-/g, "");
     }
 
-    // Enforce min/max bounds at input level
-    if (cleanedText && cleanedText !== "-" && cleanedText !== ".") {
-      const numValue = parseFloat(cleanedText);
-      if (isFinite(numValue)) {
-        if (min !== undefined && numValue < min) {
-          cleanedText = min.toString();
-        } else if (max !== undefined && numValue > max) {
-          cleanedText = max.toString();
+    // Apply validation based on mode
+    if (validationMode === "hard") {
+      // Hard mode: Enforce min/max bounds at input level (original behavior)
+      if (cleanedText && cleanedText !== "-" && cleanedText !== ".") {
+        const numValue = parseFloat(cleanedText);
+        if (isFinite(numValue)) {
+          if (min !== undefined && numValue < min) {
+            cleanedText = min.toString();
+          } else if (max !== undefined && numValue > max) {
+            cleanedText = max.toString();
+          }
         }
       }
     }
+    // Soft mode: Allow all input, warnings will be shown below
 
     onChangeText(cleanedText);
   };
 
-  const inputBorderColor = error
-    ? theme.colors.error
-    : theme.colors.borderLight;
+  // Determine warning state for soft validation
+  const getValidationState = () => {
+    if (error) {
+      return { type: "error", message: error };
+    }
+
+    if (validationMode === "soft" && value && value !== "-" && value !== ".") {
+      const numValue = parseFloat(value);
+      if (isFinite(numValue)) {
+        // Check absolute bounds (still enforce absolute limits)
+        if (min !== undefined && numValue < min) {
+          return { type: "error", message: `Value must be at least ${min}` };
+        }
+        if (max !== undefined && numValue > max) {
+          return {
+            type: "error",
+            message: `Value must be no more than ${max}`,
+          };
+        }
+
+        // Check normal range (show warnings)
+        if (normalMin !== undefined && numValue < normalMin) {
+          return {
+            type: "warning",
+            message:
+              warningText ||
+              `Value below typical range (${normalMin} - ${normalMax || ""})`,
+          };
+        }
+        if (normalMax !== undefined && numValue > normalMax) {
+          return {
+            type: "warning",
+            message:
+              warningText ||
+              `Value above typical range (${normalMin || ""} - ${normalMax})`,
+          };
+        }
+      }
+    }
+
+    return null;
+  };
+
+  const validationState = getValidationState();
+
+  const inputBorderColor =
+    validationState?.type === "error"
+      ? theme.colors.error
+      : validationState?.type === "warning"
+        ? theme.colors.warning
+        : theme.colors.borderLight;
 
   return (
     <View style={[numberInputStyles.container, style]}>
@@ -218,15 +279,25 @@ export function NumberInput({
         </View>
       </View>
 
-      {error && (
+      {validationState && (
         <Text
-          style={[numberInputStyles.helperText, { color: theme.colors.error }]}
+          style={[
+            numberInputStyles.helperText,
+            {
+              color:
+                validationState.type === "error"
+                  ? theme.colors.error
+                  : validationState.type === "warning"
+                    ? theme.colors.warning
+                    : theme.colors.textSecondary,
+            },
+          ]}
         >
-          {error}
+          {validationState.message}
         </Text>
       )}
 
-      {helperText && !error && (
+      {helperText && !validationState && (
         <Text
           style={[
             numberInputStyles.helperText,

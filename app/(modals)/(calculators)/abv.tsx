@@ -36,6 +36,63 @@ const UNIT_TYPE_OPTIONS = [
   { label: "°Bx", value: "brix" as const, description: "Degrees Brix" },
 ];
 
+/**
+ * Convert gravity value between SG, Plato, and Brix with appropriate rounding
+ */
+const convertGravityValue = (
+  value: number,
+  fromUnit: "sg" | "plato" | "brix",
+  toUnit: "sg" | "plato" | "brix"
+): number => {
+  if (fromUnit === toUnit) {
+    return value;
+  }
+
+  let sgValue: number;
+
+  // Convert to SG first
+  if (fromUnit === "plato") {
+    sgValue = ABVCalculator.platoToSG(value);
+  } else if (fromUnit === "brix") {
+    sgValue = ABVCalculator.brixToSG(value);
+  } else {
+    sgValue = value;
+  }
+
+  // Convert from SG to target unit
+  let result: number;
+  if (toUnit === "plato") {
+    result = ABVCalculator.sgToPlato(sgValue);
+  } else if (toUnit === "brix") {
+    result = ABVCalculator.sgToBrix(sgValue);
+  } else {
+    result = sgValue;
+  }
+
+  // Apply appropriate rounding
+  return roundForGravityUnit(result, toUnit);
+};
+
+/**
+ * Round gravity values to appropriate precision based on unit type
+ */
+const roundForGravityUnit = (
+  value: number,
+  unit: "sg" | "plato" | "brix"
+): number => {
+  switch (unit) {
+    case "sg":
+      // Specific gravity: 3 decimal places (e.g., 1.050)
+      return Math.round(value * 1000) / 1000;
+    case "plato":
+    case "brix":
+      // Plato/Brix: 1 decimal place (e.g., 12.5)
+      return Math.round(value * 10) / 10;
+    default:
+      return Math.round(value * 1000) / 1000;
+  }
+};
+
 export default function ABVCalculatorScreen() {
   const theme = useTheme();
   const { state, dispatch } = useCalculators();
@@ -139,10 +196,50 @@ export default function ABVCalculatorScreen() {
     });
   };
 
-  const handleUnitTypeChange = (unitType: string) => {
+  const handleUnitTypeChange = (newUnitType: string) => {
+    const oldUnitType = abv.unitType;
+    const newUnit = newUnitType as typeof abv.unitType;
+
+    // Convert existing values if they exist and units are different
+    let convertedOG = abv.originalGravity;
+    let convertedFG = abv.finalGravity;
+
+    if (oldUnitType !== newUnit) {
+      try {
+        if (abv.originalGravity && abv.originalGravity !== "") {
+          const ogValue = parseFloat(abv.originalGravity);
+          if (isFinite(ogValue)) {
+            convertedOG = convertGravityValue(
+              ogValue,
+              oldUnitType,
+              newUnit
+            ).toString();
+          }
+        }
+
+        if (abv.finalGravity && abv.finalGravity !== "") {
+          const fgValue = parseFloat(abv.finalGravity);
+          if (isFinite(fgValue)) {
+            convertedFG = convertGravityValue(
+              fgValue,
+              oldUnitType,
+              newUnit
+            ).toString();
+          }
+        }
+      } catch (error) {
+        console.warn("Unit conversion failed:", error);
+        // If conversion fails, keep original values
+      }
+    }
+
     dispatch({
       type: "SET_ABV",
-      payload: { unitType: unitType as typeof abv.unitType },
+      payload: {
+        unitType: newUnit,
+        originalGravity: convertedOG,
+        finalGravity: convertedFG,
+      },
     });
   };
 
@@ -254,8 +351,18 @@ export default function ABVCalculatorScreen() {
             onChangeText={handleOGChange}
             placeholder={`e.g., ${getPlaceholderText()}`}
             unit={getUnitLabel()}
-            min={abv.unitType === "sg" ? 1.02 : 5}
+            validationMode="soft"
+            min={abv.unitType === "sg" ? 1.0 : 0}
             max={abv.unitType === "sg" ? 1.15 : 35}
+            normalMin={abv.unitType === "sg" ? 1.02 : 5}
+            normalMax={abv.unitType === "sg" ? 1.12 : 30}
+            warningText={
+              abv.unitType === "sg"
+                ? "OG outside typical brewing range (1.020-1.120). Valid for low/no-alcohol brewing."
+                : abv.unitType === "plato"
+                  ? "OG outside typical brewing range (5-30°P). Valid for specialty styles."
+                  : "OG outside typical brewing range (5-30°Bx). Valid for specialty styles."
+            }
             step={abv.unitType === "sg" ? 0.001 : 0.1}
             precision={abv.unitType === "sg" ? 3 : 1}
             testID="abv-og-input"
@@ -267,8 +374,18 @@ export default function ABVCalculatorScreen() {
             onChangeText={handleFGChange}
             placeholder={`e.g., ${abv.unitType === "sg" ? "1.010" : "2.5"}`}
             unit={getUnitLabel()}
+            validationMode="soft"
             min={abv.unitType === "sg" ? 1.0 : 0}
             max={abv.unitType === "sg" ? 1.05 : 15}
+            normalMin={abv.unitType === "sg" ? 1.005 : 1}
+            normalMax={abv.unitType === "sg" ? 1.025 : 8}
+            warningText={
+              abv.unitType === "sg"
+                ? "FG outside typical range (1.005-1.025). Check fermentation completion."
+                : abv.unitType === "plato"
+                  ? "FG outside typical range (1-8°P). Check fermentation completion."
+                  : "FG outside typical range (1-8°Bx). Check fermentation completion."
+            }
             step={abv.unitType === "sg" ? 0.001 : 0.1}
             precision={abv.unitType === "sg" ? 3 : 1}
             testID="abv-fg-input"
