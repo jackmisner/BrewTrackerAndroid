@@ -56,12 +56,15 @@ export class UnifiedLogger {
     const envEndpoint = process.env.HOST_LOG_ENDPOINT as string | undefined;
     if (envEndpoint) {
       try {
-        const u = new URL(envEndpoint);
-        return u.origin;
+        return new URL(envEndpoint).origin;
       } catch {
-        // If not parseable as URL, return original string and let downstream handle it
-        return String(envEndpoint);
+        try {
+          return new URL(`http://${envEndpoint}`).origin;
+        } catch {
+          return String(envEndpoint).replace(/\/+$/, "");
+        }
       }
+    }
     }
     const envHost = process.env.DEV_LOG_HOST as string | undefined;
     if (envHost) {
