@@ -748,6 +748,18 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
       color: theme.colors.text,
       fontWeight: "500",
     },
+    backButtonDisabled: {
+      opacity: 0.5,
+    },
+    backButtonTextDisabled: {
+      color: theme.colors.textMuted,
+    },
+    cancelButtonDisabled: {
+      opacity: 0.5,
+    },
+    cancelButtonTextDisabled: {
+      color: theme.colors.textMuted,
+    },
     navigationRight: {
       flexDirection: "row",
       alignItems: "center",

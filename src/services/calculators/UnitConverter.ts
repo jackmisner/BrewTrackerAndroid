@@ -43,6 +43,8 @@ export class UnitConverter {
     gallon: 3.78541, // US gallon
     gallons: 3.78541,
     gal: 3.78541,
+    tsp: 0.00492892,
+    tbsp: 0.0147868,
   };
 
   // Temperature conversion functions

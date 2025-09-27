@@ -253,6 +253,7 @@ export default function EditRecipeScreen() {
     null
   );
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Load existing recipe data
   const {
@@ -484,6 +485,13 @@ export default function EditRecipeScreen() {
   }, []);
 
   /**
+   * Handles modal state changes from child components
+   */
+  const handleModalStateChange = useCallback((isOpen: boolean) => {
+    setIsModalOpen(isOpen);
+  }, []);
+
+  /**
    * Navigation helpers
    */
   const handleNext = () => {
@@ -657,6 +665,7 @@ export default function EditRecipeScreen() {
           <IngredientsForm
             recipeData={recipeData}
             onUpdateField={updateField}
+            onModalStateChange={handleModalStateChange}
           />
         );
       case RecipeStep.REVIEW:
@@ -679,8 +688,16 @@ export default function EditRecipeScreen() {
     <KeyboardAvoidingView style={styles.container} behavior="padding">
       {/* Header with navigation */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
-          <MaterialIcons name="close" size={24} color={theme.colors.text} />
+        <TouchableOpacity
+          onPress={handleCancel}
+          style={[styles.cancelButton, isModalOpen && { opacity: 0.5 }]}
+          disabled={isModalOpen}
+        >
+          <MaterialIcons
+            name="close"
+            size={24}
+            color={isModalOpen ? theme.colors.textMuted : theme.colors.text}
+          />
         </TouchableOpacity>
         <Text style={styles.title}>Edit Recipe {hasUnsavedChanges && "*"}</Text>
         <View style={styles.placeholder} />
@@ -730,13 +747,27 @@ export default function EditRecipeScreen() {
       {/* Navigation buttons */}
       <View style={styles.navigation}>
         {currentStep > RecipeStep.BASIC_INFO ? (
-          <TouchableOpacity style={styles.backButton} onPress={handlePrevious}>
+          <TouchableOpacity
+            style={[
+              styles.backButton,
+              isModalOpen && styles.backButtonDisabled,
+            ]}
+            onPress={handlePrevious}
+            disabled={isModalOpen}
+          >
             <MaterialIcons
               name="arrow-back"
               size={20}
-              color={theme.colors.text}
+              color={isModalOpen ? theme.colors.textMuted : theme.colors.text}
             />
-            <Text style={styles.backButtonText}>Back</Text>
+            <Text
+              style={[
+                styles.backButtonText,
+                isModalOpen && styles.backButtonTextDisabled,
+              ]}
+            >
+              Back
+            </Text>
           </TouchableOpacity>
         ) : null}
 
@@ -745,15 +776,16 @@ export default function EditRecipeScreen() {
             <TouchableOpacity
               style={[
                 styles.nextButton,
-                !canProceed() && styles.nextButtonDisabled,
+                (!canProceed() || isModalOpen) && styles.nextButtonDisabled,
               ]}
               onPress={handleNext}
-              disabled={!canProceed()}
+              disabled={!canProceed() || isModalOpen}
             >
               <Text
                 style={[
                   styles.nextButtonText,
-                  !canProceed() && styles.nextButtonTextDisabled,
+                  (!canProceed() || isModalOpen) &&
+                    styles.nextButtonTextDisabled,
                 ]}
               >
                 Next
@@ -761,7 +793,9 @@ export default function EditRecipeScreen() {
               <MaterialIcons
                 name="arrow-forward"
                 size={20}
-                color={canProceed() ? "#fff" : theme.colors.textMuted}
+                color={
+                  canProceed() && !isModalOpen ? "#fff" : theme.colors.textMuted
+                }
               />
             </TouchableOpacity>
           ) : (
