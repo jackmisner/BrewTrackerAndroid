@@ -51,7 +51,9 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -82,7 +84,7 @@ export default function AddFermentationEntryScreen() {
   const [entryDate, setEntryDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [isAuthorizing, setIsAuthorizing] = useState(false);
+  const [_isAuthorizing, setIsAuthorizing] = useState(false);
 
   // Fetch brew session data to get temperature unit
   const { data: brewSession } = useQuery<BrewSession>({
@@ -172,11 +174,11 @@ export default function AddFermentationEntryScreen() {
       return;
     }
 
-    // Block re-entrancy during auth check or in-flight mutation
-    if (isAuthorizing || addEntryMutation.isPending) {
+    // Block re-entrancy during in-flight mutation
+    if (addEntryMutation.isPending) {
       return;
     }
-    setIsAuthorizing(true);
+
     try {
       // Validate user permissions for fermentation entry creation
       if (!brewSession?.user_id) {
@@ -239,7 +241,10 @@ export default function AddFermentationEntryScreen() {
     }
   };
 
-  const handleDateChange = (event: any, selectedDate?: Date) => {
+  const handleDateChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date
+  ) => {
     setShowDatePicker(false);
     if (selectedDate) {
       setEntryDate(selectedDate);
@@ -268,7 +273,7 @@ export default function AddFermentationEntryScreen() {
               addEntryMutation.isPending && styles.saveButtonDisabled,
             ]}
             onPress={handleSave}
-            disabled={addEntryMutation.isPending || isAuthorizing}
+            disabled={addEntryMutation.isPending}
             testID={TEST_IDS.buttons.saveButton}
           >
             {addEntryMutation.isPending ? (

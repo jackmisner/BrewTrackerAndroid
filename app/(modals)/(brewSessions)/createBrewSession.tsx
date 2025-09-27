@@ -71,8 +71,16 @@ function toLocalISODateString(d: Date) {
 }
 
 const parseIsoDate = (iso: string) => {
-  const [year, month, day] = iso.split("-").map(Number);
-  return new Date(year, (month ?? 1) - 1, day ?? 1);
+  if (!iso) {
+    return new Date();
+  }
+  const [datePart] = iso.split("T");
+  const [year, month, day] = (datePart ?? "").split("-").map(Number);
+  if (!Number.isNaN(year) && !Number.isNaN(month) && !Number.isNaN(day)) {
+    return new Date(year, month - 1, day);
+  }
+  const fallback = new Date(iso);
+  return Number.isNaN(fallback.getTime()) ? new Date() : fallback;
 };
 const formatBrewDate = (iso: string) => parseIsoDate(iso).toLocaleDateString();
 

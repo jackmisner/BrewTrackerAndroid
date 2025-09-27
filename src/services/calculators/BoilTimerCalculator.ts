@@ -53,6 +53,8 @@ export interface HopAddition {
   use?: string;
   /** Alpha acid percentage for IBU calculations */
   alpha_acid?: number;
+  /** Whether an alert has been scheduled for this addition */
+  alertScheduled?: boolean;
 }
 
 /**

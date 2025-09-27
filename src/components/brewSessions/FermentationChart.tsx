@@ -224,6 +224,15 @@ const chartUtils = {
   },
 };
 
+const isValidTemperatureEntry = (entry: any): boolean => {
+  return (
+    "value" in entry &&
+    entry.value != null &&
+    entry.value !== 0 &&
+    !("hideDataPoint" in entry && entry.hideDataPoint === true)
+  );
+};
+
 interface FermentationChartProps {
   fermentationData: FermentationEntry[];
   expectedFG?: number;
@@ -798,13 +807,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     // Remove trailing entries that have no temperature value (this works perfectly)
     while (tempData.length > 0) {
       const lastEntry = tempData[tempData.length - 1];
-      if (
-        !("value" in lastEntry) ||
-        (!lastEntry.value &&
-          lastEntry.value !== 0 &&
-          "hideDataPoint" in lastEntry &&
-          lastEntry.hideDataPoint === true)
-      ) {
+      if (!isValidTemperatureEntry(lastEntry)) {
         tempData.pop();
       } else {
         break;
@@ -828,7 +831,8 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
       }
     }
 
-    return { data: tempData, startIndex };
+    const trimmedData = startIndex > 0 ? tempData.slice(startIndex) : tempData;
+    return { data: trimmedData, startIndex };
   }, [combinedChartData.temperature]);
 
   // Separate chart data: simple filtering of only valid temperature entries

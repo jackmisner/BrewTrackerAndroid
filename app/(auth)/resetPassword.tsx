@@ -50,7 +50,10 @@ import { TEST_IDS } from "@src/constants/testIDs";
 
 const ResetPasswordScreen: React.FC = () => {
   const { resetPassword, isLoading, error, clearError } = useAuth();
-  const { token } = useLocalSearchParams<{ token: string }>();
+  const searchParams = useLocalSearchParams<{ token?: string | string[] }>();
+  const token = Array.isArray(searchParams.token)
+    ? searchParams.token[0]
+    : searchParams.token;
 
   const [formData, setFormData] = useState({
     newPassword: "",
@@ -108,7 +111,10 @@ const ResetPasswordScreen: React.FC = () => {
    * @param password - Password to validate
    * @returns True if password is strong enough, false otherwise
    */
-  const isPasswordValid = (password: string): boolean => {
+  const isPasswordValid = (
+    password: string,
+    strength?: ReturnType<typeof getPasswordStrength>
+  ): boolean => {
     const trimmed = password.trim();
     if (trimmed.length < 8) {
       return false;
@@ -123,8 +129,9 @@ const ResetPasswordScreen: React.FC = () => {
       return false;
     }
 
+    const effectiveStrength = strength ?? getPasswordStrength(trimmed);
     // Still use zxcvbn feedback to block obviously weak passwords.
-    return getPasswordStrength(trimmed) !== "weak";
+    return effectiveStrength !== "weak";
   };
 
   /**
@@ -373,7 +380,7 @@ const ResetPasswordScreen: React.FC = () => {
                 loginStyles.resetPrimaryButton,
                 (isLoading ||
                   !passwordsMatch ||
-                  !isPasswordValid(formData.newPassword)) &&
+                  !isPasswordValid(formData.newPassword, passwordStrength)) &&
                   loginStyles.primaryButtonDisabled,
               ]}
               onPress={handleResetPassword}
@@ -389,7 +396,7 @@ const ResetPasswordScreen: React.FC = () => {
                   loginStyles.resetPrimaryButtonText,
                   (isLoading ||
                     !passwordsMatch ||
-                    !isPasswordValid(formData.newPassword)) &&
+                    !isPasswordValid(formData.newPassword, passwordStrength)) &&
                     loginStyles.primaryButtonTextDisabled,
                 ]}
               >
