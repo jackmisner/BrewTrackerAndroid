@@ -31,6 +31,7 @@ const GRAIN_TYPE_DISPLAY_MAPPING: Record<string, string> = {
 interface IngredientsFormProps {
   recipeData: RecipeFormData;
   onUpdateField: (field: keyof RecipeFormData, value: any) => void;
+  onModalStateChange?: (isOpen: boolean) => void;
 }
 
 /**
@@ -46,6 +47,7 @@ interface IngredientsFormProps {
 export function IngredientsForm({
   recipeData,
   onUpdateField,
+  onModalStateChange,
 }: IngredientsFormProps) {
   const theme = useTheme();
   const styles = createRecipeStyles(theme);
@@ -124,6 +126,7 @@ export function IngredientsForm({
   const handleEditIngredient = (ingredient: RecipeIngredient) => {
     setEditingIngredient(ingredient);
     setShowEditor(true);
+    onModalStateChange?.(true);
   };
 
   /**
@@ -149,6 +152,7 @@ export function IngredientsForm({
 
     setShowEditor(false);
     setEditingIngredient(null);
+    onModalStateChange?.(false);
   };
 
   /**
@@ -168,6 +172,7 @@ export function IngredientsForm({
 
     setShowEditor(false);
     setEditingIngredient(null);
+    onModalStateChange?.(false);
   };
 
   /**
@@ -176,6 +181,7 @@ export function IngredientsForm({
   const handleCancelEdit = () => {
     setShowEditor(false);
     setEditingIngredient(null);
+    onModalStateChange?.(false);
   };
 
   const renderIngredientSection = (

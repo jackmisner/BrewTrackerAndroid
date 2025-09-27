@@ -27,14 +27,20 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
+  Dimensions,
+  Modal,
+  TouchableWithoutFeedback,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
-import { RecipeIngredient, IngredientType } from "@src/types";
+import { useAuth } from "@contexts/AuthContext";
+import { RecipeIngredient, IngredientType, IngredientUnit } from "@src/types";
 import { ingredientDetailEditorStyles } from "@styles/recipes/ingredientDetailEditorStyles";
 import { HOP_USAGE_OPTIONS, HOP_TIME_PRESETS } from "@constants/hopConstants";
 import { getHopTimePlaceholder } from "@utils/formatUtils";
+import { UnitConverter } from "@services/calculators/UnitConverter";
 
 // Unit options by ingredient type
 const UNIT_OPTIONS: Record<IngredientType, string[]> = {
@@ -45,83 +51,117 @@ const UNIT_OPTIONS: Record<IngredientType, string[]> = {
 };
 
 /**
- * Gets unit-aware amount adjustment presets grouped by size (small, medium, large)
- * Each group represents a row in the UI
+ * Layout mode type for the ingredient editor
  */
-const getGroupedAmountAdjustments = (
+type LayoutMode = "classic" | "compact";
+
+/**
+ * Gets unit-aware contextual increment amounts based on ingredient type and unit
+ * Returns sensible adjustment increments that make sense for the selected unit
+ */
+const getContextualIncrements = (
   ingredientType: IngredientType,
   unit: string,
-  unitSystem: "imperial" | "metric"
-): { small: number[]; medium: number[]; large: number[] } => {
+  _unitSystem: "imperial" | "metric"
+): number[] => {
   if (ingredientType === "grain") {
-    if (unitSystem === "imperial") {
-      if (unit === "oz") {
-        return {
-          small: [1, 4, 8, 16], // Row 1: Small to medium adjustments
-          medium: [30, 50, 100, 250], // Row 2: Medium to large adjustments
-          large: [500], // Row 3: Large adjustments
-        };
-      } else {
-        // lb
-        return {
-          small: [0.1, 0.25, 0.5, 1], // Row 1: Small adjustments
-          medium: [], // No medium row for lb
-          large: [], // No large row for lb
-        };
-      }
-    } else {
-      // metric
-      if (unit === "g") {
-        return {
-          small: [1, 5, 10, 15], // Row 1: Small adjustments
-          medium: [30, 50, 100, 250], // Row 2: Medium adjustments
-          large: [500], // Row 3: Large adjustments
-        };
-      } else {
-        // kg
-        return {
-          small: [0.1, 0.25, 0.5, 1], // Row 1: Small adjustments
-          medium: [], // No medium row for kg
-          large: [], // No large row for kg
-        };
-      }
+    switch (unit) {
+      case "kg":
+        return [0.1, 0.25, 0.5, 1.0];
+      case "g":
+        return [50, 100, 250, 500];
+      case "lb":
+        return [0.25, 0.5, 1.0, 2.0];
+      case "oz":
+        return [1, 2, 4, 8];
+      default:
+        return [0.1, 0.25, 0.5, 1.0];
     }
   } else if (ingredientType === "hop") {
-    if (unitSystem === "imperial") {
-      return {
-        small: [0.25, 0.5, 1, 4], // Row 1: Small hop adjustments
-        medium: [8, 16], // Row 2: Larger hop adjustments
-        large: [], // No large row for hops
-      };
-    } else {
-      return {
-        small: [1, 5, 10, 15], // Row 1: Small metric hop adjustments
-        medium: [30, 50], // Row 2: Larger metric hop adjustments
-        large: [], // No large row for hops
-      };
+    switch (unit) {
+      case "g":
+        return [1, 5, 10, 15];
+      case "oz":
+        return [0.1, 0.25, 0.5, 1.0];
+      default:
+        return [0.1, 0.25, 0.5, 1.0];
     }
   } else if (ingredientType === "yeast") {
-    return {
-      small: [0.5, 1.0], // Row 1: Package increments
-      medium: [], // No medium row for yeast
-      large: [], // No large row for yeast
-    };
+    // Simple increments for yeast regardless of unit
+    return [0.5, 1.0];
   } else {
-    // Other ingredients
-    if (unitSystem === "imperial") {
-      return {
-        small: [0.1, 0.25, 0.5, 1.0], // Row 1: Small adjustments
-        medium: [], // No medium row
-        large: [], // No large row
-      };
-    } else {
-      return {
-        small: [1, 5, 10, 25], // Row 1: Small metric adjustments
-        medium: [50, 100], // Row 2: Medium metric adjustments
-        large: [], // No large row
-      };
-    }
+    // Other ingredients - simplified increments regardless of unit system
+    return [1, 5, 10, 25];
   }
+};
+
+/**
+ * Determines the appropriate default layout mode based on screen width
+ */
+const getDefaultLayoutMode = (screenWidth: number): LayoutMode => {
+  return screenWidth < 350 ? "compact" : "classic";
+};
+
+/**
+ * Gets user-scoped storage key for layout mode preference
+ */
+const getLayoutPreferenceKey = (userId: string): string => {
+  return `user:${userId}:ingredientEditor.layoutMode`;
+};
+
+/**
+ * Rounds amount to appropriate precision based on the unit type
+ */
+const roundForUnit = (amount: number, unit: string): number => {
+  const unitLower = unit.toLowerCase();
+
+  // Weight units
+  if (unitLower === "kg") {
+    // Kilograms: round to 3 decimal places for small amounts, 2 for larger
+    return amount < 1
+      ? Math.round(amount * 1000) / 1000
+      : Math.round(amount * 100) / 100;
+  } else if (unitLower === "g") {
+    // Grams: round to whole numbers for amounts > 10, 1 decimal for smaller
+    return amount > 10 ? Math.round(amount) : Math.round(amount * 10) / 10;
+  } else if (unitLower === "oz") {
+    // Ounces: round to 2 decimal places for small amounts, 1 for larger
+    return amount < 1
+      ? Math.round(amount * 100) / 100
+      : Math.round(amount * 10) / 10;
+  } else if (unitLower === "lb" || unitLower === "lbs") {
+    // Pounds: round to 2 decimal places
+    return Math.round(amount * 100) / 100;
+  }
+
+  // Volume units
+  else if (unitLower === "tsp" || unitLower === "tbsp") {
+    // Teaspoons/tablespoons: round to 1 decimal place
+    return Math.round(amount * 10) / 10;
+  } else if (unitLower === "cup") {
+    // Cups: round to 2 decimal places
+    return Math.round(amount * 100) / 100;
+  }
+
+  // Default: round to 2 decimal places
+  return Math.round(amount * 100) / 100;
+};
+
+/**
+ * Calculate viewport-aware modal position and dimensions
+ * Based on contextual menu positioning logic
+ */
+const calculateModalPosition = () => {
+  const screen = Dimensions.get("window");
+  const safeAreaPadding = 20;
+  const maxWidth = Math.min(500, screen.width - safeAreaPadding * 2);
+  const maxHeight = screen.height * 0.85;
+
+  return {
+    maxWidth,
+    maxHeight,
+    marginHorizontal: safeAreaPadding,
+  };
 };
 
 interface IngredientDetailEditorProps {
@@ -147,6 +187,7 @@ export function IngredientDetailEditor({
 }: IngredientDetailEditorProps) {
   const theme = useTheme();
   const { unitSystem } = useUnits();
+  const { getUserId } = useAuth();
   const styles = ingredientDetailEditorStyles(theme);
 
   // Local editing state
@@ -162,10 +203,74 @@ export function IngredientDetailEditor({
   const [currentUsage, setCurrentUsage] = useState<string>(
     ingredient.use || "boil"
   );
+
+  // Modal positioning
+  const modalDimensions = calculateModalPosition();
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Layout mode state
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>("classic");
+  const [selectedIncrement, setSelectedIncrement] = useState<number>(0.1);
+  const [screenWidth, setScreenWidth] = useState(
+    Dimensions.get("window").width
+  );
+  const [showUnitDropdown, setShowUnitDropdown] = useState(false);
 
   // Refs for input focus management
   const amountInputRef = useRef<TextInput>(null);
+
+  // Initialize layout mode from storage or default
+  useEffect(() => {
+    const initializeLayoutMode = async () => {
+      try {
+        const userId = await getUserId();
+        if (!userId) {
+          // Not authenticated, use auto-detection
+          const defaultMode = getDefaultLayoutMode(screenWidth);
+          setLayoutMode(defaultMode);
+          return;
+        }
+
+        const storageKey = getLayoutPreferenceKey(userId);
+        const savedMode = await AsyncStorage.getItem(storageKey);
+        if (savedMode && (savedMode === "classic" || savedMode === "compact")) {
+          setLayoutMode(savedMode as LayoutMode);
+        } else {
+          // Use auto-detection based on screen width
+          const defaultMode = getDefaultLayoutMode(screenWidth);
+          setLayoutMode(defaultMode);
+        }
+      } catch (error) {
+        // Fallback to auto-detection if storage fails
+        console.warn("Failed to load layout preference:", error);
+        const defaultMode = getDefaultLayoutMode(screenWidth);
+        setLayoutMode(defaultMode);
+      }
+    };
+
+    initializeLayoutMode();
+  }, [screenWidth, getUserId]);
+
+  // Initialize selected increment based on ingredient context
+  useEffect(() => {
+    const increments = getContextualIncrements(
+      ingredient.type as IngredientType,
+      editedIngredient.unit,
+      unitSystem
+    );
+    if (increments.length > 0) {
+      setSelectedIncrement(increments[0]); // Default to first increment
+    }
+  }, [ingredient.type, editedIngredient.unit, unitSystem]);
+
+  // Handle screen size changes
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setScreenWidth(window.width);
+    });
+
+    return () => subscription?.remove();
+  }, []);
 
   // Update local state when ingredient prop changes
   useEffect(() => {
@@ -246,22 +351,107 @@ export function IngredientDetailEditor({
   };
 
   /**
-   * Adjusts amount by a specific delta
+   * Adjusts amount by a specific delta with unit-appropriate rounding
    */
   const adjustAmount = (delta: number) => {
     const currentAmount = editedIngredient.amount || 0;
     const newAmount = Math.max(0, currentAmount + delta);
-    const roundedAmount = Math.round(newAmount * 100) / 100; // Round to 2 decimal places
+    const roundedAmount = roundForUnit(newAmount, editedIngredient.unit);
 
     setAmountText(roundedAmount.toString());
     updateField("amount", roundedAmount);
   };
 
   /**
-   * Handles unit selection
+   * Resets the amount to zero for easy rebuild using adjustment buttons
+   */
+  const handleZeroAmount = () => {
+    setAmountText("0");
+    updateField("amount", 0);
+  };
+
+  /**
+   * Handles unit selection with automatic amount conversion
    */
   const handleUnitChange = (newUnit: string) => {
-    updateField("unit", newUnit);
+    const currentUnit = editedIngredient.unit;
+    const currentAmount = editedIngredient.amount || 0;
+
+    // Only attempt conversion if we have a valid amount and different units
+    if (currentAmount > 0 && currentUnit !== newUnit) {
+      try {
+        // Determine conversion type based on ingredient type
+        const ingredientType = ingredient.type as IngredientType;
+        let convertedAmount: number;
+
+        if (ingredientType === "grain" || ingredientType === "hop") {
+          // Weight conversion for grains and hops
+          if (
+            UnitConverter.isValidWeightUnit(currentUnit) &&
+            UnitConverter.isValidWeightUnit(newUnit)
+          ) {
+            convertedAmount = UnitConverter.convertWeight(
+              currentAmount,
+              currentUnit,
+              newUnit
+            );
+          } else {
+            // If either unit is not a valid weight unit, don't convert
+            convertedAmount = currentAmount;
+          }
+        } else if (ingredientType === "other") {
+          // Handle mixed weight/volume units for "other" ingredients
+          const isCurrentWeight = UnitConverter.isValidWeightUnit(currentUnit);
+          const isNewWeight = UnitConverter.isValidWeightUnit(newUnit);
+
+          if (isCurrentWeight && isNewWeight) {
+            // Both are weight units
+            convertedAmount = UnitConverter.convertWeight(
+              currentAmount,
+              currentUnit,
+              newUnit
+            );
+          } else if (!isCurrentWeight && !isNewWeight) {
+            // Both are volume units (tsp, tbsp, cup)
+            convertedAmount = UnitConverter.convertVolume(
+              currentAmount,
+              currentUnit,
+              newUnit
+            );
+          } else {
+            // Mixed weight/volume - don't convert automatically
+            convertedAmount = currentAmount;
+          }
+        } else {
+          // For yeast or unknown types, don't convert
+          convertedAmount = currentAmount;
+        }
+
+        // Apply unit-appropriate rounding
+        const roundedAmount = roundForUnit(convertedAmount, newUnit);
+
+        // Update both unit and amount
+        setAmountText(roundedAmount.toString());
+        const updated = {
+          ...editedIngredient,
+          unit: newUnit as IngredientUnit,
+          amount: roundedAmount,
+        };
+        setEditedIngredient(updated);
+
+        // Clear any amount-related errors since we have a valid converted value
+        const newErrors = { ...errors };
+        delete newErrors.amount;
+        setErrors(newErrors);
+      } catch (error) {
+        // If conversion fails, just change the unit without converting amount
+        console.warn("Unit conversion failed:", error);
+        updateField("unit", newUnit);
+      }
+    } else {
+      // No amount to convert or same unit
+      updateField("unit", newUnit);
+    }
   };
 
   /**
@@ -413,6 +603,33 @@ export function IngredientDetailEditor({
   };
 
   /**
+   * Handles layout mode toggle with user-scoped persistence
+   */
+  const handleLayoutToggle = async () => {
+    const newMode: LayoutMode =
+      layoutMode === "classic" ? "compact" : "classic";
+    setLayoutMode(newMode);
+
+    try {
+      const userId = await getUserId();
+      if (userId) {
+        const storageKey = getLayoutPreferenceKey(userId);
+        await AsyncStorage.setItem(storageKey, newMode);
+      }
+    } catch (error) {
+      console.warn("Failed to save layout preference:", error);
+    }
+  };
+
+  /**
+   * Handles amount adjustment using selected increment for compact mode
+   */
+  const handleIncrementAdjustment = (direction: "add" | "subtract") => {
+    const delta = direction === "add" ? selectedIncrement : -selectedIncrement;
+    adjustAmount(delta);
+  };
+
+  /**
    * Saves the changes
    */
   const handleSave = () => {
@@ -449,430 +666,529 @@ export function IngredientDetailEditor({
   const availableUnits =
     UNIT_OPTIONS[ingredient.type as IngredientType] || UNIT_OPTIONS.other;
   const isHop = ingredient.type === "hop";
+  const isOther = ingredient.type === "other";
 
   return (
-    <View style={styles.overlay}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Edit Ingredient</Text>
-          <TouchableOpacity onPress={onCancel} style={styles.closeButton}>
-            <MaterialIcons name="close" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Scrollable Content */}
-        <ScrollView
-          style={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Ingredient Name */}
-          <Text style={styles.ingredientName}>{ingredient.name}</Text>
-          <Text style={styles.ingredientType}>
-            {ingredient.type.charAt(0).toUpperCase() + ingredient.type.slice(1)}
-          </Text>
-
-          {/* Amount Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Amount</Text>
-
-            <View style={styles.amountContainer}>
-              <View style={styles.amountInputContainer}>
-                <TextInput
-                  ref={amountInputRef}
-                  style={[
-                    styles.amountInput,
-                    errors.amount && styles.inputError,
-                  ]}
-                  value={amountText}
-                  onChangeText={handleAmountChange}
-                  keyboardType="decimal-pad"
-                  placeholder="0"
-                  selectTextOnFocus
-                />
-                {errors.amount ? (
-                  <Text style={styles.errorText}>{errors.amount}</Text>
-                ) : null}
-              </View>
-
-              {/* Quick adjustment buttons - unit-aware with grouped row layout */}
-              <View style={styles.adjustmentContainer}>
-                {/* Negative adjustments (left side) */}
-                <View
-                  style={[styles.adjustmentSide, styles.adjustmentSideLeft]}
-                >
-                  {(() => {
-                    const groups = getGroupedAmountAdjustments(
-                      ingredient.type as IngredientType,
-                      editedIngredient.unit,
-                      unitSystem
-                    );
-
-                    return (
-                      <>
-                        {/* Small adjustments row */}
-                        {groups.small.length > 0 ? (
-                          <View style={styles.adjustmentRow}>
-                            {[...groups.small].reverse().map(delta => (
-                              <TouchableOpacity
-                                key={`minus-small-${delta}`}
-                                style={[
-                                  styles.adjustButton,
-                                  styles.adjustButtonNegative,
-                                ]}
-                                onPress={() => adjustAmount(-delta)}
-                              >
-                                <Text
-                                  style={[
-                                    styles.adjustButtonText,
-                                    styles.adjustButtonTextNegative,
-                                  ]}
-                                >
-                                  -{delta}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        ) : null}
-
-                        {/* Medium adjustments row */}
-                        {groups.medium.length > 0 ? (
-                          <View style={styles.adjustmentRow}>
-                            {[...groups.medium].reverse().map(delta => (
-                              <TouchableOpacity
-                                key={`minus-medium-${delta}`}
-                                style={[
-                                  styles.adjustButton,
-                                  styles.adjustButtonNegative,
-                                ]}
-                                onPress={() => adjustAmount(-delta)}
-                              >
-                                <Text
-                                  style={[
-                                    styles.adjustButtonText,
-                                    styles.adjustButtonTextNegative,
-                                  ]}
-                                >
-                                  -{delta}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        ) : null}
-
-                        {/* Large adjustments row */}
-                        {groups.large.length > 0 ? (
-                          <View style={styles.adjustmentRow}>
-                            {[...groups.large].reverse().map(delta => (
-                              <TouchableOpacity
-                                key={`minus-large-${delta}`}
-                                style={[
-                                  styles.adjustButton,
-                                  styles.adjustButtonNegative,
-                                ]}
-                                onPress={() => adjustAmount(-delta)}
-                              >
-                                <Text
-                                  style={[
-                                    styles.adjustButtonText,
-                                    styles.adjustButtonTextNegative,
-                                  ]}
-                                >
-                                  -{delta}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        ) : null}
-                      </>
-                    );
-                  })()}
-                </View>
-
-                {/* Vertical divider */}
-                <View style={styles.adjustmentDivider} />
-
-                {/* Positive adjustments (right side) */}
-                <View
-                  style={[styles.adjustmentSide, styles.adjustmentSideRight]}
-                >
-                  {(() => {
-                    const groups = getGroupedAmountAdjustments(
-                      ingredient.type as IngredientType,
-                      editedIngredient.unit,
-                      unitSystem
-                    );
-
-                    return (
-                      <>
-                        {/* Small adjustments row */}
-                        {groups.small.length > 0 ? (
-                          <View style={styles.adjustmentRow}>
-                            {groups.small.map(delta => (
-                              <TouchableOpacity
-                                key={`plus-small-${delta}`}
-                                style={[
-                                  styles.adjustButton,
-                                  styles.adjustButtonPositive,
-                                ]}
-                                onPress={() => adjustAmount(delta)}
-                              >
-                                <Text
-                                  style={[
-                                    styles.adjustButtonText,
-                                    styles.adjustButtonTextPositive,
-                                  ]}
-                                >
-                                  +{delta}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        ) : null}
-
-                        {/* Medium adjustments row */}
-                        {groups.medium.length > 0 ? (
-                          <View style={styles.adjustmentRow}>
-                            {groups.medium.map(delta => (
-                              <TouchableOpacity
-                                key={`plus-medium-${delta}`}
-                                style={[
-                                  styles.adjustButton,
-                                  styles.adjustButtonPositive,
-                                ]}
-                                onPress={() => adjustAmount(delta)}
-                              >
-                                <Text
-                                  style={[
-                                    styles.adjustButtonText,
-                                    styles.adjustButtonTextPositive,
-                                  ]}
-                                >
-                                  +{delta}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        ) : null}
-
-                        {/* Large adjustments row */}
-                        {groups.large.length > 0 ? (
-                          <View style={styles.adjustmentRow}>
-                            {groups.large.map(delta => (
-                              <TouchableOpacity
-                                key={`plus-large-${delta}`}
-                                style={[
-                                  styles.adjustButton,
-                                  styles.adjustButtonPositive,
-                                ]}
-                                onPress={() => adjustAmount(delta)}
-                              >
-                                <Text
-                                  style={[
-                                    styles.adjustButtonText,
-                                    styles.adjustButtonTextPositive,
-                                  ]}
-                                >
-                                  +{delta}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        ) : null}
-                      </>
-                    );
-                  })()}
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Unit Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Unit</Text>
-            <View style={styles.unitButtons}>
-              {availableUnits.map(unit => (
-                <TouchableOpacity
-                  key={unit}
-                  style={[
-                    styles.unitButton,
-                    editedIngredient.unit === unit && styles.unitButtonActive,
-                  ]}
-                  onPress={() => handleUnitChange(unit)}
-                >
-                  <Text
-                    style={[
-                      styles.unitButtonText,
-                      editedIngredient.unit === unit &&
-                        styles.unitButtonTextActive,
-                    ]}
+    <Modal
+      visible={isVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
+      statusBarTranslucent
+    >
+      <TouchableWithoutFeedback onPress={onCancel}>
+        <View style={styles.overlay}>
+          <TouchableWithoutFeedback>
+            <View
+              style={[
+                styles.container,
+                {
+                  width: modalDimensions.maxWidth,
+                  maxHeight: modalDimensions.maxHeight,
+                },
+              ]}
+            >
+              {/* Header */}
+              <View style={styles.header}>
+                <Text style={styles.title}>Edit Ingredient</Text>
+                <View style={styles.headerActions}>
+                  <TouchableOpacity
+                    onPress={handleLayoutToggle}
+                    style={styles.layoutToggle}
                   >
-                    {unit}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Hop-specific sections */}
-          {isHop ? (
-            <>
-              {/* Usage Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Usage</Text>
-                <View style={styles.usageButtons}>
-                  {HOP_USAGE_OPTIONS.map(usage => (
-                    <TouchableOpacity
-                      key={usage.value}
-                      style={[
-                        styles.usageButton,
-                        currentUsage === usage.value &&
-                          styles.usageButtonActive,
-                      ]}
-                      onPress={() => handleHopUsageChange(usage.value)}
-                    >
-                      <Text
-                        style={[
-                          styles.usageButtonText,
-                          currentUsage === usage.value &&
-                            styles.usageButtonTextActive,
-                        ]}
-                      >
-                        {usage.display}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                {errors.use ? (
-                  <Text style={styles.errorText}>{errors.use}</Text>
-                ) : null}
-              </View>
-
-              {/* Time Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Time</Text>
-                <View style={styles.timeContainer}>
-                  <View style={styles.timeInputContainer}>
-                    <TextInput
-                      style={[
-                        styles.timeInput,
-                        errors.time && styles.timeInputError,
-                      ]}
-                      value={timeText}
-                      onChangeText={handleTimeTextChange}
-                      placeholder={getHopTimePlaceholder(
-                        currentUsage,
-                        timeUnit
-                      )}
-                      placeholderTextColor={theme.colors.textMuted}
-                      keyboardType="decimal-pad"
-                      selectTextOnFocus
+                    <MaterialIcons
+                      name={
+                        layoutMode === "classic" ? "view-module" : "view-list"
+                      }
+                      size={20}
+                      color={theme.colors.text}
                     />
-                    {errors.time ? (
-                      <Text style={styles.errorText}>{errors.time}</Text>
-                    ) : null}
-                  </View>
-
-                  {/* Time Unit Selector - conditional based on hop usage */}
-                  <View style={styles.unitButtons}>
-                    {/* Only show minutes for boil/whirlpool */}
-                    {currentUsage !== "dry-hop" ? (
-                      <TouchableOpacity
-                        style={[
-                          styles.unitButton,
-                          timeUnit === "minutes" && styles.unitButtonActive,
-                        ]}
-                        onPress={() => handleTimeUnitChange("minutes")}
-                      >
-                        <Text
-                          style={[
-                            styles.unitButtonText,
-                            timeUnit === "minutes" &&
-                              styles.unitButtonTextActive,
-                          ]}
-                        >
-                          min
-                        </Text>
-                      </TouchableOpacity>
-                    ) : null}
-                    {/* Only show days for dry-hop */}
-                    {currentUsage === "dry-hop" ? (
-                      <TouchableOpacity
-                        style={[
-                          styles.unitButton,
-                          timeUnit === "days" && styles.unitButtonActive,
-                        ]}
-                        onPress={() => handleTimeUnitChange("days")}
-                      >
-                        <Text
-                          style={[
-                            styles.unitButtonText,
-                            timeUnit === "days" && styles.unitButtonTextActive,
-                          ]}
-                        >
-                          days
-                        </Text>
-                      </TouchableOpacity>
-                    ) : null}
-                  </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={onCancel}
+                    style={styles.closeButton}
+                  >
+                    <MaterialIcons
+                      name="close"
+                      size={24}
+                      color={theme.colors.text}
+                    />
+                  </TouchableOpacity>
                 </View>
-                <View style={styles.timePresets}>
-                  {(() => {
-                    const presets =
-                      HOP_TIME_PRESETS[
-                        currentUsage as keyof typeof HOP_TIME_PRESETS
-                      ] || HOP_TIME_PRESETS.boil;
-
-                    return presets.map(preset => (
-                      <TouchableOpacity
-                        key={preset.value}
-                        style={[
-                          styles.timeButton,
-                          editedIngredient.time === preset.value &&
-                            styles.timeButtonActive,
-                        ]}
-                        onPress={() => handleTimeChange(preset.value)}
-                      >
-                        <Text
-                          style={[
-                            styles.timeButtonText,
-                            editedIngredient.time === preset.value &&
-                              styles.timeButtonTextActive,
-                          ]}
-                        >
-                          {preset.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ));
-                  })()}
-                </View>
-                {errors.time ? (
-                  <Text style={styles.errorText}>{errors.time}</Text>
-                ) : null}
               </View>
-            </>
-          ) : null}
-        </ScrollView>
 
-        {/* Action Buttons */}
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-            <MaterialIcons name="delete" size={20} color="#fff" />
-            <Text style={styles.deleteButtonText}>Delete</Text>
-          </TouchableOpacity>
+              {/* Scrollable Content */}
+              <ScrollView
+                style={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                {/* Ingredient Name */}
+                <Text style={styles.ingredientName}>{ingredient.name}</Text>
+                <Text style={styles.ingredientType}>
+                  {ingredient.type.charAt(0).toUpperCase() +
+                    ingredient.type.slice(1)}
+                </Text>
 
-          <View style={styles.primaryActions}>
-            <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
+                {/* Amount Section */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Amount</Text>
 
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveButtonText}>Save Changes</Text>
-            </TouchableOpacity>
-          </View>
+                  <View style={styles.amountContainer}>
+                    <View style={styles.amountInputRow}>
+                      <View style={styles.amountInputContainer}>
+                        <TextInput
+                          ref={amountInputRef}
+                          style={[
+                            styles.amountInput,
+                            errors.amount && styles.inputError,
+                          ]}
+                          value={amountText}
+                          onChangeText={handleAmountChange}
+                          keyboardType="decimal-pad"
+                          placeholder="0"
+                          selectTextOnFocus
+                        />
+                        {errors.amount ? (
+                          <Text style={styles.errorText}>{errors.amount}</Text>
+                        ) : null}
+                      </View>
+                      <TouchableOpacity
+                        style={styles.zeroButton}
+                        onPress={handleZeroAmount}
+                      >
+                        <Text style={styles.zeroButtonText}>0</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Quick adjustment buttons - dual layout mode */}
+                    {layoutMode === "classic" ? (
+                      // Classic Mode: Enhanced unit-aware direct +/- buttons
+                      <View style={styles.adjustmentContainer}>
+                        {(() => {
+                          const increments = getContextualIncrements(
+                            ingredient.type as IngredientType,
+                            editedIngredient.unit,
+                            unitSystem
+                          );
+
+                          // Use responsive layout: horizontal for wide screens, vertical for narrow screens
+                          const isSmallScreen = screenWidth < 380;
+
+                          if (isSmallScreen) {
+                            // Vertical stacking for small screens
+                            return (
+                              <View style={styles.classicAdjustmentColumn}>
+                                {/* Negative buttons section */}
+                                <View style={styles.classicAdjustmentSection}>
+                                  {increments.map(delta => (
+                                    <TouchableOpacity
+                                      key={`minus-${delta}`}
+                                      style={[
+                                        styles.adjustButton,
+                                        styles.adjustButtonNegative,
+                                      ]}
+                                      onPress={() => adjustAmount(-delta)}
+                                    >
+                                      <Text
+                                        style={[
+                                          styles.adjustButtonText,
+                                          styles.adjustButtonTextNegative,
+                                        ]}
+                                      >
+                                        -{delta}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+
+                                {/* Positive buttons section */}
+                                <View style={styles.classicAdjustmentSection}>
+                                  {increments.map(delta => (
+                                    <TouchableOpacity
+                                      key={`plus-${delta}`}
+                                      style={[
+                                        styles.adjustButton,
+                                        styles.adjustButtonPositive,
+                                      ]}
+                                      onPress={() => adjustAmount(delta)}
+                                    >
+                                      <Text
+                                        style={[
+                                          styles.adjustButtonText,
+                                          styles.adjustButtonTextPositive,
+                                        ]}
+                                      >
+                                        +{delta}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                              </View>
+                            );
+                          } else {
+                            // Horizontal layout for larger screens
+                            return (
+                              <View style={styles.classicAdjustmentRow}>
+                                {/* Negative buttons */}
+                                {increments.map(delta => (
+                                  <TouchableOpacity
+                                    key={`minus-${delta}`}
+                                    style={[
+                                      styles.adjustButton,
+                                      styles.adjustButtonNegative,
+                                    ]}
+                                    onPress={() => adjustAmount(-delta)}
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.adjustButtonText,
+                                        styles.adjustButtonTextNegative,
+                                      ]}
+                                    >
+                                      -{delta}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+
+                                {/* Vertical divider */}
+                                <View style={styles.adjustmentDivider} />
+
+                                {/* Positive buttons */}
+                                {increments.map(delta => (
+                                  <TouchableOpacity
+                                    key={`plus-${delta}`}
+                                    style={[
+                                      styles.adjustButton,
+                                      styles.adjustButtonPositive,
+                                    ]}
+                                    onPress={() => adjustAmount(delta)}
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.adjustButtonText,
+                                        styles.adjustButtonTextPositive,
+                                      ]}
+                                    >
+                                      +{delta}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            );
+                          }
+                        })()}
+                      </View>
+                    ) : (
+                      // Compact Mode: Radio button selection + direction buttons
+                      <View style={styles.compactAdjustmentContainer}>
+                        <View style={styles.incrementSelector}>
+                          <Text style={styles.incrementSelectorLabel}>
+                            Select Amount:
+                          </Text>
+                          {getContextualIncrements(
+                            ingredient.type as IngredientType,
+                            editedIngredient.unit,
+                            unitSystem
+                          ).map(amount => (
+                            <TouchableOpacity
+                              key={amount}
+                              style={styles.incrementOption}
+                              onPress={() => setSelectedIncrement(amount)}
+                            >
+                              <View style={styles.radioButton}>
+                                {selectedIncrement === amount && (
+                                  <View style={styles.radioButtonInner} />
+                                )}
+                              </View>
+                              <Text style={styles.incrementOptionText}>
+                                {amount}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+
+                        <View style={styles.compactActionButtons}>
+                          <TouchableOpacity
+                            style={[
+                              styles.actionButton,
+                              styles.actionButtonNegative,
+                            ]}
+                            onPress={() =>
+                              handleIncrementAdjustment("subtract")
+                            }
+                          >
+                            <MaterialIcons
+                              name="remove"
+                              size={24}
+                              color={theme.colors.error}
+                            />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[
+                              styles.actionButton,
+                              styles.actionButtonPositive,
+                            ]}
+                            onPress={() => handleIncrementAdjustment("add")}
+                          >
+                            <MaterialIcons
+                              name="add"
+                              size={24}
+                              color={theme.colors.primary}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                {/* Unit Section */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Unit</Text>
+                  {isOther ? (
+                    // Dropdown for other ingredients
+                    <View>
+                      <TouchableOpacity
+                        style={[
+                          styles.unitDropdownButton,
+                          showUnitDropdown && styles.unitDropdownButtonActive,
+                        ]}
+                        onPress={() => setShowUnitDropdown(!showUnitDropdown)}
+                      >
+                        <Text style={styles.unitDropdownText}>
+                          {editedIngredient.unit}
+                        </Text>
+                        <MaterialIcons
+                          name={
+                            showUnitDropdown
+                              ? "keyboard-arrow-up"
+                              : "keyboard-arrow-down"
+                          }
+                          size={20}
+                          color={theme.colors.text}
+                        />
+                      </TouchableOpacity>
+                      {showUnitDropdown && (
+                        <View style={styles.unitDropdownMenu}>
+                          {availableUnits.map((unit, index) => (
+                            <TouchableOpacity
+                              key={unit}
+                              style={[
+                                styles.unitDropdownItem,
+                                index === availableUnits.length - 1 &&
+                                  styles.unitDropdownItemLast,
+                              ]}
+                              onPress={() => {
+                                handleUnitChange(unit);
+                                setShowUnitDropdown(false);
+                              }}
+                            >
+                              <Text
+                                style={[
+                                  styles.unitDropdownItemText,
+                                  editedIngredient.unit === unit &&
+                                    styles.unitDropdownItemTextSelected,
+                                ]}
+                              >
+                                {unit}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  ) : (
+                    // Button grid for other ingredient types
+                    <View style={styles.unitButtonsFullWidth}>
+                      {availableUnits.map(unit => (
+                        <TouchableOpacity
+                          key={unit}
+                          style={[
+                            styles.unitButtonFullWidth,
+                            editedIngredient.unit === unit &&
+                              styles.unitButtonActive,
+                          ]}
+                          onPress={() => handleUnitChange(unit)}
+                        >
+                          <Text
+                            style={[
+                              styles.unitButtonText,
+                              editedIngredient.unit === unit &&
+                                styles.unitButtonTextActive,
+                            ]}
+                          >
+                            {unit}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                {/* Hop-specific sections */}
+                {isHop ? (
+                  <>
+                    {/* Usage Section */}
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Usage</Text>
+                      <View style={styles.usageButtons}>
+                        {HOP_USAGE_OPTIONS.map(usage => (
+                          <TouchableOpacity
+                            key={usage.value}
+                            style={[
+                              styles.usageButton,
+                              currentUsage === usage.value &&
+                                styles.usageButtonActive,
+                            ]}
+                            onPress={() => handleHopUsageChange(usage.value)}
+                          >
+                            <Text
+                              style={[
+                                styles.usageButtonText,
+                                currentUsage === usage.value &&
+                                  styles.usageButtonTextActive,
+                              ]}
+                            >
+                              {usage.display}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      {errors.use ? (
+                        <Text style={styles.errorText}>{errors.use}</Text>
+                      ) : null}
+                    </View>
+
+                    {/* Time Section */}
+                    <View style={styles.section}>
+                      <Text style={styles.sectionTitle}>Time</Text>
+                      <View style={styles.timeContainer}>
+                        <View style={styles.timeInputContainer}>
+                          <TextInput
+                            style={[
+                              styles.timeInput,
+                              errors.time && styles.timeInputError,
+                            ]}
+                            value={timeText}
+                            onChangeText={handleTimeTextChange}
+                            placeholder={getHopTimePlaceholder(
+                              currentUsage,
+                              timeUnit
+                            )}
+                            placeholderTextColor={theme.colors.textMuted}
+                            keyboardType="decimal-pad"
+                            selectTextOnFocus
+                          />
+                          {errors.time ? (
+                            <Text style={styles.errorText}>{errors.time}</Text>
+                          ) : null}
+                        </View>
+
+                        {/* Time Unit Selector - conditional based on hop usage */}
+                        <View style={styles.unitButtons}>
+                          {/* Only show minutes for boil/whirlpool */}
+                          {currentUsage !== "dry-hop" ? (
+                            <TouchableOpacity
+                              style={[
+                                styles.unitButton,
+                                timeUnit === "minutes" &&
+                                  styles.unitButtonActive,
+                              ]}
+                              onPress={() => handleTimeUnitChange("minutes")}
+                            >
+                              <Text
+                                style={[
+                                  styles.unitButtonText,
+                                  timeUnit === "minutes" &&
+                                    styles.unitButtonTextActive,
+                                ]}
+                              >
+                                min
+                              </Text>
+                            </TouchableOpacity>
+                          ) : null}
+                          {/* Only show days for dry-hop */}
+                          {currentUsage === "dry-hop" ? (
+                            <TouchableOpacity
+                              style={[
+                                styles.unitButton,
+                                timeUnit === "days" && styles.unitButtonActive,
+                              ]}
+                              onPress={() => handleTimeUnitChange("days")}
+                            >
+                              <Text
+                                style={[
+                                  styles.unitButtonText,
+                                  timeUnit === "days" &&
+                                    styles.unitButtonTextActive,
+                                ]}
+                              >
+                                days
+                              </Text>
+                            </TouchableOpacity>
+                          ) : null}
+                        </View>
+                      </View>
+                      <View style={styles.timePresets}>
+                        {(() => {
+                          const presets =
+                            HOP_TIME_PRESETS[
+                              currentUsage as keyof typeof HOP_TIME_PRESETS
+                            ] || HOP_TIME_PRESETS.boil;
+
+                          return presets.map(preset => (
+                            <TouchableOpacity
+                              key={preset.value}
+                              style={[
+                                styles.timeButton,
+                                editedIngredient.time === preset.value &&
+                                  styles.timeButtonActive,
+                              ]}
+                              onPress={() => handleTimeChange(preset.value)}
+                            >
+                              <Text
+                                style={[
+                                  styles.timeButtonText,
+                                  editedIngredient.time === preset.value &&
+                                    styles.timeButtonTextActive,
+                                ]}
+                              >
+                                {preset.label}
+                              </Text>
+                            </TouchableOpacity>
+                          ));
+                        })()}
+                      </View>
+                      {errors.time ? (
+                        <Text style={styles.errorText}>{errors.time}</Text>
+                      ) : null}
+                    </View>
+                  </>
+                ) : null}
+              </ScrollView>
+
+              {/* Action Buttons */}
+              <View style={styles.actionButtons}>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={handleDelete}
+                >
+                  <MaterialIcons name="delete" size={20} color="#fff" />
+                  <Text style={styles.deleteButtonText}>Delete</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleSave}
+                >
+                  <Text style={styles.saveButtonText}>Save Changes</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
         </View>
-      </View>
-    </View>
+      </TouchableWithoutFeedback>
+    </Modal>
   );
 }

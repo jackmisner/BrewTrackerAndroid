@@ -24,9 +24,21 @@ jest.mock("react-native", () => ({
     const React = require("react");
     return React.createElement("TouchableOpacity", props, children);
   },
+  TouchableWithoutFeedback: ({ children, ...props }: any) => {
+    const React = require("react");
+    return React.createElement("TouchableWithoutFeedback", props, children);
+  },
   ScrollView: ({ children, ...props }: any) => {
     const React = require("react");
     return React.createElement("ScrollView", props, children);
+  },
+  Modal: ({ children, ...props }: any) => {
+    const React = require("react");
+    return React.createElement("Modal", props, children);
+  },
+  Dimensions: {
+    get: jest.fn(() => ({ width: 375, height: 812 })),
+    addEventListener: jest.fn(() => ({ remove: jest.fn() })),
   },
   Alert: { alert: jest.fn() },
   Keyboard: { dismiss: jest.fn() },
@@ -66,6 +78,16 @@ jest.mock("@contexts/UnitContext", () => ({
   }),
 }));
 
+jest.mock("@contexts/AuthContext", () => ({
+  useAuth: () => ({
+    user: { id: "test-user-id" },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    getUserId: jest.fn(() => Promise.resolve("test-user-id")),
+  }),
+}));
+
 jest.mock("@src/types", () => ({
   RecipeIngredient: {},
   IngredientType: {},
@@ -94,14 +116,47 @@ jest.mock("@constants/hopConstants", () => ({
     { value: "whirlpool", display: "Whirlpool", defaultTime: 15 },
   ],
   HOP_TIME_PRESETS: {
-    boil: [60, 30, 15, 5, 0],
-    "dry-hop": [3 * 1440, 5 * 1440, 7 * 1440],
-    whirlpool: [15, 10, 5],
+    boil: [
+      { label: "60 min", value: 60 },
+      { label: "30 min", value: 30 },
+      { label: "15 min", value: 15 },
+      { label: "5 min", value: 5 },
+      { label: "0 min", value: 0 },
+    ],
+    "dry-hop": [
+      { label: "3 days", value: 3 * 1440 },
+      { label: "5 days", value: 5 * 1440 },
+      { label: "7 days", value: 7 * 1440 },
+    ],
+    whirlpool: [
+      { label: "15 min", value: 15 },
+      { label: "10 min", value: 10 },
+      { label: "5 min", value: 5 },
+    ],
   },
 }));
 
 jest.mock("@utils/formatUtils", () => ({
   getHopTimePlaceholder: jest.fn(() => "60 min"),
+}));
+
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn(() => Promise.resolve(null)),
+    setItem: jest.fn(() => Promise.resolve()),
+    removeItem: jest.fn(() => Promise.resolve()),
+    clear: jest.fn(() => Promise.resolve()),
+    getAllKeys: jest.fn(() => Promise.resolve([])),
+    multiGet: jest.fn(() => Promise.resolve([])),
+    multiSet: jest.fn(() => Promise.resolve()),
+    multiRemove: jest.fn(() => Promise.resolve()),
+  },
+}));
+
+jest.mock("@utils/keyUtils", () => ({
+  generateIngredientKey: jest.fn(() => "mock-key"),
+  generateUniqueId: jest.fn(() => "mock-uuid"),
 }));
 
 // Mock props for the component

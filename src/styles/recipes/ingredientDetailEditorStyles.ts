@@ -5,15 +5,10 @@ export const ingredientDetailEditorStyles = (theme: ThemeContextValue) =>
   StyleSheet.create({
     // Overlay and container
     overlay: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
+      flex: 1,
       backgroundColor: "rgba(0, 0, 0, 0.5)",
       justifyContent: "center",
       alignItems: "center",
-      zIndex: 1000,
       paddingHorizontal: 20,
     },
     container: {
@@ -21,8 +16,6 @@ export const ingredientDetailEditorStyles = (theme: ThemeContextValue) =>
       borderRadius: 16,
       padding: 24,
       width: "100%",
-      maxWidth: 500,
-      maxHeight: "85%",
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.25,
@@ -30,7 +23,7 @@ export const ingredientDetailEditorStyles = (theme: ThemeContextValue) =>
       elevation: 8,
     },
     scrollContent: {
-      maxHeight: 500,
+      flexGrow: 1,
       marginBottom: 16,
     },
 
@@ -45,6 +38,18 @@ export const ingredientDetailEditorStyles = (theme: ThemeContextValue) =>
       fontSize: 20,
       fontWeight: "bold",
       color: theme.colors.text,
+    },
+    headerActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    layoutToggle: {
+      padding: 8,
+      borderRadius: 6,
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
     },
     closeButton: {
       padding: 4,
@@ -79,6 +84,11 @@ export const ingredientDetailEditorStyles = (theme: ThemeContextValue) =>
     amountContainer: {
       gap: 12,
     },
+    amountInputRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 12,
+    },
     amountInputContainer: {
       flex: 1,
     },
@@ -99,6 +109,22 @@ export const ingredientDetailEditorStyles = (theme: ThemeContextValue) =>
       fontSize: 12,
       color: theme.colors.error,
       marginTop: 4,
+    },
+    zeroButton: {
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      minWidth: 48,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    zeroButtonText: {
+      fontSize: 16,
+      color: theme.colors.text,
+      fontWeight: "600",
     },
     // Time section
     timeContainer: {
@@ -126,52 +152,51 @@ export const ingredientDetailEditorStyles = (theme: ThemeContextValue) =>
       marginBottom: 4,
     },
 
-    // Adjustment buttons with left/right layout
+    // Classic layout - enhanced single row
     adjustmentContainer: {
-      flexDirection: "row",
       marginTop: 12,
-      gap: 12,
-      alignItems: "flex-start",
     },
-    adjustmentSide: {
-      flex: 1,
-      flexDirection: "column",
-      gap: 6,
-    },
-    adjustmentSideLeft: {
-      alignItems: "flex-end", // Right-align negative button rows (towards center)
-    },
-    adjustmentSideRight: {
-      alignItems: "flex-start", // Left-align positive button rows (towards center)
-    },
-    adjustmentRow: {
+    classicAdjustmentRow: {
       flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
       gap: 6,
+    },
+    // Classic layout - responsive vertical stacking for small screens
+    classicAdjustmentColumn: {
+      gap: 12,
+    },
+    classicAdjustmentSection: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 6,
+      flexWrap: "wrap",
     },
     adjustmentDivider: {
-      width: 1,
+      width: 2,
+      height: 32,
       backgroundColor: theme.colors.border,
-      alignSelf: "stretch",
-      minHeight: 40,
+      marginHorizontal: 8,
     },
     adjustButton: {
       backgroundColor: theme.colors.background,
       borderWidth: 1,
       borderColor: theme.colors.border,
       borderRadius: 6,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      minWidth: 40,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      minWidth: 52,
+      minHeight: 44,
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: 4,
+      flex: 1,
+      maxWidth: 80,
     },
     adjustButtonNegative: {
-      backgroundColor: theme.colors.background,
       borderColor: theme.colors.error,
     },
     adjustButtonPositive: {
-      backgroundColor: theme.colors.background,
       borderColor: theme.colors.primary,
     },
     adjustButtonText: {
@@ -185,7 +210,73 @@ export const ingredientDetailEditorStyles = (theme: ThemeContextValue) =>
       color: theme.colors.primary,
     },
 
-    // Unit buttons
+    // Compact layout - radio + action buttons
+    compactAdjustmentContainer: {
+      flexDirection: "row",
+      marginTop: 12,
+      gap: 16,
+      alignItems: "stretch",
+      minHeight: 120,
+    },
+    incrementSelector: {
+      flex: 1,
+    },
+    incrementSelectorLabel: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: theme.colors.text,
+      marginBottom: 8,
+    },
+    incrementOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 8,
+      gap: 12,
+    },
+    radioButton: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    radioButtonInner: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: theme.colors.primary,
+    },
+    incrementOptionText: {
+      fontSize: 14,
+      color: theme.colors.text,
+      fontWeight: "500",
+    },
+    compactActionButtons: {
+      gap: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      flex: 1,
+    },
+    actionButton: {
+      width: 56,
+      height: 56,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+    },
+    actionButtonNegative: {
+      backgroundColor: theme.colors.background,
+      borderColor: theme.colors.error,
+    },
+    actionButtonPositive: {
+      backgroundColor: theme.colors.background,
+      borderColor: theme.colors.primary,
+    },
+
+    // Unit buttons (legacy - kept for compatibility)
     unitButtons: {
       flexDirection: "row",
       flexWrap: "wrap",
@@ -201,6 +292,23 @@ export const ingredientDetailEditorStyles = (theme: ThemeContextValue) =>
       minWidth: 48,
       alignItems: "center",
     },
+
+    // Full-width unit buttons
+    unitButtonsFullWidth: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    unitButtonFullWidth: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      alignItems: "center",
+      justifyContent: "center",
+    },
     unitButtonActive: {
       backgroundColor: theme.colors.primary,
       borderColor: theme.colors.primary,
@@ -212,6 +320,57 @@ export const ingredientDetailEditorStyles = (theme: ThemeContextValue) =>
     },
     unitButtonTextActive: {
       color: "#fff",
+      fontWeight: "600",
+    },
+
+    // Unit dropdown for other ingredients
+    unitDropdownButton: {
+      backgroundColor: theme.colors.background,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    unitDropdownButtonActive: {
+      borderColor: theme.colors.primary,
+    },
+    unitDropdownText: {
+      fontSize: 14,
+      color: theme.colors.text,
+      fontWeight: "500",
+    },
+    unitDropdownMenu: {
+      backgroundColor: theme.colors.backgroundSecondary,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginTop: 4,
+      maxHeight: 200,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 4,
+    },
+    unitDropdownItem: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.borderLight,
+    },
+    unitDropdownItemLast: {
+      borderBottomWidth: 0,
+    },
+    unitDropdownItemText: {
+      fontSize: 14,
+      color: theme.colors.text,
+    },
+    unitDropdownItemTextSelected: {
+      color: theme.colors.primary,
       fontWeight: "600",
     },
 
