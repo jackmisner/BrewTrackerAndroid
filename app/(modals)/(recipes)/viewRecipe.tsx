@@ -141,7 +141,9 @@ export default function ViewRecipeScreen() {
           );
         }
 
-        console.log(`Recipe with ID ${recipe_id} not found in V2 cache or legacy system`);
+        console.log(
+          `Recipe with ID ${recipe_id} not found in V2 cache or legacy system`
+        );
         return null;
       } catch (error) {
         console.error(`Failed to load recipe ${recipe_id}:`, error);
