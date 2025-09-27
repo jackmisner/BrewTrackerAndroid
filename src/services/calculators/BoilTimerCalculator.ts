@@ -248,8 +248,15 @@ export class BoilTimerCalculator {
     const alertMap = new Map<number, HopAddition[]>();
 
     hopSchedule.forEach(hop => {
-      // Alert 30 seconds before addition time
-      const alertTime = Math.max(0, hop.time * 60 - 30); // Convert to seconds and subtract 30-second buffer
+      // Alert 30 seconds before the countdown reaches the hop addition time
+      let alertTime = hop.time * 60 + 30;
+
+      // Special case: for hops added at the very start of boil (e.g., 60min in a 60min boil),
+      // we can't alert "before" the boil starts, so alert right at boil start
+      const hopTimeSeconds = hop.time * 60;
+      if (alertTime > hopTimeSeconds && hop.time >= 60) {
+        alertTime = hopTimeSeconds;
+      }
 
       if (!alertMap.has(alertTime)) {
         alertMap.set(alertTime, []);
