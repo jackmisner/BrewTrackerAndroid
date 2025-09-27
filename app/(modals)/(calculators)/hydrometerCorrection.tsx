@@ -245,9 +245,12 @@ export default function HydrometerCorrectionCalculatorScreen() {
             placeholder="e.g., 1.050"
             min={0.99}
             max={1.2}
+            normalMax={1.2}
+            normalMin={1.02}
             step={0.001}
             precision={3}
             testID="hydrometer-measured-gravity"
+            validationMode="soft"
           />
 
           <NumberInput

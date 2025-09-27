@@ -120,8 +120,27 @@ const calculators: CalculatorItem[] = [
 function withAlpha(color: string, alpha: number): string {
   if (color.startsWith("#")) {
     const hex = color.slice(1);
-    const rgb =
-      hex.length === 8 ? hex.slice(0, 6) : hex.padEnd(6, "0").slice(0, 6);
+    let rgb: string | null = null;
+
+    if (hex.length === 3) {
+      rgb = hex
+        .split("")
+        .map(ch => ch.repeat(2))
+        .join("");
+    } else if (hex.length === 4) {
+      rgb = hex
+        .slice(0, 3)
+        .split("")
+        .map(ch => ch.repeat(2))
+        .join("");
+    } else if (hex.length === 6 || hex.length === 8) {
+      rgb = hex.slice(0, 6);
+    }
+
+    if (!rgb) {
+      return color;
+    }
+
     const a = Math.round(Math.min(1, Math.max(0, alpha)) * 255)
       .toString(16)
       .padStart(2, "0");

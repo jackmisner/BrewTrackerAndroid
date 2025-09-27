@@ -187,6 +187,11 @@ export default function EditFermentationEntryScreen() {
       }
     }
 
+    // Date validation
+    if (entryDate.getTime() > Date.now()) {
+      errors.push("Entry date cannot be in the future");
+    }
+
     setValidationErrors(errors);
     return errors.length === 0;
   };

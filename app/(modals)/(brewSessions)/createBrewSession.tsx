@@ -70,6 +70,12 @@ function toLocalISODateString(d: Date) {
   return `${year}-${month}-${day}`;
 }
 
+const parseIsoDate = (iso: string) => {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(year, (month ?? 1) - 1, day ?? 1);
+};
+const formatBrewDate = (iso: string) => parseIsoDate(iso).toLocaleDateString();
+
 /**
  * Screen for creating a new brew session from a selected recipe.
  *
@@ -489,7 +495,7 @@ export default function CreateBrewSessionScreen() {
               testID={TEST_IDS.patterns.touchableOpacityAction("date-picker")}
             >
               <Text style={styles.datePickerText}>
-                {new Date(formData.brew_date).toLocaleDateString()}
+                {formatBrewDate(formData.brew_date)}
               </Text>
               <MaterialIcons
                 name="date-range"
@@ -499,7 +505,7 @@ export default function CreateBrewSessionScreen() {
             </TouchableOpacity>
             {showDatePicker ? (
               <DateTimePicker
-                value={new Date(formData.brew_date)}
+                value={parseIsoDate(formData.brew_date)}
                 mode="date"
                 display="default"
                 onChange={handleDateChange}

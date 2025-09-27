@@ -65,11 +65,11 @@ export interface BoilTimerResult {
   /** Ordered list of hop additions */
   hopSchedule: HopAddition[];
   /** Other ingredient additions (finings, etc.) */
-  otherSchedule: Array<{
+  otherSchedule: {
     time: number;
     description: string;
     added?: boolean;
-  }>;
+  }[];
 }
 
 /**
@@ -86,7 +86,7 @@ export interface RecipeTimerData {
   /** Total boil time in minutes */
   boilTime: number;
   /** Hop alerts with completion tracking */
-  hopAlerts: Array<{
+  hopAlerts: {
     time: number;
     name: string;
     amount: number;
@@ -95,7 +95,7 @@ export interface RecipeTimerData {
     alertScheduled: boolean;
     use?: string;
     alpha_acid?: number;
-  }>;
+  }[];
 }
 
 /**
@@ -108,7 +108,7 @@ export class BoilTimerCalculator {
   public static calculate(
     duration: number,
     hopAdditions: HopAddition[] = [],
-    otherAdditions: Array<{ time: number; description: string }> = []
+    otherAdditions: { time: number; description: string }[] = []
   ): BoilTimerResult {
     if (duration <= 0) {
       throw new Error("Duration must be greater than 0");
@@ -119,6 +119,7 @@ export class BoilTimerCalculator {
       hopSchedule: hopAdditions.map(hop => ({
         ...hop,
         added: false,
+        alertScheduled: false,
       })),
       otherSchedule: otherAdditions.map(addition => ({
         ...addition,
@@ -153,7 +154,7 @@ export class BoilTimerCalculator {
   /**
    * Extract and validate hop schedule from recipe ingredients
    */
-  public static getHopSchedule(recipe: Recipe): Array<{
+  public static getHopSchedule(recipe: Recipe): {
     time: number;
     name: string;
     amount: number;
@@ -162,7 +163,7 @@ export class BoilTimerCalculator {
     alertScheduled: boolean;
     use?: string;
     alpha_acid?: number;
-  }> {
+  }[] {
     // Filter hop ingredients
     const hopIngredients = recipe.ingredients.filter(
       (ingredient: RecipeIngredient) => ingredient.type === "hop"
@@ -208,11 +209,11 @@ export class BoilTimerCalculator {
   /**
    * Generate automatic boil additions for common brewing additives
    */
-  public static getDefaultBoilAdditions(boilTime: number): Array<{
+  public static getDefaultBoilAdditions(boilTime: number): {
     time: number;
     description: string;
     added: boolean;
-  }> {
+  }[] {
     const additions = [];
 
     // Add whirlfloc/irish moss at 15min if boil is long enough

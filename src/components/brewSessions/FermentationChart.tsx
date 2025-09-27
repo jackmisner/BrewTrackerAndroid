@@ -145,9 +145,17 @@ const chartUtils = {
       adjustedMinValue = 0.995; // Provide space below for labels when readings are low
     }
 
+    // Ensure minimum range for visualization
+    const finalMaxValue = maxValue + padding;
+    if (finalMaxValue - adjustedMinValue < 0.01) {
+      return {
+        minValue: adjustedMinValue,
+        maxValue: adjustedMinValue + 0.01,
+      };
+    }
     return {
       minValue: adjustedMinValue,
-      maxValue: maxValue + padding,
+      maxValue: finalMaxValue,
     };
   },
 

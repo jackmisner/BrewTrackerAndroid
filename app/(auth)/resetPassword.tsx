@@ -109,7 +109,22 @@ const ResetPasswordScreen: React.FC = () => {
    * @returns True if password is strong enough, false otherwise
    */
   const isPasswordValid = (password: string): boolean => {
-    return getPasswordStrength(password) === "strong";
+    const trimmed = password.trim();
+    if (trimmed.length < 8) {
+      return false;
+    }
+
+    const hasUpper = /[A-Z]/.test(trimmed);
+    const hasLower = /[a-z]/.test(trimmed);
+    const hasNumber = /\d/.test(trimmed);
+    const hasSpecial = /[^A-Za-z0-9]/.test(trimmed);
+
+    if (!(hasUpper && hasLower && hasNumber && hasSpecial)) {
+      return false;
+    }
+
+    // Still use zxcvbn feedback to block obviously weak passwords.
+    return getPasswordStrength(trimmed) !== "weak";
   };
 
   /**
