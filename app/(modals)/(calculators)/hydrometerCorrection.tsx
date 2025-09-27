@@ -1,3 +1,33 @@
+/**
+ * Hydrometer Correction Calculator Screen
+ *
+ * Calculator screen for correcting hydrometer readings based on temperature
+ * difference from calibration. Essential for accurate gravity measurements
+ * when wort temperature differs from hydrometer calibration temperature.
+ *
+ * Features:
+ * - Measured gravity, wort temperature, and calibration temperature inputs
+ * - Temperature unit toggle (Fahrenheit/Celsius)
+ * - Real-time temperature-corrected gravity calculation
+ * - Input validation with error handling
+ * - Themed calculator card layout
+ * - Modal header with navigation
+ * - Auto-calculation on input changes
+ * - State management via CalculatorsContext
+ *
+ * Calculations:
+ * - Uses temperature correction formula to adjust gravity readings
+ * - Accounts for thermal expansion/contraction of liquid
+ * - Corrected gravity = measured gravity + temperature correction factor
+ * - Supports both Fahrenheit and Celsius temperature scales
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push('/(modals)/(calculators)/hydrometerCorrection');
+ * ```
+ */
+
 import React, { useEffect, useCallback } from "react";
 import { View, ScrollView } from "react-native";
 import { useCalculators } from "@contexts/CalculatorsContext";
@@ -10,6 +40,9 @@ import { SingleResult } from "@components/calculators/ResultDisplay";
 import { useTheme } from "@contexts/ThemeContext";
 import { calculatorScreenStyles } from "@styles/modals/calculators/calculatorScreenStyles";
 
+/**
+ * Temperature unit options for the calculator
+ */
 const TEMP_UNIT_OPTIONS = [
   { label: "°F", value: "f" as const, description: "Fahrenheit" },
   { label: "°C", value: "c" as const, description: "Celsius" },
@@ -212,9 +245,12 @@ export default function HydrometerCorrectionCalculatorScreen() {
             placeholder="e.g., 1.050"
             min={0.99}
             max={1.2}
+            normalMax={1.2}
+            normalMin={1.02}
             step={0.001}
             precision={3}
             testID="hydrometer-measured-gravity"
+            validationMode="soft"
           />
 
           <NumberInput

@@ -264,13 +264,12 @@ describe("BoilTimerCalculator", () => {
         { time: 0, name: "Whirlpool", amount: 1.0, unit: "oz" },
       ];
 
-      const alertMap = BoilTimerCalculator.getHopAlertTimes(hopSchedule);
-
-      // 60min hop: alert at 60*60+30 = 3630 seconds
-      // 15min hop: alert at 15*60+30 = 930 seconds
-      // 0min hop: alert at 0*60+30 = 30 seconds
+      const alertMap = BoilTimerCalculator.getHopAlertTimes(hopSchedule, 60);
+      // 60min hop: alert at 3600 seconds (clamped to boil length)
+      // 15min hop: alert at 15*60+30 = 930 seconds (30 seconds before)
+      // 0min hop: alert at Math.max(0, 0*60+30) = 30 seconds
       expect(alertMap.size).toBe(3);
-      expect(alertMap.has(3630)).toBe(true);
+      expect(alertMap.has(3600)).toBe(true);
       expect(alertMap.has(930)).toBe(true);
       expect(alertMap.has(30)).toBe(true);
     });
@@ -281,16 +280,26 @@ describe("BoilTimerCalculator", () => {
         { time: 15, name: "Centennial", amount: 0.5, unit: "oz" },
       ];
 
-      const alertMap = BoilTimerCalculator.getHopAlertTimes(hopSchedule);
-
+      const alertMap = BoilTimerCalculator.getHopAlertTimes(hopSchedule, 60);
       expect(alertMap.size).toBe(1);
-      expect(alertMap.has(930)).toBe(true); // 15*60+30
+      expect(alertMap.has(930)).toBe(true); // 15*60+30 (30 seconds before)
       expect(alertMap.get(930)?.length).toBe(2);
     });
 
     it("should handle empty hop schedule", () => {
       const alertMap = BoilTimerCalculator.getHopAlertTimes([]);
       expect(alertMap.size).toBe(0);
+    });
+
+    it("should handle short boil with start-of-boil hop", () => {
+      const hopSchedule: HopAddition[] = [
+        { time: 30, name: "Magnum", amount: 1.0, unit: "oz" },
+      ];
+
+      const alertMap = BoilTimerCalculator.getHopAlertTimes(hopSchedule, 30);
+      // 30min hop in 30min boil: alert at Math.max(0, 30*60-30) = 1770 seconds, but clamped to boil start at 1800
+      expect(alertMap.size).toBe(1);
+      expect(alertMap.has(1800)).toBe(true);
     });
   });
 

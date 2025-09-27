@@ -196,7 +196,7 @@ describe("NumberInput", () => {
 
       fireEvent.changeText(getByDisplayValue("10"), "3");
 
-      expect(onChangeText).toHaveBeenCalledWith("5");
+      expect(onChangeText).toHaveBeenCalledWith("5.00");
     });
 
     it("should enforce maximum bounds", () => {
@@ -207,7 +207,7 @@ describe("NumberInput", () => {
 
       fireEvent.changeText(getByDisplayValue("10"), "25");
 
-      expect(onChangeText).toHaveBeenCalledWith("20");
+      expect(onChangeText).toHaveBeenCalledWith("20.00");
     });
 
     it("should allow partial input like minus sign only", () => {

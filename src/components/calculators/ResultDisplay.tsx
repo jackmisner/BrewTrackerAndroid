@@ -1,21 +1,80 @@
+/**
+ * ResultDisplay Component
+ *
+ * Themed display component for calculator results. Provides consistent
+ * formatting and layout for calculation outputs with support for multiple
+ * result items, icons, units, and precision control.
+ *
+ * Features:
+ * - Multiple result items in a single display
+ * - Optional icons for visual identification
+ * - Unit display with proper formatting
+ * - Configurable decimal precision
+ * - Highlight mode for important results
+ * - Themed styling with adaptive colors
+ * - Responsive layout with proper spacing
+ * - Optional title header
+ *
+ * @example
+ * Basic usage:
+ * ```typescript
+ * <ResultDisplay
+ *   title="Strike Water Results"
+ *   results={[
+ *     { label: "Strike Temperature", value: 172.5, unit: "°F", precision: 1 },
+ *     { label: "Water Volume", value: 3.2, unit: "gal", precision: 2 }
+ *   ]}
+ * />
+ * ```
+ *
+ * @example
+ * Single result with highlight:
+ * ```typescript
+ * <SingleResult
+ *   label="ABV"
+ *   value={5.8}
+ *   unit="%"
+ *   precision={1}
+ *   icon="local-bar"
+ * />
+ * ```
+ */
+
 import React from "react";
 import { View, Text, StyleProp, ViewStyle } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { resultDisplayStyles } from "@styles/components/calculators/resultDisplayStyles";
 
+/**
+ * Individual result item configuration
+ * @interface ResultItem
+ */
 interface ResultItem {
+  /** Display label for the result */
   label: string;
+  /** Numeric or string value to display */
   value: string | number;
+  /** Optional unit suffix (e.g., "°F", "%", "gal") */
   unit?: string;
+  /** Optional Material Icon name for visual identification */
   icon?: keyof typeof MaterialIcons.glyphMap;
+  /** Number of decimal places to display */
   precision?: number;
 }
 
+/**
+ * Props for the ResultDisplay component
+ * @interface ResultDisplayProps
+ */
 interface ResultDisplayProps {
+  /** Array of result items to display */
   results: ResultItem[];
+  /** Optional title header for the results section */
   title?: string;
+  /** Additional styles for the container */
   style?: StyleProp<ViewStyle>;
+  /** Whether to highlight the results with accent styling */
   highlight?: boolean;
 }
 

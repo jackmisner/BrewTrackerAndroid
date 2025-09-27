@@ -1,3 +1,34 @@
+/**
+ * Utilities Tab Screen
+ *
+ * Central hub for brewing calculators and tools that provides quick access to
+ * essential brewing utilities. Displays a grid of calculator cards with icons,
+ * descriptions, and navigation to dedicated calculator screens.
+ *
+ * Features:
+ * - Grid layout of brewing calculators and tools
+ * - Visual cards with icons and descriptions
+ * - Direct navigation to calculator screens
+ * - Themed styling with color adaptation
+ * - Touch-friendly card design (72px minimum height)
+ * - Test ID support for automated testing
+ *
+ * Available Calculators:
+ * - Unit Converter: Metric/imperial conversions
+ * - ABV Calculator: Alcohol by volume calculations
+ * - Strike Water: Mash water temperature calculation
+ * - Hydrometer Correction: Temperature-adjusted gravity readings
+ * - Dilution Calculator: Gravity and volume adjustments
+ * - Boil Timer: Recipe-aware countdown with hop alarms
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * // Accessed via tab navigation
+ * <Tabs.Screen name="utilities" component={UtilitiesScreen} />
+ * ```
+ */
+
 import React from "react";
 import {
   View,
@@ -10,6 +41,15 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { useRouter } from "expo-router";
 
+/**
+ * Calculator item configuration interface
+ * @interface CalculatorItem
+ * @property {string} id - Unique identifier for the calculator
+ * @property {string} title - Display name of the calculator
+ * @property {string} description - Brief description of calculator functionality
+ * @property {keyof typeof MaterialIcons.glyphMap} icon - Material icon name
+ * @property {string} route - Navigation route to the calculator screen
+ */
 interface CalculatorItem {
   id: string;
   title: string;
@@ -63,12 +103,44 @@ const calculators: CalculatorItem[] = [
   },
 ];
 
-// Simple alpha helper for hex (#RRGGBB / #RRGGBBAA) and rgb()/rgba()
+/**
+ * Applies alpha transparency to color values
+ * Supports both hex (#RRGGBB / #RRGGBBAA) and rgb()/rgba() color formats
+ *
+ * @param color - Color value in hex or rgb format
+ * @param alpha - Alpha value between 0 and 1
+ * @returns Color string with applied alpha transparency
+ *
+ * @example
+ * ```typescript
+ * withAlpha('#FF0000', 0.5) // Returns '#FF000080'
+ * withAlpha('rgb(255, 0, 0)', 0.5) // Returns 'rgba(255, 0, 0, 0.5)'
+ * ```
+ */
 function withAlpha(color: string, alpha: number): string {
   if (color.startsWith("#")) {
     const hex = color.slice(1);
-    const rgb =
-      hex.length === 8 ? hex.slice(0, 6) : hex.padEnd(6, "0").slice(0, 6);
+    let rgb: string | null = null;
+
+    if (hex.length === 3) {
+      rgb = hex
+        .split("")
+        .map(ch => ch.repeat(2))
+        .join("");
+    } else if (hex.length === 4) {
+      rgb = hex
+        .slice(0, 3)
+        .split("")
+        .map(ch => ch.repeat(2))
+        .join("");
+    } else if (hex.length === 6 || hex.length === 8) {
+      rgb = hex.slice(0, 6);
+    }
+
+    if (!rgb) {
+      return color;
+    }
+
     const a = Math.round(Math.min(1, Math.max(0, alpha)) * 255)
       .toString(16)
       .padStart(2, "0");

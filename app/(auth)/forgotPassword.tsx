@@ -1,3 +1,33 @@
+/**
+ * Forgot Password Screen
+ *
+ * Password reset request screen that allows users to initiate password recovery
+ * by providing their email address. Includes email validation, loading states,
+ * and a success confirmation flow.
+ *
+ * Features:
+ * - Email validation with regex pattern matching
+ * - Real-time form validation and disabled states
+ * - Success screen with instructions after email submission
+ * - Error handling with visual feedback
+ * - Keyboard-aware layout with auto-dismissal
+ * - Navigation back to login and registration
+ * - Loading states during API requests
+ *
+ * Flow:
+ * 1. User enters email address
+ * 2. Form validates email format
+ * 3. Submit triggers password reset API call
+ * 4. Success shows confirmation screen with instructions
+ * 5. User can navigate back to login or registration
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push('/(auth)/forgotPassword');
+ * ```
+ */
+
 import React, { useState } from "react";
 import {
   View,
@@ -19,11 +49,21 @@ const ForgotPasswordScreen: React.FC = () => {
   const [email, setEmail] = useState<string>("");
   const [emailSent, setEmailSent] = useState<boolean>(false);
 
+  /**
+   * Validates email format using regex pattern
+   * @param email - Email address to validate
+   * @returns True if email format is valid, false otherwise
+   */
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
+  /**
+   * Handles password reset request submission
+   * Validates email and calls the forgot password API
+   * @throws {Error} When validation fails or API request fails
+   */
   const handleForgotPassword = async (): Promise<void> => {
     if (isLoading) {
       return;
@@ -46,11 +86,17 @@ const ForgotPasswordScreen: React.FC = () => {
     }
   };
 
+  /**
+   * Navigates back to login screen and clears any errors
+   */
   const handleBackToLogin = (): void => {
     clearError();
     router.replace("/(auth)/login");
   };
 
+  /**
+   * Navigates to registration screen and clears any errors
+   */
   const handleCreateAccount = (): void => {
     clearError();
     router.replace("/(auth)/register");

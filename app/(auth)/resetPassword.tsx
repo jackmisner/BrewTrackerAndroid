@@ -1,4 +1,36 @@
-import React, { useState, useEffect } from "react";
+/**
+ * Reset Password Screen
+ *
+ * Password reset completion screen that allows users to set a new password using
+ * a reset token from their email. Includes comprehensive password validation,
+ * strength checking, and confirmation matching.
+ *
+ * Features:
+ * - Token validation from URL parameters
+ * - Real-time password strength analysis using zxcvbn
+ * - Password confirmation matching with visual feedback
+ * - Secure password toggle visibility
+ * - Comprehensive form validation with error messages
+ * - Success screen after successful password reset
+ * - Navigation back to login or request new reset link
+ * - Test ID support for automated testing
+ *
+ * Flow:
+ * 1. User accesses via reset link with token parameter
+ * 2. Token is validated on component mount
+ * 3. User enters new password with real-time strength feedback
+ * 4. Password confirmation is validated for matching
+ * 5. Submit triggers password reset API with token
+ * 6. Success shows confirmation with navigation to login
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push('/(auth)/resetPassword?token=abc123');
+ * ```
+ */
+
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,9 +48,14 @@ import { useAuth } from "@contexts/AuthContext";
 import { loginStyles } from "@styles/auth/loginStyles";
 import { TEST_IDS } from "@src/constants/testIDs";
 
+type Strength = "" | "weak" | "medium" | "strong";
+
 const ResetPasswordScreen: React.FC = () => {
   const { resetPassword, isLoading, error, clearError } = useAuth();
-  const { token } = useLocalSearchParams<{ token: string }>();
+  const searchParams = useLocalSearchParams<{ token?: string | string[] }>();
+  const token = Array.isArray(searchParams.token)
+    ? searchParams.token[0]
+    : searchParams.token;
 
   const [formData, setFormData] = useState({
     newPassword: "",
@@ -29,17 +66,26 @@ const ResetPasswordScreen: React.FC = () => {
     useState<boolean>(false);
   const [success, setSuccess] = useState<boolean>(false);
 
+  const warnedMissingToken = React.useRef(false);
+
   useEffect(() => {
-    if (!token) {
+    if (!token && !warnedMissingToken.current) {
       Alert.alert(
         "Invalid Reset Link",
         "No reset token provided. Please use the link from your email.",
         [{ text: "OK", onPress: () => router.replace("/(auth)/login") }]
       );
+      warnedMissingToken.current = true;
     }
   }, [token]);
 
-  const getPasswordStrength = (password: string): string => {
+  /**
+   * Evaluates password strength using the zxcvbn library
+   * Maps zxcvbn scores (0-4) to simplified strength levels
+   * @param password - Password to evaluate
+   * @returns Strength level: "weak", "medium", or "strong"
+   */
+  const getPasswordStrength = (password: string): Strength => {
     if (!password) {
       return "";
     }
@@ -65,11 +111,40 @@ const ResetPasswordScreen: React.FC = () => {
     }
   };
 
-  const isPasswordValid = (password: string): boolean => {
-    return getPasswordStrength(password) === "strong";
+  /**
+   * Validates if password meets minimum strength requirements
+   * @param password - Password to validate
+   * @returns True if password is strong enough, false otherwise
+   */
+  const isPasswordValid = (password: string, strength?: Strength): boolean => {
+    const trimmed = password.trim();
+    if (trimmed.length < 8) {
+      return false;
+    }
+
+    const hasUpper = /[A-Z]/.test(trimmed);
+    const hasLower = /[a-z]/.test(trimmed);
+    const hasNumber = /\d/.test(trimmed);
+    const hasSpecial = /[^A-Za-z0-9]/.test(trimmed);
+
+    if (!(hasUpper && hasLower && hasNumber && hasSpecial)) {
+      return false;
+    }
+
+    const effectiveStrength = strength ?? getPasswordStrength(trimmed);
+    // Still use zxcvbn feedback to block obviously weak passwords.
+    return effectiveStrength !== "weak";
   };
 
+  /**
+   * Handles password reset form submission with comprehensive validation
+   * Validates token, password strength, confirmation matching, and whitespace
+   * @throws {Error} When validation fails or API request fails
+   */
   const handleResetPassword = async (): Promise<void> => {
+    if (isLoading) {
+      return;
+    }
     if (!token) {
       Alert.alert(
         "Error",
@@ -133,7 +208,10 @@ const ResetPasswordScreen: React.FC = () => {
     formData.newPassword &&
     formData.confirmPassword &&
     formData.newPassword === formData.confirmPassword;
-  const passwordStrength = getPasswordStrength(formData.newPassword);
+  const passwordStrength = useMemo(
+    () => getPasswordStrength(formData.newPassword),
+    [formData.newPassword]
+  );
 
   if (success) {
     return (
@@ -231,6 +309,10 @@ const ResetPasswordScreen: React.FC = () => {
               <TouchableOpacity
                 style={loginStyles.passwordToggle}
                 onPress={() => setShowPassword(!showPassword)}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  showPassword ? "Hide password" : "Show password"
+                }
               >
                 <MaterialIcons
                   name={showPassword ? "visibility" : "visibility-off"}
@@ -290,6 +372,10 @@ const ResetPasswordScreen: React.FC = () => {
               <TouchableOpacity
                 style={loginStyles.passwordToggle}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  showConfirmPassword ? "Hide password" : "Show password"
+                }
               >
                 <MaterialIcons
                   name={showConfirmPassword ? "visibility" : "visibility-off"}
@@ -310,14 +396,14 @@ const ResetPasswordScreen: React.FC = () => {
                 loginStyles.resetPrimaryButton,
                 (isLoading ||
                   !passwordsMatch ||
-                  !isPasswordValid(formData.newPassword)) &&
+                  !isPasswordValid(formData.newPassword, passwordStrength)) &&
                   loginStyles.primaryButtonDisabled,
               ]}
               onPress={handleResetPassword}
               disabled={
                 isLoading ||
                 !passwordsMatch ||
-                !isPasswordValid(formData.newPassword)
+                !isPasswordValid(formData.newPassword, passwordStrength)
               }
               testID={TEST_IDS.auth.resetPasswordButton}
             >
@@ -326,7 +412,7 @@ const ResetPasswordScreen: React.FC = () => {
                   loginStyles.resetPrimaryButtonText,
                   (isLoading ||
                     !passwordsMatch ||
-                    !isPasswordValid(formData.newPassword)) &&
+                    !isPasswordValid(formData.newPassword, passwordStrength)) &&
                     loginStyles.primaryButtonTextDisabled,
                 ]}
               >

@@ -1,3 +1,46 @@
+/**
+ * Calculators Context
+ *
+ * Global state management for all brewing calculator screens. Provides
+ * persistent state storage, type-safe reducers, and shared calculator
+ * logic across the application. Handles state persistence via AsyncStorage.
+ *
+ * Features:
+ * - Centralized state for all calculator types
+ * - Type-safe reducer actions with payload validation
+ * - Automatic persistence to AsyncStorage
+ * - State hydration on app startup
+ * - Individual calculator state isolation
+ * - Optimized re-renders with React.memo patterns
+ *
+ * Supported Calculators:
+ * - **Unit Converter**: Multi-category unit conversions
+ * - **ABV Calculator**: Alcohol by volume with multiple formulas
+ * - **Strike Water**: Mash water temperature calculations
+ * - **Hydrometer Correction**: Temperature-adjusted gravity readings
+ * - **Dilution Calculator**: Beer dilution and volume adjustments
+ * - **Boil Timer**: Recipe-aware countdown with hop schedules
+ *
+ * State Architecture:
+ * - Each calculator maintains independent state slice
+ * - Reducer pattern with action-based updates
+ * - Persistence on state changes with debouncing
+ * - Error boundaries for calculator failures
+ *
+ * @example
+ * Using in calculator components:
+ * ```typescript
+ * const { state, dispatch } = useCalculators();
+ * const { abv } = state;
+ *
+ * // Update ABV calculator state
+ * dispatch({
+ *   type: 'SET_ABV',
+ *   payload: { originalGravity: '1.050', result: 5.2 }
+ * });
+ * ```
+ */
+
 import React, {
   createContext,
   useContext,
@@ -7,7 +50,10 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Types for calculator states
+/**
+ * Type definitions for individual calculator states
+ * Each calculator maintains its own state slice with specific properties
+ */
 export interface UnitConverterState {
   fromUnit: string;
   toUnit: string;

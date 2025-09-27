@@ -1,3 +1,34 @@
+/**
+ * Email Verification Screen
+ *
+ * Email verification screen that allows users to verify their email address
+ * by entering a verification code sent to their email. Includes automatic
+ * verification status checking and resend functionality.
+ *
+ * Features:
+ * - Verification code input with validation
+ * - Automatic verification status polling
+ * - Resend verification email capability
+ * - Loading states for verify and resend operations
+ * - Automatic navigation to main app when verified
+ * - Error handling with visual feedback
+ * - Email address display for user reference
+ *
+ * Flow:
+ * 1. User accesses after registration or from profile
+ * 2. Current verification status is checked automatically
+ * 3. User enters verification code from email
+ * 4. Submit triggers email verification API
+ * 5. Success automatically navigates to main app
+ * 6. User can request new verification email if needed
+ *
+ * @example
+ * Navigation usage:
+ * ```typescript
+ * router.push('/(auth)/verifyEmail');
+ * ```
+ */
+
 import React, { useState, useEffect } from "react";
 import {
   View,
