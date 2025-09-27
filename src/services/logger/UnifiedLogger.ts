@@ -14,6 +14,8 @@ export class UnifiedLogger {
   private static initialized = false;
   private static suppressForward = false;
   private static hostUri: string | null = null;
+  private static lastNetworkErrorTime = 0;
+  private static networkErrorCooldown = 30000; // 30 seconds
 
   /**
    * Initialize console.error interception
@@ -240,12 +242,23 @@ export class UnifiedLogger {
         clearTimeout(timeoutId);
       }
     } catch (error) {
-      // In development, show connection issues for ERROR level logs
+      // In development, show connection issues but with cooldown to prevent spam
       if (__DEV__ && level === "ERROR") {
-        this.originalConsoleError?.(
-          `[UnifiedLogger] Failed to send ${level} to dev server:`,
-          error instanceof Error ? error.message : error
-        );
+        const now = Date.now();
+        if (now - this.lastNetworkErrorTime >= this.networkErrorCooldown) {
+          this.lastNetworkErrorTime = now;
+          // Use suppressForward to prevent recursive logging
+          const wasSuppressionActive = this.suppressForward;
+          this.suppressForward = true;
+          try {
+            this.originalConsoleError?.(
+              `[UnifiedLogger] Dev server connection failed (will retry in ${this.networkErrorCooldown / 1000}s):`,
+              error instanceof Error ? error.message : error
+            );
+          } finally {
+            this.suppressForward = wasSuppressionActive;
+          }
+        }
       }
       // For other levels, silently fail to avoid spam
     }

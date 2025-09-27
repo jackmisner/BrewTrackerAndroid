@@ -297,7 +297,7 @@ describe("BoilTimerCalculator", () => {
       ];
 
       const alertMap = BoilTimerCalculator.getHopAlertTimes(hopSchedule, 30);
-      // 30min hop in 30min boil: alert at 30*60 = 1800 seconds (clamped from 1830)
+      // 30min hop in 30min boil: alert at Math.max(0, 30*60-30) = 1770 seconds, but clamped to boil start at 1800
       expect(alertMap.size).toBe(1);
       expect(alertMap.has(1800)).toBe(true);
     });
