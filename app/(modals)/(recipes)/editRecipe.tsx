@@ -688,8 +688,16 @@ export default function EditRecipeScreen() {
     <KeyboardAvoidingView style={styles.container} behavior="padding">
       {/* Header with navigation */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
-          <MaterialIcons name="close" size={24} color={theme.colors.text} />
+        <TouchableOpacity
+          onPress={handleCancel}
+          style={[styles.cancelButton, isModalOpen && { opacity: 0.5 }]}
+          disabled={isModalOpen}
+        >
+          <MaterialIcons
+            name="close"
+            size={24}
+            color={isModalOpen ? theme.colors.textMuted : theme.colors.text}
+          />
         </TouchableOpacity>
         <Text style={styles.title}>Edit Recipe {hasUnsavedChanges && "*"}</Text>
         <View style={styles.placeholder} />

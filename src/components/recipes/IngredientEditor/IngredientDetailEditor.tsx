@@ -220,35 +220,35 @@ export function IngredientDetailEditor({
   const amountInputRef = useRef<TextInput>(null);
 
   // Initialize layout mode from storage or default
+  const layoutInitializedRef = useRef(false);
   useEffect(() => {
-    const initializeLayoutMode = async () => {
+    const init = async () => {
       try {
         const userId = await getUserId();
-        if (!userId) {
-          // Not authenticated, use auto-detection
-          const defaultMode = getDefaultLayoutMode(screenWidth);
-          setLayoutMode(defaultMode);
+        if (layoutInitializedRef.current) {
+          if (!userId) {
+            setLayoutMode(getDefaultLayoutMode(screenWidth));
+          }
           return;
         }
-
-        const storageKey = getLayoutPreferenceKey(userId);
-        const savedMode = await AsyncStorage.getItem(storageKey);
-        if (savedMode && (savedMode === "classic" || savedMode === "compact")) {
-          setLayoutMode(savedMode as LayoutMode);
-        } else {
-          // Use auto-detection based on screen width
-          const defaultMode = getDefaultLayoutMode(screenWidth);
-          setLayoutMode(defaultMode);
+        let savedMode: string | null = null;
+        if (userId) {
+          savedMode = await AsyncStorage.getItem(
+            getLayoutPreferenceKey(userId)
+          );
         }
-      } catch (error) {
-        // Fallback to auto-detection if storage fails
-        console.warn("Failed to load layout preference:", error);
-        const defaultMode = getDefaultLayoutMode(screenWidth);
-        setLayoutMode(defaultMode);
+        setLayoutMode(
+          savedMode === "classic" || savedMode === "compact"
+            ? (savedMode as LayoutMode)
+            : getDefaultLayoutMode(screenWidth)
+        );
+        layoutInitializedRef.current = true;
+      } catch {
+        setLayoutMode(getDefaultLayoutMode(screenWidth));
+        layoutInitializedRef.current = true;
       }
     };
-
-    initializeLayoutMode();
+    init();
   }, [screenWidth, getUserId]);
 
   // Initialize selected increment based on ingredient context
