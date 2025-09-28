@@ -24,6 +24,7 @@ import {
   SyncError,
   STORAGE_KEYS_V2,
   Recipe,
+  BrewSession,
 } from "@src/types";
 
 // Simple per-key queue (no external deps)
@@ -734,6 +735,572 @@ export class UserCacheService {
   }
 
   // ============================================================================
+  // Brew Session Management
+  // ============================================================================
+
+  /**
+   * Get a specific brew session by ID with enforced user scoping
+   */
+  static async getBrewSessionById(
+    sessionId: string,
+    userId?: string
+  ): Promise<BrewSession | null> {
+    try {
+      // Require userId for security - prevent cross-user data access
+      if (!userId) {
+        console.warn(
+          `[UserCacheService.getBrewSessionById] User ID is required for security`
+        );
+        return null;
+      }
+
+      // Use the existing getCachedBrewSessions method which already filters by user
+      const userSessions = await this.getCachedBrewSessions(userId);
+
+      // Find the session by matching ID and confirm user ownership
+      const sessionItem = userSessions.find(
+        item =>
+          (item.id === sessionId ||
+            item.data.id === sessionId ||
+            item.tempId === sessionId) &&
+          item.data.user_id === userId &&
+          !item.isDeleted
+      );
+
+      if (!sessionItem) {
+        return null;
+      }
+
+      return sessionItem.data;
+    } catch (error) {
+      console.error(`[UserCacheService.getBrewSessionById] Error:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all brew sessions for a user
+   */
+  static async getBrewSessions(
+    userId: string,
+    userUnitSystem: "imperial" | "metric" = "imperial"
+  ): Promise<BrewSession[]> {
+    try {
+      await UnifiedLogger.debug(
+        "UserCacheService.getBrewSessions",
+        `Retrieving brew sessions for user ${userId}`,
+        {
+          userId,
+          unitSystem: userUnitSystem,
+        }
+      );
+
+      console.log(
+        `[UserCacheService.getBrewSessions] Getting brew sessions for user ID: "${userId}"`
+      );
+
+      const cached = await this.getCachedBrewSessions(userId);
+
+      // Log detailed info about what we found in cache
+      const deletedCount = cached.filter(item => item.isDeleted).length;
+      const pendingSyncCount = cached.filter(item => item.needsSync).length;
+      const deletedPendingSyncCount = cached.filter(
+        item => item.isDeleted && item.needsSync
+      ).length;
+
+      await UnifiedLogger.debug(
+        "UserCacheService.getBrewSessions",
+        `Cache contents analysis`,
+        {
+          userId,
+          totalItems: cached.length,
+          deletedItems: deletedCount,
+          pendingSyncItems: pendingSyncCount,
+          deletedPendingSyncItems: deletedPendingSyncCount,
+          itemDetails: cached.map(item => ({
+            id: item.id,
+            dataId: item.data.id,
+            name: item.data.name,
+            isDeleted: item.isDeleted || false,
+            needsSync: item.needsSync,
+            syncStatus: item.syncStatus,
+          })),
+        }
+      );
+
+      console.log(
+        `[UserCacheService.getBrewSessions] getCachedBrewSessions returned ${cached.length} items for user "${userId}"`
+      );
+
+      // If no cached sessions found, try to hydrate from server
+      if (cached.length === 0) {
+        console.log(
+          `[UserCacheService.getBrewSessions] No cached sessions found, attempting to hydrate from server...`
+        );
+        try {
+          await this.hydrateBrewSessionsFromServer(
+            userId,
+            false,
+            userUnitSystem
+          );
+          // Try again after hydration
+          const hydratedCached = await this.getCachedBrewSessions(userId);
+          console.log(
+            `[UserCacheService.getBrewSessions] After hydration: ${hydratedCached.length} sessions cached`
+          );
+
+          return this.filterAndSortHydrated(hydratedCached);
+        } catch (hydrationError) {
+          console.warn(
+            `[UserCacheService.getBrewSessions] Failed to hydrate from server:`,
+            hydrationError
+          );
+          // Continue with empty cache
+        }
+      }
+
+      // Filter out deleted items and return data
+      const filteredSessions = cached.filter(item => !item.isDeleted);
+      console.log(
+        `[UserCacheService.getBrewSessions] After filtering out deleted: ${filteredSessions.length} sessions`
+      );
+
+      if (filteredSessions.length > 0) {
+        const sessionIds = filteredSessions.map(item => item.data.id);
+        console.log(
+          `[UserCacheService.getBrewSessions] Session IDs: [${sessionIds.join(", ")}]`
+        );
+      }
+
+      const finalSessions = this.filterAndSortHydrated(filteredSessions);
+
+      await UnifiedLogger.debug(
+        "UserCacheService.getBrewSessions",
+        `Returning filtered sessions to UI`,
+        {
+          userId,
+          returnedCount: finalSessions.length,
+          filteredOutCount: filteredSessions.length - finalSessions.length,
+          returnedSessions: finalSessions.map(session => ({
+            id: session.id,
+            name: session.name,
+            status: session.status || "Unknown",
+          })),
+        }
+      );
+
+      return finalSessions;
+    } catch (error) {
+      await UnifiedLogger.error(
+        "UserCacheService.getBrewSessions",
+        `Error getting brew sessions: ${error instanceof Error ? error.message : "Unknown error"}`,
+        {
+          userId,
+          error: error instanceof Error ? error.message : "Unknown error",
+        }
+      );
+      console.error("Error getting brew sessions:", error);
+      throw new OfflineError(
+        "Failed to get brew sessions",
+        "SESSIONS_ERROR",
+        true
+      );
+    }
+  }
+
+  /**
+   * Create a new brew session
+   */
+  static async createBrewSession(
+    session: Partial<BrewSession>
+  ): Promise<BrewSession> {
+    try {
+      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const now = Date.now();
+
+      // Get current user ID from JWT token
+      const currentUserId =
+        session.user_id ??
+        (await UserValidationService.getCurrentUserIdFromToken());
+      if (!currentUserId) {
+        throw new OfflineError(
+          "User ID is required for creating brew sessions",
+          "AUTH_ERROR",
+          false
+        );
+      }
+
+      await UnifiedLogger.info(
+        "UserCacheService.createBrewSession",
+        `Starting brew session creation for user ${currentUserId}`,
+        {
+          userId: currentUserId,
+          tempId,
+          sessionName: session.name || "Untitled",
+          sessionStatus: session.status || "planned",
+          recipeId: session.recipe_id || "Unknown",
+          timestamp: new Date().toISOString(),
+        }
+      );
+
+      const newSession: BrewSession = {
+        ...session,
+        id: tempId,
+        name: session.name || "",
+        recipe_id: session.recipe_id || "",
+        status: session.status || "planned",
+        batch_size: session.batch_size || 5.0,
+        batch_size_unit: session.batch_size_unit || "gal",
+        brew_date: session.brew_date || new Date().toISOString().split("T")[0],
+        notes: session.notes || "",
+        created_at: new Date(now).toISOString(),
+        updated_at: new Date(now).toISOString(),
+        user_id: currentUserId,
+        fermentation_entries: session.fermentation_entries || [],
+        // Initialize optional fields
+        temperature_unit: session.temperature_unit || "F",
+      } as BrewSession;
+
+      // Create syncable item
+      const syncableItem: SyncableItem<BrewSession> = {
+        id: tempId,
+        data: newSession,
+        lastModified: now,
+        syncStatus: "pending",
+        needsSync: true,
+        tempId,
+      };
+
+      // Sanitize session data for API consumption
+      const sanitizedSessionData = this.sanitizeBrewSessionUpdatesForAPI({
+        ...session,
+        user_id: newSession.user_id,
+      });
+
+      // Create pending operation
+      const operation: PendingOperation = {
+        id: `create_${tempId}`,
+        type: "create",
+        entityType: "brew_session",
+        entityId: tempId,
+        userId: newSession.user_id,
+        data: sanitizedSessionData,
+        timestamp: now,
+        retryCount: 0,
+        maxRetries: this.MAX_RETRY_ATTEMPTS,
+      };
+
+      // Atomically add to both cache and pending queue
+      await Promise.all([
+        this.addBrewSessionToCache(syncableItem),
+        this.addPendingOperation(operation),
+      ]);
+
+      // Trigger background sync (fire and forget)
+      void this.backgroundSync();
+
+      await UnifiedLogger.info(
+        "UserCacheService.createBrewSession",
+        `Brew session creation completed successfully`,
+        {
+          userId: currentUserId,
+          sessionId: tempId,
+          sessionName: newSession.name,
+          operationId: operation.id,
+          pendingSync: true,
+        }
+      );
+
+      return newSession;
+    } catch (error) {
+      console.error("Error creating brew session:", error);
+      throw new OfflineError(
+        "Failed to create brew session",
+        "CREATE_ERROR",
+        true
+      );
+    }
+  }
+
+  /**
+   * Update an existing brew session
+   */
+  static async updateBrewSession(
+    id: string,
+    updates: Partial<BrewSession>
+  ): Promise<BrewSession> {
+    try {
+      const userId =
+        updates.user_id ??
+        (await UserValidationService.getCurrentUserIdFromToken());
+      if (!userId) {
+        throw new OfflineError(
+          "User ID is required for updating brew sessions",
+          "AUTH_ERROR",
+          false
+        );
+      }
+
+      await UnifiedLogger.info(
+        "UserCacheService.updateBrewSession",
+        `Starting brew session update for user ${userId}`,
+        {
+          userId,
+          sessionId: id,
+          updateFields: Object.keys(updates),
+          sessionName: updates.name || "Unknown",
+          hasStatusChange: !!updates.status,
+          timestamp: new Date().toISOString(),
+        }
+      );
+
+      const cached = await this.getCachedBrewSessions(userId);
+      const existingItem = cached.find(
+        item => item.id === id || item.data.id === id
+      );
+
+      if (!existingItem) {
+        throw new OfflineError("Brew session not found", "NOT_FOUND", false);
+      }
+
+      const now = Date.now();
+      const updatedSession: BrewSession = {
+        ...existingItem.data,
+        ...updates,
+        updated_at: new Date(now).toISOString(),
+      };
+
+      // Update syncable item
+      const updatedItem: SyncableItem<BrewSession> = {
+        ...existingItem,
+        data: updatedSession,
+        lastModified: now,
+        syncStatus: "pending",
+        needsSync: true,
+      };
+
+      // Sanitize updates for API consumption
+      const sanitizedUpdates = this.sanitizeBrewSessionUpdatesForAPI(updates);
+
+      // Create pending operation
+      const operation: PendingOperation = {
+        id: `update_${id}_${now}`,
+        type: "update",
+        entityType: "brew_session",
+        entityId: id,
+        userId: updatedSession.user_id,
+        data: sanitizedUpdates,
+        timestamp: now,
+        retryCount: 0,
+        maxRetries: this.MAX_RETRY_ATTEMPTS,
+      };
+
+      // Atomically update cache and add to pending queue
+      await Promise.all([
+        this.updateBrewSessionInCache(updatedItem),
+        this.addPendingOperation(operation),
+      ]);
+
+      // Trigger background sync
+      this.backgroundSync();
+
+      await UnifiedLogger.info(
+        "UserCacheService.updateBrewSession",
+        `Brew session update completed successfully`,
+        {
+          userId,
+          sessionId: id,
+          sessionName: updatedSession.name,
+          operationId: operation.id,
+          pendingSync: true,
+        }
+      );
+
+      return updatedSession;
+    } catch (error) {
+      console.error("Error updating brew session:", error);
+      if (error instanceof OfflineError) {
+        throw error;
+      }
+      throw new OfflineError(
+        "Failed to update brew session",
+        "UPDATE_ERROR",
+        true
+      );
+    }
+  }
+
+  /**
+   * Delete a brew session (tombstone pattern - same as recipes)
+   */
+  static async deleteBrewSession(id: string, userId?: string): Promise<void> {
+    try {
+      const currentUserId =
+        userId ?? (await UserValidationService.getCurrentUserIdFromToken());
+      if (!currentUserId) {
+        throw new OfflineError(
+          "User ID is required for deleting brew sessions",
+          "AUTH_ERROR",
+          false
+        );
+      }
+
+      await UnifiedLogger.info(
+        "UserCacheService.deleteBrewSession",
+        `Starting brew session deletion for user ${currentUserId}`,
+        {
+          userId: currentUserId,
+          sessionId: id,
+          timestamp: new Date().toISOString(),
+        }
+      );
+
+      const cached = await this.getCachedBrewSessions(currentUserId);
+      const existingItem = cached.find(
+        item => item.id === id || item.data.id === id || item.tempId === id
+      );
+
+      if (!existingItem) {
+        await UnifiedLogger.warn(
+          "UserCacheService.deleteBrewSession",
+          `Brew session not found for deletion`,
+          {
+            userId: currentUserId,
+            sessionId: id,
+            availableSessionCount: cached.filter(
+              item => item.data.user_id === currentUserId
+            ).length,
+          }
+        );
+        throw new OfflineError("Brew session not found", "NOT_FOUND", false);
+      }
+
+      await UnifiedLogger.info(
+        "UserCacheService.deleteBrewSession",
+        `Found session for deletion`,
+        {
+          userId: currentUserId,
+          sessionId: id,
+          sessionName: existingItem.data.name,
+          sessionStatus: existingItem.data.status || "Unknown",
+          wasAlreadyDeleted: existingItem.isDeleted || false,
+          currentSyncStatus: existingItem.syncStatus,
+          needsSync: existingItem.needsSync,
+        }
+      );
+
+      const now = Date.now();
+
+      // Check if there's a pending CREATE operation for this session
+      const pendingOps = await this.getPendingOperations();
+      const existingCreateOp = pendingOps.find(
+        op =>
+          op.type === "create" &&
+          op.entityType === "brew_session" &&
+          op.entityId === id
+      );
+
+      if (existingCreateOp) {
+        // Session was created offline and is being deleted offline - cancel both operations
+        await UnifiedLogger.info(
+          "UserCacheService.deleteBrewSession",
+          `Canceling offline create+delete operations for session ${id}`,
+          {
+            createOperationId: existingCreateOp.id,
+            sessionId: id,
+            sessionName: existingItem.data.name,
+            cancelBothOperations: true,
+          }
+        );
+
+        // Remove the create operation and the session from cache entirely
+        await Promise.all([
+          this.removePendingOperation(existingCreateOp.id),
+          this.removeBrewSessionFromCache(id),
+        ]);
+
+        await UnifiedLogger.info(
+          "UserCacheService.deleteBrewSession",
+          `Successfully canceled offline operations for session ${id}`,
+          {
+            canceledCreateOp: existingCreateOp.id,
+            removedFromCache: true,
+            noSyncRequired: true,
+          }
+        );
+
+        return; // Exit early - no sync needed
+      }
+
+      // Session exists on server - proceed with normal deletion (tombstone + delete operation)
+      // Mark as deleted (tombstone)
+      const deletedItem: SyncableItem<BrewSession> = {
+        ...existingItem,
+        isDeleted: true,
+        deletedAt: now,
+        lastModified: now,
+        syncStatus: "pending",
+        needsSync: true,
+      };
+
+      // Create pending operation
+      const operation: PendingOperation = {
+        id: `delete_${id}_${now}`,
+        type: "delete",
+        entityType: "brew_session",
+        entityId: id,
+        userId: existingItem.data.user_id,
+        timestamp: now,
+        retryCount: 0,
+        maxRetries: this.MAX_RETRY_ATTEMPTS,
+      };
+
+      await UnifiedLogger.info(
+        "UserCacheService.deleteBrewSession",
+        `Created delete operation for synced session ${id}`,
+        {
+          operationId: operation.id,
+          entityId: id,
+          sessionName: existingItem.data.name || "Unknown",
+          requiresServerSync: true,
+        }
+      );
+
+      // Atomically update cache and add to pending queue
+      await Promise.all([
+        this.updateBrewSessionInCache(deletedItem),
+        this.addPendingOperation(operation),
+      ]);
+
+      await UnifiedLogger.info(
+        "UserCacheService.deleteBrewSession",
+        `Brew session deletion completed successfully`,
+        {
+          userId: currentUserId,
+          sessionId: id,
+          sessionName: existingItem.data.name,
+          operationId: operation.id,
+          pendingSync: true,
+          tombstoneCreated: true,
+        }
+      );
+
+      // Trigger background sync
+      this.backgroundSync();
+    } catch (error) {
+      console.error("Error deleting brew session:", error);
+      if (error instanceof OfflineError) {
+        throw error;
+      }
+      throw new OfflineError(
+        "Failed to delete brew session",
+        "DELETE_ERROR",
+        true
+      );
+    }
+  }
+
+  // ============================================================================
   // Sync Management
   // ============================================================================
 
@@ -1423,11 +1990,13 @@ export class UserCacheService {
           `[UserCacheService.clearUserData] Clearing data for user: "${userId}"`
         );
         await this.clearUserRecipesFromCache(userId);
+        await this.clearUserBrewSessionsFromCache(userId);
         await this.clearUserPendingOperations(userId);
       } else {
         console.log(`[UserCacheService.clearUserData] Clearing all data`);
         await AsyncStorage.removeItem(STORAGE_KEYS_V2.USER_RECIPES);
         await AsyncStorage.removeItem(STORAGE_KEYS_V2.PENDING_OPERATIONS);
+        await AsyncStorage.removeItem(STORAGE_KEYS_V2.USER_BREW_SESSIONS);
       }
     } catch (error) {
       console.error(`[UserCacheService.clearUserData] Error:`, error);
@@ -1690,6 +2259,548 @@ export class UserCacheService {
   }
 
   /**
+   * Get cached brew sessions for a user
+   */
+  private static async getCachedBrewSessions(
+    userId: string
+  ): Promise<SyncableItem<BrewSession>[]> {
+    return await withKeyQueue(STORAGE_KEYS_V2.USER_BREW_SESSIONS, async () => {
+      try {
+        await UnifiedLogger.debug(
+          "UserCacheService.getCachedBrewSessions",
+          `Loading cache for user ID: "${userId}"`
+        );
+
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.USER_BREW_SESSIONS
+        );
+        if (!cached) {
+          await UnifiedLogger.debug(
+            "UserCacheService.getCachedBrewSessions",
+            "No cache found"
+          );
+          return [];
+        }
+
+        const allSessions: SyncableItem<BrewSession>[] = JSON.parse(cached);
+        await UnifiedLogger.debug(
+          "UserCacheService.getCachedBrewSessions",
+          `Total cached sessions found: ${allSessions.length}`
+        );
+
+        // Log sample of all cached session user IDs for debugging
+        if (allSessions.length > 0) {
+          const sampleUserIds = allSessions.slice(0, 5).map(item => ({
+            id: item.data.id,
+            user_id: item.data.user_id,
+          }));
+          await UnifiedLogger.debug(
+            "UserCacheService.getCachedBrewSessions",
+            "Sample cached sessions",
+            { sampleUserIds }
+          );
+        }
+
+        const userSessions = allSessions.filter(item => {
+          const isMatch = item.data.user_id === userId;
+          if (!isMatch) {
+            console.log(
+              `[UserCacheService.getCachedBrewSessions] Session ${item.data.id} user_id "${item.data.user_id}" != target "${userId}"`
+            );
+          }
+          return isMatch;
+        });
+
+        await UnifiedLogger.debug(
+          "UserCacheService.getCachedBrewSessions",
+          `Filtered to ${userSessions.length} sessions for user "${userId}"`
+        );
+        return userSessions;
+      } catch (e) {
+        await UnifiedLogger.error(
+          "UserCacheService.getCachedBrewSessions",
+          "Corrupt USER_BREW_SESSIONS cache; resetting",
+          { error: e }
+        );
+        await AsyncStorage.removeItem(STORAGE_KEYS_V2.USER_BREW_SESSIONS);
+        return [];
+      }
+    });
+  }
+
+  /**
+   * Add brew session to cache
+   */
+  static async addBrewSessionToCache(
+    item: SyncableItem<BrewSession>
+  ): Promise<void> {
+    return await withKeyQueue(STORAGE_KEYS_V2.USER_BREW_SESSIONS, async () => {
+      try {
+        await UnifiedLogger.debug(
+          "UserCacheService.addBrewSessionToCache",
+          `Adding session to cache`,
+          {
+            sessionId: item.id,
+            sessionName: item.data.name,
+            userId: item.data.user_id,
+            syncStatus: item.syncStatus,
+          }
+        );
+
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.USER_BREW_SESSIONS
+        );
+        const sessions: SyncableItem<BrewSession>[] = cached
+          ? JSON.parse(cached)
+          : [];
+
+        sessions.push(item);
+
+        await AsyncStorage.setItem(
+          STORAGE_KEYS_V2.USER_BREW_SESSIONS,
+          JSON.stringify(sessions)
+        );
+
+        await UnifiedLogger.debug(
+          "UserCacheService.addBrewSessionToCache",
+          `Successfully added session to cache`,
+          { totalSessions: sessions.length }
+        );
+      } catch (error) {
+        await UnifiedLogger.error(
+          "UserCacheService.addBrewSessionToCache",
+          "Error adding brew session to cache",
+          { error: error instanceof Error ? error.message : "Unknown error" }
+        );
+        throw new OfflineError(
+          "Failed to cache brew session",
+          "CACHE_ERROR",
+          true
+        );
+      }
+    });
+  }
+
+  /**
+   * Update brew session in cache
+   */
+  private static async updateBrewSessionInCache(
+    updatedItem: SyncableItem<BrewSession>
+  ): Promise<void> {
+    return await withKeyQueue(STORAGE_KEYS_V2.USER_BREW_SESSIONS, async () => {
+      try {
+        await UnifiedLogger.debug(
+          "UserCacheService.updateBrewSessionInCache",
+          `Updating session in cache`,
+          {
+            sessionId: updatedItem.id,
+            sessionName: updatedItem.data.name,
+            syncStatus: updatedItem.syncStatus,
+            needsSync: updatedItem.needsSync,
+          }
+        );
+
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.USER_BREW_SESSIONS
+        );
+        const sessions: SyncableItem<BrewSession>[] = cached
+          ? JSON.parse(cached)
+          : [];
+
+        const index = sessions.findIndex(
+          item =>
+            item.id === updatedItem.id || item.data.id === updatedItem.data.id
+        );
+
+        if (index >= 0) {
+          sessions[index] = updatedItem;
+          await UnifiedLogger.debug(
+            "UserCacheService.updateBrewSessionInCache",
+            `Updated existing session at index ${index}`
+          );
+        } else {
+          sessions.push(updatedItem);
+          await UnifiedLogger.debug(
+            "UserCacheService.updateBrewSessionInCache",
+            `Added new session to cache`
+          );
+        }
+
+        await AsyncStorage.setItem(
+          STORAGE_KEYS_V2.USER_BREW_SESSIONS,
+          JSON.stringify(sessions)
+        );
+      } catch (error) {
+        await UnifiedLogger.error(
+          "UserCacheService.updateBrewSessionInCache",
+          "Error updating brew session in cache",
+          { error: error instanceof Error ? error.message : "Unknown error" }
+        );
+        throw new OfflineError(
+          "Failed to update cached brew session",
+          "CACHE_ERROR",
+          true
+        );
+      }
+    });
+  }
+
+  /**
+   * Remove brew session from cache completely (for offline create+delete cancellation)
+   */
+  private static async removeBrewSessionFromCache(
+    entityId: string
+  ): Promise<void> {
+    return await withKeyQueue(STORAGE_KEYS_V2.USER_BREW_SESSIONS, async () => {
+      try {
+        await UnifiedLogger.debug(
+          "UserCacheService.removeBrewSessionFromCache",
+          `Removing session from cache`,
+          { entityId }
+        );
+
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.USER_BREW_SESSIONS
+        );
+        if (!cached) {
+          return;
+        }
+        const sessions: SyncableItem<BrewSession>[] = JSON.parse(cached);
+        const filteredSessions = sessions.filter(
+          item => item.id !== entityId && item.data.id !== entityId
+        );
+
+        if (filteredSessions.length < sessions.length) {
+          await AsyncStorage.setItem(
+            STORAGE_KEYS_V2.USER_BREW_SESSIONS,
+            JSON.stringify(filteredSessions)
+          );
+          await UnifiedLogger.debug(
+            "UserCacheService.removeBrewSessionFromCache",
+            `Successfully removed session from cache`,
+            { removedCount: sessions.length - filteredSessions.length }
+          );
+        } else {
+          await UnifiedLogger.warn(
+            "UserCacheService.removeBrewSessionFromCache",
+            `Session with ID "${entityId}" not found in cache for removal`
+          );
+        }
+      } catch (error) {
+        await UnifiedLogger.error(
+          "UserCacheService.removeBrewSessionFromCache",
+          "Error removing brew session from cache",
+          {
+            error: error instanceof Error ? error.message : "Unknown error",
+            entityId,
+          }
+        );
+      }
+    });
+  }
+
+  /**
+   * Clear all brew sessions for a specific user from cache
+   */
+  private static async clearUserBrewSessionsFromCache(
+    userId: string
+  ): Promise<void> {
+    return await withKeyQueue(STORAGE_KEYS_V2.USER_BREW_SESSIONS, async () => {
+      try {
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.USER_BREW_SESSIONS
+        );
+        if (!cached) {
+          return;
+        }
+
+        const allSessions: SyncableItem<BrewSession>[] = JSON.parse(cached);
+        // Keep sessions for other users, remove sessions for this user
+        const filteredSessions = allSessions.filter(
+          item => item.data.user_id !== userId
+        );
+
+        await AsyncStorage.setItem(
+          STORAGE_KEYS_V2.USER_BREW_SESSIONS,
+          JSON.stringify(filteredSessions)
+        );
+        await UnifiedLogger.debug(
+          "UserCacheService.clearUserBrewSessionsFromCache",
+          `Cleared sessions for user "${userId}", kept ${filteredSessions.length} sessions for other users`
+        );
+      } catch (error) {
+        await UnifiedLogger.error(
+          "UserCacheService.clearUserBrewSessionsFromCache",
+          `Error clearing sessions for user: ${error instanceof Error ? error.message : "Unknown error"}`,
+          {
+            userId,
+            error: error instanceof Error ? error.message : "Unknown error",
+          }
+        );
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * Hydrate cache with brew sessions from server
+   */
+  private static async hydrateBrewSessionsFromServer(
+    userId: string,
+    forceRefresh: boolean = false,
+    _userUnitSystem: "imperial" | "metric" = "imperial"
+  ): Promise<void> {
+    try {
+      await UnifiedLogger.debug(
+        "UserCacheService.hydrateBrewSessionsFromServer",
+        `Fetching sessions from server for user: "${userId}" (forceRefresh: ${forceRefresh})`
+      );
+
+      // Import the API service here to avoid circular dependencies
+      const { default: ApiService } = await import("@services/api/apiService");
+
+      // Fetch user's brew sessions from server
+      const response = await ApiService.brewSessions.getAll(1, 100); // Get first 100 sessions
+      const serverSessions = response.data?.brew_sessions || [];
+
+      // Initialize offline created sessions array
+      let offlineCreatedSessions: SyncableItem<BrewSession>[] = [];
+
+      // If force refresh and we successfully got server data, clear and replace cache
+      if (forceRefresh && serverSessions.length >= 0) {
+        await UnifiedLogger.debug(
+          "UserCacheService.hydrateBrewSessionsFromServer",
+          `Force refresh successful - updating cache for user "${userId}"`
+        );
+
+        // Get existing offline-created sessions to preserve before clearing
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.USER_BREW_SESSIONS
+        );
+        if (cached) {
+          const allSessions: SyncableItem<BrewSession>[] = JSON.parse(cached);
+          offlineCreatedSessions = allSessions.filter(item => {
+            // Only preserve sessions for this user
+            if (item.data.user_id !== userId) {
+              return false;
+            }
+
+            // Always preserve sessions that need sync (including pending deletions)
+            if (item.needsSync || item.syncStatus === "pending") {
+              return true;
+            }
+
+            // Always preserve temp sessions (newly created offline)
+            if (item.tempId) {
+              return true;
+            }
+
+            // Don't preserve deleted sessions that have already been synced
+            if (item.isDeleted && !item.needsSync) {
+              return false;
+            }
+
+            return false;
+          });
+
+          await UnifiedLogger.debug(
+            "UserCacheService.hydrateBrewSessionsFromServer",
+            `Found ${offlineCreatedSessions.length} V2 offline-created sessions to preserve`
+          );
+        }
+
+        // Clear all sessions for this user
+        await this.clearUserBrewSessionsFromCache(userId);
+
+        // Restore offline-created sessions first
+        for (const session of offlineCreatedSessions) {
+          await this.addBrewSessionToCache(session);
+        }
+
+        await UnifiedLogger.debug(
+          "UserCacheService.hydrateBrewSessionsFromServer",
+          `Preserved ${offlineCreatedSessions.length} offline-created sessions`
+        );
+      }
+
+      await UnifiedLogger.debug(
+        "UserCacheService.hydrateBrewSessionsFromServer",
+        `Fetched ${serverSessions.length} sessions from server`
+      );
+
+      // Only process and cache server sessions if we have them
+      if (serverSessions.length > 0) {
+        // Filter out server sessions that are already preserved (to avoid duplicates)
+        const preservedIds = new Set(
+          offlineCreatedSessions.map(s => s.id || s.data.id)
+        );
+        const filteredServerSessions = serverSessions.filter(
+          session => !preservedIds.has(session.id)
+        );
+
+        await UnifiedLogger.debug(
+          "UserCacheService.hydrateBrewSessionsFromServer",
+          `Filtered out ${serverSessions.length - filteredServerSessions.length} duplicate server sessions`
+        );
+
+        // Convert server sessions to syncable items
+        const now = Date.now();
+        const syncableSessions = filteredServerSessions.map(session => ({
+          id: session.id,
+          data: session,
+          lastModified: now,
+          syncStatus: "synced" as const,
+          needsSync: false,
+        }));
+
+        // Store all sessions in cache
+        for (const session of syncableSessions) {
+          await this.addBrewSessionToCache(session);
+        }
+
+        await UnifiedLogger.debug(
+          "UserCacheService.hydrateBrewSessionsFromServer",
+          `Successfully cached ${syncableSessions.length} sessions`
+        );
+      } else if (!forceRefresh) {
+        // Only log this for non-force refresh (normal hydration)
+        await UnifiedLogger.debug(
+          "UserCacheService.hydrateBrewSessionsFromServer",
+          `No server sessions found`
+        );
+      }
+    } catch (error) {
+      await UnifiedLogger.error(
+        "UserCacheService.hydrateBrewSessionsFromServer",
+        `Failed to hydrate from server: ${error instanceof Error ? error.message : "Unknown error"}`,
+        {
+          userId,
+          error: error instanceof Error ? error.message : "Unknown error",
+        }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Refresh brew sessions from server (for pull-to-refresh functionality)
+   */
+  static async refreshBrewSessionsFromServer(
+    userId: string,
+    userUnitSystem: "imperial" | "metric" = "imperial"
+  ): Promise<BrewSession[]> {
+    try {
+      await UnifiedLogger.info(
+        "UserCacheService.refreshBrewSessionsFromServer",
+        `Force refreshing sessions from server for user: "${userId}"`
+      );
+
+      await this.hydrateBrewSessionsFromServer(userId, true, userUnitSystem);
+
+      // Return the updated sessions
+      const refreshedSessions = await this.getBrewSessions(
+        userId,
+        userUnitSystem
+      );
+
+      await UnifiedLogger.info(
+        "UserCacheService.refreshBrewSessionsFromServer",
+        `Refresh completed, returning ${refreshedSessions.length} sessions`
+      );
+
+      return refreshedSessions;
+    } catch (error) {
+      await UnifiedLogger.error(
+        "UserCacheService.refreshBrewSessionsFromServer",
+        `Failed to refresh sessions from server: ${error instanceof Error ? error.message : "Unknown error"}`,
+        {
+          userId,
+          error: error instanceof Error ? error.message : "Unknown error",
+        }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Sanitize brew session update data for API consumption
+   * Ensures all fields are properly formatted and valid for backend validation
+   */
+  private static sanitizeBrewSessionUpdatesForAPI(
+    updates: Partial<BrewSession>
+  ): Partial<BrewSession> {
+    const sanitized = { ...updates };
+
+    // Debug logging to understand the data being sanitized
+    if (__DEV__) {
+      UnifiedLogger.debug(
+        "UserCacheService.sanitizeBrewSessionUpdatesForAPI",
+        "Sanitizing brew session data for API",
+        {
+          originalFields: Object.keys(updates),
+          hasFermentationEntries: !!(
+            sanitized.fermentation_entries &&
+            sanitized.fermentation_entries.length > 0
+          ),
+          fermentationEntryCount: sanitized.fermentation_entries?.length || 0,
+        }
+      );
+    }
+
+    // Remove fields that shouldn't be updated via API
+    delete sanitized.id;
+    delete sanitized.created_at;
+    delete sanitized.user_id;
+
+    // Sanitize numeric fields
+    if (sanitized.batch_size !== undefined && sanitized.batch_size !== null) {
+      sanitized.batch_size = Number(sanitized.batch_size) || 0;
+    }
+    if (sanitized.actual_og !== undefined && sanitized.actual_og !== null) {
+      sanitized.actual_og = Number(sanitized.actual_og) || undefined;
+    }
+    if (sanitized.actual_fg !== undefined && sanitized.actual_fg !== null) {
+      sanitized.actual_fg = Number(sanitized.actual_fg) || undefined;
+    }
+    if (sanitized.actual_abv !== undefined && sanitized.actual_abv !== null) {
+      sanitized.actual_abv = Number(sanitized.actual_abv) || undefined;
+    }
+    if (sanitized.mash_temp !== undefined && sanitized.mash_temp !== null) {
+      sanitized.mash_temp = Number(sanitized.mash_temp) || undefined;
+    }
+    if (
+      sanitized.actual_efficiency !== undefined &&
+      sanitized.actual_efficiency !== null
+    ) {
+      sanitized.actual_efficiency =
+        Number(sanitized.actual_efficiency) || undefined;
+    }
+    if (
+      sanitized.batch_rating !== undefined &&
+      sanitized.batch_rating !== null
+    ) {
+      sanitized.batch_rating =
+        Math.floor(Number(sanitized.batch_rating)) || undefined;
+    }
+
+    // Debug logging for sanitized result
+    if (__DEV__) {
+      UnifiedLogger.debug(
+        "UserCacheService.sanitizeBrewSessionUpdatesForAPI",
+        "Sanitization completed",
+        {
+          sanitizedFields: Object.keys(sanitized),
+          removedFields: Object.keys(updates).filter(
+            key => !(key in sanitized)
+          ),
+        }
+      );
+    }
+
+    return sanitized;
+  }
+
+  /**
    * Get pending operations
    */
   private static async getPendingOperations(): Promise<PendingOperation[]> {
@@ -1798,6 +2909,30 @@ export class UserCacheService {
             if (response && response.data && response.data.id) {
               return { realId: response.data.id };
             }
+          } else if (operation.entityType === "brew_session") {
+            await UnifiedLogger.info(
+              "UserCacheService.processPendingOperation",
+              `Executing CREATE API call for brew session`,
+              {
+                entityId: operation.entityId,
+                operationId: operation.id,
+                sessionName: operation.data?.name || "Unknown",
+              }
+            );
+            const response = await ApiService.brewSessions.create(
+              operation.data
+            );
+            if (response && response.data && response.data.id) {
+              await UnifiedLogger.info(
+                "UserCacheService.processPendingOperation",
+                `CREATE API call successful for brew session`,
+                {
+                  entityId: operation.entityId,
+                  realId: response.data.id,
+                }
+              );
+              return { realId: response.data.id };
+            }
           }
           break;
 
@@ -1831,6 +2966,46 @@ export class UserCacheService {
                 operation.data
               );
             }
+          } else if (operation.entityType === "brew_session") {
+            // Check if this is a temp ID - if so, treat as CREATE instead of UPDATE
+            const isTempId = operation.entityId.startsWith("temp_");
+
+            if (isTempId) {
+              // Convert UPDATE with temp ID to CREATE operation
+              await UnifiedLogger.info(
+                "UserCacheService.processPendingOperation",
+                `Converting UPDATE with temp ID ${operation.entityId} to CREATE operation for brew session`,
+                {
+                  entityId: operation.entityId,
+                  sessionName: operation.data?.name || "Unknown",
+                }
+              );
+              const response = await ApiService.brewSessions.create(
+                operation.data
+              );
+              if (response && response.data && response.data.id) {
+                return { realId: response.data.id };
+              }
+            } else {
+              // Normal UPDATE operation for real MongoDB IDs
+              await UnifiedLogger.info(
+                "UserCacheService.processPendingOperation",
+                `Executing UPDATE API call for brew session ${operation.entityId}`,
+                {
+                  entityId: operation.entityId,
+                  updateFields: Object.keys(operation.data || {}),
+                  sessionName: operation.data?.name || "Unknown",
+                }
+              );
+              await ApiService.brewSessions.update(
+                operation.entityId,
+                operation.data
+              );
+              await UnifiedLogger.info(
+                "UserCacheService.processPendingOperation",
+                `UPDATE API call successful for brew session ${operation.entityId}`
+              );
+            }
           }
           break;
 
@@ -1848,6 +3023,20 @@ export class UserCacheService {
             await UnifiedLogger.info(
               "UserCacheService.syncOperation",
               `DELETE API call successful for recipe ${operation.entityId}`
+            );
+          } else if (operation.entityType === "brew_session") {
+            await UnifiedLogger.info(
+              "UserCacheService.processPendingOperation",
+              `Executing DELETE API call for brew session ${operation.entityId}`,
+              {
+                entityId: operation.entityId,
+                operationId: operation.id,
+              }
+            );
+            await ApiService.brewSessions.delete(operation.entityId);
+            await UnifiedLogger.info(
+              "UserCacheService.processPendingOperation",
+              `DELETE API call successful for brew session ${operation.entityId}`
             );
           }
           break;
@@ -1989,6 +3178,47 @@ export class UserCacheService {
         }
       });
 
+      // 1b) Update brew session cache under USER_BREW_SESSIONS lock
+      await withKeyQueue(STORAGE_KEYS_V2.USER_BREW_SESSIONS, async () => {
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.USER_BREW_SESSIONS
+        );
+        if (!cached) {
+          return;
+        }
+        const sessions: SyncableItem<BrewSession>[] = JSON.parse(cached);
+        const i = sessions.findIndex(
+          item => item.id === tempId || item.data.id === tempId
+        );
+        if (i >= 0) {
+          sessions[i].id = realId;
+          sessions[i].data.id = realId;
+          sessions[i].data.updated_at = new Date().toISOString();
+          sessions[i].syncStatus = "synced";
+          sessions[i].needsSync = false;
+          // Keep tempId for navigation compatibility - don't delete it
+          // This allows sessions to still be found by their original temp ID
+          // even after they've been synced and assigned a real ID
+          await AsyncStorage.setItem(
+            STORAGE_KEYS_V2.USER_BREW_SESSIONS,
+            JSON.stringify(sessions)
+          );
+          await UnifiedLogger.debug(
+            "UserCacheService.mapTempIdToRealId",
+            `Mapped brew session temp ID to real ID`,
+            {
+              tempId,
+              realId,
+              sessionName: sessions[i].data.name,
+            }
+          );
+        } else {
+          console.warn(
+            `[UserCacheService] Brew session with temp ID "${tempId}" not found in cache`
+          );
+        }
+      });
+
       // 2) Update pending ops under PENDING_OPERATIONS lock
       await withKeyQueue(STORAGE_KEYS_V2.PENDING_OPERATIONS, async () => {
         const cached = await AsyncStorage.getItem(
@@ -2041,6 +3271,7 @@ export class UserCacheService {
    */
   private static async markItemAsSynced(entityId: string): Promise<void> {
     try {
+      // Try to mark recipe as synced
       await withKeyQueue(STORAGE_KEYS_V2.USER_RECIPES, async () => {
         const cached = await AsyncStorage.getItem(STORAGE_KEYS_V2.USER_RECIPES);
         if (!cached) {
@@ -2058,14 +3289,58 @@ export class UserCacheService {
             STORAGE_KEYS_V2.USER_RECIPES,
             JSON.stringify(recipes)
           );
+          await UnifiedLogger.debug(
+            "UserCacheService.markItemAsSynced",
+            `Marked recipe as synced`,
+            { entityId, recipeName: recipes[i].data.name }
+          );
         } else {
           console.warn(
             `[UserCacheService] Recipe with ID "${entityId}" not found in cache for marking as synced`
           );
         }
       });
+
+      // Try to mark brew session as synced
+      await withKeyQueue(STORAGE_KEYS_V2.USER_BREW_SESSIONS, async () => {
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.USER_BREW_SESSIONS
+        );
+        if (!cached) {
+          return;
+        }
+        const sessions: SyncableItem<BrewSession>[] = JSON.parse(cached);
+        const i = sessions.findIndex(
+          item => item.id === entityId || item.data.id === entityId
+        );
+        if (i >= 0) {
+          sessions[i].syncStatus = "synced";
+          sessions[i].needsSync = false;
+          sessions[i].data.updated_at = new Date().toISOString();
+          await AsyncStorage.setItem(
+            STORAGE_KEYS_V2.USER_BREW_SESSIONS,
+            JSON.stringify(sessions)
+          );
+          await UnifiedLogger.debug(
+            "UserCacheService.markItemAsSynced",
+            `Marked brew session as synced`,
+            { entityId, sessionName: sessions[i].data.name }
+          );
+        } else {
+          console.warn(
+            `[UserCacheService] Brew session with ID "${entityId}" not found in cache for marking as synced`
+          );
+        }
+      });
     } catch (error) {
-      console.error("[UserCacheService] Error marking item as synced:", error);
+      await UnifiedLogger.error(
+        "UserCacheService.markItemAsSynced",
+        "Error marking item as synced",
+        {
+          error: error instanceof Error ? error.message : "Unknown error",
+          entityId,
+        }
+      );
     }
   }
 
@@ -2074,6 +3349,7 @@ export class UserCacheService {
    */
   private static async removeItemFromCache(entityId: string): Promise<void> {
     try {
+      // Try to remove recipe from cache
       await withKeyQueue(STORAGE_KEYS_V2.USER_RECIPES, async () => {
         const cached = await AsyncStorage.getItem(STORAGE_KEYS_V2.USER_RECIPES);
         if (!cached) {
@@ -2089,16 +3365,58 @@ export class UserCacheService {
             STORAGE_KEYS_V2.USER_RECIPES,
             JSON.stringify(filteredRecipes)
           );
+          await UnifiedLogger.debug(
+            "UserCacheService.removeItemFromCache",
+            `Removed recipe from cache`,
+            { entityId, removedCount: recipes.length - filteredRecipes.length }
+          );
         } else {
           console.warn(
             `[UserCacheService] Recipe with ID "${entityId}" not found in cache for removal`
           );
         }
       });
+
+      // Try to remove brew session from cache
+      await withKeyQueue(STORAGE_KEYS_V2.USER_BREW_SESSIONS, async () => {
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.USER_BREW_SESSIONS
+        );
+        if (!cached) {
+          return;
+        }
+        const sessions: SyncableItem<BrewSession>[] = JSON.parse(cached);
+        const filteredSessions = sessions.filter(
+          item => item.id !== entityId && item.data.id !== entityId
+        );
+
+        if (filteredSessions.length < sessions.length) {
+          await AsyncStorage.setItem(
+            STORAGE_KEYS_V2.USER_BREW_SESSIONS,
+            JSON.stringify(filteredSessions)
+          );
+          await UnifiedLogger.debug(
+            "UserCacheService.removeItemFromCache",
+            `Removed brew session from cache`,
+            {
+              entityId,
+              removedCount: sessions.length - filteredSessions.length,
+            }
+          );
+        } else {
+          console.warn(
+            `[UserCacheService] Brew session with ID "${entityId}" not found in cache for removal`
+          );
+        }
+      });
     } catch (error) {
-      console.error(
-        "[UserCacheService] Error removing item from cache:",
-        error
+      await UnifiedLogger.error(
+        "UserCacheService.removeItemFromCache",
+        "Error removing item from cache",
+        {
+          error: error instanceof Error ? error.message : "Unknown error",
+          entityId,
+        }
       );
     }
   }

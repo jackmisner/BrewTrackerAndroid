@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -17,34 +17,77 @@ import { useTheme } from "@contexts/ThemeContext";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { FermentationChart } from "@src/components/brewSessions/FermentationChart";
 import { FermentationData } from "@src/components/brewSessions/FermentationData";
+import { useBrewSessions } from "@hooks/offlineV2/useUserData";
 
 export default function ViewBrewSession() {
   const { brewSessionId } = useLocalSearchParams<{ brewSessionId: string }>();
 
   const [refreshing, setRefreshing] = useState(false);
   const [chartRefreshCounter, setChartRefreshCounter] = useState(0);
+  const [brewSessionData, setBrewSessionData] = useState<BrewSession | null>(
+    null
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const theme = useTheme();
   const styles = viewBrewSessionStyles(theme);
   const queryClient = useQueryClient();
-  const {
-    data: brewSessionData,
-    isLoading,
-    error,
-    refetch,
-    dataUpdatedAt, // Track when data was last updated
-  } = useQuery<BrewSession>({
-    queryKey: ["brewSession", brewSessionId],
-    queryFn: async () => {
+
+  // Use offline-first brew sessions hook
+  const brewSessionsHook = useBrewSessions();
+
+  // Load brew session data using offline-first approach
+  useEffect(() => {
+    let cancelled = false;
+    const loadBrewSession = async () => {
       if (!brewSessionId) {
-        throw new Error("Brew session ID is required");
+        if (!cancelled) {
+          setError("Brew session ID is required");
+          setIsLoading(false);
+        }
+        return;
       }
-      const response = await ApiService.brewSessions.getById(brewSessionId);
-      return response.data;
-    },
-    enabled: !!brewSessionId, // Only run query if brewSessionId exists
-    retry: 1,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-  });
+
+      try {
+        if (cancelled) {
+          return;
+        }
+        setIsLoading(true);
+        setError(null);
+        console.log(`[ViewBrewSession] Loading brew session: ${brewSessionId}`);
+
+        const session = await brewSessionsHook.getById(brewSessionId);
+        console.log(
+          `[ViewBrewSession] Loaded session:`,
+          session ? "found" : "not found"
+        );
+        if (cancelled) {
+          return;
+        }
+        if (session) {
+          setBrewSessionData(session);
+        } else {
+          setError("Brew session not found");
+        }
+      } catch (err) {
+        console.error("[ViewBrewSession] Error loading brew session:", err);
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to load brew session";
+        if (!cancelled) {
+          setError(errorMessage);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadBrewSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [brewSessionId, brewSessionsHook.getById]);
 
   // Fetch recipe data for expected FG reference line
   const { data: recipeData } = useQuery<Recipe | undefined>({
@@ -63,39 +106,60 @@ export default function ViewBrewSession() {
     staleTime: 1000 * 60 * 10, // Cache recipe data longer (10 minutes)
   });
 
-  // Force chart refresh when brew session data is updated
-  React.useEffect(() => {
-    if (dataUpdatedAt) {
-      setChartRefreshCounter(prev => prev + 1);
-    }
-  }, [dataUpdatedAt]);
-
   // Force chart refresh when screen comes into focus (handles navigation back from modals)
   useFocusEffect(
     React.useCallback(() => {
       setChartRefreshCounter(prev => prev + 1);
     }, [])
   );
+
   /**
    * Pull-to-refresh handler
-   * Manually triggers a refetch of the brew session data and chart refresh
-   * Also handles dimension recalculation for foldable devices
+   * Manually triggers a refresh of the brew session data and chart refresh
+   * Uses the offline-first approach with fallback to cached data
    */
   const onRefresh = async () => {
+    if (!brewSessionId) {
+      return;
+    }
+
     setRefreshing(true);
     const currentRecipeId = brewSessionData?.recipe_id;
     try {
-      await refetch();
+      console.log(
+        `[ViewBrewSession.onRefresh] Refreshing brew session: ${brewSessionId}`
+      );
+
+      // First try to refresh the overall brew sessions data
+      await brewSessionsHook.refresh();
+
+      // Then reload the specific session
+      const session = await brewSessionsHook.getById(brewSessionId);
+      if (session) {
+        setBrewSessionData(session);
+        setError(null);
+      } else {
+        console.warn(
+          `[ViewBrewSession.onRefresh] Session ${brewSessionId} not found after refresh`
+        );
+        // Don't set error here - keep existing data if available
+      }
+
       // Also refresh recipe (FG) if present
       if (currentRecipeId) {
         await queryClient.invalidateQueries({
           queryKey: ["recipe", currentRecipeId],
         });
       }
+
       // Force chart refresh for foldable devices
       setChartRefreshCounter(prev => prev + 1);
     } catch (error) {
-      console.error("Error refreshing brew session:", error);
+      console.error(
+        "[ViewBrewSession.onRefresh] Error refreshing brew session:",
+        error
+      );
+      // Don't set error state on refresh failure - preserve offline data
     } finally {
       setRefreshing(false);
     }
@@ -226,9 +290,11 @@ export default function ViewBrewSession() {
 
   /**
    * Error State
-   * Show error message and retry button when API call fails
+   * Show error message and retry button when loading fails
    */
   if (error) {
+    console.log(`[ViewBrewSession] Rendering error state: ${error}`);
+
     return (
       <View style={styles.container}>
         <View style={styles.header}>
@@ -248,12 +314,53 @@ export default function ViewBrewSession() {
         <View style={styles.errorContainer}>
           <MaterialIcons name="error" size={64} color="#f44336" />
           <Text style={styles.errorTitle}>Failed to Load Brew Session</Text>
-          <Text style={styles.errorText}>
-            {error instanceof Error ? error.message : "Unknown error occurred"}
-          </Text>
+          <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity
             style={styles.retryButton}
-            onPress={() => refetch()}
+            onPress={async () => {
+              console.log(
+                `[ViewBrewSession] Retry button pressed for session: ${brewSessionId}`
+              );
+              if (!brewSessionId) {
+                console.warn(
+                  `[ViewBrewSession] No brew session ID available for retry`
+                );
+                return;
+              }
+
+              try {
+                setIsLoading(true);
+                setError(null);
+                console.log(
+                  `[ViewBrewSession] Retrying load for session: ${brewSessionId}`
+                );
+
+                // Try to refresh the data first
+                await brewSessionsHook.refresh();
+
+                // Then get the specific session
+                const session = await brewSessionsHook.getById(brewSessionId);
+                console.log(
+                  `[ViewBrewSession] Retry result:`,
+                  session ? "found" : "not found"
+                );
+
+                if (session) {
+                  setBrewSessionData(session);
+                } else {
+                  setError("Brew session not found");
+                }
+              } catch (err) {
+                console.error("[ViewBrewSession] Retry failed:", err);
+                const errorMessage =
+                  err instanceof Error
+                    ? err.message
+                    : "Failed to load brew session";
+                setError(errorMessage);
+              } finally {
+                setIsLoading(false);
+              }
+            }}
           >
             <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>

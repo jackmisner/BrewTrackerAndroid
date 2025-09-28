@@ -151,6 +151,18 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
     [getUserIdForOperations, loadData]
   );
 
+  const getById = useCallback(
+    async (id: string): Promise<Recipe | null> => {
+      const userId = await getUserIdForOperations();
+      if (!userId) {
+        console.log(`[useRecipes.getById] No user ID available`);
+        return null;
+      }
+      return await UserCacheService.getRecipeById(id, userId);
+    },
+    [getUserIdForOperations]
+  );
+
   const refresh = useCallback(async (): Promise<void> => {
     const userIdForCache = await getUserIdForOperations();
     if (!userIdForCache) {
@@ -250,6 +262,7 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
     update,
     delete: deleteRecipe,
     clone,
+    getById,
     sync,
     refresh,
   };
@@ -259,80 +272,247 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
  * Hook for managing brew sessions with offline capabilities
  */
 export function useBrewSessions(): UseUserDataReturn<BrewSession> {
-  const { user: _user } = useAuth();
-  const [data] = useState<BrewSession[] | null>(null);
+  const { getUserId } = useAuth();
+  const { unitSystem } = useUnits();
+  const [data, setData] = useState<BrewSession[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error] = useState<string | null>(null);
-  const [pendingCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
   const [conflictCount] = useState(0);
-  const [lastSync] = useState<number | null>(null);
+  const [lastSync, setLastSync] = useState<number | null>(null);
 
-  // TODO: Implement brew sessions methods similar to recipes
-  // For now, return basic structure
+  // Helper to get user ID consistently
+  const getUserIdForOperations = useCallback(async () => {
+    const userId = await getUserId();
+    if (!userId) {
+      console.log(`[useBrewSessions] No user ID available`);
+      setData(null);
+      setIsLoading(false);
+      return null;
+    }
+    return userId;
+  }, [getUserId]);
 
-  // TODO: Implement loadData when UserCacheService supports brew sessions
-  useEffect(() => {
-    setIsLoading(false);
-  }, []);
+  const loadData = useCallback(
+    async (showLoading = true) => {
+      const userId = await getUserIdForOperations();
+      if (!userId) {
+        console.log(`[useBrewSessions.loadData] No user ID found`);
+        return;
+      }
+
+      try {
+        if (showLoading) {
+          setIsLoading(true);
+        }
+        setError(null);
+
+        const sessions = await UserCacheService.getBrewSessions(
+          userId,
+          unitSystem
+        );
+        console.log(
+          `[useBrewSessions.loadData] UserCacheService returned ${sessions.length} sessions`
+        );
+        setData(sessions);
+
+        // Update sync status
+        const pending = await UserCacheService.getPendingOperationsCount();
+        setPendingCount(pending);
+      } catch (err) {
+        console.error("Error loading brew sessions:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to load brew sessions"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [getUserIdForOperations, unitSystem]
+  );
 
   const create = useCallback(
-    async (_session: Partial<BrewSession>): Promise<BrewSession> => {
-      // TODO: Implement
-      throw new Error("Brew sessions not yet implemented in UserCacheService");
+    async (session: Partial<BrewSession>): Promise<BrewSession> => {
+      const userId = await getUserIdForOperations();
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+
+      const newSession = await UserCacheService.createBrewSession({
+        ...session,
+        user_id: userId,
+      });
+
+      // Refresh data
+      await loadData(false);
+
+      return newSession;
     },
-    []
+    [getUserIdForOperations, loadData]
   );
 
   const update = useCallback(
-    async (
-      _id: string,
-      _updates: Partial<BrewSession>
-    ): Promise<BrewSession> => {
-      // TODO: Implement
-      throw new Error("Brew sessions not yet implemented in UserCacheService");
+    async (id: string, updates: Partial<BrewSession>): Promise<BrewSession> => {
+      const userId = await getUserIdForOperations();
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+
+      const updatedSession = await UserCacheService.updateBrewSession(id, {
+        ...updates,
+        user_id: userId,
+      });
+
+      // Refresh data
+      await loadData(false);
+
+      return updatedSession;
     },
-    []
+    [getUserIdForOperations, loadData]
   );
 
-  const deleteSession = useCallback(async (_id: string): Promise<void> => {
-    // TODO: Implement
-    throw new Error("Brew sessions not yet implemented in UserCacheService");
-  }, []);
+  const deleteSession = useCallback(
+    async (id: string): Promise<void> => {
+      const userId = await getUserIdForOperations();
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+
+      await UserCacheService.deleteBrewSession(id, userId);
+
+      // Refresh data
+      await loadData(false);
+    },
+    [getUserIdForOperations, loadData]
+  );
 
   const sync = useCallback(async (): Promise<SyncResult> => {
-    // TODO: Implement
-    return {
-      success: true,
-      processed: 0,
-      failed: 0,
-      conflicts: 0,
-      errors: [],
-    };
+    const result = await UserCacheService.syncPendingOperations();
+
+    // Refresh data and sync status
+    await loadData(false);
+    setLastSync(Date.now());
+
+    return result;
+  }, [loadData]);
+
+  // Note: Brew sessions don't support cloning operations (removed from plan)
+  const clone = useCallback(async (_id: string): Promise<BrewSession> => {
+    throw new Error("Brew session cloning is not supported");
   }, []);
 
-  const clone = useCallback(async (_id: string): Promise<BrewSession> => {
-    // TODO: Implement brew session cloning when UserCacheService supports it
-    throw new Error(
-      "Brew session cloning not yet implemented in UserCacheService"
-    );
-  }, []);
+  const getById = useCallback(
+    async (id: string): Promise<BrewSession | null> => {
+      const userId = await getUserIdForOperations();
+      if (!userId) {
+        console.log(`[useBrewSessions.getById] No user ID available`);
+        return null;
+      }
+      return await UserCacheService.getBrewSessionById(id, userId);
+    },
+    [getUserIdForOperations]
+  );
 
   const refresh = useCallback(async (): Promise<void> => {
-    // TODO: Implement when UserCacheService supports brew sessions
-    // For now, do nothing since brew sessions are not implemented
-  }, []);
+    const userIdForCache = await getUserIdForOperations();
+    if (!userIdForCache) {
+      console.log(`[useBrewSessions.refresh] No user ID found for refresh`);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      // Don't clear error state immediately - preserve it if refresh fails
+
+      console.log(
+        `[useBrewSessions.refresh] Refreshing sessions from server for user: "${userIdForCache}"`
+      );
+
+      const refreshedSessions =
+        await UserCacheService.refreshBrewSessionsFromServer(
+          userIdForCache,
+          unitSystem
+        );
+      console.log(
+        `[useBrewSessions.refresh] Refresh completed, got ${refreshedSessions.length} sessions`
+      );
+
+      setData(refreshedSessions);
+      setError(null); // Only clear error on successful refresh
+
+      // Update sync status
+      const pending = await UserCacheService.getPendingOperationsCount();
+      setPendingCount(pending);
+      setLastSync(Date.now());
+    } catch (error) {
+      console.error(`[useBrewSessions.refresh] Refresh failed:`, error);
+
+      // Don't set error state for refresh failures - preserve offline cache
+      // Instead, try to load existing offline data to ensure offline-created sessions are available
+      console.log(
+        `[useBrewSessions.refresh] Refresh failed, loading offline cache to preserve data`
+      );
+
+      try {
+        const offlineSessions = await UserCacheService.getBrewSessions(
+          userIdForCache,
+          unitSystem
+        );
+        console.log(
+          `[useBrewSessions.refresh] Loaded ${offlineSessions.length} sessions from offline cache`
+        );
+        setData(offlineSessions);
+
+        // Update sync status to reflect pending operations
+        const pending = await UserCacheService.getPendingOperationsCount();
+        setPendingCount(pending);
+
+        // Don't update error state - let existing cache be shown
+        console.log(
+          `[useBrewSessions.refresh] Preserved offline cache despite refresh failure`
+        );
+      } catch (cacheError) {
+        console.error(
+          `[useBrewSessions.refresh] Failed to load offline cache:`,
+          cacheError
+        );
+        // Only set error if we can't even load offline cache
+        setError(
+          error instanceof Error ? error.message : "Failed to refresh sessions"
+        );
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getUserIdForOperations, unitSystem]);
+
+  // Load data on mount and when user changes
+  useEffect(() => {
+    const loadDataIfAuthenticated = async () => {
+      const userId = await getUserIdForOperations();
+      if (userId) {
+        loadData();
+      } else {
+        setData(null);
+        setIsLoading(false);
+      }
+    };
+
+    loadDataIfAuthenticated();
+  }, [getUserIdForOperations, loadData]);
 
   return {
     data,
     isLoading,
     error,
     pendingCount,
-    conflictCount,
+    conflictCount, // TODO: Implement conflict tracking
     lastSync,
     create,
     update,
     delete: deleteSession,
     clone,
+    getById,
     sync,
     refresh,
   };

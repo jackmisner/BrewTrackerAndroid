@@ -112,6 +112,73 @@ jest.mock("@contexts/ThemeContext", () => ({
   }),
 }));
 
+jest.mock("@contexts/AuthContext", () => {
+  const React = require("react");
+  return {
+    AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+    useAuth: () => ({
+      user: { id: "user-123", username: "testuser" },
+      isLoading: false,
+      isAuthenticated: true,
+      error: null,
+      login: jest.fn(),
+      register: jest.fn(),
+      logout: jest.fn(),
+      getUserId: jest.fn().mockResolvedValue("user-123"),
+    }),
+  };
+});
+
+jest.mock("@contexts/UnitContext", () => {
+  const React = require("react");
+  return {
+    UnitProvider: ({ children }: { children: React.ReactNode }) => children,
+    useUnit: () => ({ temperatureUnit: "F", weightUnit: "lb" }),
+    useUnits: jest.fn(() => ({ unitSystem: "imperial" })),
+  };
+});
+
+// Mock UserCacheService
+jest.mock("@services/offlineV2/UserCacheService", () => {
+  const mockBrewSession = {
+    id: "session-123",
+    name: "Test Session",
+    recipe_id: "test-recipe-id",
+    brew_date: "2024-01-01",
+    status: "fermenting",
+    user_id: "test-user-id",
+    notes: "Test notes",
+    tasting_notes: "",
+    mash_temp: "",
+    actual_og: "1.05",
+    actual_fg: "",
+    actual_abv: "",
+    actual_efficiency: "",
+    fermentation_start_date: "",
+    fermentation_end_date: "",
+    packaging_date: "",
+    batch_rating: "",
+    created_at: "1640995200000",
+    updated_at: "1640995200000",
+    temperature_unit: "F",
+    batch_size: 5,
+    batch_size_unit: "gal",
+  };
+
+  return {
+    UserCacheService: {
+      getBrewSessions: jest.fn().mockResolvedValue([mockBrewSession]),
+      getBrewSessionById: jest.fn().mockResolvedValue(mockBrewSession),
+      updateBrewSession: jest.fn().mockResolvedValue({
+        ...mockBrewSession,
+        name: "Updated Session",
+        notes: "Updated notes",
+      }),
+      getPendingOperationsCount: jest.fn().mockResolvedValue(0),
+    },
+  };
+});
+
 // Mock user validation
 jest.mock("@utils/userValidation", () => ({
   useUserValidation: () => ({

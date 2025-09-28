@@ -46,9 +46,7 @@ import {
   Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import ApiService from "@services/api/apiService";
 import { BrewSession } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { brewSessionsStyles } from "@styles/tabs/brewSessionsStyles";
@@ -60,7 +58,7 @@ import {
 } from "@src/components/ui/ContextMenu/BrewSessionContextMenu";
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
-import { QUERY_KEYS } from "@services/api/queryClient";
+import { useBrewSessions } from "@hooks/offlineV2/useUserData";
 export default function BrewSessionsScreen() {
   const theme = useTheme();
   const styles = brewSessionsStyles(theme);
@@ -88,70 +86,47 @@ export default function BrewSessionsScreen() {
     lastParamsRef.current = currentActiveTabParam;
   }, [params.activeTab]);
 
+  // Use offline V2 brew sessions hook
+  const {
+    data: brewSessions,
+    isLoading,
+    error,
+    refresh,
+    delete: deleteBrewSession,
+  } = useBrewSessions();
+
   // Handle pull to refresh
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await refetch();
+      await refresh();
     } finally {
       setRefreshing(false);
     }
   };
 
-  // Query for brew sessions
-  const {
-    data: brewSessionsData,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: ["brewSessions"],
-    queryFn: async () => {
-      const response = await ApiService.brewSessions.getAll(1, 20);
-      return response.data;
-    },
-    retry: 1,
-    staleTime: 1000 * 60 * 2, // Cache for 2 minutes
-  });
+  // Handle delete with offline support
+  const handleDeleteSession = async (brewSessionId: string) => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await deleteBrewSession(brewSessionId);
 
-  // Delete mutation
-  const queryClient = useQueryClient();
-  const deleteMutation = useMutation<unknown, unknown, string>({
-    mutationKey: ["deleteBrewSession"],
-    mutationFn: async (brewSessionId: string) => {
-      return ApiService.brewSessions.delete(brewSessionId);
-    },
-    onSuccess: (_data, brewSessionId) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.BREW_SESSIONS });
-      // Drop stale detail caches for the deleted session
-      queryClient.removeQueries({
-        queryKey: QUERY_KEYS.BREW_SESSION(brewSessionId),
-      });
-      queryClient.removeQueries({
-        queryKey: QUERY_KEYS.FERMENTATION_DATA(brewSessionId),
-      });
-      queryClient.removeQueries({
-        queryKey: QUERY_KEYS.FERMENTATION_STATS(brewSessionId),
-      });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD });
-    },
-    onError: (error, brewSessionId) => {
+      Alert.alert(
+        "Session Deleted",
+        "The brew session has been deleted successfully.",
+        [{ text: "OK", style: "default" }]
+      );
+    } catch (error) {
       console.error("Failed to delete brew session:", error);
       Alert.alert(
         "Delete Failed",
-        "Failed to delete brew session. Please try again.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Retry",
-            onPress: () => deleteMutation.mutate(brewSessionId as string),
-          },
-        ]
+        "We couldn't queue the deletion. Please check your connection and try again.",
+        [{ text: "OK", style: "default" }]
       );
-    },
-  });
+    }
+  };
 
-  const allBrewSessions = brewSessionsData?.brew_sessions || [];
+  const allBrewSessions = brewSessions || [];
   const activeBrewSessions = allBrewSessions.filter(
     session => session.status !== "completed"
   );
@@ -220,15 +195,8 @@ export default function BrewSessionsScreen() {
             text: "Delete",
             style: "destructive",
             onPress: () => {
-              if (deleteMutation.isPending) {
-                return;
-              }
               contextMenu.hideMenu();
-              deleteMutation.mutate(brewSession.id, {
-                onSuccess: () => {
-                  Alert.alert("Success", "Brew session deleted successfully");
-                },
-              });
+              handleDeleteSession(brewSession.id);
             },
           },
         ]
@@ -545,7 +513,7 @@ export default function BrewSessionsScreen() {
           </Text>
           <TouchableOpacity
             style={styles.retryButton}
-            onPress={() => refetch()}
+            onPress={() => refresh()}
           >
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>

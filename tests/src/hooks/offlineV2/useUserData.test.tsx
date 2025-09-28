@@ -15,9 +15,15 @@ import { Recipe, BrewSession, User } from "@src/types";
 jest.mock("@services/offlineV2/UserCacheService", () => ({
   UserCacheService: {
     getRecipes: jest.fn(),
+    getRecipeById: jest.fn(),
     createRecipe: jest.fn(),
     updateRecipe: jest.fn(),
     deleteRecipe: jest.fn(),
+    getBrewSessions: jest.fn(),
+    getBrewSessionById: jest.fn(),
+    createBrewSession: jest.fn(),
+    updateBrewSession: jest.fn(),
+    deleteBrewSession: jest.fn(),
     syncPendingOperations: jest.fn(),
     getPendingOperationsCount: jest.fn(),
   },
@@ -522,10 +528,8 @@ describe("useUserData hooks", () => {
         );
       });
     });
-  });
 
-  describe("useBrewSessions", () => {
-    it("should return initial state with TODO implementation", async () => {
+    it("should get a recipe by ID", async () => {
       mockUseAuth.mockReturnValue({
         user: mockUser as User,
         isAuthenticated: true,
@@ -545,7 +549,11 @@ describe("useUserData hooks", () => {
         getUserId: jest.fn().mockReturnValue(mockUser.id),
       });
 
-      const { result } = renderHook(() => useBrewSessions(), {
+      mockUserCacheService.getRecipes.mockResolvedValue([mockRecipe]);
+      mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
+      mockUserCacheService.getRecipeById.mockResolvedValue(mockRecipe);
+
+      const { result } = renderHook(() => useRecipes(), {
         wrapper: createWrapper(),
       });
 
@@ -553,28 +561,82 @@ describe("useUserData hooks", () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      expect(result.current.data).toBeNull();
+      const recipe = await result.current.getById("recipe-1");
+
+      expect(recipe).toEqual(mockRecipe);
+      expect(mockUserCacheService.getRecipeById).toHaveBeenCalledWith(
+        "recipe-1",
+        mockUser.id
+      );
+    });
+  });
+
+  describe("useBrewSessions", () => {
+    it("should load brew sessions when user is authenticated", async () => {
+      mockUseAuth.mockReturnValue({
+        user: mockUser as User,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+        login: jest.fn(),
+        logout: jest.fn(),
+        register: jest.fn(),
+        refreshUser: jest.fn(),
+        clearError: jest.fn(),
+        signInWithGoogle: jest.fn(),
+        verifyEmail: jest.fn(),
+        resendVerification: jest.fn(),
+        checkVerificationStatus: jest.fn(),
+        forgotPassword: jest.fn(),
+        resetPassword: jest.fn(),
+        getUserId: jest.fn().mockReturnValue(mockUser.id),
+      });
+
+      mockUserCacheService.getBrewSessions.mockResolvedValue([mockBrewSession]);
+      mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
+
+      const { result } = renderHook(() => useBrewSessions(), {
+        wrapper: createWrapper(),
+      });
+
+      expect(result.current.isLoading).toBe(true);
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.data).toEqual([mockBrewSession]);
       expect(result.current.error).toBeNull();
-      expect(result.current.pendingCount).toBe(0);
-      expect(result.current.conflictCount).toBe(0);
-      expect(result.current.lastSync).toBeNull();
-    });
-
-    it("should throw error for unimplemented create method", async () => {
-      const { result } = renderHook(() => useBrewSessions(), {
-        wrapper: createWrapper(),
-      });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      await expect(result.current.create(mockBrewSession)).rejects.toThrow(
-        "Brew sessions not yet implemented in UserCacheService"
+      expect(mockUserCacheService.getBrewSessions).toHaveBeenCalledWith(
+        mockUser.id,
+        "imperial"
       );
     });
 
-    it("should throw error for unimplemented update method", async () => {
+    it("should create a new brew session", async () => {
+      mockUseAuth.mockReturnValue({
+        user: mockUser as User,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+        login: jest.fn(),
+        logout: jest.fn(),
+        register: jest.fn(),
+        refreshUser: jest.fn(),
+        clearError: jest.fn(),
+        signInWithGoogle: jest.fn(),
+        verifyEmail: jest.fn(),
+        resendVerification: jest.fn(),
+        checkVerificationStatus: jest.fn(),
+        forgotPassword: jest.fn(),
+        resetPassword: jest.fn(),
+        getUserId: jest.fn().mockReturnValue(mockUser.id),
+      });
+
+      mockUserCacheService.getBrewSessions.mockResolvedValue([mockBrewSession]);
+      mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
+      mockUserCacheService.createBrewSession.mockResolvedValue(mockBrewSession);
+
       const { result } = renderHook(() => useBrewSessions(), {
         wrapper: createWrapper(),
       });
@@ -583,14 +645,92 @@ describe("useUserData hooks", () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      await expect(
-        result.current.update("session-1", { name: "Updated" })
-      ).rejects.toThrow(
-        "Brew sessions not yet implemented in UserCacheService"
+      const newSessionData = {
+        name: "Test Brew Session",
+        recipe_id: "recipe-1",
+        brew_date: "2024-01-01",
+      };
+
+      const createdSession = await result.current.create(newSessionData);
+
+      expect(createdSession).toEqual(mockBrewSession);
+      expect(mockUserCacheService.createBrewSession).toHaveBeenCalledWith({
+        ...newSessionData,
+        user_id: mockUser.id,
+      });
+    });
+
+    it("should update an existing brew session", async () => {
+      mockUseAuth.mockReturnValue({
+        user: mockUser as User,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+        login: jest.fn(),
+        logout: jest.fn(),
+        register: jest.fn(),
+        refreshUser: jest.fn(),
+        clearError: jest.fn(),
+        signInWithGoogle: jest.fn(),
+        verifyEmail: jest.fn(),
+        resendVerification: jest.fn(),
+        checkVerificationStatus: jest.fn(),
+        forgotPassword: jest.fn(),
+        resetPassword: jest.fn(),
+        getUserId: jest.fn().mockReturnValue(mockUser.id),
+      });
+
+      mockUserCacheService.getBrewSessions.mockResolvedValue([mockBrewSession]);
+      mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
+
+      const updatedSession = { ...mockBrewSession, name: "Updated Session" };
+      mockUserCacheService.updateBrewSession.mockResolvedValue(updatedSession);
+
+      const { result } = renderHook(() => useBrewSessions(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      const updates = { name: "Updated Session" };
+      const updated = await result.current.update("session-1", updates);
+
+      expect(updated).toEqual(updatedSession);
+      expect(mockUserCacheService.updateBrewSession).toHaveBeenCalledWith(
+        "session-1",
+        {
+          ...updates,
+          user_id: mockUser.id,
+        }
       );
     });
 
-    it("should throw error for unimplemented delete method", async () => {
+    it("should delete a brew session", async () => {
+      mockUseAuth.mockReturnValue({
+        user: mockUser as User,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+        login: jest.fn(),
+        logout: jest.fn(),
+        register: jest.fn(),
+        refreshUser: jest.fn(),
+        clearError: jest.fn(),
+        signInWithGoogle: jest.fn(),
+        verifyEmail: jest.fn(),
+        resendVerification: jest.fn(),
+        checkVerificationStatus: jest.fn(),
+        forgotPassword: jest.fn(),
+        resetPassword: jest.fn(),
+        getUserId: jest.fn().mockReturnValue(mockUser.id),
+      });
+
+      mockUserCacheService.getBrewSessions.mockResolvedValue([mockBrewSession]);
+      mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
+      mockUserCacheService.deleteBrewSession.mockResolvedValue();
+
       const { result } = renderHook(() => useBrewSessions(), {
         wrapper: createWrapper(),
       });
@@ -599,29 +739,102 @@ describe("useUserData hooks", () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      await expect(result.current.delete("session-1")).rejects.toThrow(
-        "Brew sessions not yet implemented in UserCacheService"
+      await result.current.delete("session-1");
+
+      expect(mockUserCacheService.deleteBrewSession).toHaveBeenCalledWith(
+        "session-1",
+        mockUser.id
       );
     });
 
-    it("should return empty sync result for unimplemented sync", async () => {
-      const { result } = renderHook(() => useBrewSessions(), {
-        wrapper: createWrapper(),
+    it("should sync pending operations", async () => {
+      mockUseAuth.mockReturnValue({
+        user: mockUser as User,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+        login: jest.fn(),
+        logout: jest.fn(),
+        register: jest.fn(),
+        refreshUser: jest.fn(),
+        clearError: jest.fn(),
+        signInWithGoogle: jest.fn(),
+        verifyEmail: jest.fn(),
+        resendVerification: jest.fn(),
+        checkVerificationStatus: jest.fn(),
+        forgotPassword: jest.fn(),
+        resetPassword: jest.fn(),
+        getUserId: jest.fn().mockReturnValue(mockUser.id),
       });
 
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
+      mockUserCacheService.getBrewSessions.mockResolvedValue([mockBrewSession]);
+      mockUserCacheService.getPendingOperationsCount.mockResolvedValue(1);
 
-      const syncResult = await result.current.sync();
-
-      expect(syncResult).toEqual({
+      const syncResult = {
         success: true,
-        processed: 0,
+        processed: 1,
         failed: 0,
         conflicts: 0,
         errors: [],
+      };
+      mockUserCacheService.syncPendingOperations.mockResolvedValue(syncResult);
+
+      const { result } = renderHook(() => useBrewSessions(), {
+        wrapper: createWrapper(),
       });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      const result_sync = await result.current.sync();
+
+      expect(result_sync).toEqual(syncResult);
+      expect(mockUserCacheService.syncPendingOperations).toHaveBeenCalled();
+      expect(result.current.lastSync).toBeDefined();
+    });
+
+    it("should get a brew session by ID", async () => {
+      mockUseAuth.mockReturnValue({
+        user: mockUser as User,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+        login: jest.fn(),
+        logout: jest.fn(),
+        register: jest.fn(),
+        refreshUser: jest.fn(),
+        clearError: jest.fn(),
+        signInWithGoogle: jest.fn(),
+        verifyEmail: jest.fn(),
+        resendVerification: jest.fn(),
+        checkVerificationStatus: jest.fn(),
+        forgotPassword: jest.fn(),
+        resetPassword: jest.fn(),
+        getUserId: jest.fn().mockReturnValue(mockUser.id),
+      });
+
+      mockUserCacheService.getBrewSessions.mockResolvedValue([mockBrewSession]);
+      mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
+      mockUserCacheService.getBrewSessionById.mockResolvedValue(
+        mockBrewSession
+      );
+
+      const { result } = renderHook(() => useBrewSessions(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      const session = await result.current.getById("session-1");
+
+      expect(session).toEqual(mockBrewSession);
+      expect(mockUserCacheService.getBrewSessionById).toHaveBeenCalledWith(
+        "session-1",
+        mockUser.id
+      );
     });
   });
 });

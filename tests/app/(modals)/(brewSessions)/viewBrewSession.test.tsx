@@ -67,6 +67,49 @@ jest.mock("@contexts/UnitContext", () => ({
   useUnits: jest.fn(),
 }));
 
+jest.mock("@contexts/AuthContext", () => {
+  const React = require("react");
+  return {
+    AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+    useAuth: () => ({
+      user: { id: "test-user-id", username: "testuser" },
+      isLoading: false,
+      isAuthenticated: true,
+      error: null,
+      login: jest.fn(),
+      register: jest.fn(),
+      logout: jest.fn(),
+      getUserId: jest.fn().mockResolvedValue("test-user-id"),
+    }),
+  };
+});
+
+// Mock UserCacheService
+jest.mock("@services/offlineV2/UserCacheService", () => {
+  const mockBrewSession = {
+    id: "test-session-id",
+    name: "Test Brew Session",
+    recipe_id: "test-recipe-id",
+    brew_date: "2024-01-01",
+    status: "fermenting",
+    user_id: "test-user-id",
+    notes: "Test notes",
+    created_at: "1640995200000",
+    updated_at: "1640995200000",
+    temperature_unit: "F",
+    batch_size: 5,
+    batch_size_unit: "gal",
+  };
+
+  return {
+    UserCacheService: {
+      getBrewSessions: jest.fn().mockResolvedValue([mockBrewSession]),
+      getBrewSessionById: jest.fn().mockResolvedValue(mockBrewSession),
+      getPendingOperationsCount: jest.fn().mockResolvedValue(0),
+    },
+  };
+});
+
 jest.mock("@styles/modals/viewBrewSessionStyles", () => ({
   viewBrewSessionStyles: jest.fn(() => ({
     container: { flex: 1 },

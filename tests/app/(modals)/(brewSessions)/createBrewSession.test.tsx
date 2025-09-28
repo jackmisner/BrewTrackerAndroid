@@ -40,6 +40,7 @@ jest.mock("@contexts/AuthContext", () => {
       login: jest.fn(),
       register: jest.fn(),
       logout: jest.fn(),
+      getUserId: jest.fn().mockResolvedValue("test-user-id"),
     }),
   };
 });
@@ -81,6 +82,22 @@ jest.mock("@contexts/CalculatorsContext", () => {
     useCalculators: () => ({ state: {}, dispatch: jest.fn() }),
   };
 });
+
+// Mock UserCacheService
+jest.mock("@services/offlineV2/UserCacheService", () => ({
+  UserCacheService: {
+    getBrewSessions: jest.fn().mockResolvedValue([]),
+    getPendingOperationsCount: jest.fn().mockResolvedValue(0),
+    createBrewSession: jest.fn().mockResolvedValue({
+      id: "new-session-id",
+      name: "Test Brew Session",
+      recipe_id: "test-recipe-id",
+      brew_date: "2024-01-01",
+      status: "fermenting",
+      user_id: "test-user-id",
+    }),
+  },
+}));
 
 import React from "react";
 import { fireEvent, waitFor, act } from "@testing-library/react-native";
