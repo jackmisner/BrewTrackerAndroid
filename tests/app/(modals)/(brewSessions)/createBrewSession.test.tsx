@@ -571,12 +571,11 @@ describe("CreateBrewSessionScreen", () => {
       });
     });
 
-    it("should show loading state during submission", async () => {
+       it("should show loading state during submission", async () => {
       const service =
         require("@services/offlineV2/UserCacheService").UserCacheService;
-      // Keep promise pending to simulate in-flight submit
-      service.createBrewSession.mockReturnValue(new Promise(() => {}));
-
+      // Keep promise pending only for this invocation
+      service.createBrewSession.mockImplementationOnce(() => new Promise(() => {}));
       const { getByTestId, getByPlaceholderText } = renderWithProviders(
         <CreateBrewSessionScreen />
       );
@@ -585,7 +584,6 @@ describe("CreateBrewSessionScreen", () => {
         "Test Brew Session"
       );
       fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
-
       await waitFor(() => expect(service.createBrewSession).toHaveBeenCalled());
       // While pending, there must be no navigation
       expect(mockRouter.replace).not.toHaveBeenCalled();
@@ -593,6 +591,18 @@ describe("CreateBrewSessionScreen", () => {
     });
 
     it("should handle successful creation", async () => {
+      // Ensure the UserCacheService mock is set to success for this test
+      const service =
+        require("@services/offlineV2/UserCacheService").UserCacheService;
+      service.createBrewSession.mockResolvedValue({
+        id: "new-session-id",
+        name: "Test Brew Session",
+        recipe_id: "test-recipe-id",
+        brew_date: "2024-01-01",
+        status: "fermenting",
+        user_id: "test-user-id",
+      });
+
       const { getByTestId } = renderWithProviders(<CreateBrewSessionScreen />);
 
       // Fill in the form to trigger creation

@@ -87,7 +87,7 @@ export default function ViewBrewSession() {
     return () => {
       cancelled = true;
     };
-  }, [brewSessionId, brewSessionsHook.getById]);
+  }, [brewSessionId, brewSessionsHook]);
 
   // Fetch recipe data for expected FG reference line
   const { data: recipeData } = useQuery<Recipe | undefined>({
