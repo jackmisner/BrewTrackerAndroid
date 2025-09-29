@@ -62,9 +62,6 @@ export default function ViewBrewSession() {
           `[ViewBrewSession] Loaded session:`,
           session ? "found" : "not found"
         );
-        if (cancelled) {
-          return;
-        }
         if (session) {
           setBrewSessionData(session);
         } else {
@@ -143,7 +140,9 @@ export default function ViewBrewSession() {
         console.warn(
           `[ViewBrewSession.onRefresh] Session ${brewSessionId} not found after refresh`
         );
-        // Don't set error here - keep existing data if available
+        // Session was deleted - clear data and show error
+        setBrewSessionData(null);
+        setError("This brew session has been deleted");
       }
 
       // Also refresh recipe (FG) if present
