@@ -5,7 +5,7 @@
  * offline CRUD operations and automatic sync capabilities.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { UserCacheService } from "@services/offlineV2/UserCacheService";
 import { UseUserDataReturn, SyncResult, Recipe, BrewSession } from "@src/types";
 import { useAuth } from "@contexts/AuthContext";
@@ -15,7 +15,7 @@ import { useUnits } from "@contexts/UnitContext";
  * Hook for managing recipes with offline capabilities
  */
 export function useRecipes(): UseUserDataReturn<Recipe> {
-  const { getUserId } = useAuth();
+  const { user } = useAuth(); // Use user object directly instead of getUserId function
   const { unitSystem } = useUnits();
   const [data, setData] = useState<Recipe[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,9 +24,12 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
   const [conflictCount] = useState(0);
   const [lastSync, setLastSync] = useState<number | null>(null);
 
-  // Helper to get user ID consistently
+  // Create a stable ref for the loadData function to avoid dependency issues
+  const loadDataRef = useRef<(() => Promise<void>) | null>(null);
+
+  // Helper to get user ID consistently using stable user object
   const getUserIdForOperations = useCallback(async () => {
-    const userId = await getUserId();
+    const userId = user?.id;
     if (!userId) {
       console.log(`[useRecipes] No user ID available`);
       setData(null);
@@ -34,7 +37,7 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
       return null;
     }
     return userId;
-  }, [getUserId]);
+  }, [user?.id]); // Depend on user.id directly, not getUserId function
 
   const loadData = useCallback(
     async (showLoading = true) => {
@@ -68,6 +71,9 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
     },
     [getUserIdForOperations, unitSystem]
   );
+
+  // Store the current loadData function in the ref
+  loadDataRef.current = loadData;
 
   const create = useCallback(
     async (recipe: Partial<Recipe>): Promise<Recipe> => {
@@ -240,8 +246,8 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
   useEffect(() => {
     const loadDataIfAuthenticated = async () => {
       const userId = await getUserIdForOperations();
-      if (userId) {
-        loadData();
+      if (userId && loadDataRef.current) {
+        loadDataRef.current();
       } else {
         setData(null);
         setIsLoading(false);
@@ -249,7 +255,7 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
     };
 
     loadDataIfAuthenticated();
-  }, [getUserIdForOperations, loadData]);
+  }, [getUserIdForOperations]);
 
   return {
     data,
@@ -272,7 +278,7 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
  * Hook for managing brew sessions with offline capabilities
  */
 export function useBrewSessions(): UseUserDataReturn<BrewSession> {
-  const { getUserId } = useAuth();
+  const { user } = useAuth(); // Use user object directly instead of getUserId function
   const { unitSystem } = useUnits();
   const [data, setData] = useState<BrewSession[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -281,9 +287,12 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
   const [conflictCount] = useState(0);
   const [lastSync, setLastSync] = useState<number | null>(null);
 
-  // Helper to get user ID consistently
+  // Create a stable ref for the loadData function to avoid dependency issues
+  const loadDataRef = useRef<(() => Promise<void>) | null>(null);
+
+  // Helper to get user ID consistently using stable user object
   const getUserIdForOperations = useCallback(async () => {
-    const userId = await getUserId();
+    const userId = user?.id;
     if (!userId) {
       console.log(`[useBrewSessions] No user ID available`);
       setData(null);
@@ -291,7 +300,7 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
       return null;
     }
     return userId;
-  }, [getUserId]);
+  }, [user?.id]); // Depend on user.id directly, not getUserId function
 
   const loadData = useCallback(
     async (showLoading = true) => {
@@ -330,6 +339,9 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
     },
     [getUserIdForOperations, unitSystem]
   );
+
+  // Store the current loadData function in the ref
+  loadDataRef.current = loadData;
 
   const create = useCallback(
     async (session: Partial<BrewSession>): Promise<BrewSession> => {
@@ -490,8 +502,8 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
   useEffect(() => {
     const loadDataIfAuthenticated = async () => {
       const userId = await getUserIdForOperations();
-      if (userId) {
-        loadData();
+      if (userId && loadDataRef.current) {
+        loadDataRef.current();
       } else {
         setData(null);
         setIsLoading(false);
@@ -499,7 +511,7 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
     };
 
     loadDataIfAuthenticated();
-  }, [getUserIdForOperations, loadData]);
+  }, [getUserIdForOperations]);
 
   return {
     data,

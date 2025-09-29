@@ -27,27 +27,66 @@ import {
   BrewSession,
 } from "@src/types";
 
-// Simple per-key queue (no external deps)
+// Simple per-key queue (no external deps) with race condition protection
 const keyQueues = new Map<string, Promise<unknown>>();
+const queueDebugCounters = new Map<string, number>();
+
 async function withKeyQueue<T>(key: string, fn: () => Promise<T>): Promise<T> {
   // In test environment, bypass the queue to avoid hanging
   if (process.env.NODE_ENV === "test" || (global as any).__JEST_ENVIRONMENT__) {
     return await fn();
   }
 
-  const prev = keyQueues.get(key) ?? Promise.resolve();
-  const next = prev
-    .catch(() => undefined) // keep the chain alive after errors
-    .then(fn);
-  keyQueues.set(
-    key,
-    next.finally(() => {
-      if (keyQueues.get(key) === next) {
-        keyQueues.delete(key);
-      }
-    })
-  );
-  return next;
+  // Debug counter to track potential infinite loops
+  const currentCount = (queueDebugCounters.get(key) || 0) + 1;
+  queueDebugCounters.set(key, currentCount);
+
+  // Log warning if too many concurrent calls for the same key
+  if (currentCount > 10) {
+    console.warn(
+      `[withKeyQueue] High concurrent call count for key "${key}": ${currentCount} calls`
+    );
+  }
+
+  // Break infinite loops by limiting max concurrent calls per key
+  if (currentCount > 50) {
+    queueDebugCounters.set(key, 0); // Reset counter
+    console.error(
+      `[withKeyQueue] Breaking potential infinite loop for key "${key}" after ${currentCount} calls`
+    );
+    // Execute directly to break the loop
+    return await fn();
+  }
+
+  try {
+    const prev = keyQueues.get(key) ?? Promise.resolve();
+    const next = prev
+      .catch(() => undefined) // keep the chain alive after errors
+      .then(fn);
+
+    keyQueues.set(
+      key,
+      next.finally(() => {
+        // Decrement counter when this call completes
+        const newCount = Math.max(0, (queueDebugCounters.get(key) || 1) - 1);
+        queueDebugCounters.set(key, newCount);
+
+        // Clean up queue if this was the last operation
+        if (keyQueues.get(key) === next) {
+          keyQueues.delete(key);
+        }
+      })
+    );
+
+    return await next;
+  } catch (error) {
+    // Reset counter on error to prevent stuck state
+    queueDebugCounters.set(
+      key,
+      Math.max(0, (queueDebugCounters.get(key) || 1) - 1)
+    );
+    throw error;
+  }
 }
 
 export class UserCacheService {
@@ -2266,6 +2305,13 @@ export class UserCacheService {
   ): Promise<SyncableItem<BrewSession>[]> {
     return await withKeyQueue(STORAGE_KEYS_V2.USER_BREW_SESSIONS, async () => {
       try {
+        // Add stack trace in dev mode to track what's calling this
+        if (__DEV__) {
+          const stack = new Error().stack;
+          const caller = stack?.split("\n")[3]?.trim() || "unknown";
+          console.log(`[getCachedBrewSessions] Called by: ${caller}`);
+        }
+
         await UnifiedLogger.debug(
           "UserCacheService.getCachedBrewSessions",
           `Loading cache for user ID: "${userId}"`

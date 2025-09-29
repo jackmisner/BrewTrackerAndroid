@@ -35,6 +35,7 @@ export default function ViewBrewSession() {
 
   // Use offline-first brew sessions hook
   const brewSessionsHook = useBrewSessions();
+  const { getById } = brewSessionsHook; // Extract getById to use in dependency array
 
   // Load brew session data using offline-first approach
   useEffect(() => {
@@ -56,7 +57,7 @@ export default function ViewBrewSession() {
         setError(null);
         console.log(`[ViewBrewSession] Loading brew session: ${brewSessionId}`);
 
-        const session = await brewSessionsHook.getById(brewSessionId);
+        const session = await getById(brewSessionId);
         console.log(
           `[ViewBrewSession] Loaded session:`,
           session ? "found" : "not found"
@@ -87,7 +88,7 @@ export default function ViewBrewSession() {
     return () => {
       cancelled = true;
     };
-  }, [brewSessionId, brewSessionsHook]);
+  }, [brewSessionId, getById]); // Include getById which should be stable via useCallback
 
   // Fetch recipe data for expected FG reference line
   const { data: recipeData } = useQuery<Recipe | undefined>({
