@@ -56,24 +56,54 @@ jest.mock("@contexts/AuthContext", () => {
 
 // Mock UserCacheService
 jest.mock("@services/offlineV2/UserCacheService", () => {
-  const mockBrewSession = {
-    id: "test-session-id",
-    name: "Test Brew Session",
-    recipe_id: "test-recipe-id",
-    brew_date: "2024-01-01",
-    status: "fermenting",
-    user_id: "test-user-id",
-    notes: "Test notes",
-    created_at: "1640995200000",
-    updated_at: "1640995200000",
-    temperature_unit: "F",
-    batch_size: 5,
-    batch_size_unit: "gal",
-  };
+  const mockBrewSessions = [
+    {
+      id: "test-session-1",
+      name: "Active Brew 1",
+      recipe_id: "test-recipe-id-1",
+      brew_date: "2024-01-01",
+      status: "fermenting",
+      user_id: "test-user-id",
+      notes: "Test notes 1",
+      created_at: "1640995200000",
+      updated_at: "1640995200000",
+      temperature_unit: "F",
+      batch_size: 5,
+      batch_size_unit: "gal",
+    },
+    {
+      id: "test-session-2",
+      name: "Active Brew 2",
+      recipe_id: "test-recipe-id-2",
+      brew_date: "2024-01-02",
+      status: "in-progress",
+      user_id: "test-user-id",
+      notes: "Test notes 2",
+      created_at: "1640995300000",
+      updated_at: "1640995300000",
+      temperature_unit: "F",
+      batch_size: 5,
+      batch_size_unit: "gal",
+    },
+    {
+      id: "test-session-3",
+      name: "Completed Brew",
+      recipe_id: "test-recipe-id-3",
+      brew_date: "2024-01-03",
+      status: "completed",
+      user_id: "test-user-id",
+      notes: "Test notes 3",
+      created_at: "1640995400000",
+      updated_at: "1640995400000",
+      temperature_unit: "F",
+      batch_size: 5,
+      batch_size_unit: "gal",
+    },
+  ];
 
   return {
     UserCacheService: {
-      getBrewSessions: jest.fn().mockResolvedValue([mockBrewSession]),
+      getBrewSessions: jest.fn().mockResolvedValue(mockBrewSessions),
       getPendingOperationsCount: jest.fn().mockResolvedValue(0),
     },
   };
@@ -278,52 +308,60 @@ describe("BrewSessionsScreen", () => {
       }));
     });
 
-    it("should render active tab as selected by default", () => {
+    it("should render active tab as selected by default", async () => {
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
-      expect(getByText("Active (2)")).toBeTruthy(); // fermenting + active
-      expect(getByText("Completed (1)")).toBeTruthy();
+      await waitFor(() => {
+        expect(getByText("Active (2)")).toBeTruthy(); // fermenting + active
+        expect(getByText("Completed (1)")).toBeTruthy();
+      });
     });
 
-    it("should switch to completed tab when URL parameter is set", () => {
+    it("should switch to completed tab when URL parameter is set", async () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "completed" });
 
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
-      expect(getByText("Completed (1)")).toBeTruthy();
+      await waitFor(() => {
+        expect(getByText("Completed (1)")).toBeTruthy();
+      });
     });
 
-    it("should navigate to active tab when pressed from completed tab", () => {
+    it("should navigate to active tab when pressed from completed tab", async () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "completed" });
 
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
-      const activeTab = getByText("Active (2)");
 
-      fireEvent.press(activeTab);
-
-      expect(mockRouter.push).toHaveBeenCalledWith({
-        pathname: "/(tabs)/brewSessions",
-        params: { activeTab: "active" },
+      await waitFor(() => {
+        const activeTab = getByText("Active (2)");
+        fireEvent.press(activeTab);
+        expect(mockRouter.push).toHaveBeenCalledWith({
+          pathname: "/(tabs)/brewSessions",
+          params: { activeTab: "active" },
+        });
       });
     });
 
-    it("should navigate to completed tab when pressed", () => {
+    it("should navigate to completed tab when pressed", async () => {
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
-      const completedTab = getByText("Completed (1)");
 
-      fireEvent.press(completedTab);
-
-      expect(mockRouter.push).toHaveBeenCalledWith({
-        pathname: "/(tabs)/brewSessions",
-        params: { activeTab: "completed" },
+      await waitFor(() => {
+        const completedTab = getByText("Completed (1)");
+        fireEvent.press(completedTab);
+        expect(mockRouter.push).toHaveBeenCalledWith({
+          pathname: "/(tabs)/brewSessions",
+          params: { activeTab: "completed" },
+        });
       });
     });
 
-    it("should display correct session counts in tabs", () => {
+    it("should display correct session counts in tabs", async () => {
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
-      expect(getByText("Active (2)")).toBeTruthy();
-      expect(getByText("Completed (1)")).toBeTruthy();
+      await waitFor(() => {
+        expect(getByText("Active (2)")).toBeTruthy();
+        expect(getByText("Completed (1)")).toBeTruthy();
+      });
     });
   });
 
@@ -343,109 +381,152 @@ describe("BrewSessionsScreen", () => {
   });
 
   describe("error state", () => {
-    it("should show error message when data fails to load", () => {
-      mockUseQuery.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        error: new Error("Network error"),
-        refetch: jest.fn(),
-      });
+    it("should show error message when data fails to load", async () => {
+      // Mock UserCacheService to throw an error
+      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockRejectedValue(
+        new Error("Network error")
+      );
 
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
-      expect(getByText("Backend Not Available")).toBeTruthy();
-      expect(
-        getByText(
-          "Brew sessions require a backend connection. The app will show empty states until the backend is running."
-        )
-      ).toBeTruthy();
+      await waitFor(() => {
+        expect(getByText("Backend Not Available")).toBeTruthy();
+        expect(
+          getByText(
+            "Brew sessions require a backend connection. The app will show empty states until the backend is running."
+          )
+        ).toBeTruthy();
+      });
     });
 
-    it("should allow retry when error occurs", () => {
-      const mockRefetch = jest.fn();
-      mockUseQuery.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        error: new Error("Network error"),
-        refetch: mockRefetch,
-      });
+    it("should allow retry when error occurs", async () => {
+      // Mock UserCacheService to throw an error
+      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockRejectedValue(
+        new Error("Network error")
+      );
+      // Add the missing refreshBrewSessionsFromServer mock
+      const mockRefresh = jest.fn().mockResolvedValue([]);
+      require("@services/offlineV2/UserCacheService").UserCacheService.refreshBrewSessionsFromServer =
+        mockRefresh;
 
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
-      const retryButton = getByText("Retry");
 
+      await waitFor(() => {
+        expect(getByText("Backend Not Available")).toBeTruthy();
+      });
+
+      const retryButton = getByText("Retry");
       fireEvent.press(retryButton);
 
-      expect(mockRefetch).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockRefresh).toHaveBeenCalled();
+      });
     });
   });
 
   describe("brew session list", () => {
-    const mockBrewSessions = [
-      mockData.brewSession({
-        name: "Test IPA Brew",
-        status: "fermenting",
-        brew_date: "2024-01-15T00:00:00Z",
-        original_gravity: 1.065,
-        final_gravity: null,
-        actual_abv: null,
-      }),
-      mockData.brewSession({
-        name: "Test Stout Brew",
-        status: "completed",
-        brew_date: "2024-01-01T00:00:00Z",
-        original_gravity: 1.055,
-        final_gravity: 1.015,
-        actual_abv: 5.2,
-      }),
-    ];
-
+    // Use the default mock data that provides 2 active + 1 completed = 3 total sessions
     beforeEach(() => {
-      mockUseQuery.mockImplementation(() => ({
-        data: { brew_sessions: mockBrewSessions },
-        isLoading: false,
-        error: null,
-        refetch: jest.fn(),
-      }));
+      // Restore the default mock data from the top-level mock
+      // This ensures tests get the expected counts: Active (2), Completed (1)
+      const defaultMockBrewSessions = [
+        {
+          id: "test-session-1",
+          name: "Active Brew 1",
+          recipe_id: "test-recipe-id-1",
+          brew_date: "2024-01-01",
+          status: "fermenting",
+          user_id: "test-user-id",
+          notes: "Test notes 1",
+          created_at: "1640995200000",
+          updated_at: "1640995200000",
+          temperature_unit: "F",
+          batch_size: 5,
+          batch_size_unit: "gal",
+        },
+        {
+          id: "test-session-2",
+          name: "Active Brew 2",
+          recipe_id: "test-recipe-id-2",
+          brew_date: "2024-01-02",
+          status: "active",
+          user_id: "test-user-id",
+          notes: "Test notes 2",
+          created_at: "1640995300000",
+          updated_at: "1640995300000",
+          temperature_unit: "F",
+          batch_size: 5,
+          batch_size_unit: "gal",
+        },
+        {
+          id: "test-session-3",
+          name: "Completed Brew",
+          recipe_id: "test-recipe-id-3",
+          brew_date: "2024-01-03",
+          status: "completed",
+          user_id: "test-user-id",
+          notes: "Test notes 3",
+          created_at: "1640995400000",
+          updated_at: "1640995400000",
+          temperature_unit: "F",
+          batch_size: 5,
+          batch_size_unit: "gal",
+        },
+      ];
+
+      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockResolvedValue(
+        defaultMockBrewSessions
+      );
     });
 
-    it("should render FlatList with active brew sessions", () => {
+    it("should render FlatList with active brew sessions", async () => {
       const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
-      // Verify active tab is displayed with correct count
-      expect(queryByText("Active (1)")).toBeTruthy();
-      // Verify completed tab shows correct count
-      expect(queryByText("Completed (1)")).toBeTruthy();
+      await waitFor(() => {
+        // Verify active tab is displayed with correct count
+        expect(queryByText("Active (2)")).toBeTruthy();
+        // Verify completed tab shows correct count
+        expect(queryByText("Completed (1)")).toBeTruthy();
+      });
     });
 
-    it("should handle completed brew sessions tab logic", () => {
+    it("should handle completed brew sessions tab logic", async () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "completed" });
 
       const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
-      // When activeTab is "completed", component should handle tab state correctly
-      // Verify tabs are still rendered with counts
-      expect(queryByText("Active (1)")).toBeTruthy();
-      expect(queryByText("Completed (1)")).toBeTruthy();
+      await waitFor(() => {
+        // When activeTab is "completed", component should handle tab state correctly
+        // Verify tabs are still rendered with counts from the mock data
+        expect(queryByText("Active (2)")).toBeTruthy();
+        expect(queryByText("Completed (1)")).toBeTruthy();
+      });
     });
 
-    it("should provide correct data to FlatList", () => {
+    it("should provide correct data to FlatList", async () => {
       const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
-      // Verify component processes data correctly by checking the data structure
-      // mockUseQuery should have been called with correct query key
-      expect(mockUseQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          queryKey: ["brewSessions"],
-        })
-      );
-      // Component should render tabs showing correct data counts
-      expect(queryByText("Active (1)")).toBeTruthy();
+      await waitFor(() => {
+        // Verify component processes data correctly by checking the UI counts
+        // In V2, we verify UserCacheService was called instead of React Query
+        expect(
+          require("@services/offlineV2/UserCacheService").UserCacheService
+            .getBrewSessions
+        ).toHaveBeenCalled();
+        // Component should render tabs showing correct data counts
+        expect(queryByText("Active (2)")).toBeTruthy();
+      });
     });
 
-    it("should handle brew session navigation logic", () => {
+    it("should handle brew session navigation logic", async () => {
       const mockPush = jest.spyOn(require("expo-router").router, "push");
 
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
+
+      // Wait for data to load and tabs to render
+      await waitFor(() => {
+        expect(getByText("Completed (1)")).toBeTruthy();
+      });
 
       // Test tab navigation - click on Completed tab
       const completedTab = getByText("Completed (1)");
@@ -484,34 +565,51 @@ describe("BrewSessionsScreen", () => {
 
   describe("empty states", () => {
     beforeEach(() => {
-      // Mock is already set in main beforeEach to return empty data
+      // Override UserCacheService mock to return empty data
+      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockResolvedValue(
+        []
+      );
     });
 
-    it("should show empty state for active brew sessions", () => {
+    it("should show empty state for active brew sessions", async () => {
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
-      expect(getByText("No Active Brews")).toBeTruthy();
-      expect(
-        getByText("Start a brew session to track your fermentation progress")
-      ).toBeTruthy();
-      expect(getByText("Start Brewing")).toBeTruthy();
+      await waitFor(() => {
+        expect(getByText("No Active Brews")).toBeTruthy();
+        expect(
+          getByText("Start a brew session to track your fermentation progress")
+        ).toBeTruthy();
+        expect(getByText("Start Brewing")).toBeTruthy();
+      });
     });
 
-    it("should show empty state for completed brew sessions", () => {
+    it("should show empty state for completed brew sessions", async () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "completed" });
 
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
-      expect(getByText("No Completed Brews")).toBeTruthy();
-      expect(
-        getByText("Completed brew sessions will appear here")
-      ).toBeTruthy();
+      await waitFor(() => {
+        expect(getByText("No Completed Brews")).toBeTruthy();
+        expect(
+          getByText("Completed brew sessions will appear here")
+        ).toBeTruthy();
+      });
     });
 
-    it("should navigate to recipes when start brewing is pressed", () => {
-      const { getByText } = renderWithProviders(<BrewSessionsScreen />);
-      const startBrewingButton = getByText("Start Brewing");
+    it("should navigate to recipes when start brewing is pressed", async () => {
+      // Mock empty data to show empty state with Start Brewing button
+      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockResolvedValue(
+        []
+      );
 
+      const { getByText } = renderWithProviders(<BrewSessionsScreen />);
+
+      // Wait for empty state to be rendered
+      await waitFor(() => {
+        expect(getByText("Start Brewing")).toBeTruthy();
+      });
+
+      const startBrewingButton = getByText("Start Brewing");
       fireEvent.press(startBrewingButton);
 
       expect(mockRouter.push).toHaveBeenCalledWith({
@@ -567,30 +665,80 @@ describe("BrewSessionsScreen", () => {
   });
 
   describe("status utilities", () => {
-    const mockBrewSessions = [
-      mockData.brewSession({ status: "fermenting" }),
-      mockData.brewSession({ status: "completed" }),
-      mockData.brewSession({ status: "paused" }),
-      mockData.brewSession({ status: "failed" }),
+    const mockBrewSessionsForStatus = [
+      {
+        id: "test-session-1",
+        name: "Fermenting Brew",
+        status: "fermenting",
+        user_id: "test-user-id",
+        recipe_id: "test-recipe-id-1",
+        brew_date: "2024-01-01",
+        notes: "Test notes 1",
+        created_at: "1640995200000",
+        updated_at: "1640995200000",
+        temperature_unit: "F",
+        batch_size: 5,
+        batch_size_unit: "gal",
+      },
+      {
+        id: "test-session-2",
+        name: "Completed Brew",
+        status: "completed",
+        user_id: "test-user-id",
+        recipe_id: "test-recipe-id-2",
+        brew_date: "2024-01-02",
+        notes: "Test notes 2",
+        created_at: "1640995300000",
+        updated_at: "1640995300000",
+        temperature_unit: "F",
+        batch_size: 5,
+        batch_size_unit: "gal",
+      },
+      {
+        id: "test-session-3",
+        name: "Paused Brew",
+        status: "paused",
+        user_id: "test-user-id",
+        recipe_id: "test-recipe-id-3",
+        brew_date: "2024-01-03",
+        notes: "Test notes 3",
+        created_at: "1640995400000",
+        updated_at: "1640995400000",
+        temperature_unit: "F",
+        batch_size: 5,
+        batch_size_unit: "gal",
+      },
+      {
+        id: "test-session-4",
+        name: "Failed Brew",
+        status: "failed",
+        user_id: "test-user-id",
+        recipe_id: "test-recipe-id-4",
+        brew_date: "2024-01-04",
+        notes: "Test notes 4",
+        created_at: "1640995500000",
+        updated_at: "1640995500000",
+        temperature_unit: "F",
+        batch_size: 5,
+        batch_size_unit: "gal",
+      },
     ];
 
     beforeEach(() => {
-      mockUseQuery.mockImplementation(() => ({
-        data: { brew_sessions: mockBrewSessions },
-        isLoading: false,
-        error: null,
-        refetch: jest.fn(),
-      }));
+      // Override UserCacheService mock for this test
+      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockResolvedValue(
+        mockBrewSessionsForStatus
+      );
     });
 
-    it("should display different status badges correctly", () => {
+    it("should display different status badges correctly", async () => {
       const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
-      // Verify component renders with status handling capabilities
-      expect(queryByText("Active (3)")).toBeTruthy(); // fermenting + paused + failed
-      expect(queryByText("Completed (1)")).toBeTruthy(); // completed
-      // Component should handle status rendering without errors
-      expect(queryByText("Active (3)")).toBeTruthy();
+      await waitFor(() => {
+        // Verify component renders with status handling capabilities
+        expect(queryByText("Active (3)")).toBeTruthy(); // fermenting + paused + failed
+        expect(queryByText("Completed (1)")).toBeTruthy(); // completed
+      });
     });
   });
 
@@ -601,23 +749,23 @@ describe("BrewSessionsScreen", () => {
     });
 
     beforeEach(() => {
-      mockUseQuery.mockReturnValue({
-        data: { brew_sessions: [mockBrewSession] },
-        isLoading: false,
-        error: null,
-        refetch: jest.fn(),
-      });
+      // Override UserCacheService mock for this test with single session
+      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockResolvedValue(
+        [mockBrewSession]
+      );
     });
 
-    it("should calculate and display brewing progress", () => {
+    it("should calculate and display brewing progress", async () => {
       // Since FlatList is mocked, we can't test the actual rendering of items
       // Instead, we verify that the component receives the correct data and can render without errors
       const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
-      // Verify the screen renders successfully with the mock data
-      // The component should not crash and should display the tabs with counts
-      expect(queryByText("Active (1)")).toBeTruthy();
-      expect(queryByText("Completed (0)")).toBeTruthy();
+      await waitFor(() => {
+        // Verify the screen renders successfully with the mock data
+        // The component should not crash and should display the tabs with counts
+        expect(queryByText("Active (1)")).toBeTruthy();
+        expect(queryByText("Completed (0)")).toBeTruthy();
+      });
 
       // Since FlatList is mocked, the actual progress calculation happens in the renderItem function
       // which isn't called. The test verifies the component structure and data handling.
@@ -703,22 +851,22 @@ describe("BrewSessionsScreen", () => {
     });
 
     beforeEach(() => {
-      mockUseQuery.mockReturnValue({
-        data: { brew_sessions: [mockBrewSession] },
-        isLoading: false,
-        error: null,
-        refetch: jest.fn(),
-      });
+      // Override UserCacheService mock for this test with single session
+      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockResolvedValue(
+        [mockBrewSession]
+      );
     });
 
-    it("should format dates correctly", () => {
+    it("should format dates correctly", async () => {
       const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
-      // Verify component renders with date handling capabilities
-      expect(queryByText("Active (1)")).toBeTruthy();
-      expect(queryByText("Completed (0)")).toBeTruthy();
+      await waitFor(() => {
+        // Verify component renders with date handling capabilities
+        expect(queryByText("Active (1)")).toBeTruthy();
+        expect(queryByText("Completed (0)")).toBeTruthy();
+      });
       // Component should handle date formatting without errors
-      expect(queryByText("Active (1)")).toBeTruthy();
+      // Since FlatList is mocked, the actual date formatting happens in renderItem
     });
   });
 });

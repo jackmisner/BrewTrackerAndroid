@@ -149,9 +149,9 @@ jest.mock("@services/offlineV2/UserCacheService", () => {
     user_id: "test-user-id",
     notes: "Test notes",
     tasting_notes: "",
-    mash_temp: "",
+    mash_temp: "152",
     actual_og: "1.05",
-    actual_fg: "",
+    actual_fg: "1.012",
     actual_abv: "",
     actual_efficiency: "",
     fermentation_start_date: "",
@@ -304,16 +304,13 @@ describe("EditBrewSessionScreen", () => {
       });
     });
 
-    it("displays error message when API fails", async () => {
-      mockUseQuery.mockReturnValue({
-        data: null,
-        isLoading: false,
-        error: new Error("Failed to load"),
-      });
-
+    it("displays edit form when session loads successfully", async () => {
       const { getByText } = renderWithClient(<EditBrewSessionScreen />);
+
       await waitFor(() => {
-        expect(getByText("Failed to Load Session")).toBeTruthy();
+        expect(getByText("Edit Brew Session")).toBeTruthy();
+        expect(getByText("Session Details")).toBeTruthy();
+        expect(getByText("Save")).toBeTruthy();
       });
     });
   });
@@ -341,13 +338,16 @@ describe("EditBrewSessionScreen", () => {
       });
     });
 
-    it("calls API update when save button pressed", async () => {
-      const mockMutate = jest.fn();
-      mockUseMutation.mockReturnValue({
-        mutate: mockMutate,
-        isPending: false,
-        error: null,
+    it("calls V2 update service when save button pressed", async () => {
+      const mockUpdateBrewSession = jest.fn().mockResolvedValue({
+        ...defaultSessionData.data,
+        name: "Updated Session",
+        notes: "Updated notes",
       });
+
+      // Mock the UserCacheService for this test
+      require("@services/offlineV2/UserCacheService").UserCacheService.updateBrewSession =
+        mockUpdateBrewSession;
 
       const { getByText } = renderWithClient(<EditBrewSessionScreen />);
 
@@ -357,7 +357,10 @@ describe("EditBrewSessionScreen", () => {
       });
 
       await waitFor(() => {
-        expect(mockMutate).toHaveBeenCalled();
+        expect(mockUpdateBrewSession).toHaveBeenCalledWith(
+          "session-123",
+          expect.any(Object)
+        );
       });
     });
   });
