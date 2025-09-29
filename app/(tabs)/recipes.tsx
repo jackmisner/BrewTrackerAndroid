@@ -72,7 +72,7 @@ function getSyncStatusMessage(
     return "All synced";
   }
 
-  return `${pendingOperations} change${pendingOperations !== 1 ? "s" : ""} need sync`;
+  return `${pendingOperations} change${pendingOperations !== 1 ? "s" : ""} need${pendingOperations === 1 ? "s" : ""} sync`;
 }
 
 /**

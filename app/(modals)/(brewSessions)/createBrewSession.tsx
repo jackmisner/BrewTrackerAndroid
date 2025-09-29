@@ -47,9 +47,9 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import ApiService from "@services/api/apiService";
-import { CreateBrewSessionRequest } from "@src/types";
+import { useBrewSessions } from "@hooks/offlineV2/useUserData";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import { useUserValidation } from "@utils/userValidation";
@@ -102,7 +102,7 @@ export default function CreateBrewSessionScreen() {
   const userValidation = useUserValidation();
   const styles = createBrewSessionStyles(theme);
   const params = useLocalSearchParams();
-  const queryClient = useQueryClient();
+  const { create: createBrewSession } = useBrewSessions();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedTemperatureUnit, setSelectedTemperatureUnit] = useState<
     "F" | "C" | null
@@ -169,26 +169,8 @@ export default function CreateBrewSessionScreen() {
     }
   }, [recipe, units.unitSystem, selectedTemperatureUnit]);
 
-  // Create brew session mutation
-  const createBrewSessionMutation = useMutation({
-    mutationFn: async (brewSessionData: CreateBrewSessionRequest) => {
-      return ApiService.brewSessions.create(brewSessionData);
-    },
-    onSuccess: response => {
-      // Invalidate brew sessions cache to trigger refresh
-      queryClient.invalidateQueries({ queryKey: ["brewSessions"] });
-
-      // Navigate to the new brew session
-      router.replace({
-        pathname: "/(modals)/(brewSessions)/viewBrewSession",
-        params: { brewSessionId: response.data.id },
-      });
-    },
-    onError: (error: any) => {
-      const errorMessage = ApiService.handleApiError(error).message;
-      Alert.alert("Error", `Failed to create brew session: ${errorMessage}`);
-    },
-  });
+  // Loading state for creation
+  const [isCreating, setIsCreating] = useState(false);
   if (!recipeId) {
     Alert.alert("Error", "Recipe ID is required");
     router.back();
@@ -250,7 +232,7 @@ export default function CreateBrewSessionScreen() {
       }
     }
 
-    const brewSessionData: CreateBrewSessionRequest = {
+    const brewSessionData = {
       recipe_id: recipeId,
       name: formData.name.trim(),
       brew_date: formData.brew_date,
@@ -269,7 +251,24 @@ export default function CreateBrewSessionScreen() {
         // omit names in production logs
       });
     }
-    createBrewSessionMutation.mutate(brewSessionData);
+
+    try {
+      setIsCreating(true);
+      const newBrewSession = await createBrewSession(brewSessionData);
+
+      // Navigate to the new brew session
+      router.replace({
+        pathname: "/(modals)/(brewSessions)/viewBrewSession",
+        params: { brewSessionId: newBrewSession.id },
+      });
+    } catch (error) {
+      console.error("❌ Failed to create brew session:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      Alert.alert("Error", `Failed to create brew session: ${errorMessage}`);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleCancel = () => {
@@ -325,13 +324,13 @@ export default function CreateBrewSessionScreen() {
           style={[
             styles.headerButton,
             styles.saveButton,
-            createBrewSessionMutation.isPending && styles.saveButtonDisabled,
+            isCreating && styles.saveButtonDisabled,
           ]}
           onPress={handleSubmit}
-          disabled={createBrewSessionMutation.isPending}
+          disabled={isCreating}
           testID={TEST_IDS.buttons.saveButton}
         >
-          {createBrewSessionMutation.isPending ? (
+          {isCreating ? (
             <ActivityIndicator size={20} color="#fff" />
           ) : (
             <Text style={styles.saveButtonText}>Start</Text>

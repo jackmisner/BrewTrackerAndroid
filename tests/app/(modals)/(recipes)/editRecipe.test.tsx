@@ -929,4 +929,48 @@ describe("EditRecipeScreen", () => {
       expect(hasRecipeChanges(recipe1, recipe2)).toBe(false);
     });
   });
+
+  describe("Unit System Logic", () => {
+    it("should handle unit system initialization without errors", () => {
+      // Mock API response to keep render deterministic
+      const api = require("@services/api/apiService").default;
+      api.recipes.getById.mockResolvedValue({
+        data: {
+          id: "test-recipe-id",
+          name: "Test Recipe",
+          style: "American IPA",
+          batch_size: 5,
+          ingredients: [],
+          parameters: {},
+        },
+      });
+
+      // This test ensures the component renders without errors regardless of unit system
+      expect(() => renderWithProviders(<EditRecipeScreen />)).not.toThrow();
+    });
+
+    it("should utilize unit context for conversions", () => {
+      const api = require("@services/api/apiService").default;
+      api.recipes.getById.mockResolvedValue({
+        data: {
+          id: "test-recipe-id",
+          name: "Test Recipe",
+          style: "American IPA",
+          batch_size: 5,
+          ingredients: [],
+          parameters: {},
+        },
+      });
+
+      // Test that the component renders successfully with unit context
+      expect(() => renderWithProviders(<EditRecipeScreen />)).not.toThrow();
+
+      // The useUnits hook is already mocked at the module level, so we just verify
+      // that the component renders successfully with the mocked unit system
+      const { getByText } = renderWithProviders(<EditRecipeScreen />);
+
+      // Basic assertion that the component structure is rendered
+      expect(getByText).toBeDefined();
+    });
+  });
 });

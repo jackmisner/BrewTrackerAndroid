@@ -122,7 +122,6 @@ const DynamicPersistQueryClientProvider = ({
           "dev",
       }}
     >
-      <StartupHydration />
       {children}
     </PersistQueryClientProvider>
   );
@@ -138,6 +137,7 @@ export default function RootLayout() {
             <AuthProvider>
               <DynamicPersistQueryClientProvider>
                 <UnitProvider>
+                  <StartupHydration />
                   <CalculatorsProvider>
                     <Stack
                       screenOptions={{

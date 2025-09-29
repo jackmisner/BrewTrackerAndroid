@@ -121,7 +121,15 @@ jest.mock("@contexts/UnitContext", () => {
   const React = require("react");
   return {
     UnitProvider: ({ children }: { children: React.ReactNode }) => children,
-    useUnit: () => ({ temperatureUnit: "F", weightUnit: "lb" }),
+    useUnits: () => ({
+      unitSystem: "imperial",
+      temperatureUnit: "F",
+      weightUnit: "lb",
+      volumeUnit: "gal",
+      convertWeight: (v: number) => v,
+      convertTemperature: (v: number) => v,
+      convertVolume: (v: number) => v,
+    }),
   };
 });
 

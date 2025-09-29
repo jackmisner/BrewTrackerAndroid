@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@contexts/AuthContext";
 import { useNetwork } from "@contexts/NetworkContext";
+import { useUnits } from "@contexts/UnitContext";
 import { StartupHydrationService } from "@services/offlineV2/StartupHydrationService";
 
 export interface UseStartupHydrationReturn {
@@ -22,6 +23,7 @@ export interface UseStartupHydrationReturn {
 export function useStartupHydration(): UseStartupHydrationReturn {
   const { user, isAuthenticated } = useAuth();
   const { isConnected } = useNetwork();
+  const { unitSystem } = useUnits();
   const [isHydrating, setIsHydrating] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export function useStartupHydration(): UseStartupHydrationReturn {
 
         // Use user.id (normalized) for hydration
         const userId = user.id;
-        await StartupHydrationService.hydrateOnStartup(userId);
+        await StartupHydrationService.hydrateOnStartup(userId, unitSystem);
 
         if (!isCancelled) {
           setHasHydrated(true);
@@ -77,7 +79,14 @@ export function useStartupHydration(): UseStartupHydrationReturn {
     return () => {
       isCancelled = true;
     };
-  }, [isAuthenticated, user?.id, isConnected, hasHydrated, lastUserId]);
+  }, [
+    isAuthenticated,
+    user?.id,
+    isConnected,
+    hasHydrated,
+    lastUserId,
+    unitSystem,
+  ]);
 
   // Reset hydration state when user logs out
   useEffect(() => {
