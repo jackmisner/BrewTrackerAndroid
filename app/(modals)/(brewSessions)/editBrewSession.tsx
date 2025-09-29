@@ -13,8 +13,7 @@ import {
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import ApiService from "@services/api/apiService";
+import { useBrewSessions } from "@hooks/offlineV2/useUserData";
 import { UpdateBrewSessionRequest, BrewSessionStatus } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUserValidation } from "@utils/userValidation";
@@ -31,9 +30,12 @@ export default function EditBrewSessionScreen() {
   const userValidation = useUserValidation();
   const styles = editBrewSessionStyles(theme);
   const params = useLocalSearchParams();
-  const queryClient = useQueryClient();
+  const { data: brewSessions, update: updateBrewSession } = useBrewSessions();
 
   const brewSessionId = params.brewSessionId as string;
+
+  // Loading state for update operation
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Form state - initialize with empty values, will be populated when session loads
   const [formData, setFormData] = useState({
@@ -58,24 +60,13 @@ export default function EditBrewSessionScreen() {
     visible: boolean;
   }>({ field: "", visible: false });
 
-  // Fetch brew session details
-  const {
-    data: brewSessionResponse,
-    isLoading: isLoadingSession,
-    error: sessionError,
-  } = useQuery({
-    queryKey: ["brewSession", brewSessionId],
-    queryFn: async () => {
-      if (!brewSessionId) {
-        throw new Error("Brew session ID is required");
-      }
-      return ApiService.brewSessions.getById(brewSessionId);
-    },
-    enabled: !!brewSessionId,
-    retry: 1,
-  });
-
-  const brewSession = brewSessionResponse?.data;
+  // Get brew session from offline cache
+  const brewSession = brewSessions?.find(
+    session => session.id === brewSessionId
+  );
+  const isLoadingSession = !brewSessions; // Still loading if data not available
+  const sessionError =
+    brewSessions && !brewSession ? "Brew session not found" : null;
 
   // Populate form data when brew session loads
   useEffect(() => {
@@ -97,27 +88,6 @@ export default function EditBrewSessionScreen() {
       });
     }
   }, [brewSession]);
-
-  // Update brew session mutation
-  const updateBrewSessionMutation = useMutation({
-    mutationFn: async (updateData: UpdateBrewSessionRequest) => {
-      return ApiService.brewSessions.update(brewSessionId, updateData);
-    },
-    onSuccess: () => {
-      // Invalidate brew session caches to trigger refresh
-      queryClient.invalidateQueries({
-        queryKey: ["brewSession", brewSessionId],
-      });
-      queryClient.invalidateQueries({ queryKey: ["brewSessions"] });
-
-      // Navigate back to session details
-      router.back();
-    },
-    onError: (error: any) => {
-      const errorMessage = ApiService.handleApiError(error).message;
-      Alert.alert("Error", `Failed to update brew session: ${errorMessage}`);
-    },
-  });
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -237,7 +207,20 @@ export default function EditBrewSessionScreen() {
       updateData.batch_rating = parseFloat(formData.batch_rating);
     }
 
-    updateBrewSessionMutation.mutate(updateData);
+    try {
+      setIsUpdating(true);
+      await updateBrewSession(brewSessionId, updateData);
+
+      // Navigate back to session details
+      router.back();
+    } catch (error) {
+      console.error("❌ Failed to update brew session:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      Alert.alert("Error", `Failed to update brew session: ${errorMessage}`);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const handleCancel = () => {
@@ -320,12 +303,12 @@ export default function EditBrewSessionScreen() {
           style={[
             styles.headerButton,
             styles.saveButton,
-            updateBrewSessionMutation.isPending && styles.saveButtonDisabled,
+            isUpdating && styles.saveButtonDisabled,
           ]}
           onPress={handleSubmit}
-          disabled={updateBrewSessionMutation.isPending}
+          disabled={isUpdating}
         >
-          {updateBrewSessionMutation.isPending ? (
+          {isUpdating ? (
             <ActivityIndicator size={20} color="#fff" />
           ) : (
             <Text style={styles.saveButtonText}>Save</Text>

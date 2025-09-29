@@ -40,6 +40,7 @@ jest.mock("@contexts/AuthContext", () => {
       login: jest.fn(),
       register: jest.fn(),
       logout: jest.fn(),
+      getUserId: jest.fn().mockResolvedValue("test-user-id"),
     }),
   };
 });
@@ -81,6 +82,22 @@ jest.mock("@contexts/CalculatorsContext", () => {
     useCalculators: () => ({ state: {}, dispatch: jest.fn() }),
   };
 });
+
+// Mock UserCacheService
+jest.mock("@services/offlineV2/UserCacheService", () => ({
+  UserCacheService: {
+    getBrewSessions: jest.fn().mockResolvedValue([]),
+    getPendingOperationsCount: jest.fn().mockResolvedValue(0),
+    createBrewSession: jest.fn().mockResolvedValue({
+      id: "new-session-id",
+      name: "Test Brew Session",
+      recipe_id: "test-recipe-id",
+      brew_date: "2024-01-01",
+      status: "fermenting",
+      user_id: "test-user-id",
+    }),
+  },
+}));
 
 import React from "react";
 import { fireEvent, waitFor, act } from "@testing-library/react-native";
@@ -522,13 +539,6 @@ describe("CreateBrewSessionScreen", () => {
 
   describe("Brew Session Creation", () => {
     it("should create brew session with correct data", async () => {
-      const mockMutate = jest.fn();
-      mockUseMutation.mockReturnValue({
-        mutate: mockMutate,
-        isLoading: false,
-        error: null,
-      });
-
       const { getByTestId, getByPlaceholderText } = renderWithProviders(
         <CreateBrewSessionScreen />
       );
@@ -544,78 +554,99 @@ describe("CreateBrewSessionScreen", () => {
       const createButton = getByTestId(TEST_IDS.buttons.saveButton);
       fireEvent.press(createButton);
 
-      // Verify mutation was called with correct data
+      // Verify V2 hook created the brew session
       await waitFor(() => {
-        expect(mockMutate).toHaveBeenCalledWith(
+        expect(
+          require("@services/offlineV2/UserCacheService").UserCacheService
+            .createBrewSession
+        ).toHaveBeenCalledWith(
           expect.objectContaining({
             recipe_id: "test-recipe-id",
             name: "Test Brew Session",
             notes: "Test notes",
             status: "planned",
+            user_id: "test-user-id",
           })
         );
       });
     });
 
-    it("should show loading state during submission", () => {
-      mockUseMutation.mockReturnValue({
-        mutate: jest.fn(),
-        isLoading: true,
-        error: null,
-      });
-
-      renderWithProviders(<CreateBrewSessionScreen />);
-
-      // Component should handle loading state
-      expect(mockUseMutation).toHaveBeenCalled();
+       it("should show loading state during submission", async () => {
+      const service =
+        require("@services/offlineV2/UserCacheService").UserCacheService;
+      // Keep promise pending only for this invocation
+      service.createBrewSession.mockImplementationOnce(() => new Promise(() => {}));
+      const { getByTestId, getByPlaceholderText } = renderWithProviders(
+        <CreateBrewSessionScreen />
+      );
+      fireEvent.changeText(
+        getByPlaceholderText("Enter session name"),
+        "Test Brew Session"
+      );
+      fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
+      await waitFor(() => expect(service.createBrewSession).toHaveBeenCalled());
+      // While pending, there must be no navigation
+      expect(mockRouter.replace).not.toHaveBeenCalled();
+      // Optionally assert disabled state or spinner if the UI exposes a testID/accessibility primitive
     });
 
     it("should handle successful creation", async () => {
-      const mockMutate = jest.fn();
-
-      mockUseMutation.mockImplementation((config: any) => {
-        // Simulate successful creation
-        if (config.onSuccess) {
-          config.onSuccess({ data: { id: "new-brew-session-id" } });
-        }
-        return {
-          mutate: mockMutate,
-          isLoading: false,
-          error: null,
-        };
+      // Ensure the UserCacheService mock is set to success for this test
+      const service =
+        require("@services/offlineV2/UserCacheService").UserCacheService;
+      service.createBrewSession.mockResolvedValue({
+        id: "new-session-id",
+        name: "Test Brew Session",
+        recipe_id: "test-recipe-id",
+        brew_date: "2024-01-01",
+        status: "fermenting",
+        user_id: "test-user-id",
       });
 
-      renderWithProviders(<CreateBrewSessionScreen />);
+      const { getByTestId } = renderWithProviders(<CreateBrewSessionScreen />);
 
-      // Verify navigation after successful creation
+      // Fill in the form to trigger creation
+      const sessionNameInput = getByTestId(
+        TEST_IDS.patterns.inputField("session-name")
+      );
+      fireEvent.changeText(sessionNameInput, "Test Brew Session");
+
+      // Submit the form
+      const createButton = getByTestId(TEST_IDS.buttons.saveButton);
+      fireEvent.press(createButton);
+
+      // Verify navigation after successful creation (the mock returns our session ID)
       await waitFor(() => {
         expect(mockRouter.replace).toHaveBeenCalledWith({
           pathname: "/(modals)/(brewSessions)/viewBrewSession",
-          params: { brewSessionId: "new-brew-session-id" },
+          params: { brewSessionId: "new-session-id" },
         });
       });
     });
 
     it("should handle creation error", async () => {
-      const mockMutate = jest.fn();
-      let capturedConfig: any = null;
+      const service =
+        require("@services/offlineV2/UserCacheService").UserCacheService;
+      const mockError = new Error("Creation failed");
+      // Fail only this invocation; avoid leaking to other tests
+      service.createBrewSession.mockRejectedValueOnce(mockError);
 
-      mockUseMutation.mockImplementation((config: any) => {
-        // Capture the configuration without calling onError
-        capturedConfig = config;
-        return {
-          mutate: mockMutate,
-          isLoading: false,
-          error: new Error("Creation failed"),
-        };
-      });
+      const { getByTestId, getByPlaceholderText } = renderWithProviders(
+        <CreateBrewSessionScreen />
+      );
 
-      renderWithProviders(<CreateBrewSessionScreen />);
+      // Fill in the form to trigger creation
+      const sessionNameInput = getByPlaceholderText("Enter session name");
+      fireEvent.changeText(sessionNameInput, "Test Brew Session");
 
-      // Verify that the mutation includes error handling
-      expect(mockUseMutation).toHaveBeenCalled();
-      expect(capturedConfig).toBeTruthy();
-      expect(typeof capturedConfig.onError).toBe("function");
+      // Submit the form
+      const createButton = getByTestId(TEST_IDS.buttons.saveButton);
+      fireEvent.press(createButton);
+
+      await waitFor(() => expect(service.createBrewSession).toHaveBeenCalled());
+      // User-visible feedback and no navigation on error
+      expect(mockAlert.alert).toHaveBeenCalledWith("Error", expect.any(String));
+      expect(mockRouter.replace).not.toHaveBeenCalled();
     });
   });
 

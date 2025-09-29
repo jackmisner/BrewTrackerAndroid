@@ -281,7 +281,7 @@ const mockUseLocalSearchParams = require("expo-router").useLocalSearchParams;
 
 // Get references to V2 offline hook mocks
 const { useRecipes, useOfflineSync } = require("@src/hooks/offlineV2");
-
+const mockUseOfflineSync = require("@src/hooks/offlineV2").useOfflineSync;
 beforeEach(() => {
   // Reset all mock implementations between tests
   jest.resetAllMocks();
@@ -1008,6 +1008,44 @@ describe("RecipesScreen", () => {
 
       // Recipe with empty name should not be rendered
       expect(queryByText("Unnamed Recipe")).toBeNull();
+    });
+  });
+
+  describe("Sync Status Display", () => {
+    it("should show 'Syncing...' message when sync is in progress", () => {
+      mockUseOfflineSync.mockReturnValue({
+        isSyncing: true,
+        pendingOperations: 5,
+        conflicts: 0,
+        lastSync: null,
+        sync: jest.fn(),
+        clearPending: jest.fn(),
+        resolveConflict: jest.fn(),
+      });
+
+      const { queryByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
+
+      expect(queryByText("Syncing...")).toBeTruthy();
+    });
+
+    it("should show pending operations count with plural form for multiple changes", () => {
+      mockUseOfflineSync.mockReturnValue({
+        isSyncing: false,
+        pendingOperations: 3,
+        conflicts: 0,
+        lastSync: null,
+        sync: jest.fn(),
+        clearPending: jest.fn(),
+        resolveConflict: jest.fn(),
+      });
+
+      const { queryByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
+
+      expect(queryByText("3 changes need sync")).toBeTruthy();
     });
   });
 });
