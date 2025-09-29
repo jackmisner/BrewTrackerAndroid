@@ -281,7 +281,7 @@ const mockUseLocalSearchParams = require("expo-router").useLocalSearchParams;
 
 // Get references to V2 offline hook mocks
 const { useRecipes, useOfflineSync } = require("@src/hooks/offlineV2");
-const mockUseOfflineSync = require("@src/hooks/offlineV2").useOfflineSync;
+
 beforeEach(() => {
   // Reset all mock implementations between tests
   jest.resetAllMocks();
@@ -1013,7 +1013,7 @@ describe("RecipesScreen", () => {
 
   describe("Sync Status Display", () => {
     it("should show 'Syncing...' message when sync is in progress", () => {
-      mockUseOfflineSync.mockReturnValue({
+      useOfflineSync.mockReturnValue({
         isSyncing: true,
         pendingOperations: 5,
         conflicts: 0,
@@ -1030,8 +1030,26 @@ describe("RecipesScreen", () => {
       expect(queryByText("Syncing...")).toBeTruthy();
     });
 
+    it("should show singular form for one pending change", () => {
+      useOfflineSync.mockReturnValue({
+        isSyncing: false,
+        pendingOperations: 1,
+        conflicts: 0,
+        lastSync: null,
+        sync: jest.fn(),
+        clearPending: jest.fn(),
+        resolveConflict: jest.fn(),
+      });
+
+      const { queryByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
+
+      expect(queryByText("1 change needs sync")).toBeTruthy();
+    });
+
     it("should show pending operations count with plural form for multiple changes", () => {
-      mockUseOfflineSync.mockReturnValue({
+      useOfflineSync.mockReturnValue({
         isSyncing: false,
         pendingOperations: 3,
         conflicts: 0,
@@ -1046,6 +1064,53 @@ describe("RecipesScreen", () => {
       });
 
       expect(queryByText("3 changes need sync")).toBeTruthy();
+    });
+
+    it("should hide sync status when activeTab is 'public'", () => {
+      // Set activeTab to "public"
+      mockUseLocalSearchParams.mockReturnValue({ activeTab: "public" });
+
+      useOfflineSync.mockReturnValue({
+        isSyncing: false,
+        pendingOperations: 5,
+        conflicts: 0,
+        lastSync: null,
+        sync: jest.fn(),
+        clearPending: jest.fn(),
+        resolveConflict: jest.fn(),
+      });
+
+      const { queryByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
+
+      // Sync status should not be displayed on public tab
+      expect(queryByText("5 changes need sync")).toBeNull();
+      expect(queryByText("Syncing...")).toBeNull();
+    });
+
+    it("should hide sync status when pendingOperations is 0", () => {
+      // Ensure we're on "my" tab but with 0 pending operations
+      mockUseLocalSearchParams.mockReturnValue({ activeTab: "my" });
+
+      useOfflineSync.mockReturnValue({
+        isSyncing: false,
+        pendingOperations: 0,
+        conflicts: 0,
+        lastSync: null,
+        sync: jest.fn(),
+        clearPending: jest.fn(),
+        resolveConflict: jest.fn(),
+      });
+
+      const { queryByText } = renderWithProviders(<RecipesScreen />, {
+        initialAuthState: testUtils.createAuthenticatedState(),
+      });
+
+      // Sync status should not be displayed when there are no pending operations
+      expect(queryByText("All synced")).toBeNull();
+      expect(queryByText("0 changes need sync")).toBeNull();
+      expect(queryByText("Syncing...")).toBeNull();
     });
   });
 });

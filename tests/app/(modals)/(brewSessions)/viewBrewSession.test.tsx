@@ -72,23 +72,6 @@ jest.mock("@services/api/apiService", () => ({
   },
 }));
 
-// Mock components that the ViewBrewSession component imports
-jest.mock("@src/components/brewSessions/FermentationChart", () => {
-  const React = require("react");
-  return {
-    FermentationChart: (props: any) =>
-      React.createElement("View", { testID: "fermentation-chart" }),
-  };
-});
-
-jest.mock("@src/components/brewSessions/FermentationData", () => {
-  const React = require("react");
-  return {
-    FermentationData: (props: any) =>
-      React.createElement("View", { testID: "fermentation-data" }),
-  };
-});
-
 // Comprehensive provider mocking to avoid conflicts with testUtils.tsx
 jest.mock("@contexts/ThemeContext", () => {
   const React = require("react");
@@ -324,27 +307,12 @@ jest.mock("@src/components/brewSessions/FermentationData", () => {
   };
 });
 
-const mockTheme = {
-  colors: {
-    primary: "#007AFF",
-    background: "#FFFFFF",
-    text: "#000000",
-    textSecondary: "#666666",
-    error: "#FF3B30",
-  },
-};
-
-const mockUnits = {
-  weight: "kg",
-  volume: "L",
-  temperature: "C",
-};
-
 const mockUseQuery = require("@tanstack/react-query").useQuery;
 const mockRouter = require("expo-router").router;
 const mockUseLocalSearchParams = require("expo-router").useLocalSearchParams;
 
 // Setup mocks - contexts now return values directly from their mocks
+const TEST_BREW_SESSION_ID = "test-brew-session-1";
 
 describe("ViewBrewSessionScreen", () => {
   beforeEach(() => {
@@ -637,7 +605,7 @@ describe("ViewBrewSessionScreen", () => {
 
     it("should handle invalid status gracefully", async () => {
       const brewSession = mockData.brewSession({
-        id: "test-brew-session-1", // Important: must match the URL param
+        id: TEST_BREW_SESSION_ID,
         status: null as any,
       });
 
@@ -666,7 +634,7 @@ describe("ViewBrewSessionScreen", () => {
 
     it("should format dates correctly", async () => {
       const brewSession = mockData.brewSession({
-        id: "test-brew-session-1", // Important: must match the URL param
+        id: TEST_BREW_SESSION_ID,
         brew_date: "2024-01-15T00:00:00Z",
         fermentation_start_date: "2024-01-16T00:00:00Z",
       });
@@ -739,7 +707,7 @@ describe("ViewBrewSessionScreen", () => {
 
     it("should format brewing metrics with correct precision", async () => {
       const brewSession = mockData.brewSession({
-        id: "test-brew-session-1", // Important: must match the URL param
+        id: TEST_BREW_SESSION_ID,
         actual_og: 1.065432,
         actual_fg: 1.012345,
         actual_abv: 6.789,
@@ -765,7 +733,7 @@ describe("ViewBrewSessionScreen", () => {
 
     it("should handle missing metrics gracefully", async () => {
       const brewSession = mockData.brewSession({
-        id: "test-brew-session-1", // Important: must match the URL param
+        id: TEST_BREW_SESSION_ID,
         actual_og: undefined,
         actual_fg: undefined,
         actual_abv: undefined,

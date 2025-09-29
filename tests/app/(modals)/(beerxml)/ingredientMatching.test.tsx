@@ -38,7 +38,7 @@ jest.mock("@services/beerxml/BeerXMLService", () => ({
   __esModule: true,
   default: {
     matchIngredients: jest.fn(),
-    createIngredientsFromMatching: jest.fn(),
+    createIngredients: jest.fn(),
   },
 }));
 
