@@ -571,11 +571,13 @@ describe("CreateBrewSessionScreen", () => {
       });
     });
 
-       it("should show loading state during submission", async () => {
+    it("should show loading state during submission", async () => {
       const service =
         require("@services/offlineV2/UserCacheService").UserCacheService;
       // Keep promise pending only for this invocation
-      service.createBrewSession.mockImplementationOnce(() => new Promise(() => {}));
+      service.createBrewSession.mockImplementationOnce(
+        () => new Promise(() => {})
+      );
       const { getByTestId, getByPlaceholderText } = renderWithProviders(
         <CreateBrewSessionScreen />
       );

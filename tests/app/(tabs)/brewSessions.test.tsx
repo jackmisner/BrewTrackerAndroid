@@ -293,7 +293,8 @@ describe("BrewSessionsScreen", () => {
     });
 
     // Reset UserCacheService mock implementations to prevent test leakage
-    const UserCacheServiceMock = require("@services/offlineV2/UserCacheService").UserCacheService;
+    const UserCacheServiceMock =
+      require("@services/offlineV2/UserCacheService").UserCacheService;
     const mockBrewSessions = [
       {
         id: "test-session-1",
@@ -340,7 +341,9 @@ describe("BrewSessionsScreen", () => {
     ];
     UserCacheServiceMock.getBrewSessions.mockResolvedValue(mockBrewSessions);
     UserCacheServiceMock.getPendingOperationsCount.mockResolvedValue(0);
-    UserCacheServiceMock.refreshBrewSessionsFromServer.mockResolvedValue(undefined);
+    UserCacheServiceMock.refreshBrewSessionsFromServer.mockResolvedValue(
+      undefined
+    );
   });
 
   describe("tab navigation", () => {
@@ -456,7 +459,9 @@ describe("BrewSessionsScreen", () => {
         new Error("Network error")
       );
       // Mock refreshBrewSessionsFromServer for this test
-      require("@services/offlineV2/UserCacheService").UserCacheService.refreshBrewSessionsFromServer.mockResolvedValueOnce(undefined);
+      require("@services/offlineV2/UserCacheService").UserCacheService.refreshBrewSessionsFromServer.mockResolvedValueOnce(
+        undefined
+      );
 
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
@@ -468,7 +473,10 @@ describe("BrewSessionsScreen", () => {
       fireEvent.press(retryButton);
 
       await waitFor(() => {
-        expect(require("@services/offlineV2/UserCacheService").UserCacheService.refreshBrewSessionsFromServer).toHaveBeenCalled();
+        expect(
+          require("@services/offlineV2/UserCacheService").UserCacheService
+            .refreshBrewSessionsFromServer
+        ).toHaveBeenCalled();
       });
     });
   });
@@ -669,11 +677,12 @@ describe("BrewSessionsScreen", () => {
   });
 
   describe("floating action button", () => {
-  beforeEach(() => {
-    // Ensure empty dataset for this describe
-    require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions
-      .mockResolvedValue([]);
-  });
+    beforeEach(() => {
+      // Ensure empty dataset for this describe
+      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockResolvedValue(
+        []
+      );
+    });
 
     it("should show floating action button only for active tab", () => {
       const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
