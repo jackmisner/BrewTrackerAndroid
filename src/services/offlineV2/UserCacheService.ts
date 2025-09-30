@@ -1340,6 +1340,398 @@ export class UserCacheService {
   }
 
   // ============================================================================
+  // Fermentation Entry Management
+  // ============================================================================
+
+  /**
+   * Add a fermentation entry to a brew session
+   * Operates on embedded array - updates parent brew session
+   */
+  static async addFermentationEntry(
+    sessionId: string,
+    entry: Partial<import("@src/types").FermentationEntry>
+  ): Promise<import("@src/types").BrewSession> {
+    try {
+      const userId = await UserValidationService.getCurrentUserIdFromToken();
+      if (!userId) {
+        throw new OfflineError(
+          "User ID is required for adding fermentation entries",
+          "AUTH_ERROR",
+          false
+        );
+      }
+
+      await UnifiedLogger.info(
+        "UserCacheService.addFermentationEntry",
+        `Adding fermentation entry to session ${sessionId}`,
+        { userId, sessionId, entryDate: entry.entry_date }
+      );
+
+      // Get the brew session
+      const session = await this.getBrewSessionById(sessionId, userId);
+      if (!session) {
+        throw new OfflineError("Brew session not found", "NOT_FOUND", false);
+      }
+
+      // Create new entry with defaults
+      const newEntry: import("@src/types").FermentationEntry = {
+        entry_date: entry.entry_date || new Date().toISOString().split("T")[0],
+        temperature: entry.temperature,
+        gravity: entry.gravity,
+        ph: entry.ph,
+        notes: entry.notes,
+      };
+
+      // Update fermentation entries array
+      const updatedEntries = [
+        ...(session.fermentation_entries || []),
+        newEntry,
+      ];
+
+      // Update the brew session with new entry
+      const updatedSession = await this.updateBrewSession(sessionId, {
+        fermentation_entries: updatedEntries,
+      });
+
+      await UnifiedLogger.info(
+        "UserCacheService.addFermentationEntry",
+        `Fermentation entry added successfully`,
+        { sessionId, totalEntries: updatedEntries.length }
+      );
+
+      return updatedSession;
+    } catch (error) {
+      console.error("Error adding fermentation entry:", error);
+      throw new OfflineError(
+        "Failed to add fermentation entry",
+        "CREATE_ERROR",
+        true
+      );
+    }
+  }
+
+  /**
+   * Update a fermentation entry by index
+   * Uses array index since entries don't have unique IDs
+   */
+  static async updateFermentationEntry(
+    sessionId: string,
+    entryIndex: number,
+    updates: Partial<import("@src/types").FermentationEntry>
+  ): Promise<import("@src/types").BrewSession> {
+    try {
+      const userId = await UserValidationService.getCurrentUserIdFromToken();
+      if (!userId) {
+        throw new OfflineError(
+          "User ID is required for updating fermentation entries",
+          "AUTH_ERROR",
+          false
+        );
+      }
+
+      await UnifiedLogger.info(
+        "UserCacheService.updateFermentationEntry",
+        `Updating fermentation entry at index ${entryIndex}`,
+        { userId, sessionId, entryIndex }
+      );
+
+      // Get the brew session
+      const session = await this.getBrewSessionById(sessionId, userId);
+      if (!session) {
+        throw new OfflineError("Brew session not found", "NOT_FOUND", false);
+      }
+
+      const entries = session.fermentation_entries || [];
+      if (entryIndex < 0 || entryIndex >= entries.length) {
+        throw new OfflineError(
+          "Fermentation entry not found",
+          "NOT_FOUND",
+          false
+        );
+      }
+
+      // Update the entry
+      const updatedEntries = [...entries];
+      updatedEntries[entryIndex] = {
+        ...updatedEntries[entryIndex],
+        ...updates,
+      };
+
+      // Update the brew session
+      const updatedSession = await this.updateBrewSession(sessionId, {
+        fermentation_entries: updatedEntries,
+      });
+
+      await UnifiedLogger.info(
+        "UserCacheService.updateFermentationEntry",
+        `Fermentation entry updated successfully`,
+        { sessionId, entryIndex }
+      );
+
+      return updatedSession;
+    } catch (error) {
+      console.error("Error updating fermentation entry:", error);
+      throw new OfflineError(
+        "Failed to update fermentation entry",
+        "UPDATE_ERROR",
+        true
+      );
+    }
+  }
+
+  /**
+   * Delete a fermentation entry by index
+   */
+  static async deleteFermentationEntry(
+    sessionId: string,
+    entryIndex: number
+  ): Promise<import("@src/types").BrewSession> {
+    try {
+      const userId = await UserValidationService.getCurrentUserIdFromToken();
+      if (!userId) {
+        throw new OfflineError(
+          "User ID is required for deleting fermentation entries",
+          "AUTH_ERROR",
+          false
+        );
+      }
+
+      await UnifiedLogger.info(
+        "UserCacheService.deleteFermentationEntry",
+        `Deleting fermentation entry at index ${entryIndex}`,
+        { userId, sessionId, entryIndex }
+      );
+
+      // Get the brew session
+      const session = await this.getBrewSessionById(sessionId, userId);
+      if (!session) {
+        throw new OfflineError("Brew session not found", "NOT_FOUND", false);
+      }
+
+      const entries = session.fermentation_entries || [];
+      if (entryIndex < 0 || entryIndex >= entries.length) {
+        throw new OfflineError(
+          "Fermentation entry not found",
+          "NOT_FOUND",
+          false
+        );
+      }
+
+      // Remove the entry
+      const updatedEntries = entries.filter((_, index) => index !== entryIndex);
+
+      // Update the brew session
+      const updatedSession = await this.updateBrewSession(sessionId, {
+        fermentation_entries: updatedEntries,
+      });
+
+      await UnifiedLogger.info(
+        "UserCacheService.deleteFermentationEntry",
+        `Fermentation entry deleted successfully`,
+        { sessionId, remainingEntries: updatedEntries.length }
+      );
+
+      return updatedSession;
+    } catch (error) {
+      console.error("Error deleting fermentation entry:", error);
+      throw new OfflineError(
+        "Failed to delete fermentation entry",
+        "DELETE_ERROR",
+        true
+      );
+    }
+  }
+
+  // ============================================================================
+  // Dry-Hop Management
+  // ============================================================================
+
+  /**
+   * Add a dry-hop from recipe ingredient (no manual entry needed)
+   * Automatically sets addition_date to now
+   */
+  static async addDryHopFromRecipe(
+    sessionId: string,
+    dryHopData: import("@src/types").CreateDryHopFromRecipeRequest
+  ): Promise<import("@src/types").BrewSession> {
+    try {
+      const userId = await UserValidationService.getCurrentUserIdFromToken();
+      if (!userId) {
+        throw new OfflineError(
+          "User ID is required for adding dry-hops",
+          "AUTH_ERROR",
+          false
+        );
+      }
+
+      await UnifiedLogger.info(
+        "UserCacheService.addDryHopFromRecipe",
+        `Adding dry-hop to session ${sessionId}`,
+        { userId, sessionId, hopName: dryHopData.hop_name }
+      );
+
+      // Get the brew session
+      const session = await this.getBrewSessionById(sessionId, userId);
+      if (!session) {
+        throw new OfflineError("Brew session not found", "NOT_FOUND", false);
+      }
+
+      // Create new dry-hop addition with automatic timestamp
+      const newDryHop: import("@src/types").DryHopAddition = {
+        addition_date:
+          dryHopData.addition_date || new Date().toISOString().split("T")[0],
+        hop_name: dryHopData.hop_name,
+        hop_type: dryHopData.hop_type,
+        amount: dryHopData.amount,
+        amount_unit: dryHopData.amount_unit,
+        duration_days: dryHopData.duration_days,
+        phase: dryHopData.phase || "primary",
+      };
+
+      // Update dry-hop additions array
+      const updatedDryHops = [...(session.dry_hop_additions || []), newDryHop];
+
+      // Update the brew session with new dry-hop
+      const updatedSession = await this.updateBrewSession(sessionId, {
+        dry_hop_additions: updatedDryHops,
+      });
+
+      await UnifiedLogger.info(
+        "UserCacheService.addDryHopFromRecipe",
+        `Dry-hop added successfully`,
+        {
+          sessionId,
+          hopName: dryHopData.hop_name,
+          totalDryHops: updatedDryHops.length,
+        }
+      );
+
+      return updatedSession;
+    } catch (error) {
+      console.error("Error adding dry-hop:", error);
+      throw new OfflineError("Failed to add dry-hop", "CREATE_ERROR", true);
+    }
+  }
+
+  /**
+   * Remove a dry-hop (mark with removal_date)
+   * Uses index since dry-hops don't have unique IDs
+   */
+  static async removeDryHop(
+    sessionId: string,
+    dryHopIndex: number
+  ): Promise<import("@src/types").BrewSession> {
+    try {
+      const userId = await UserValidationService.getCurrentUserIdFromToken();
+      if (!userId) {
+        throw new OfflineError(
+          "User ID is required for removing dry-hops",
+          "AUTH_ERROR",
+          false
+        );
+      }
+
+      await UnifiedLogger.info(
+        "UserCacheService.removeDryHop",
+        `Removing dry-hop at index ${dryHopIndex}`,
+        { userId, sessionId, dryHopIndex }
+      );
+
+      // Get the brew session
+      const session = await this.getBrewSessionById(sessionId, userId);
+      if (!session) {
+        throw new OfflineError("Brew session not found", "NOT_FOUND", false);
+      }
+
+      const dryHops = session.dry_hop_additions || [];
+      if (dryHopIndex < 0 || dryHopIndex >= dryHops.length) {
+        throw new OfflineError("Dry-hop not found", "NOT_FOUND", false);
+      }
+
+      // Mark with removal_date (don't delete from array)
+      const updatedDryHops = [...dryHops];
+      updatedDryHops[dryHopIndex] = {
+        ...updatedDryHops[dryHopIndex],
+        removal_date: new Date().toISOString().split("T")[0],
+      };
+
+      // Update the brew session
+      const updatedSession = await this.updateBrewSession(sessionId, {
+        dry_hop_additions: updatedDryHops,
+      });
+
+      await UnifiedLogger.info(
+        "UserCacheService.removeDryHop",
+        `Dry-hop marked as removed successfully`,
+        { sessionId, dryHopIndex }
+      );
+
+      return updatedSession;
+    } catch (error) {
+      console.error("Error removing dry-hop:", error);
+      throw new OfflineError("Failed to remove dry-hop", "UPDATE_ERROR", true);
+    }
+  }
+
+  /**
+   * Delete a dry-hop addition completely (admin operation)
+   * Uses index since dry-hops don't have unique IDs
+   */
+  static async deleteDryHopAddition(
+    sessionId: string,
+    dryHopIndex: number
+  ): Promise<import("@src/types").BrewSession> {
+    try {
+      const userId = await UserValidationService.getCurrentUserIdFromToken();
+      if (!userId) {
+        throw new OfflineError(
+          "User ID is required for deleting dry-hops",
+          "AUTH_ERROR",
+          false
+        );
+      }
+
+      await UnifiedLogger.info(
+        "UserCacheService.deleteDryHopAddition",
+        `Deleting dry-hop at index ${dryHopIndex}`,
+        { userId, sessionId, dryHopIndex }
+      );
+
+      // Get the brew session
+      const session = await this.getBrewSessionById(sessionId, userId);
+      if (!session) {
+        throw new OfflineError("Brew session not found", "NOT_FOUND", false);
+      }
+
+      const dryHops = session.dry_hop_additions || [];
+      if (dryHopIndex < 0 || dryHopIndex >= dryHops.length) {
+        throw new OfflineError("Dry-hop not found", "NOT_FOUND", false);
+      }
+
+      // Remove from array completely
+      const updatedDryHops = dryHops.filter(
+        (_, index) => index !== dryHopIndex
+      );
+
+      // Update the brew session
+      const updatedSession = await this.updateBrewSession(sessionId, {
+        dry_hop_additions: updatedDryHops,
+      });
+
+      await UnifiedLogger.info(
+        "UserCacheService.deleteDryHopAddition",
+        `Dry-hop deleted successfully`,
+        { sessionId, remainingDryHops: updatedDryHops.length }
+      );
+
+      return updatedSession;
+    } catch (error) {
+      console.error("Error deleting dry-hop:", error);
+      throw new OfflineError("Failed to delete dry-hop", "DELETE_ERROR", true);
+    }
+  }
+
+  // ============================================================================
   // Sync Management
   // ============================================================================
 
