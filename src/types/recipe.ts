@@ -34,6 +34,9 @@ export type IngredientUnit =
   | "ml"
   | "l";
 
+// Hop format/type (applies to all hop ingredients)
+export type HopFormat = "Pellet" | "Leaf" | "Plug" | "Whole" | "Extract";
+
 // Recipe ingredient interface
 export interface RecipeIngredient {
   id: ID;
@@ -52,7 +55,7 @@ export interface RecipeIngredient {
   alpha_acid?: number;
   use?: string;
   time?: number;
-  hop_type?: string;
+  hop_type?: HopFormat;
 
   // Yeast-specific
   attenuation?: number;
@@ -204,7 +207,7 @@ export interface CreateRecipeIngredientData {
   alpha_acid?: number;
   use?: string;
   time?: number;
-  hop_type?: string;
+  hop_type?: HopFormat;
   attenuation?: number;
   yeast_type?: string;
   manufacturer?: string;

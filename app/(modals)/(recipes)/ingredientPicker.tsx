@@ -47,6 +47,7 @@ import {
   IngredientType,
   IngredientUnit,
   Ingredient,
+  HopFormat,
 } from "@src/types";
 import { ingredientPickerStyles } from "@styles/modals/ingredientPickerStyles";
 import { IngredientDetailEditor } from "@src/components/recipes/IngredientEditor/IngredientDetailEditor";
@@ -121,6 +122,8 @@ const convertIngredientToRecipeIngredient = (
     type: ingredient.type as IngredientType,
     amount: ingredient.amount || 0,
     unit: (ingredient.unit as IngredientUnit) || "oz",
+    // Cast hop_type to HopFormat if present
+    hop_type: ingredient.hop_type as HopFormat | undefined,
     // Defer actual instance_id assignment; created in createRecipeIngredientWithDefaults
     instance_id: "",
   };

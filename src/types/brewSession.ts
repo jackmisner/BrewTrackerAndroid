@@ -1,5 +1,5 @@
 import { ID } from "./common";
-import { Recipe } from "./recipe";
+import { Recipe, HopFormat } from "./recipe";
 
 // Brew session status types
 export type BrewSessionStatus =
@@ -97,7 +97,7 @@ export interface BrewSession {
   // Additional API fields
   temperature_unit?: "C" | "F";
   fermentation_data?: FermentationEntry[];
-  dry_hop_additions?: any[];
+  dry_hop_additions?: DryHopAddition[];
 
   // Timestamps
   created_at: string;
@@ -160,6 +160,36 @@ export interface UpdateFermentationEntryRequest {
   temperature?: number;
   gravity?: number; // Specific gravity (e.g., 1.010)
   ph?: number;
+  notes?: string;
+}
+
+// Dry-hop addition - matches backend schema
+export interface DryHopAddition {
+  addition_date: string; // ISO date string
+  hop_name: string;
+  hop_type?: HopFormat;
+  amount: number;
+  amount_unit: string; // oz, g, etc.
+  duration_days?: number; // Planned duration
+  removal_date?: string; // ISO date string when removed
+  notes?: string;
+  phase?: string; // fermentation, secondary, etc.
+}
+
+// Create dry-hop from recipe ingredient
+export interface CreateDryHopFromRecipeRequest {
+  hop_name: string;
+  hop_type?: HopFormat;
+  amount: number;
+  amount_unit: string;
+  duration_days?: number;
+  addition_date?: string; // Defaults to now
+  phase?: string;
+}
+
+// Update dry-hop addition
+export interface UpdateDryHopRequest {
+  removal_date?: string;
   notes?: string;
 }
 

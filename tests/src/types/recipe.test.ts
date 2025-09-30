@@ -150,13 +150,13 @@ describe("Recipe Types", () => {
         alpha_acid: 5.5,
         use: "boil",
         time: 60,
-        hop_type: "bittering",
+        hop_type: "Pellet",
       });
 
       expect(hop.alpha_acid).toBe(5.5);
       expect(hop.use).toBe("boil");
       expect(hop.time).toBe(60);
-      expect(hop.hop_type).toBe("bittering");
+      expect(hop.hop_type).toBe("Pellet");
     });
 
     it("should support yeast-specific properties", () => {
@@ -656,7 +656,7 @@ describe("Recipe Types", () => {
         alpha_acid: 12.0,
         use: "aroma",
         time: 5,
-        hop_type: "aroma",
+        hop_type: "Leaf",
       };
 
       const newYeast: CreateRecipeIngredientData = {
