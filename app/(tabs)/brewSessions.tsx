@@ -59,6 +59,13 @@ import {
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
 import { useBrewSessions } from "@hooks/offlineV2/useUserData";
+import { useOfflineSync } from "@hooks/offlineV2";
+import { useNetwork } from "@contexts/NetworkContext";
+import {
+  getSyncStatusMessage,
+  handlePullToRefreshSync,
+} from "@utils/syncUtils";
+
 export default function BrewSessionsScreen() {
   const theme = useTheme();
   const styles = brewSessionsStyles(theme);
@@ -69,6 +76,10 @@ export default function BrewSessionsScreen() {
 
   // Context menu state
   const contextMenu = useContextMenu<BrewSession>();
+
+  // Network and sync state
+  const { isConnected } = useNetwork();
+  const { isSyncing, pendingOperations, sync: syncMutation } = useOfflineSync();
 
   // Set active tab from URL parameters
   // Always respond to navigation with explicit activeTab parameters
@@ -99,6 +110,14 @@ export default function BrewSessionsScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
+      // Trigger sync if online and there are pending changes
+      await handlePullToRefreshSync(
+        isConnected,
+        pendingOperations,
+        syncMutation
+      );
+
+      // Refresh brew sessions data
       await refresh();
     } finally {
       setRefreshing(false);
@@ -485,6 +504,42 @@ export default function BrewSessionsScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Sync status and button */}
+        {pendingOperations > 0 && (
+          <View style={styles.syncStatusContainer}>
+            <View style={styles.syncInfo}>
+              <MaterialIcons
+                name={isSyncing ? "sync" : "cloud-upload"}
+                size={16}
+                color={theme.colors.primary}
+                style={isSyncing ? { transform: [{ rotate: "45deg" }] } : {}}
+              />
+              <Text style={styles.syncText}>
+                {getSyncStatusMessage(pendingOperations, isSyncing)}
+              </Text>
+            </View>
+            {isConnected && !isSyncing && (
+              <TouchableOpacity
+                onPress={async () => {
+                  try {
+                    await syncMutation();
+                  } catch (error) {
+                    console.error("Sync failed:", error);
+                    Alert.alert(
+                      "Sync Failed",
+                      "Unable to sync changes. Please try again.",
+                      [{ text: "OK" }]
+                    );
+                  }
+                }}
+                style={styles.syncButton}
+              >
+                <Text style={styles.syncButtonText}>Sync Now</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
 
       {/* Create button for active brews */}

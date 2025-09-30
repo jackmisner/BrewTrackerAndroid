@@ -397,9 +397,25 @@ describe("UserCacheService", () => {
         maxRetries: 3,
       };
 
-      mockAsyncStorage.getItem.mockResolvedValue(
-        JSON.stringify([createOperation])
-      );
+      const tempRecipe: SyncableItem<Recipe> = {
+        id: "temp-123",
+        data: { ...mockRecipe, id: "temp-123" },
+        lastModified: Date.now(),
+        syncStatus: "pending",
+        needsSync: true,
+        tempId: "temp-123",
+      };
+
+      // Mock getPendingOperations sequence: first with operation, then empty after processing
+      mockAsyncStorage.getItem
+        .mockResolvedValueOnce(JSON.stringify([createOperation])) // Initial getPendingOperations
+        .mockResolvedValueOnce(JSON.stringify([createOperation])) // removePendingOperation read
+        .mockResolvedValueOnce(JSON.stringify([tempRecipe])) // mapTempIdToRealId - read USER_RECIPES
+        .mockResolvedValueOnce("[]") // mapTempIdToRealId - read USER_BREW_SESSIONS (no sessions)
+        .mockResolvedValueOnce("[]") // mapTempIdToRealId - read USER_BREW_SESSIONS again for recipe_id references
+        .mockResolvedValueOnce(JSON.stringify([createOperation])) // mapTempIdToRealId - read PENDING_OPERATIONS
+        .mockResolvedValueOnce("[]"); // getPendingOperations after ID mapping (empty queue)
+
       (mockApiService.recipes.create as jest.Mock).mockResolvedValue({
         data: mockRecipe,
       });
@@ -427,9 +443,13 @@ describe("UserCacheService", () => {
         maxRetries: 3,
       };
 
-      mockAsyncStorage.getItem.mockResolvedValue(
-        JSON.stringify([updateOperation])
-      );
+      // Mock sequence for update operation
+      mockAsyncStorage.getItem
+        .mockResolvedValueOnce(JSON.stringify([updateOperation])) // Initial getPendingOperations
+        .mockResolvedValueOnce(JSON.stringify([updateOperation])) // removePendingOperation read
+        .mockResolvedValueOnce(JSON.stringify([])) // getCachedRecipes for markItemAsSynced
+        .mockResolvedValueOnce("[]"); // getPendingOperations after processing (empty)
+
       (mockApiService.recipes.update as jest.Mock).mockResolvedValue({
         data: mockRecipe,
       });
@@ -456,9 +476,13 @@ describe("UserCacheService", () => {
         maxRetries: 3,
       };
 
-      mockAsyncStorage.getItem.mockResolvedValue(
-        JSON.stringify([deleteOperation])
-      );
+      // Mock sequence for delete operation
+      mockAsyncStorage.getItem
+        .mockResolvedValueOnce(JSON.stringify([deleteOperation])) // Initial getPendingOperations
+        .mockResolvedValueOnce(JSON.stringify([deleteOperation])) // removePendingOperation read
+        .mockResolvedValueOnce(JSON.stringify([])) // getCachedRecipes for removeItemFromCache
+        .mockResolvedValueOnce("[]"); // getPendingOperations after processing (empty)
+
       (mockApiService.recipes.delete as jest.Mock).mockResolvedValue({
         data: {},
       });
@@ -483,9 +507,12 @@ describe("UserCacheService", () => {
         maxRetries: 3,
       };
 
-      mockAsyncStorage.getItem.mockResolvedValue(
-        JSON.stringify([failingOperation])
-      );
+      // Mock sequence for failed operation
+      mockAsyncStorage.getItem
+        .mockResolvedValueOnce(JSON.stringify([failingOperation])) // Initial getPendingOperations
+        .mockResolvedValueOnce(JSON.stringify([failingOperation])) // updatePendingOperation read
+        .mockResolvedValueOnce("[]"); // getPendingOperations after error handling (empty to exit loop)
+
       (mockApiService.recipes.create as jest.Mock).mockRejectedValue(
         new Error("Network error")
       );
@@ -513,9 +540,12 @@ describe("UserCacheService", () => {
         maxRetries: 3,
       };
 
-      mockAsyncStorage.getItem.mockResolvedValue(
-        JSON.stringify([maxRetriesOperation])
-      );
+      // Mock sequence for max retries reached
+      mockAsyncStorage.getItem
+        .mockResolvedValueOnce(JSON.stringify([maxRetriesOperation])) // Initial getPendingOperations
+        .mockResolvedValueOnce(JSON.stringify([maxRetriesOperation])) // removePendingOperation read
+        .mockResolvedValueOnce("[]"); // getPendingOperations after removal (empty)
+
       (mockApiService.recipes.create as jest.Mock).mockRejectedValue(
         new Error("Network error")
       );

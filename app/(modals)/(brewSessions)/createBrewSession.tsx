@@ -47,9 +47,7 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
-import ApiService from "@services/api/apiService";
-import { useBrewSessions } from "@hooks/offlineV2/useUserData";
+import { useBrewSessions, useRecipes } from "@hooks/offlineV2/useUserData";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import { useUserValidation } from "@utils/userValidation";
@@ -103,11 +101,15 @@ export default function CreateBrewSessionScreen() {
   const styles = createBrewSessionStyles(theme);
   const params = useLocalSearchParams();
   const { create: createBrewSession } = useBrewSessions();
+  const { getById: getRecipeById } = useRecipes();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedTemperatureUnit, setSelectedTemperatureUnit] = useState<
     "F" | "C" | null
   >(null);
   const [showUnitPrompt, setShowUnitPrompt] = useState(false);
+  const [recipe, setRecipe] = useState<any>(null);
+  const [isLoadingRecipe, setIsLoadingRecipe] = useState(true);
+  const [recipeError, setRecipeError] = useState<string | null>(null);
 
   const recipeIdParam = params.recipeId as string | string[] | undefined;
   const recipeId = Array.isArray(recipeIdParam)
@@ -122,24 +124,37 @@ export default function CreateBrewSessionScreen() {
     notes: "",
   });
 
-  // Fetch recipe details
-  const {
-    data: recipeResponse,
-    isLoading: isLoadingRecipe,
-    error: recipeError,
-  } = useQuery({
-    queryKey: ["recipe", recipeId],
-    queryFn: async () => {
+  // Load recipe details from offline cache
+  useEffect(() => {
+    const loadRecipe = async () => {
       if (!recipeId) {
-        throw new Error("Recipe ID is required");
+        setRecipeError("Recipe ID is required");
+        setIsLoadingRecipe(false);
+        return;
       }
-      return ApiService.recipes.getById(recipeId);
-    },
-    enabled: !!recipeId,
-    retry: 1,
-  });
 
-  const recipe = recipeResponse?.data;
+      try {
+        setIsLoadingRecipe(true);
+        setRecipeError(null);
+
+        const recipeData = await getRecipeById(recipeId);
+        if (recipeData) {
+          setRecipe(recipeData);
+        } else {
+          setRecipeError("Recipe not found in offline cache");
+        }
+      } catch (error) {
+        console.error("Error loading recipe:", error);
+        setRecipeError(
+          error instanceof Error ? error.message : "Failed to load recipe"
+        );
+      } finally {
+        setIsLoadingRecipe(false);
+      }
+    };
+
+    loadRecipe();
+  }, [recipeId, getRecipeById]);
 
   // Auto-populate session name when recipe loads
   useEffect(() => {
@@ -286,13 +301,13 @@ export default function CreateBrewSessionScreen() {
   }
 
   // Error state
-  if (recipeError || !recipe) {
+  if (recipeError || (!isLoadingRecipe && !recipe)) {
     return (
       <View style={styles.errorContainer}>
         <MaterialIcons name="error" size={48} color={theme.colors.error} />
         <Text style={styles.errorText}>Failed to Load Recipe</Text>
         <Text style={styles.errorSubtext}>
-          {recipeError ? "Could not load recipe details" : "Recipe not found"}
+          {recipeError || "Recipe not found"}
         </Text>
         <TouchableOpacity
           style={styles.retryButton}

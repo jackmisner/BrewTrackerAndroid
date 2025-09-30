@@ -83,20 +83,10 @@ jest.mock("@contexts/CalculatorsContext", () => {
   };
 });
 
-// Mock UserCacheService
-jest.mock("@services/offlineV2/UserCacheService", () => ({
-  UserCacheService: {
-    getBrewSessions: jest.fn().mockResolvedValue([]),
-    getPendingOperationsCount: jest.fn().mockResolvedValue(0),
-    createBrewSession: jest.fn().mockResolvedValue({
-      id: "new-session-id",
-      name: "Test Brew Session",
-      recipe_id: "test-recipe-id",
-      brew_date: "2024-01-01",
-      status: "fermenting",
-      user_id: "test-user-id",
-    }),
-  },
+// Mock offline V2 hooks instead of the service directly
+jest.mock("@hooks/offlineV2/useUserData", () => ({
+  useBrewSessions: jest.fn(),
+  useRecipes: jest.fn(),
 }));
 
 import React from "react";
@@ -143,21 +133,6 @@ jest.mock("@react-native-community/datetimepicker", () => {
   return MockDateTimePicker;
 });
 
-jest.mock("@tanstack/react-query", () => {
-  const actual = jest.requireActual("@tanstack/react-query");
-  const queryClientMock = {
-    invalidateQueries: jest.fn(),
-    setQueryData: jest.fn(),
-    getQueryData: jest.fn(),
-  };
-  return {
-    ...actual,
-    useQuery: jest.fn(),
-    useMutation: jest.fn(),
-    useQueryClient: jest.fn(() => queryClientMock),
-  };
-});
-
 jest.mock("expo-router", () => ({
   router: {
     back: jest.fn(),
@@ -166,24 +141,6 @@ jest.mock("expo-router", () => ({
   useLocalSearchParams: jest.fn(() => ({
     recipeId: "test-recipe-id",
   })),
-}));
-
-// Mock the API service with a different approach
-const mockApiService = {
-  recipes: {
-    getById: jest.fn(),
-  },
-  brewSessions: {
-    create: jest.fn(),
-  },
-  handleApiError: jest.fn((error: any) => ({
-    message: error.message || "Unknown error",
-  })),
-};
-
-jest.mock("@services/api/apiService", () => ({
-  __esModule: true,
-  default: mockApiService,
 }));
 
 jest.mock("@utils/userValidation", () => ({
@@ -241,8 +198,9 @@ jest.mock("@utils/formatUtils", () => ({
   formatSRM: jest.fn(value => (value ? value.toFixed(1) : "—")),
 }));
 
-const mockUseQuery = require("@tanstack/react-query").useQuery;
-const mockUseMutation = require("@tanstack/react-query").useMutation;
+const mockUseBrewSessions =
+  require("@hooks/offlineV2/useUserData").useBrewSessions;
+const mockUseRecipes = require("@hooks/offlineV2/useUserData").useRecipes;
 const mockRouter = require("expo-router").router;
 const mockUseLocalSearchParams = require("expo-router").useLocalSearchParams;
 const mockAlert = require("react-native").Alert;
@@ -264,6 +222,9 @@ const mockRecipe = {
 };
 
 describe("CreateBrewSessionScreen", () => {
+  let mockCreateBrewSession: jest.Mock;
+  let mockGetRecipeById: jest.Mock;
+
   beforeEach(() => {
     jest.clearAllMocks();
     testUtils.resetCounters();
@@ -271,16 +232,29 @@ describe("CreateBrewSessionScreen", () => {
     // Set default mock implementations
     mockUseLocalSearchParams.mockReturnValue({ recipeId: "test-recipe-id" });
 
-    mockUseQuery.mockReturnValue({
-      data: { data: mockRecipe },
-      isLoading: false,
-      error: null,
+    // Mock the offline V2 hooks
+    mockCreateBrewSession = jest.fn().mockResolvedValue({
+      id: "new-session-id",
+      name: "Test Brew Session",
+      recipe_id: "test-recipe-id",
+      brew_date: "2024-01-01",
+      status: "planned",
+      user_id: "test-user-id",
     });
 
-    mockUseMutation.mockReturnValue({
-      mutate: jest.fn(),
-      isLoading: false,
-      error: null,
+    mockGetRecipeById = jest.fn().mockResolvedValue(mockRecipe);
+
+    mockUseBrewSessions.mockReturnValue({
+      create: mockCreateBrewSession,
+      update: jest.fn(),
+      delete: jest.fn(),
+    });
+
+    mockUseRecipes.mockReturnValue({
+      getById: mockGetRecipeById,
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
     });
 
     // Reset UnitContext mock to return imperial by default
@@ -302,42 +276,35 @@ describe("CreateBrewSessionScreen", () => {
       expect(mockRouter.back).toHaveBeenCalled();
     });
 
-    it("should handle array recipeId parameter", () => {
+    it("should handle array recipeId parameter", async () => {
       mockUseLocalSearchParams.mockReturnValue({
         recipeId: ["test-recipe-1", "test-recipe-2"],
       });
 
       renderWithProviders(<CreateBrewSessionScreen />);
 
-      expect(mockUseQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          queryKey: ["recipe", "test-recipe-1"],
-        })
-      );
+      await waitFor(() => {
+        expect(mockGetRecipeById).toHaveBeenCalledWith("test-recipe-1");
+      });
     });
 
-    it("should use single recipeId when provided as string", () => {
+    it("should use single recipeId when provided as string", async () => {
       mockUseLocalSearchParams.mockReturnValue({
         recipeId: "single-recipe-id",
       });
 
       renderWithProviders(<CreateBrewSessionScreen />);
 
-      expect(mockUseQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          queryKey: ["recipe", "single-recipe-id"],
-        })
-      );
+      await waitFor(() => {
+        expect(mockGetRecipeById).toHaveBeenCalledWith("single-recipe-id");
+      });
     });
   });
 
   describe("Loading State", () => {
     it("should show loading indicator while fetching recipe", () => {
-      mockUseQuery.mockReturnValue({
-        data: null,
-        isLoading: true,
-        error: null,
-      });
+      // Mock getById to return a pending promise
+      mockGetRecipeById.mockImplementation(() => new Promise(() => {}));
 
       const { getByText } = renderWithProviders(<CreateBrewSessionScreen />);
 
@@ -346,40 +313,36 @@ describe("CreateBrewSessionScreen", () => {
   });
 
   describe("Error States", () => {
-    it("should show error message when recipe fails to load", () => {
-      mockUseQuery.mockReturnValue({
-        data: null,
-        isLoading: false,
-        error: new Error("Network error"),
-      });
+    it("should show error message when recipe fails to load", async () => {
+      mockGetRecipeById.mockRejectedValue(new Error("Network error"));
 
       const { getByText } = renderWithProviders(<CreateBrewSessionScreen />);
 
-      expect(getByText("Failed to Load Recipe")).toBeTruthy();
-      expect(getByText("Could not load recipe details")).toBeTruthy();
+      await waitFor(() => {
+        expect(getByText("Failed to Load Recipe")).toBeTruthy();
+        expect(getByText("Network error")).toBeTruthy();
+      });
     });
 
-    it("should show not found message when recipe is null", () => {
-      mockUseQuery.mockReturnValue({
-        data: null,
-        isLoading: false,
-        error: null,
-      });
+    it("should show not found message when recipe is null", async () => {
+      mockGetRecipeById.mockResolvedValue(null);
 
       const { getByText } = renderWithProviders(<CreateBrewSessionScreen />);
 
-      expect(getByText("Failed to Load Recipe")).toBeTruthy();
-      expect(getByText("Recipe not found")).toBeTruthy();
+      await waitFor(() => {
+        expect(getByText("Failed to Load Recipe")).toBeTruthy();
+        expect(getByText("Recipe not found in offline cache")).toBeTruthy();
+      });
     });
 
-    it("should navigate back when go back button is pressed in error state", () => {
-      mockUseQuery.mockReturnValue({
-        data: null,
-        isLoading: false,
-        error: new Error("Network error"),
-      });
+    it("should navigate back when go back button is pressed in error state", async () => {
+      mockGetRecipeById.mockRejectedValue(new Error("Network error"));
 
       const { getByText } = renderWithProviders(<CreateBrewSessionScreen />);
+
+      await waitFor(() => {
+        expect(getByText("Failed to Load Recipe")).toBeTruthy();
+      });
 
       fireEvent.press(getByText("Go Back"));
 
@@ -388,18 +351,22 @@ describe("CreateBrewSessionScreen", () => {
   });
 
   describe("Successful Recipe Load", () => {
-    it("should display recipe information correctly", () => {
+    it("should display recipe information correctly", async () => {
       const { getByText } = renderWithProviders(<CreateBrewSessionScreen />);
 
-      expect(getByText("Test IPA Recipe")).toBeTruthy();
-      expect(getByText("American IPA")).toBeTruthy();
+      await waitFor(() => {
+        expect(getByText("Test IPA Recipe")).toBeTruthy();
+        expect(getByText("American IPA")).toBeTruthy();
+      });
     });
 
-    it("should display recipe metrics", () => {
+    it("should display recipe metrics", async () => {
       const { queryByText } = renderWithProviders(<CreateBrewSessionScreen />);
 
       // The component should render without errors and show recipe data
-      expect(queryByText("Test IPA Recipe")).toBeTruthy();
+      await waitFor(() => {
+        expect(queryByText("Test IPA Recipe")).toBeTruthy();
+      });
     });
 
     it("should auto-populate session name based on recipe", async () => {
@@ -417,14 +384,10 @@ describe("CreateBrewSessionScreen", () => {
   });
 
   describe("Unit System Handling", () => {
-    it("should not show unit prompt when recipe and user units match", () => {
+    it("should not show unit prompt when recipe and user units match", async () => {
       // Both recipe and user prefer imperial
       const imperialRecipe = { ...mockRecipe, unit_system: "imperial" };
-      mockUseQuery.mockReturnValue({
-        data: { data: imperialRecipe },
-        isLoading: false,
-        error: null,
-      });
+      mockGetRecipeById.mockResolvedValue(imperialRecipe);
 
       require("@contexts/UnitContext").useUnits.mockReturnValue({
         unitSystem: "imperial",
@@ -432,18 +395,19 @@ describe("CreateBrewSessionScreen", () => {
 
       const { queryByText } = renderWithProviders(<CreateBrewSessionScreen />);
 
+      // Wait for recipe to load
+      await waitFor(() => {
+        expect(queryByText("Test IPA Recipe")).toBeTruthy();
+      });
+
       // Should not show unit selection prompt
       expect(queryByText("Unit System")).toBeNull();
     });
 
-    it("should show unit prompt when recipe and user units differ", () => {
+    it("should show unit prompt when recipe and user units differ", async () => {
       // Recipe is metric, user prefers imperial
       const metricRecipe = { ...mockRecipe, unit_system: "metric" };
-      mockUseQuery.mockReturnValue({
-        data: { data: metricRecipe },
-        isLoading: false,
-        error: null,
-      });
+      mockGetRecipeById.mockResolvedValue(metricRecipe);
 
       require("@contexts/UnitContext").useUnits.mockReturnValue({
         unitSystem: "imperial",
@@ -451,25 +415,40 @@ describe("CreateBrewSessionScreen", () => {
 
       renderWithProviders(<CreateBrewSessionScreen />);
 
-      // Component should handle unit system differences
-      expect(mockUseQuery).toHaveBeenCalled();
+      // Component should handle unit system differences - wait for recipe to load
+      await waitFor(() => {
+        expect(mockGetRecipeById).toHaveBeenCalled();
+      });
     });
   });
 
   describe("Form Interactions", () => {
-    it("should update session name when user types", () => {
+    it("should update session name when user types", async () => {
       const { getByPlaceholderText } = renderWithProviders(
         <CreateBrewSessionScreen />
       );
 
+      // Wait for recipe to load AND auto-populate
+      await waitFor(() => {
+        const sessionNameInput = getByPlaceholderText("Enter session name");
+        expect(sessionNameInput.props.value).toContain("Test IPA Recipe");
+      });
+
+      // Component auto-populates with recipe name, we can now change it
       const sessionNameInput = getByPlaceholderText("Enter session name");
+
+      // Now change it
       fireEvent.changeText(sessionNameInput, "New Brew Session");
 
       expect(sessionNameInput.props.value).toBe("New Brew Session");
     });
 
-    it("should show date picker when date button is pressed", () => {
+    it("should show date picker when date button is pressed", async () => {
       const { getByTestId } = renderWithProviders(<CreateBrewSessionScreen />);
+
+      await waitFor(() => {
+        expect(mockGetRecipeById).toHaveBeenCalled();
+      });
 
       const dateButton = getByTestId(
         TEST_IDS.patterns.touchableOpacityAction("date-picker")
@@ -480,8 +459,12 @@ describe("CreateBrewSessionScreen", () => {
       expect(dateButton).toBeTruthy();
     });
 
-    it("should update notes when user types", () => {
+    it("should update notes when user types", async () => {
       const { getByTestId } = renderWithProviders(<CreateBrewSessionScreen />);
+
+      await waitFor(() => {
+        expect(mockGetRecipeById).toHaveBeenCalled();
+      });
 
       const notesInput = getByTestId(TEST_IDS.patterns.inputField("notes"));
       fireEvent.changeText(notesInput, "Test notes for brew session");
@@ -492,16 +475,20 @@ describe("CreateBrewSessionScreen", () => {
 
   describe("Form Validation", () => {
     it("should show error when session name is empty", async () => {
-      const mockMutate = jest.fn();
-      mockUseMutation.mockReturnValue({
-        mutate: mockMutate,
-        isLoading: false,
-        error: null,
-      });
-
       const { getByTestId, getByPlaceholderText } = renderWithProviders(
         <CreateBrewSessionScreen />
       );
+
+      // Wait for recipe to load
+      await waitFor(() => {
+        expect(mockGetRecipeById).toHaveBeenCalled();
+      });
+
+      // Wait for auto-population to occur
+      await waitFor(() => {
+        const sessionNameInput = getByPlaceholderText("Enter session name");
+        expect(sessionNameInput.props.value).toContain("Test IPA Recipe");
+      });
 
       // Clear the session name by setting it to just spaces to trigger validation
       const sessionNameInput = getByPlaceholderText("Enter session name");
@@ -519,21 +506,19 @@ describe("CreateBrewSessionScreen", () => {
         );
       });
 
-      // Verify mutation was not called
-      expect(mockMutate).not.toHaveBeenCalled();
+      // Verify create was not called
+      expect(mockCreateBrewSession).not.toHaveBeenCalled();
     });
 
     it("should show error when recipe data is missing during submission", async () => {
-      mockUseQuery.mockReturnValue({
-        data: null,
-        isLoading: false,
-        error: null,
-      });
+      mockGetRecipeById.mockResolvedValue(null);
 
       const { getByText } = renderWithProviders(<CreateBrewSessionScreen />);
 
       // Should show error state when recipe is missing
-      expect(getByText("Recipe not found")).toBeTruthy();
+      await waitFor(() => {
+        expect(getByText("Recipe not found in offline cache")).toBeTruthy();
+      });
     });
   });
 
@@ -543,7 +528,13 @@ describe("CreateBrewSessionScreen", () => {
         <CreateBrewSessionScreen />
       );
 
-      // Fill in the form
+      // Wait for recipe to load and auto-populate
+      await waitFor(() => {
+        const sessionNameInput = getByPlaceholderText("Enter session name");
+        expect(sessionNameInput.props.value).toContain("Test IPA Recipe");
+      });
+
+      // Fill in the form - keep the auto-populated name or change it
       const sessionNameInput = getByPlaceholderText("Enter session name");
       fireEvent.changeText(sessionNameInput, "Test Brew Session");
 
@@ -556,61 +547,61 @@ describe("CreateBrewSessionScreen", () => {
 
       // Verify V2 hook created the brew session
       await waitFor(() => {
-        expect(
-          require("@services/offlineV2/UserCacheService").UserCacheService
-            .createBrewSession
-        ).toHaveBeenCalledWith(
+        expect(mockCreateBrewSession).toHaveBeenCalledWith(
           expect.objectContaining({
             recipe_id: "test-recipe-id",
             name: "Test Brew Session",
             notes: "Test notes",
             status: "planned",
-            user_id: "test-user-id",
           })
         );
       });
     });
 
     it("should show loading state during submission", async () => {
-      const service =
-        require("@services/offlineV2/UserCacheService").UserCacheService;
       // Keep promise pending only for this invocation
-      service.createBrewSession.mockImplementationOnce(
-        () => new Promise(() => {})
-      );
+      mockCreateBrewSession.mockImplementationOnce(() => new Promise(() => {}));
       const { getByTestId, getByPlaceholderText } = renderWithProviders(
         <CreateBrewSessionScreen />
       );
+
+      await waitFor(() => {
+        expect(mockGetRecipeById).toHaveBeenCalled();
+      });
+
       fireEvent.changeText(
         getByPlaceholderText("Enter session name"),
         "Test Brew Session"
       );
       fireEvent.press(getByTestId(TEST_IDS.buttons.saveButton));
-      await waitFor(() => expect(service.createBrewSession).toHaveBeenCalled());
+      await waitFor(() => expect(mockCreateBrewSession).toHaveBeenCalled());
       // While pending, there must be no navigation
       expect(mockRouter.replace).not.toHaveBeenCalled();
       // Optionally assert disabled state or spinner if the UI exposes a testID/accessibility primitive
     });
 
     it("should handle successful creation", async () => {
-      // Ensure the UserCacheService mock is set to success for this test
-      const service =
-        require("@services/offlineV2/UserCacheService").UserCacheService;
-      service.createBrewSession.mockResolvedValue({
+      // Ensure the mock is set to success for this test
+      mockCreateBrewSession.mockResolvedValue({
         id: "new-session-id",
         name: "Test Brew Session",
         recipe_id: "test-recipe-id",
         brew_date: "2024-01-01",
-        status: "fermenting",
+        status: "planned",
         user_id: "test-user-id",
       });
 
-      const { getByTestId } = renderWithProviders(<CreateBrewSessionScreen />);
+      const { getByTestId, getByPlaceholderText } = renderWithProviders(
+        <CreateBrewSessionScreen />
+      );
+
+      // Wait for recipe to load
+      await waitFor(() => {
+        expect(mockGetRecipeById).toHaveBeenCalled();
+      });
 
       // Fill in the form to trigger creation
-      const sessionNameInput = getByTestId(
-        TEST_IDS.patterns.inputField("session-name")
-      );
+      const sessionNameInput = getByPlaceholderText("Enter session name");
       fireEvent.changeText(sessionNameInput, "Test Brew Session");
 
       // Submit the form
@@ -627,15 +618,18 @@ describe("CreateBrewSessionScreen", () => {
     });
 
     it("should handle creation error", async () => {
-      const service =
-        require("@services/offlineV2/UserCacheService").UserCacheService;
       const mockError = new Error("Creation failed");
       // Fail only this invocation; avoid leaking to other tests
-      service.createBrewSession.mockRejectedValueOnce(mockError);
+      mockCreateBrewSession.mockRejectedValueOnce(mockError);
 
       const { getByTestId, getByPlaceholderText } = renderWithProviders(
         <CreateBrewSessionScreen />
       );
+
+      // Wait for recipe to load
+      await waitFor(() => {
+        expect(mockGetRecipeById).toHaveBeenCalled();
+      });
 
       // Fill in the form to trigger creation
       const sessionNameInput = getByPlaceholderText("Enter session name");
@@ -645,7 +639,7 @@ describe("CreateBrewSessionScreen", () => {
       const createButton = getByTestId(TEST_IDS.buttons.saveButton);
       fireEvent.press(createButton);
 
-      await waitFor(() => expect(service.createBrewSession).toHaveBeenCalled());
+      await waitFor(() => expect(mockCreateBrewSession).toHaveBeenCalled());
       // User-visible feedback and no navigation on error
       expect(mockAlert.alert).toHaveBeenCalledWith("Error", expect.any(String));
       expect(mockRouter.replace).not.toHaveBeenCalled();
@@ -653,8 +647,14 @@ describe("CreateBrewSessionScreen", () => {
   });
 
   describe("Navigation", () => {
-    it("should navigate back when cancel button is pressed", () => {
+    it("should navigate back when cancel button is pressed", async () => {
       const { getByTestId } = renderWithProviders(<CreateBrewSessionScreen />);
+
+      // Wait for recipe to load
+      await waitFor(() => {
+        expect(mockGetRecipeById).toHaveBeenCalled();
+      });
+
       const cancelButton = getByTestId(TEST_IDS.components.closeButton);
       fireEvent.press(cancelButton);
       expect(mockRouter.back).toHaveBeenCalled();

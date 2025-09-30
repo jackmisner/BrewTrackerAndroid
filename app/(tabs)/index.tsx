@@ -175,24 +175,31 @@ export default function DashboardScreen() {
             throw error; // Rethrow original error
           }
 
-          // V2 system: Try to get cached recipes for fallback dashboard
-          const cachedRecipes = await UserCacheService.getRecipes(
-            user.id,
-            unitSystem
-          );
+          // V2 system: Try to get cached recipes and brew sessions for fallback dashboard
+          const [cachedRecipes, cachedBrewSessions] = await Promise.all([
+            UserCacheService.getRecipes(user.id, unitSystem),
+            UserCacheService.getBrewSessions(user.id, unitSystem),
+          ]);
+
           if (cachedRecipes && cachedRecipes.length > 0) {
             console.log(
-              "Using cached recipes for fallback dashboard due to API error"
+              "Using cached data for fallback dashboard due to API error"
             );
+
+            // Calculate brew session stats from cached data
+            const activeBrewSessions = (cachedBrewSessions || []).filter(
+              session => session.status !== "completed"
+            );
+
             const fallbackDashboardData = {
               user_stats: {
                 total_recipes: cachedRecipes.length,
                 public_recipes: 0, // Cannot determine from cached data
-                total_brew_sessions: 0, // V2 system doesn't cache brew sessions yet
-                active_brew_sessions: 0,
+                total_brew_sessions: cachedBrewSessions?.length || 0,
+                active_brew_sessions: activeBrewSessions.length,
               },
               recent_recipes: cachedRecipes.slice(0, 3),
-              active_brew_sessions: [],
+              active_brew_sessions: activeBrewSessions.slice(0, 3),
             };
             return {
               data: fallbackDashboardData,
