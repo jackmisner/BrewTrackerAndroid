@@ -498,6 +498,109 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
     }
   }, [getUserIdForOperations, unitSystem]);
 
+  // Fermentation entry operations
+  const addFermentationEntry = useCallback(
+    async (
+      sessionId: string,
+      entry: Partial<import("@src/types").FermentationEntry>
+    ): Promise<BrewSession> => {
+      const updatedSession = await UserCacheService.addFermentationEntry(
+        sessionId,
+        entry
+      );
+
+      // Refresh data
+      await loadData(false);
+
+      return updatedSession;
+    },
+    [loadData]
+  );
+
+  const updateFermentationEntry = useCallback(
+    async (
+      sessionId: string,
+      entryIndex: number,
+      updates: Partial<import("@src/types").FermentationEntry>
+    ): Promise<BrewSession> => {
+      const updatedSession = await UserCacheService.updateFermentationEntry(
+        sessionId,
+        entryIndex,
+        updates
+      );
+
+      // Refresh data
+      await loadData(false);
+
+      return updatedSession;
+    },
+    [loadData]
+  );
+
+  const deleteFermentationEntry = useCallback(
+    async (sessionId: string, entryIndex: number): Promise<BrewSession> => {
+      const updatedSession = await UserCacheService.deleteFermentationEntry(
+        sessionId,
+        entryIndex
+      );
+
+      // Refresh data
+      await loadData(false);
+
+      return updatedSession;
+    },
+    [loadData]
+  );
+
+  // Dry-hop operations
+  const addDryHopFromRecipe = useCallback(
+    async (
+      sessionId: string,
+      dryHopData: import("@src/types").CreateDryHopFromRecipeRequest
+    ): Promise<BrewSession> => {
+      const updatedSession = await UserCacheService.addDryHopFromRecipe(
+        sessionId,
+        dryHopData
+      );
+
+      // Refresh data
+      await loadData(false);
+
+      return updatedSession;
+    },
+    [loadData]
+  );
+
+  const removeDryHop = useCallback(
+    async (sessionId: string, dryHopIndex: number): Promise<BrewSession> => {
+      const updatedSession = await UserCacheService.removeDryHop(
+        sessionId,
+        dryHopIndex
+      );
+
+      // Refresh data
+      await loadData(false);
+
+      return updatedSession;
+    },
+    [loadData]
+  );
+
+  const deleteDryHopAddition = useCallback(
+    async (sessionId: string, dryHopIndex: number): Promise<BrewSession> => {
+      const updatedSession = await UserCacheService.deleteDryHopAddition(
+        sessionId,
+        dryHopIndex
+      );
+
+      // Refresh data
+      await loadData(false);
+
+      return updatedSession;
+    },
+    [loadData]
+  );
+
   // Load data on mount and when user changes
   useEffect(() => {
     const loadDataIfAuthenticated = async () => {
@@ -527,5 +630,13 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
     getById,
     sync,
     refresh,
+    // Fermentation entry operations
+    addFermentationEntry,
+    updateFermentationEntry,
+    deleteFermentationEntry,
+    // Dry-hop operations
+    addDryHopFromRecipe,
+    removeDryHop,
+    deleteDryHopAddition,
   };
 }

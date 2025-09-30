@@ -252,6 +252,32 @@ export interface UseUserDataReturn<T> {
   getById: (id: string) => Promise<T | null>;
   sync: () => Promise<SyncResult>;
   refresh: () => Promise<void>;
+  // Optional brew session-specific methods
+  addFermentationEntry?: (
+    sessionId: string,
+    entry: Partial<import("./brewSession").FermentationEntry>
+  ) => Promise<import("./brewSession").BrewSession>;
+  updateFermentationEntry?: (
+    sessionId: string,
+    entryIndex: number,
+    updates: Partial<import("./brewSession").FermentationEntry>
+  ) => Promise<import("./brewSession").BrewSession>;
+  deleteFermentationEntry?: (
+    sessionId: string,
+    entryIndex: number
+  ) => Promise<import("./brewSession").BrewSession>;
+  addDryHopFromRecipe?: (
+    sessionId: string,
+    dryHopData: import("./brewSession").CreateDryHopFromRecipeRequest
+  ) => Promise<import("./brewSession").BrewSession>;
+  removeDryHop?: (
+    sessionId: string,
+    dryHopIndex: number
+  ) => Promise<import("./brewSession").BrewSession>;
+  deleteDryHopAddition?: (
+    sessionId: string,
+    dryHopIndex: number
+  ) => Promise<import("./brewSession").BrewSession>;
 }
 
 export interface UseOfflineSyncReturn {
