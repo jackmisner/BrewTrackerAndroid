@@ -80,6 +80,32 @@ jest.mock("@expo/vector-icons", () => ({
   },
 }));
 
+// Mock useBrewSessions hook
+const mockGetById = jest.fn();
+const mockUpdateFermentationEntry = jest.fn();
+
+// Create a stable mock hook object
+const mockBrewSessionsHook = {
+  data: null,
+  isLoading: false,
+  error: null,
+  pendingCount: 0,
+  conflictCount: 0,
+  lastSync: null,
+  getById: mockGetById,
+  updateFermentationEntry: mockUpdateFermentationEntry,
+  create: jest.fn(),
+  update: jest.fn(),
+  delete: jest.fn(),
+  clone: jest.fn(),
+  sync: jest.fn(),
+  refresh: jest.fn(),
+};
+
+jest.mock("@src/hooks/offlineV2", () => ({
+  useBrewSessions: jest.fn(() => mockBrewSessionsHook),
+}));
+
 // Mock external dependencies
 jest.mock("@tanstack/react-query", () => {
   const actual = jest.requireActual("@tanstack/react-query");
@@ -319,6 +345,25 @@ describe("EditFermentationEntryScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     testUtils.resetCounters();
+    // Default mock implementation
+    mockGetById.mockResolvedValue({
+      id: "session-123",
+      name: "Test Batch",
+      user_id: "user-123",
+      temperature_unit: "F",
+      fermentation_data: [
+        { gravity: 1.05, temperature: 68, entry_date: "2024-01-01" },
+      ],
+    });
+    mockUpdateFermentationEntry.mockResolvedValue({
+      id: "session-123",
+      name: "Test Batch",
+      user_id: "user-123",
+      temperature_unit: "F",
+      fermentation_data: [
+        { gravity: 1.045, temperature: 70, entry_date: "2024-01-01" },
+      ],
+    });
   });
 
   describe("Basic Rendering", () => {
@@ -335,12 +380,7 @@ describe("EditFermentationEntryScreen", () => {
         ],
       });
 
-      const mockUseQuery = require("@tanstack/react-query").useQuery;
-      mockUseQuery.mockReturnValue({
-        data: mockSession,
-        isLoading: false,
-        error: null,
-      });
+      mockGetById.mockResolvedValue(mockSession);
 
       expect(() =>
         renderWithProviders(<EditFermentationEntryScreen />)
@@ -352,12 +392,7 @@ describe("EditFermentationEntryScreen", () => {
         fermentation_data: [],
       });
 
-      const mockUseQuery = require("@tanstack/react-query").useQuery;
-      mockUseQuery.mockReturnValue({
-        data: mockSession,
-        isLoading: false,
-        error: null,
-      });
+      mockGetById.mockResolvedValue(mockSession);
 
       const { getByText } = renderWithProviders(
         <EditFermentationEntryScreen />
@@ -372,12 +407,7 @@ describe("EditFermentationEntryScreen", () => {
         fermentation_data: [], // No entries at index 0
       });
 
-      const mockUseQuery = require("@tanstack/react-query").useQuery;
-      mockUseQuery.mockReturnValue({
-        data: mockSession,
-        isLoading: false,
-        error: null,
-      });
+      mockGetById.mockResolvedValue(mockSession);
 
       const { getByText } = renderWithProviders(
         <EditFermentationEntryScreen />
@@ -389,12 +419,8 @@ describe("EditFermentationEntryScreen", () => {
     });
 
     it("should handle API errors gracefully", async () => {
-      const mockUseQuery = require("@tanstack/react-query").useQuery;
-      mockUseQuery.mockReturnValue({
-        data: null,
-        isLoading: false,
-        error: new Error("Failed to fetch session"),
-      });
+      mockGetById.mockRejectedValue(new Error("Failed to fetch session"));
+
       const { getByText } = renderWithProviders(
         <EditFermentationEntryScreen />
       );
@@ -421,12 +447,7 @@ describe("EditFermentationEntryScreen", () => {
         ],
       });
 
-      const mockUseQuery = require("@tanstack/react-query").useQuery;
-      mockUseQuery.mockReturnValue({
-        data: mockBrewSession,
-        isLoading: false,
-        error: null,
-      });
+      mockGetById.mockResolvedValue(mockBrewSession);
 
       const { getByText } = renderWithProviders(
         <EditFermentationEntryScreen />
@@ -457,12 +478,7 @@ describe("EditFermentationEntryScreen", () => {
         temperature_unit: "C", // Celsius
       });
 
-      const mockUseQuery = require("@tanstack/react-query").useQuery;
-      mockUseQuery.mockReturnValue({
-        data: mockBrewSessionCelsius,
-        isLoading: false,
-        error: null,
-      });
+      mockGetById.mockResolvedValue(mockBrewSessionCelsius);
 
       const { getByText } = renderWithProviders(
         <EditFermentationEntryScreen />
@@ -481,12 +497,7 @@ describe("EditFermentationEntryScreen", () => {
         fermentation_data: [],
       });
 
-      const mockUseQuery = require("@tanstack/react-query").useQuery;
-      mockUseQuery.mockReturnValue({
-        data: mockSession,
-        isLoading: false,
-        error: null,
-      });
+      mockGetById.mockResolvedValue(mockSession);
 
       // Render the component
       expect(() =>
@@ -532,25 +543,21 @@ describe("EditFermentationEntryScreen", () => {
         ],
       });
 
-      const mockUseQuery = require("@tanstack/react-query").useQuery;
-      mockUseQuery.mockReturnValue({
-        data: mockSession,
-        isLoading: false,
-        error: null,
-      });
+      mockGetById.mockResolvedValue(mockSession);
 
-      const mockMutate = jest.fn();
-      const mockUseMutation = require("@tanstack/react-query").useMutation;
-      mockUseMutation.mockReturnValue({
-        mutate: mockMutate,
-        isPending: false,
-      });
-
-      const { getByTestId } = renderWithProviders(
+      const { getByTestId, queryByText } = renderWithProviders(
         <EditFermentationEntryScreen />
       );
 
-      // Change a field value
+      // Wait for loading to complete
+      await waitFor(
+        () => {
+          expect(queryByText("Loading entry...")).toBeNull();
+        },
+        { timeout: 3000 }
+      );
+
+      // Now interact with the form
       const gravityInput = getByTestId(TEST_IDS.patterns.inputField("gravity"));
       fireEvent.changeText(gravityInput, "1.045");
 
@@ -558,9 +565,9 @@ describe("EditFermentationEntryScreen", () => {
       const saveButton = getByTestId(TEST_IDS.buttons.saveButton);
       fireEvent.press(saveButton);
 
-      // Verify mutation was called
+      // Verify updateFermentationEntry was called
       await waitFor(() => {
-        expect(mockMutate).toHaveBeenCalledTimes(1);
+        expect(mockUpdateFermentationEntry).toHaveBeenCalledTimes(1);
       });
     });
   });

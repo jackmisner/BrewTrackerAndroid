@@ -39,7 +39,7 @@
  * ```
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -56,9 +56,8 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import ApiService from "@services/api/apiService";
-import { CreateFermentationEntryRequest, BrewSession } from "@src/types";
+import { useBrewSessions } from "@src/hooks/offlineV2";
+import { BrewSession } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUserValidation } from "@utils/userValidation";
 import { editBrewSessionStyles } from "@styles/modals/editBrewSessionStyles";
@@ -70,7 +69,7 @@ export default function AddFermentationEntryScreen() {
   const userValidation = useUserValidation();
   const styles = editBrewSessionStyles(theme);
   const params = useLocalSearchParams();
-  const queryClient = useQueryClient();
+  const brewSessionsHook = useBrewSessions();
 
   const brewSessionId = params.brewSessionId as string;
 
@@ -84,40 +83,30 @@ export default function AddFermentationEntryScreen() {
   const [entryDate, setEntryDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [brewSession, setBrewSession] = useState<BrewSession | null>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Fetch brew session data to get temperature unit
-  const { data: brewSession } = useQuery<BrewSession>({
-    queryKey: ["brewSession", brewSessionId],
-    queryFn: async () => {
-      const response = await ApiService.brewSessions.getById(brewSessionId);
-      return response.data;
-    },
-    enabled: !!brewSessionId,
-  });
+  // Load brew session data to get temperature unit
+  useEffect(() => {
+    const loadSession = async () => {
+      if (!brewSessionId) {
+        return;
+      }
 
-  const addEntryMutation = useMutation({
-    mutationFn: async (entryData: CreateFermentationEntryRequest) => {
-      return ApiService.brewSessions.addFermentationEntry(
-        brewSessionId,
-        entryData
-      );
-    },
-    onSuccess: () => {
-      // Invalidate and refetch brew session data
-      queryClient.invalidateQueries({
-        queryKey: ["brewSession", brewSessionId],
-      });
-      router.back();
-    },
-    onError: error => {
-      console.error("Failed to add fermentation entry:", error);
-      Alert.alert(
-        "Save Failed",
-        "Failed to add fermentation entry. Please check your data and try again.",
-        [{ text: "OK" }]
-      );
-    },
-  });
+      try {
+        setIsLoadingSession(true);
+        const session = await brewSessionsHook.getById(brewSessionId);
+        setBrewSession(session);
+      } catch (error) {
+        console.error("Failed to load brew session:", error);
+      } finally {
+        setIsLoadingSession(false);
+      }
+    };
+
+    loadSession();
+  }, [brewSessionId, brewSessionsHook]);
 
   const validateForm = (): boolean => {
     const errors: string[] = [];
@@ -176,12 +165,14 @@ export default function AddFermentationEntryScreen() {
       return;
     }
 
-    // Block re-entrancy during in-flight mutation
-    if (addEntryMutation.isPending) {
+    // Block re-entrancy during save
+    if (isSaving) {
       return;
     }
 
     try {
+      setIsSaving(true);
+
       // Validate user permissions for fermentation entry creation
       if (!brewSession?.user_id) {
         Alert.alert(
@@ -215,8 +206,8 @@ export default function AddFermentationEntryScreen() {
         return;
       }
 
-      const entryData: CreateFermentationEntryRequest = {
-        entry_date: entryDate.toISOString(),
+      const entryData = {
+        entry_date: entryDate.toISOString().split("T")[0], // Date only
         gravity: parseFloat(formData.gravity),
         ...(formData.temperature.trim() && {
           temperature: parseFloat(formData.temperature),
@@ -236,12 +227,18 @@ export default function AddFermentationEntryScreen() {
       }
 
       try {
-        await addEntryMutation.mutateAsync(entryData);
-      } catch {
-        // Handled by onError in the mutation options
+        await brewSessionsHook.addFermentationEntry!(brewSessionId, entryData);
+        router.back();
+      } catch (error) {
+        console.error("Failed to add fermentation entry:", error);
+        Alert.alert(
+          "Save Failed",
+          "Failed to add fermentation entry. Please check your data and try again.",
+          [{ text: "OK" }]
+        );
       }
     } finally {
-      // no-op
+      setIsSaving(false);
     }
   };
 
@@ -272,15 +269,12 @@ export default function AddFermentationEntryScreen() {
         testID="add-fermentation-entry-header"
         rightActions={
           <TouchableOpacity
-            style={[
-              styles.saveButton,
-              addEntryMutation.isPending && styles.saveButtonDisabled,
-            ]}
+            style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
             onPress={handleSave}
-            disabled={addEntryMutation.isPending}
+            disabled={isSaving}
             testID={TEST_IDS.buttons.saveButton}
           >
-            {addEntryMutation.isPending ? (
+            {isSaving ? (
               <ActivityIndicator
                 size="small"
                 color={theme.colors.primaryText}
@@ -306,6 +300,14 @@ export default function AddFermentationEntryScreen() {
 
       {/* Form */}
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Loading state for brew session */}
+        {isLoadingSession && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={styles.loadingText}>Loading brew session...</Text>
+          </View>
+        )}
+
         {/* Entry Date */}
         <View style={styles.formGroup}>
           <Text style={styles.label}>Entry Date *</Text>

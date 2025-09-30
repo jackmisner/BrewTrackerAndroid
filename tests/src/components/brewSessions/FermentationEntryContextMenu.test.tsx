@@ -4,9 +4,8 @@
 
 import React from "react";
 import { render } from "@testing-library/react-native";
-import { FermentationEntryContextMenu } from "@src/components/brewSessions/FermentationEntryContextMenu";
 
-// Mock external dependencies
+// Mock external dependencies BEFORE component import
 jest.mock("expo-router", () => ({
   router: {
     push: jest.fn(),
@@ -14,17 +13,49 @@ jest.mock("expo-router", () => ({
   },
 }));
 
-jest.mock("@tanstack/react-query", () => ({
-  useMutation: jest.fn(() => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
-    isLoading: false,
-    error: null,
-  })),
-  useQueryClient: jest.fn(() => ({
-    invalidateQueries: jest.fn(),
-  })),
+// Mock useBrewSessions hook
+const mockDeleteFermentationEntry = jest.fn();
+
+const mockBrewSessionsHook = {
+  data: null,
+  isLoading: false,
+  error: null,
+  pendingCount: 0,
+  conflictCount: 0,
+  lastSync: null,
+  getById: jest.fn(),
+  deleteFermentationEntry: mockDeleteFermentationEntry,
+  create: jest.fn(),
+  update: jest.fn(),
+  delete: jest.fn(),
+  clone: jest.fn(),
+  sync: jest.fn(),
+  refresh: jest.fn(),
+};
+
+jest.mock("@src/hooks/offlineV2", () => ({
+  useBrewSessions: jest.fn(() => mockBrewSessionsHook),
 }));
+
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query");
+  return {
+    ...actual,
+    QueryClient: jest.fn().mockImplementation(() => ({
+      invalidateQueries: jest.fn(),
+      clear: jest.fn(),
+    })),
+    useMutation: jest.fn(() => ({
+      mutate: jest.fn(),
+      mutateAsync: jest.fn(),
+      isLoading: false,
+      error: null,
+    })),
+    useQueryClient: jest.fn(() => ({
+      invalidateQueries: jest.fn(),
+    })),
+  };
+});
 
 jest.mock("@services/api/apiService", () => ({
   __esModule: true,
@@ -61,6 +92,9 @@ jest.mock("@src/components/ui/ContextMenu/BaseContextMenu", () => {
     },
   };
 });
+
+// Import component AFTER all mocks are defined
+import { FermentationEntryContextMenu } from "@src/components/brewSessions/FermentationEntryContextMenu";
 
 describe("FermentationEntryContextMenu", () => {
   const defaultProps = {
