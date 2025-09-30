@@ -1385,14 +1385,16 @@ export class UserCacheService {
     };
 
     try {
-      const operations = await this.getPendingOperations();
+      let operations = await this.getPendingOperations();
       if (operations.length > 0) {
         console.log(
           `[UserCacheService] Starting sync of ${operations.length} pending operations`
         );
       }
 
-      for (const operation of operations) {
+      // Process operations one at a time, reloading after each to catch any updates
+      while (operations.length > 0) {
+        const operation = operations[0]; // Always process the first operation
         try {
           // Process the operation and get any ID mapping info
           const operationResult = await this.processPendingOperation(operation);
@@ -1402,10 +1404,22 @@ export class UserCacheService {
 
           // ONLY after successful removal, update the cache with ID mapping
           if (operationResult.realId && operation.type === "create") {
+            result.processed++; // Increment BEFORE continuing to count this operation
             await this.mapTempIdToRealId(
               operation.entityId,
               operationResult.realId
             );
+            // CRITICAL: Reload operations after ID mapping to get updated recipe_id references
+            // This ensures subsequent operations (like brew sessions) use the new real IDs
+            operations = await this.getPendingOperations();
+            await UnifiedLogger.debug(
+              "UserCacheService.syncPendingOperations",
+              `Reloaded pending operations after ID mapping`,
+              {
+                remainingOperations: operations.length,
+              }
+            );
+            continue; // Skip to next iteration with fresh operations list
           } else if (operation.type === "update") {
             // For update operations, mark the item as synced
             await this.markItemAsSynced(operation.entityId);
@@ -1415,6 +1429,8 @@ export class UserCacheService {
           }
 
           result.processed++;
+          // Reload operations list after successful processing
+          operations = await this.getPendingOperations();
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : "Unknown error";
@@ -1427,19 +1443,47 @@ export class UserCacheService {
             `${operation.type} ${operation.entityType}: ${errorMessage}`
           );
 
-          // Increment retry count
-          operation.retryCount++;
+          // Check if this is an offline/network error - these shouldn't count as retries
+          const isOfflineError =
+            errorMessage.includes("Simulated offline mode") ||
+            errorMessage.includes("Network request failed") ||
+            errorMessage.includes("offline") ||
+            errorMessage.includes("ECONNREFUSED");
 
-          if (operation.retryCount >= operation.maxRetries) {
-            // Max retries reached, remove operation
-            await this.removePendingOperation(operation.id);
-            result.errors.push(
-              `Max retries reached for ${operation.type} ${operation.entityType}`
+          if (isOfflineError) {
+            // Offline error - don't increment retry count, just stop syncing
+            // We'll try again next time (when network is back or next background sync)
+            await UnifiedLogger.debug(
+              "UserCacheService.syncPendingOperations",
+              `Stopping sync due to offline error - will retry later`,
+              {
+                operationId: operation.id,
+                operationType: operation.type,
+                entityType: operation.entityType,
+                error: errorMessage,
+                remainingOperations: operations.length,
+              }
             );
+            // Break out of the while loop - don't keep retrying offline operations
+            break;
           } else {
-            // Update operation with new retry count
-            await this.updatePendingOperation(operation);
+            // Real error - increment retry count
+            operation.retryCount++;
+
+            if (operation.retryCount >= operation.maxRetries) {
+              // Max retries reached, remove operation
+              await this.removePendingOperation(operation.id);
+              result.errors.push(
+                `Max retries reached for ${operation.type} ${operation.entityType}`
+              );
+            } else {
+              // Update operation with new retry count
+              await this.updatePendingOperation(operation);
+            }
           }
+
+          // Reload operations list after error handling
+          operations = await this.getPendingOperations();
         }
       }
 
@@ -2963,6 +3007,7 @@ export class UserCacheService {
                 entityId: operation.entityId,
                 operationId: operation.id,
                 sessionName: operation.data?.name || "Unknown",
+                brewSessionData: operation.data, // Log the actual data being sent
               }
             );
             const response = await ApiService.brewSessions.create(
@@ -3265,6 +3310,57 @@ export class UserCacheService {
         }
       });
 
+      // 1c) Update recipe_id references in brew sessions that reference the mapped recipe
+      await withKeyQueue(STORAGE_KEYS_V2.USER_BREW_SESSIONS, async () => {
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.USER_BREW_SESSIONS
+        );
+        if (!cached) {
+          return;
+        }
+        const sessions: SyncableItem<BrewSession>[] = JSON.parse(cached);
+        let updatedCount = 0;
+
+        // Find all sessions that reference the old temp recipe ID
+        for (const session of sessions) {
+          if (session.data.recipe_id === tempId) {
+            session.data.recipe_id = realId;
+            session.data.updated_at = new Date().toISOString();
+            // Always mark as needing sync to propagate the new recipe_id to server
+            session.needsSync = true;
+            session.syncStatus = "pending";
+            session.lastModified = Date.now();
+            updatedCount++;
+            await UnifiedLogger.debug(
+              "UserCacheService.mapTempIdToRealId",
+              `Updated recipe_id reference in brew session`,
+              {
+                sessionId: session.id,
+                sessionName: session.data.name,
+                oldRecipeId: tempId,
+                newRecipeId: realId,
+              }
+            );
+          }
+        }
+
+        if (updatedCount > 0) {
+          await AsyncStorage.setItem(
+            STORAGE_KEYS_V2.USER_BREW_SESSIONS,
+            JSON.stringify(sessions)
+          );
+          await UnifiedLogger.info(
+            "UserCacheService.mapTempIdToRealId",
+            `Updated ${updatedCount} brew session(s) with new recipe_id reference`,
+            {
+              tempRecipeId: tempId,
+              realRecipeId: realId,
+              updatedSessions: updatedCount,
+            }
+          );
+        }
+      });
+
       // 2) Update pending ops under PENDING_OPERATIONS lock
       await withKeyQueue(STORAGE_KEYS_V2.PENDING_OPERATIONS, async () => {
         const cached = await AsyncStorage.getItem(
@@ -3273,9 +3369,28 @@ export class UserCacheService {
         const operations: PendingOperation[] = cached ? JSON.parse(cached) : [];
         let updated = false;
         for (const op of operations) {
+          // Update entityId if it matches the temp ID
           if (op.entityId === tempId) {
             op.entityId = realId;
             updated = true;
+          }
+          // Update recipe_id in brew session operation data if it references the temp recipe ID
+          if (op.entityType === "brew_session" && op.data) {
+            const brewSessionData = op.data as Partial<BrewSession>;
+            if (brewSessionData.recipe_id === tempId) {
+              brewSessionData.recipe_id = realId;
+              updated = true;
+              await UnifiedLogger.debug(
+                "UserCacheService.mapTempIdToRealId",
+                `Updated recipe_id in pending brew session operation`,
+                {
+                  operationId: op.id,
+                  operationType: op.type,
+                  oldRecipeId: tempId,
+                  newRecipeId: realId,
+                }
+              );
+            }
           }
         }
         if (updated) {

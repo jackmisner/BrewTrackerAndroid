@@ -53,27 +53,10 @@ import {
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
 import { useUserValidation } from "@utils/userValidation";
-
-/**
- * Pure helper function to generate sync status message
- * @param pendingOperations - Number of pending operations
- * @param isSyncing - Whether sync is currently in progress
- * @returns The appropriate sync status message string
- */
-function getSyncStatusMessage(
-  pendingOperations: number,
-  isSyncing: boolean
-): string {
-  if (isSyncing) {
-    return "Syncing...";
-  }
-
-  if (pendingOperations === 0) {
-    return "All synced";
-  }
-
-  return `${pendingOperations} change${pendingOperations !== 1 ? "s" : ""} need${pendingOperations === 1 ? "s" : ""} sync`;
-}
+import {
+  getSyncStatusMessage,
+  handlePullToRefreshSync,
+} from "@utils/syncUtils";
 
 /**
  * Displays a tabbed interface for browsing and managing recipes, allowing users to view their own recipes or search public recipes.
@@ -117,19 +100,12 @@ export default function RecipesScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      // Legacy cleanup no longer needed - V2 system handles cache management automatically
-
       // Trigger sync if online and there are pending changes
-      if (isConnected && pendingOperations > 0) {
-        try {
-          console.log("🔄 Pull-to-refresh triggering sync...");
-          await syncMutation();
-          console.log("✅ Pull-to-refresh sync completed");
-        } catch (error) {
-          console.warn("Pull-to-refresh sync failed:", error);
-          // Don't let sync errors block the refresh
-        }
-      }
+      await handlePullToRefreshSync(
+        isConnected,
+        pendingOperations,
+        syncMutation
+      );
 
       // Refresh the appropriate tab data
       if (activeTab === "my") {
