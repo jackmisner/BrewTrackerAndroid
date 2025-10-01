@@ -58,7 +58,22 @@ jest.mock("@contexts/CalculatorsContext", () => ({
   }),
 }));
 
-// ThemeContext is provided by renderWithProviders
+// Mock ThemeContext to avoid conflicts with testUtils
+jest.mock("@contexts/ThemeContext", () => {
+  const React = require("react");
+  return {
+    useTheme: jest.fn(() => ({
+      colors: {
+        background: "#ffffff",
+        text: "#000000",
+        primary: "#f4511e",
+        textSecondary: "#666666",
+        border: "#e0e0e0",
+      },
+    })),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
 
 // Mock ModalHeader component
 jest.mock("@src/components/ui/ModalHeader", () => ({

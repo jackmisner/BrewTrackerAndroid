@@ -712,7 +712,14 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
           // Position based on actual visual height comparison
           // The HIGHER point gets label ABOVE (-15), the LOWER point gets label BELOW (+25)
-          if (gravityVisualHeight > tempVisualHeight) {
+          // Edge case: when heights are equal (data points overlap), gravity goes below, temperature goes above
+          const heightDifference = Math.abs(
+            gravityVisualHeight - tempVisualHeight
+          );
+          if (heightDifference < 0.01) {
+            // Data points are at essentially the same height - force different label positions
+            gravityLabelShift = 25; // Gravity below
+          } else if (gravityVisualHeight > tempVisualHeight) {
             gravityLabelShift = -15; // Gravity is higher visually - label above the data point
           } else {
             gravityLabelShift = 25; // Gravity is lower visually - label below the data point
@@ -768,7 +775,14 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
 
           // Position based on actual visual height comparison
           // The HIGHER point gets label ABOVE (-15), the LOWER point gets label BELOW (+15)
-          if (tempVisualHeight > gravityVisualHeight) {
+          // Edge case: when heights are equal (data points overlap), gravity goes below, temperature goes above
+          const heightDifference = Math.abs(
+            tempVisualHeight - gravityVisualHeight
+          );
+          if (heightDifference < 0.01) {
+            // Data points are at essentially the same height - force different label positions
+            temperatureLabelShift = -15; // Temperature above
+          } else if (tempVisualHeight > gravityVisualHeight) {
             temperatureLabelShift = -15; // Temperature is higher visually - label above the data point
           } else {
             temperatureLabelShift = 25; // Temperature is lower visually - label below the data point
@@ -928,22 +942,6 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
     dataPointsColor: theme.colors.temperatureLine,
     dataPointsRadius: 4,
     yAxisLabelSuffix: getSessionTemperatureSymbol(),
-    yAxisLabelTexts: (() => {
-      const labels = [];
-      for (let i = 0; i <= 4; i++) {
-        const value =
-          temperatureAxisConfig.minValue +
-          (i *
-            (temperatureAxisConfig.maxValue - temperatureAxisConfig.minValue)) /
-            4;
-        if (typeof value === "number" && !isNaN(value)) {
-          labels.push(formatSessionTemperature(value, 0));
-        } else {
-          labels.push(`0${getSessionTemperatureSymbol()}`); // Fallback label
-        }
-      }
-      return labels;
-    })(),
     formatYLabel: (label: string) => Math.round(parseFloat(label)).toString(),
     pressEnabled: true,
     onPress: handleDataPointInteraction,
@@ -1226,7 +1224,7 @@ export const FermentationChart: React.FC<FermentationChartProps> = ({
           // Combined dual-axis chart
           gravityChartData.length > 0 &&
           (combinedTemperatureData?.data?.length || 0) > 0 ? (
-            <ChartSection title="Combined View" theme={theme}>
+            <ChartSection title="" theme={theme}>
               <ChartWrapper refreshKey={chartKeys.combined}>
                 <LineChart
                   {...combinedChartConfig}

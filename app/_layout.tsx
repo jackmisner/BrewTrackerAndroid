@@ -127,6 +127,54 @@ const DynamicPersistQueryClientProvider = ({
   );
 };
 
+// Component to provide themed background for Stack navigator
+const ThemedStack = () => {
+  const { colors } = useTheme();
+  return (
+    <Stack
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: "#f4511e",
+        },
+        headerTintColor: "#fff",
+        headerTitleStyle: {
+          fontWeight: "bold",
+        },
+        contentStyle: {
+          backgroundColor: colors.background,
+        },
+      }}
+    >
+      <Stack.Screen
+        name="index"
+        options={{
+          title: "BrewTracker",
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="(auth)"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="(tabs)"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="(modals)"
+        options={{
+          headerShown: false,
+          presentation: "modal",
+        }}
+      />
+    </Stack>
+  );
+};
+
 export default function RootLayout() {
   return (
     <DeveloperProvider>
@@ -139,44 +187,7 @@ export default function RootLayout() {
                 <UnitProvider>
                   <StartupHydration />
                   <CalculatorsProvider>
-                    <Stack
-                      screenOptions={{
-                        headerStyle: {
-                          backgroundColor: "#f4511e",
-                        },
-                        headerTintColor: "#fff",
-                        headerTitleStyle: {
-                          fontWeight: "bold",
-                        },
-                      }}
-                    >
-                      <Stack.Screen
-                        name="index"
-                        options={{
-                          title: "BrewTracker",
-                          headerShown: false,
-                        }}
-                      />
-                      <Stack.Screen
-                        name="(auth)"
-                        options={{
-                          headerShown: false,
-                        }}
-                      />
-                      <Stack.Screen
-                        name="(tabs)"
-                        options={{
-                          headerShown: false,
-                        }}
-                      />
-                      <Stack.Screen
-                        name="(modals)"
-                        options={{
-                          headerShown: false,
-                          presentation: "modal",
-                        }}
-                      />
-                    </Stack>
+                    <ThemedStack />
                   </CalculatorsProvider>
                 </UnitProvider>
               </DynamicPersistQueryClientProvider>

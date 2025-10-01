@@ -50,7 +50,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@contexts/AuthContext";
-import { registerStyles as styles } from "@styles/auth/registerStyles";
+import { useTheme } from "@contexts/ThemeContext";
+import { registerStyles } from "@styles/auth/registerStyles";
 import { TEST_IDS } from "@src/constants/testIDs";
 
 export default function RegisterScreen() {
@@ -62,6 +63,8 @@ export default function RegisterScreen() {
 
   const { register, error, clearError } = useAuth();
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = registerStyles(colors);
 
   const validateForm = () => {
     if (!username || !email || !password || !confirmPassword) {
@@ -136,6 +139,7 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               placeholder="Username"
+              placeholderTextColor={colors.textMuted}
               value={username}
               onChangeText={setUsername}
               autoCapitalize="none"
@@ -148,6 +152,7 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               placeholder="Email"
+              placeholderTextColor={colors.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -161,6 +166,7 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               placeholder="Password"
+              placeholderTextColor={colors.textMuted}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -173,6 +179,7 @@ export default function RegisterScreen() {
             <TextInput
               style={styles.input}
               placeholder="Confirm Password"
+              placeholderTextColor={colors.textMuted}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry

@@ -158,6 +158,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [effectiveTheme, setEffectiveTheme] = useState<"light" | "dark">(
     getSystemTheme()
   );
+  const [isThemeLoaded, setIsThemeLoaded] = useState(false);
 
   // Load saved theme preference on app start
   useEffect(() => {
@@ -171,6 +172,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         }
       } catch (error) {
         console.error("Error loading theme preference:", error);
+      } finally {
+        // Mark theme as loaded regardless of success/failure
+        setIsThemeLoaded(true);
       }
     };
 
@@ -211,6 +215,22 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     setTheme,
     toggleTheme,
   };
+
+  // Don't render children until theme preference has been loaded
+  // This prevents flash of wrong theme on app startup
+  // Show a loading view with the appropriate background color
+  if (!isThemeLoaded) {
+    const { View } = require("react-native");
+    const loadingColors = getThemeColors(effectiveTheme);
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: loadingColors.background,
+        }}
+      />
+    );
+  }
 
   return (
     <ThemeContext.Provider value={contextValue}>
