@@ -12,11 +12,10 @@
  * - Temperature recording with unit conversion support
  * - Notes field for fermentation observations
  * - Form validation preventing invalid data entry
- * - Real-time API integration with React Query
+ * - Offline-first data management with automatic sync
  * - Loading states and comprehensive error handling
  * - Navigation back to brew session details
  * - Keyboard-aware layout for mobile input
- * - Optimistic updates with rollback on failure
  *
  * Data Validation:
  * - Gravity: 0.990-1.200 range (covers full fermentation span)
@@ -29,8 +28,8 @@
  * 2. Existing entry data is loaded and pre-populated
  * 3. User modifies fermentation data as needed
  * 4. Form validation ensures data quality and consistency
- * 5. Submit updates fermentation entry via API
- * 6. Success navigates back with cache invalidation
+ * 5. Submit updates fermentation entry via offline hook
+ * 6. Success navigates back with local cache update
  * 7. Error states provide user feedback and retry options
  *
  * @example
@@ -48,16 +47,14 @@ import {
   ScrollView,
   TextInput,
   KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Alert,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import ApiService from "@services/api/apiService";
-import { BrewSession, UpdateFermentationEntryRequest } from "@src/types";
+import { useBrewSessions } from "@hooks/offlineV2/useUserData";
+import { BrewSession } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUserValidation } from "@utils/userValidation";
 import { editBrewSessionStyles } from "@styles/modals/editBrewSessionStyles";
@@ -68,7 +65,7 @@ export default function EditFermentationEntryScreen() {
   const userValidation = useUserValidation();
   const styles = editBrewSessionStyles(theme);
   const params = useLocalSearchParams();
-  const queryClient = useQueryClient();
+  const brewSessionsHook = useBrewSessions();
 
   const brewSessionId = params.brewSessionId as string;
   const entryIndex = parseInt(params.entryIndex as string, 10);
@@ -83,20 +80,32 @@ export default function EditFermentationEntryScreen() {
   const [entryDate, setEntryDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [brewSessionData, setBrewSessionData] = useState<BrewSession | null>(
+    null
+  );
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Fetch brew session data to get the entry to edit
-  const {
-    data: brewSessionData,
-    isLoading: isLoadingSession,
-    error: sessionError,
-  } = useQuery<BrewSession>({
-    queryKey: ["brewSession", brewSessionId],
-    queryFn: async () => {
-      const response = await ApiService.brewSessions.getById(brewSessionId);
-      return response.data;
-    },
-    enabled: !!brewSessionId,
-  });
+  useEffect(() => {
+    const loadSession = async () => {
+      if (!brewSessionId) {
+        return;
+      }
+
+      try {
+        setIsLoadingSession(true);
+        const session = await brewSessionsHook.getById(brewSessionId);
+        setBrewSessionData(session);
+      } catch (error) {
+        console.error("Failed to load brew session:", error);
+      } finally {
+        setIsLoadingSession(false);
+      }
+    };
+
+    loadSession();
+  }, [brewSessionId, brewSessionsHook]);
 
   // Initialize form with existing entry data
   useEffect(() => {
@@ -117,31 +126,6 @@ export default function EditFermentationEntryScreen() {
     }
   }, [brewSessionData, entryIndex]);
 
-  const updateEntryMutation = useMutation({
-    mutationFn: async (entryData: UpdateFermentationEntryRequest) => {
-      return ApiService.brewSessions.updateFermentationEntry(
-        brewSessionId,
-        entryIndex,
-        entryData
-      );
-    },
-    onSuccess: _response => {
-      // Invalidate and refetch brew session data
-      queryClient.invalidateQueries({
-        queryKey: ["brewSession", brewSessionId],
-      });
-      router.back();
-    },
-    onError: error => {
-      console.error("Failed to update fermentation entry:", error);
-      Alert.alert(
-        "Save Failed",
-        "Failed to update fermentation entry. Please check your data and try again.",
-        [{ text: "OK" }]
-      );
-    },
-  });
-
   const validateForm = (): boolean => {
     const errors: string[] = [];
 
@@ -150,8 +134,8 @@ export default function EditFermentationEntryScreen() {
       errors.push("Gravity is required");
     } else {
       const gravity = parseFloat(formData.gravity);
-      if (isNaN(gravity) || gravity < 0.8 || gravity > 1.2) {
-        errors.push("Gravity must be between 0.800 and 1.200");
+      if (isNaN(gravity) || gravity < 0.99 || gravity > 1.2) {
+        errors.push("Gravity must be between 0.990 and 1.200");
       }
     }
 
@@ -249,8 +233,8 @@ export default function EditFermentationEntryScreen() {
       return;
     }
 
-    const entryData: UpdateFermentationEntryRequest = {
-      entry_date: entryDate.toISOString(),
+    const entryData = {
+      entry_date: entryDate.toISOString().split("T")[0], // Date only
       gravity: parseFloat(formData.gravity),
       ...(formData.temperature.trim() && {
         temperature: parseFloat(formData.temperature),
@@ -259,16 +243,35 @@ export default function EditFermentationEntryScreen() {
       ...(formData.notes.trim() && { notes: formData.notes.trim() }),
     };
 
-    // Log fermentation entry update for security monitoring
-    console.log("📝 Updating fermentation entry:", {
-      brewSessionId,
-      brewSessionName: brewSessionData?.name,
-      entryIndex,
-      hasBrewSessionUserId: !!brewSessionData?.user_id,
-      entryDate: entryData.entry_date,
-    });
+    // Log fermentation entry update for security monitoring (dev only)
+    if (__DEV__) {
+      console.log("📝 Updating fermentation entry:", {
+        brewSessionId,
+        brewSessionName: brewSessionData?.name,
+        entryIndex,
+        hasBrewSessionUserId: !!brewSessionData?.user_id,
+        entryDate: entryData.entry_date,
+      });
+    }
 
-    updateEntryMutation.mutate(entryData);
+    try {
+      setIsSaving(true);
+      await brewSessionsHook.updateFermentationEntry!(
+        brewSessionId,
+        entryIndex,
+        entryData
+      );
+      router.back();
+    } catch (error) {
+      console.error("Failed to update fermentation entry:", error);
+      Alert.alert(
+        "Save Failed",
+        "Failed to update fermentation entry. Please check your data and try again.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -304,7 +307,7 @@ export default function EditFermentationEntryScreen() {
     );
   }
 
-  if (sessionError || !brewSessionData?.fermentation_data?.[entryIndex]) {
+  if (!brewSessionData?.fermentation_data?.[entryIndex]) {
     return (
       <View style={styles.container}>
         <ModalHeader
@@ -326,24 +329,18 @@ export default function EditFermentationEntryScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={"height"}>
       <ModalHeader
         title="Edit Fermentation Entry"
         testID="edit-fermentation-entry-header"
         rightActions={
           <TouchableOpacity
-            style={[
-              styles.saveButton,
-              updateEntryMutation.isPending && styles.saveButtonDisabled,
-            ]}
+            style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
             onPress={handleSave}
-            disabled={updateEntryMutation.isPending}
+            disabled={isSaving}
             testID="save-button"
           >
-            {updateEntryMutation.isPending ? (
+            {isSaving ? (
               <ActivityIndicator
                 size="small"
                 color={theme.colors.primaryText}

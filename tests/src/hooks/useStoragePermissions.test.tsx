@@ -149,34 +149,7 @@ describe("useStoragePermissions", () => {
     expect(result.current.mediaPermission.loading).toBe(false);
   });
 
-  it("should handle iOS platform", async () => {
-    (Platform as any).OS = "ios";
-    mockStorageService.getStorageInfo.mockReturnValue({
-      platform: "ios",
-      androidVersion: null,
-      isAndroid13Plus: false,
-      isAndroid10Plus: false,
-      hasScopedStorage: false,
-      requiresGranularPermissions: false,
-    });
-
-    mockMediaLibrary.getPermissionsAsync.mockResolvedValue({
-      status: MediaLibrary.PermissionStatus.GRANTED,
-      granted: true,
-      canAskAgain: true,
-      accessPrivileges: "all",
-      expires: "never",
-    });
-
-    const { result } = renderHook(() => useStoragePermissions());
-
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
-
-    expect(result.current.storageInfo.platform).toBe("ios");
-    expect(result.current.storageInfo.androidVersion).toBeNull();
-  });
+  // Removed iOS platform test - this is an Android-only app
 
   it("should handle permission check errors", async () => {
     // Make MediaLibrary.getPermissionsAsync throw an error

@@ -36,7 +36,6 @@ import {
   TouchableOpacity,
   Alert,
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
 } from "react-native";
 import { router } from "expo-router";
@@ -104,10 +103,7 @@ const ForgotPasswordScreen: React.FC = () => {
 
   if (emailSent) {
     return (
-      <KeyboardAvoidingView
-        style={loginStyles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
+      <KeyboardAvoidingView style={loginStyles.container} behavior={"height"}>
         <ScrollView contentContainerStyle={loginStyles.scrollContainer}>
           <View style={loginStyles.formContainer}>
             <View style={loginStyles.header}>
@@ -146,10 +142,7 @@ const ForgotPasswordScreen: React.FC = () => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={loginStyles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <KeyboardAvoidingView style={loginStyles.container} behavior={"height"}>
       <ScrollView contentContainerStyle={loginStyles.scrollContainer}>
         <View style={loginStyles.formContainer}>
           <View style={loginStyles.header}>

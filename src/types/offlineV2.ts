@@ -116,17 +116,45 @@ export interface SyncableItem<T> {
   needsSync: boolean;
 }
 
-export interface PendingOperation {
+// Discriminated union types for compile-time safety of embedded operations
+type EmbeddedEntity = "fermentation_entry" | "dry_hop_addition";
+type RootEntity = "recipe" | "brew_session";
+
+type EmbeddedOperation =
+  | {
+      id: string;
+      type: "create";
+      entityType: EmbeddedEntity;
+      entityId: string;
+      parentId: string; // Required for embedded create
+      data: any;
+      // No entryIndex for create operations
+    }
+  | {
+      id: string;
+      type: "update" | "delete";
+      entityType: EmbeddedEntity;
+      entityId: string;
+      parentId: string; // Required for embedded update/delete
+      entryIndex: number; // Required for update/delete operations
+      data?: any;
+    };
+
+type RootOperation = {
   id: string;
   type: "create" | "update" | "delete";
-  entityType: "recipe" | "brew_session" | "fermentation_entry";
+  entityType: RootEntity;
   entityId: string;
-  userId?: string;
   data?: any;
+  // No parentId or entryIndex for root operations
+};
+
+export type PendingOperation = (EmbeddedOperation | RootOperation) & {
   timestamp: number;
   retryCount: number;
   maxRetries: number;
-}
+  userId?: string;
+};
 
 export interface SyncResult {
   success: boolean;
@@ -252,6 +280,32 @@ export interface UseUserDataReturn<T> {
   getById: (id: string) => Promise<T | null>;
   sync: () => Promise<SyncResult>;
   refresh: () => Promise<void>;
+  // Optional brew session-specific methods
+  addFermentationEntry?: (
+    sessionId: string,
+    entry: Partial<import("./brewSession").FermentationEntry>
+  ) => Promise<import("./brewSession").BrewSession>;
+  updateFermentationEntry?: (
+    sessionId: string,
+    entryIndex: number,
+    updates: Partial<import("./brewSession").FermentationEntry>
+  ) => Promise<import("./brewSession").BrewSession>;
+  deleteFermentationEntry?: (
+    sessionId: string,
+    entryIndex: number
+  ) => Promise<import("./brewSession").BrewSession>;
+  addDryHopFromRecipe?: (
+    sessionId: string,
+    dryHopData: import("./brewSession").CreateDryHopFromRecipeRequest
+  ) => Promise<import("./brewSession").BrewSession>;
+  removeDryHop?: (
+    sessionId: string,
+    dryHopIndex: number
+  ) => Promise<import("./brewSession").BrewSession>;
+  deleteDryHopAddition?: (
+    sessionId: string,
+    dryHopIndex: number
+  ) => Promise<import("./brewSession").BrewSession>;
 }
 
 export interface UseOfflineSyncReturn {

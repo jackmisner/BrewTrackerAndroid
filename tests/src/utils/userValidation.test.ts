@@ -26,8 +26,11 @@ jest.mock("@contexts/AuthContext", () => ({
 
 // Mock the dynamic imports that UserValidationService uses
 const mockExtractUserIdFromJWT = jest.fn();
+const mockGetToken = jest.fn();
 const mockApiService = {
-  token: { getToken: jest.fn() },
+  token: {
+    getToken: mockGetToken,
+  },
 };
 
 jest.mock("@utils/jwtUtils", () => ({
@@ -35,6 +38,7 @@ jest.mock("@utils/jwtUtils", () => ({
 }));
 
 jest.mock("@services/api/apiService", () => ({
+  __esModule: true,
   default: mockApiService,
 }));
 
@@ -613,8 +617,12 @@ describe("useUserValidation hook", () => {
   // The core functionality is thoroughly tested above with 34+ test cases
 });
 
-// Test the UserValidationService class (non-hook version) - simplified due to dynamic import mocking limitations
+// Test the UserValidationService class (non-hook version)
 describe("UserValidationService", () => {
+  const validUserId = "user123";
+  const otherUserId = "user456";
+  const mockToken = "mock.jwt.token";
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(console, "warn").mockImplementation(() => {});
@@ -624,34 +632,263 @@ describe("UserValidationService", () => {
     jest.restoreAllMocks();
   });
 
-  describe("behavioral tests", () => {
-    it("should handle errors gracefully when validateOwnershipFromToken fails", async () => {
-      // Due to dynamic import complexity, we test that the service handles failures properly
+  describe("validateOwnershipFromToken", () => {
+    it("should validate ownership successfully when token is valid and user IDs match", async () => {
+      mockGetToken.mockResolvedValue(mockToken);
+      mockExtractUserIdFromJWT.mockReturnValue(validUserId);
+
       const result =
-        await UserValidationService.validateOwnershipFromToken("test-user");
+        await UserValidationService.validateOwnershipFromToken(validUserId);
 
-      // Should always return a UserValidationResult structure
-      expect(result).toHaveProperty("isValid");
-      expect(result).toHaveProperty("currentUserId");
-      expect(typeof result.isValid).toBe("boolean");
-
-      // Due to mocking limitations, will likely be false but that's expected
-      if (!result.isValid) {
-        expect(result.error).toBeTruthy();
-        expect(typeof result.error).toBe("string");
-      }
+      expect(result).toEqual({
+        isValid: true,
+        currentUserId: validUserId,
+        error: undefined,
+      });
+      expect(mockGetToken).toHaveBeenCalled();
+      expect(mockExtractUserIdFromJWT).toHaveBeenCalledWith(mockToken);
     });
 
-    it("should handle errors gracefully when getCurrentUserIdFromToken fails", async () => {
-      // Test that the service handles failures properly
+    it("should reject ownership when user IDs do not match", async () => {
+      mockGetToken.mockResolvedValue(mockToken);
+      mockExtractUserIdFromJWT.mockReturnValue(validUserId);
+
+      const result =
+        await UserValidationService.validateOwnershipFromToken(otherUserId);
+
+      expect(result).toEqual({
+        isValid: false,
+        currentUserId: validUserId,
+        error: "User does not own this resource",
+      });
+    });
+
+    it("should return error when no token is found", async () => {
+      mockGetToken.mockResolvedValue(null);
+
+      const result =
+        await UserValidationService.validateOwnershipFromToken(validUserId);
+
+      expect(result).toEqual({
+        isValid: false,
+        currentUserId: null,
+        error: "No authentication token found",
+      });
+    });
+
+    it("should return error when token is invalid (extractUserId returns null)", async () => {
+      mockGetToken.mockResolvedValue(mockToken);
+      mockExtractUserIdFromJWT.mockReturnValue(null);
+
+      const result =
+        await UserValidationService.validateOwnershipFromToken(validUserId);
+
+      expect(result).toEqual({
+        isValid: false,
+        currentUserId: null,
+        error: "Invalid authentication token",
+      });
+    });
+
+    it("should handle token retrieval errors gracefully", async () => {
+      mockGetToken.mockRejectedValue(new Error("Network error"));
+
+      const result =
+        await UserValidationService.validateOwnershipFromToken(validUserId);
+
+      expect(result).toEqual({
+        isValid: false,
+        currentUserId: null,
+        error: "Token validation error: Network error",
+      });
+    });
+
+    it("should handle JWT extraction errors gracefully", async () => {
+      mockGetToken.mockResolvedValue(mockToken);
+      mockExtractUserIdFromJWT.mockImplementation(() => {
+        throw new Error("Invalid JWT format");
+      });
+
+      const result =
+        await UserValidationService.validateOwnershipFromToken(validUserId);
+
+      expect(result).toEqual({
+        isValid: false,
+        currentUserId: null,
+        error: "Token validation error: Invalid JWT format",
+      });
+    });
+
+    it("should handle unknown errors gracefully", async () => {
+      mockGetToken.mockRejectedValue("String error");
+
+      const result =
+        await UserValidationService.validateOwnershipFromToken(validUserId);
+
+      expect(result.isValid).toBe(false);
+      expect(result.currentUserId).toBeNull();
+      expect(result.error).toContain("Token validation error: Unknown error");
+    });
+
+    it("should handle empty resource user ID", async () => {
+      mockGetToken.mockResolvedValue(mockToken);
+      mockExtractUserIdFromJWT.mockReturnValue(validUserId);
+
+      const result = await UserValidationService.validateOwnershipFromToken("");
+
+      expect(result).toEqual({
+        isValid: false,
+        currentUserId: validUserId,
+        error: "User does not own this resource",
+      });
+    });
+
+    it("should handle different user IDs correctly", async () => {
+      mockGetToken.mockResolvedValue(mockToken);
+      mockExtractUserIdFromJWT.mockReturnValue("user789");
+
+      const result =
+        await UserValidationService.validateOwnershipFromToken(validUserId);
+
+      expect(result).toEqual({
+        isValid: false,
+        currentUserId: "user789",
+        error: "User does not own this resource",
+      });
+    });
+  });
+
+  describe("getCurrentUserIdFromToken", () => {
+    it("should return user ID successfully when token is valid", async () => {
+      mockGetToken.mockResolvedValue(mockToken);
+      mockExtractUserIdFromJWT.mockReturnValue(validUserId);
+
       const userId = await UserValidationService.getCurrentUserIdFromToken();
 
-      // Should return null or a string
-      expect(userId === null || typeof userId === "string").toBe(true);
+      expect(userId).toBe(validUserId);
+      expect(mockGetToken).toHaveBeenCalled();
+      expect(mockExtractUserIdFromJWT).toHaveBeenCalledWith(mockToken);
     });
 
+    it("should return null when no token is found", async () => {
+      mockGetToken.mockResolvedValue(null);
+
+      const userId = await UserValidationService.getCurrentUserIdFromToken();
+
+      expect(userId).toBeNull();
+    });
+
+    it("should return null when token extraction fails", async () => {
+      mockGetToken.mockResolvedValue(mockToken);
+      mockExtractUserIdFromJWT.mockReturnValue(null);
+
+      const userId = await UserValidationService.getCurrentUserIdFromToken();
+
+      expect(userId).toBeNull();
+    });
+
+    it("should handle token retrieval errors gracefully", async () => {
+      mockGetToken.mockRejectedValue(new Error("Storage error"));
+
+      const userId = await UserValidationService.getCurrentUserIdFromToken();
+
+      expect(userId).toBeNull();
+      expect(console.warn).toHaveBeenCalledWith(
+        "Failed to get user ID from token:",
+        expect.any(Error)
+      );
+    });
+
+    it("should handle JWT extraction errors gracefully", async () => {
+      mockGetToken.mockResolvedValue(mockToken);
+      mockExtractUserIdFromJWT.mockImplementation(() => {
+        throw new Error("Malformed JWT");
+      });
+
+      const userId = await UserValidationService.getCurrentUserIdFromToken();
+
+      expect(userId).toBeNull();
+      expect(console.warn).toHaveBeenCalledWith(
+        "Failed to get user ID from token:",
+        expect.any(Error)
+      );
+    });
+
+    it("should handle unknown errors gracefully", async () => {
+      mockGetToken.mockRejectedValue("String error");
+
+      const userId = await UserValidationService.getCurrentUserIdFromToken();
+
+      expect(userId).toBeNull();
+      expect(console.warn).toHaveBeenCalled();
+    });
+
+    it("should handle empty token gracefully", async () => {
+      mockGetToken.mockResolvedValue("");
+
+      const userId = await UserValidationService.getCurrentUserIdFromToken();
+
+      // Empty string is falsy, should return null
+      expect(userId).toBeNull();
+    });
+
+    it("should handle undefined token gracefully", async () => {
+      mockGetToken.mockResolvedValue(undefined);
+
+      const userId = await UserValidationService.getCurrentUserIdFromToken();
+
+      expect(userId).toBeNull();
+    });
+  });
+
+  describe("integration scenarios", () => {
+    it("should handle multiple sequential validations", async () => {
+      mockGetToken.mockResolvedValue(mockToken);
+      mockExtractUserIdFromJWT.mockReturnValue(validUserId);
+
+      const result1 =
+        await UserValidationService.validateOwnershipFromToken(validUserId);
+      const result2 =
+        await UserValidationService.validateOwnershipFromToken(otherUserId);
+
+      expect(result1.isValid).toBe(true);
+      expect(result2.isValid).toBe(false);
+    });
+
+    it("should handle concurrent validations", async () => {
+      mockGetToken.mockResolvedValue(mockToken);
+      mockExtractUserIdFromJWT.mockReturnValue(validUserId);
+
+      const results = await Promise.all([
+        UserValidationService.validateOwnershipFromToken(validUserId),
+        UserValidationService.validateOwnershipFromToken(otherUserId),
+        UserValidationService.getCurrentUserIdFromToken(),
+      ]);
+
+      expect(results[0].isValid).toBe(true);
+      expect(results[1].isValid).toBe(false);
+      expect(results[2]).toBe(validUserId);
+    });
+
+    it("should maintain consistent error structure across methods", async () => {
+      mockGetToken.mockRejectedValue(new Error("Test error"));
+
+      const validationResult =
+        await UserValidationService.validateOwnershipFromToken(validUserId);
+      const userIdResult =
+        await UserValidationService.getCurrentUserIdFromToken();
+
+      // Both should handle errors gracefully
+      expect(validationResult.isValid).toBe(false);
+      expect(validationResult.currentUserId).toBeNull();
+      expect(validationResult.error).toBeTruthy();
+      expect(userIdResult).toBeNull();
+      expect(console.warn).toHaveBeenCalled();
+    });
+  });
+
+  describe("method signatures and behavior", () => {
     it("should have proper method signatures", () => {
-      // Test that the service has the expected methods
       expect(typeof UserValidationService.validateOwnershipFromToken).toBe(
         "function"
       );
@@ -667,37 +904,32 @@ describe("UserValidationService", () => {
       expect(result2).toBeInstanceOf(Promise);
     });
 
-    it("should handle different resource user ID inputs consistently", async () => {
-      const testInputs = ["", "user123", "   ", "invalid-id"];
+    it("should always return consistent response structure", async () => {
+      const testCases = [
+        { token: mockToken, userId: validUserId, resourceId: validUserId },
+        { token: null, userId: null, resourceId: validUserId },
+        { token: mockToken, userId: null, resourceId: validUserId },
+        { token: mockToken, userId: validUserId, resourceId: otherUserId },
+      ];
 
-      for (const input of testInputs) {
-        const result =
-          await UserValidationService.validateOwnershipFromToken(input);
+      for (const testCase of testCases) {
+        mockGetToken.mockResolvedValue(testCase.token);
+        mockExtractUserIdFromJWT.mockReturnValue(testCase.userId);
 
-        // Should always return consistent structure
+        const result = await UserValidationService.validateOwnershipFromToken(
+          testCase.resourceId
+        );
+
+        // Should always have consistent structure
         expect(result).toHaveProperty("isValid");
         expect(result).toHaveProperty("currentUserId");
         expect(typeof result.isValid).toBe("boolean");
+
+        if (!result.isValid) {
+          expect(result.error).toBeTruthy();
+          expect(typeof result.error).toBe("string");
+        }
       }
     });
-
-    it("should maintain consistent error handling patterns", async () => {
-      // Test various scenarios to ensure consistent error handling
-      const results = await Promise.allSettled([
-        UserValidationService.validateOwnershipFromToken("test1"),
-        UserValidationService.validateOwnershipFromToken("test2"),
-        UserValidationService.getCurrentUserIdFromToken(),
-      ]);
-
-      // All promises should resolve (not reject)
-      results.forEach(result => {
-        expect(result.status).toBe("fulfilled");
-      });
-    });
   });
-
-  // Note: More comprehensive UserValidationService tests are limited by Jest's
-  // inability to properly mock dynamic imports in this test environment.
-  // The hook version (useUserValidation) provides comprehensive coverage
-  // of the core validation logic with 34+ test cases above.
 });

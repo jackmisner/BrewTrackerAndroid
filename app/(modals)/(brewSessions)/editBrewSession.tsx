@@ -6,7 +6,6 @@ import {
   ScrollView,
   TextInput,
   KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Alert,
 } from "react-native";
@@ -100,12 +99,17 @@ export default function EditBrewSessionScreen() {
     setShowDatePicker({ field, visible: true });
   };
 
+  const toYMDLocal = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
   const handleDateChange = (event: any, selectedDate?: Date) => {
+    const { field } = showDatePicker;
     setShowDatePicker({ field: "", visible: false });
-
     if (selectedDate) {
-      const dateString = selectedDate.toISOString().split("T")[0]; // YYYY-MM-DD format
-      handleInputChange(showDatePicker.field, dateString);
+      handleInputChange(field, toYMDLocal(selectedDate));
     }
   };
 
@@ -114,7 +118,8 @@ export default function EditBrewSessionScreen() {
       return "Select date";
     }
     try {
-      const date = new Date(dateString);
+      const [y, m, d] = dateString.split("-").map(n => parseInt(n, 10));
+      const date = y && m && d ? new Date(y, m - 1, d) : new Date(dateString);
       return date.toLocaleDateString();
     } catch {
       return dateString;
@@ -286,8 +291,8 @@ export default function EditBrewSessionScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      behavior={"height"}
+      keyboardVerticalOffset={0}
     >
       {/* Header */}
       <View style={styles.header}>

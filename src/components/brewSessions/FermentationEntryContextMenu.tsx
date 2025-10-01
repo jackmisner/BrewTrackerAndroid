@@ -1,8 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { Alert } from "react-native";
 import { router } from "expo-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import ApiService from "@services/api/apiService";
+import { useBrewSessions } from "@src/hooks/offlineV2";
 import { FermentationEntry } from "@src/types";
 import { useUserValidation } from "@utils/userValidation";
 import {
@@ -31,32 +30,9 @@ export const FermentationEntryContextMenu: React.FC<
   onClose,
   position,
 }) => {
-  const queryClient = useQueryClient();
+  const brewSessionsHook = useBrewSessions();
   const userValidation = useUserValidation();
-
-  const deleteMutation = useMutation({
-    mutationFn: async (contextData: {
-      brewSessionId: string;
-      index: number;
-      entry: FermentationEntry;
-    }) => {
-      const { brewSessionId: sessionId, index } = contextData;
-      return ApiService.brewSessions.deleteFermentationEntry(sessionId, index);
-    },
-    onSuccess: (_, contextData) => {
-      queryClient.invalidateQueries({
-        queryKey: ["brewSession", contextData.brewSessionId],
-      });
-    },
-    onError: error => {
-      console.error("Failed to delete fermentation entry:", error);
-      Alert.alert(
-        "Delete Failed",
-        "Failed to delete fermentation entry. Please try again.",
-        [{ text: "OK" }]
-      );
-    },
-  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) {
@@ -116,13 +92,18 @@ export const FermentationEntryContextMenu: React.FC<
     index: number;
     brewSessionId: string;
   }) => {
-    const { brewSessionId: sessionId, index, entry } = contextData;
+    const { brewSessionId: sessionId, index } = contextData;
     if (!sessionId || index === undefined) {
       Alert.alert(
         "Error",
         "Cannot delete entry: Missing required information",
         [{ text: "OK" }]
       );
+      return;
+    }
+
+    // Block re-entrancy
+    if (isDeleting) {
       return;
     }
 
@@ -153,7 +134,20 @@ export const FermentationEntryContextMenu: React.FC<
       }
     }
 
-    deleteMutation.mutate({ brewSessionId: sessionId, index, entry });
+    try {
+      setIsDeleting(true);
+      await brewSessionsHook.deleteFermentationEntry!(sessionId, index);
+      onClose();
+    } catch (error) {
+      console.error("Failed to delete fermentation entry:", error);
+      Alert.alert(
+        "Delete Failed",
+        "Failed to delete fermentation entry. Please try again.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleViewDetails = (contextData: {
