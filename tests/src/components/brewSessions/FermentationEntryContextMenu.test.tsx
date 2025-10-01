@@ -405,7 +405,7 @@ describe("FermentationEntryContextMenu", () => {
     });
 
     it("should handle entry with minimal fields", () => {
-      const minimalEntry = {
+      const minimalEntry: any = {
         id: "entry-minimal",
         brew_session_id: "session-123",
       };
@@ -421,7 +421,7 @@ describe("FermentationEntryContextMenu", () => {
     });
 
     it("should handle entry with null gravity", () => {
-      const entryNullGravity = {
+      const entryNullGravity: any = {
         ...mockEntry,
         gravity: null,
       };
@@ -438,7 +438,7 @@ describe("FermentationEntryContextMenu", () => {
     });
 
     it("should handle entry with null temperature", () => {
-      const entryNullTemp = {
+      const entryNullTemp: any = {
         ...mockEntry,
         temperature: null,
       };
@@ -455,7 +455,7 @@ describe("FermentationEntryContextMenu", () => {
     });
 
     it("should handle entry with null pH", () => {
-      const entryNullPh = {
+      const entryNullPh: any = {
         ...mockEntry,
         ph: null,
       };
