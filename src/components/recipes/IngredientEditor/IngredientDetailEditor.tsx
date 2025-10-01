@@ -41,6 +41,7 @@ import { ingredientDetailEditorStyles } from "@styles/recipes/ingredientDetailEd
 import { HOP_USAGE_OPTIONS, HOP_TIME_PRESETS } from "@constants/hopConstants";
 import { getHopTimePlaceholder } from "@utils/formatUtils";
 import { UnitConverter } from "@services/calculators/UnitConverter";
+import { TEST_IDS } from "@/src/constants/testIDs";
 
 // Unit options by ingredient type
 const UNIT_OPTIONS: Record<IngredientType, string[]> = {
@@ -1181,6 +1182,7 @@ export function IngredientDetailEditor({
                 <TouchableOpacity
                   style={styles.saveButton}
                   onPress={handleSave}
+                  testID={TEST_IDS.patterns.touchableOpacityAction("save")}
                 >
                   <Text style={styles.saveButtonText}>Save Changes</Text>
                 </TouchableOpacity>

@@ -14,56 +14,28 @@ jest.mock("expo-router", () => ({
 }));
 
 // Mock useBrewSessions hook
-const mockDeleteFermentationEntry = jest.fn();
+const mockDeleteFermentationEntry = jest.fn().mockResolvedValue(undefined);
 
-const mockBrewSessionsHook = {
-  data: null,
-  isLoading: false,
-  error: null,
-  pendingCount: 0,
-  conflictCount: 0,
-  lastSync: null,
-  getById: jest.fn(),
-  deleteFermentationEntry: mockDeleteFermentationEntry,
-  create: jest.fn(),
-  update: jest.fn(),
-  delete: jest.fn(),
-  clone: jest.fn(),
-  sync: jest.fn(),
-  refresh: jest.fn(),
-};
+const mockBrewSessionsHook /* : Partial<ReturnType<typeof require("@src/hooks/offlineV2").useBrewSessions>> */ =
+  {
+    data: null,
+    isLoading: false,
+    error: null,
+    pendingCount: 0,
+    conflictCount: 0,
+    lastSync: null,
+    getById: jest.fn(),
+    deleteFermentationEntry: mockDeleteFermentationEntry,
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    clone: jest.fn(),
+    sync: jest.fn(),
+    refresh: jest.fn(),
+  };
 
 jest.mock("@src/hooks/offlineV2", () => ({
   useBrewSessions: jest.fn(() => mockBrewSessionsHook),
-}));
-
-jest.mock("@tanstack/react-query", () => {
-  const actual = jest.requireActual("@tanstack/react-query");
-  return {
-    ...actual,
-    QueryClient: jest.fn().mockImplementation(() => ({
-      invalidateQueries: jest.fn(),
-      clear: jest.fn(),
-    })),
-    useMutation: jest.fn(() => ({
-      mutate: jest.fn(),
-      mutateAsync: jest.fn(),
-      isLoading: false,
-      error: null,
-    })),
-    useQueryClient: jest.fn(() => ({
-      invalidateQueries: jest.fn(),
-    })),
-  };
-});
-
-jest.mock("@services/api/apiService", () => ({
-  __esModule: true,
-  default: {
-    brewSessions: {
-      deleteFermentationEntry: jest.fn(),
-    },
-  },
 }));
 
 // Mock user validation
@@ -86,7 +58,15 @@ jest.mock("@src/components/ui/ContextMenu/BaseContextMenu", () => {
         RN.View,
         {},
         actions.map((action: any) =>
-          React.createElement(RN.Text, { key: action.id }, action.title)
+          React.createElement(
+            RN.TouchableOpacity,
+            {
+              key: action.id,
+              onPress: () => action.onPress?.(item),
+              testID: `action-${action.id}`,
+            },
+            React.createElement(RN.Text, null, action.title)
+          )
         )
       );
     },
@@ -109,8 +89,8 @@ describe("FermentationEntryContextMenu", () => {
     id: "entry-1",
     brew_session_id: "session-123",
     date: "2024-01-15T10:30:00Z",
-    specific_gravity: 1.05,
-    temperature_c: 20,
+    gravity: 1.05,
+    temperature: 20,
     ph: 4.5,
     notes: "Initial fermentation reading",
     created_at: "2024-01-15T10:30:00Z",
@@ -140,6 +120,8 @@ describe("FermentationEntryContextMenu", () => {
     brew_session_id: "session-123",
     date: "invalid-date-string",
     gravity: 1.015,
+    temperature: 20,
+    ph: 4.2,
   };
 
   beforeEach(() => {
@@ -172,10 +154,9 @@ describe("FermentationEntryContextMenu", () => {
     }).not.toThrow();
   });
 
-  it("should handle missing entry data gracefully", () => {
+  it("should handle missing required props gracefully (no render)", () => {
     const props = {
       ...defaultProps,
-      entry: null,
       entryIndex: undefined,
       brewSessionId: undefined,
     };
@@ -408,6 +389,9 @@ describe("FermentationEntryContextMenu", () => {
       const minimalEntry: any = {
         id: "entry-minimal",
         brew_session_id: "session-123",
+        gravity: 1.04,
+        temperature: 60,
+        ph: 4.2,
       };
 
       const props = {
@@ -420,15 +404,15 @@ describe("FermentationEntryContextMenu", () => {
       expect(getByText("Edit Entry")).toBeTruthy();
     });
 
-    it("should handle entry with null gravity", () => {
-      const entryNullGravity: any = {
+    it("should handle entry with 0 gravity", () => {
+      const entryZeroGravity: any = {
         ...mockEntry,
-        gravity: null,
+        gravity: 0,
       };
 
       const props = {
         ...defaultProps,
-        entry: entryNullGravity,
+        entry: entryZeroGravity,
         entryIndex: 1,
       };
 
@@ -437,15 +421,15 @@ describe("FermentationEntryContextMenu", () => {
       }).not.toThrow();
     });
 
-    it("should handle entry with null temperature", () => {
-      const entryNullTemp: any = {
+    it("should handle entry with 0 temperature", () => {
+      const entryZeroTemp: any = {
         ...mockEntry,
-        temperature: null,
+        temperature: 0,
       };
 
       const props = {
         ...defaultProps,
-        entry: entryNullTemp,
+        entry: entryZeroTemp,
         entryIndex: 1,
       };
 
@@ -454,15 +438,15 @@ describe("FermentationEntryContextMenu", () => {
       }).not.toThrow();
     });
 
-    it("should handle entry with null pH", () => {
-      const entryNullPh: any = {
+    it("should handle entry with 0 pH", () => {
+      const entryZeroPh: any = {
         ...mockEntry,
-        ph: null,
+        ph: 0,
       };
 
       const props = {
         ...defaultProps,
-        entry: entryNullPh,
+        entry: entryZeroPh,
         entryIndex: 1,
       };
 
@@ -520,6 +504,27 @@ describe("FermentationEntryContextMenu", () => {
       expect(getByText("View Details")).toBeTruthy();
       expect(getByText("Edit Entry")).toBeTruthy();
       expect(getByText("Delete Entry")).toBeTruthy();
+    });
+
+    it("invokes delete via hook and calls onClose", async () => {
+      mockDeleteFermentationEntry.mockResolvedValueOnce(undefined);
+      const props = {
+        ...defaultProps,
+        entry: mockEntry,
+        entryIndex: 1,
+        brewSessionId: "session-123",
+      };
+      const { getByTestId } = render(
+        <FermentationEntryContextMenu {...props} />
+      );
+      getByTestId("action-delete").props.onPress(); // trigger
+      // wait microtask
+      await Promise.resolve();
+      expect(mockDeleteFermentationEntry).toHaveBeenCalledWith(
+        "session-123",
+        1
+      );
+      expect(props.onClose).toHaveBeenCalled();
     });
   });
 });

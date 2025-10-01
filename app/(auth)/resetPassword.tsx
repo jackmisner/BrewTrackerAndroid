@@ -38,7 +38,6 @@ import {
   TouchableOpacity,
   Alert,
   KeyboardAvoidingView,
-  Platform,
   ScrollView,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -215,10 +214,7 @@ const ResetPasswordScreen: React.FC = () => {
 
   if (success) {
     return (
-      <KeyboardAvoidingView
-        style={loginStyles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
+      <KeyboardAvoidingView style={loginStyles.container} behavior={"height"}>
         <ScrollView contentContainerStyle={loginStyles.scrollContainer}>
           <View style={loginStyles.formContainer}>
             <View style={loginStyles.header}>
@@ -253,10 +249,7 @@ const ResetPasswordScreen: React.FC = () => {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={loginStyles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <KeyboardAvoidingView style={loginStyles.container} behavior={"height"}>
       <ScrollView contentContainerStyle={loginStyles.scrollContainer}>
         <View style={loginStyles.formContainer}>
           <View style={loginStyles.header}>

@@ -48,7 +48,7 @@ jest.mock("react-native", () => ({
     const React = require("react");
     return React.createElement("KeyboardAvoidingView", props, children);
   },
-  Platform: { OS: "ios" },
+  Platform: { OS: "android" },
   ActivityIndicator: (props: any) => {
     const React = require("react");
     return React.createElement("ActivityIndicator", props);

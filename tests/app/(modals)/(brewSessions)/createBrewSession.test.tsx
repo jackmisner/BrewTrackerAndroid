@@ -113,7 +113,7 @@ jest.mock("react-native", () => ({
     flatten: (styles: any) => styles,
   },
   Platform: {
-    OS: "ios",
+    OS: "android",
   },
   Appearance: {
     getColorScheme: jest.fn(() => "light"),

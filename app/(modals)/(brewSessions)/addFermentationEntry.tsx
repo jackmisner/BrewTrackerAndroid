@@ -47,7 +47,6 @@ import {
   ScrollView,
   TextInput,
   KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Alert,
 } from "react-native";
@@ -260,10 +259,7 @@ export default function AddFermentationEntryScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={"height"}>
       <ModalHeader
         title="Add Fermentation Entry"
         testID="add-fermentation-entry-header"

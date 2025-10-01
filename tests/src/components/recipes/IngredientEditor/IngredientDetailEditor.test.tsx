@@ -3,8 +3,9 @@
  */
 
 import React from "react";
-import { render } from "@testing-library/react-native";
-import { IngredientDetailEditor } from "../../../../../src/components/recipes/IngredientEditor/IngredientDetailEditor";
+import { fireEvent, render } from "@testing-library/react-native";
+import { IngredientDetailEditor } from "@src/components/recipes/IngredientEditor/IngredientDetailEditor";
+import { TEST_IDS } from "@constants/testIDs";
 
 // Mock React Native components
 jest.mock("react-native", () => ({
@@ -32,9 +33,13 @@ jest.mock("react-native", () => ({
     const React = require("react");
     return React.createElement("ScrollView", props, children);
   },
-  Modal: ({ children, ...props }: any) => {
+  Modal: ({ children, visible, ...props }: any) => {
     const React = require("react");
-    return React.createElement("Modal", props, children);
+    return visible ? React.createElement("Modal", props, children) : null;
+  },
+  Platform: {
+    OS: "android",
+    select: jest.fn(obj => obj.android || obj.default),
   },
   Dimensions: {
     get: jest.fn(() => ({ width: 375, height: 812 })),
@@ -42,6 +47,10 @@ jest.mock("react-native", () => ({
   },
   Alert: { alert: jest.fn() },
   Keyboard: { dismiss: jest.fn() },
+  StyleSheet: {
+    create: jest.fn(styles => styles),
+    flatten: jest.fn(styles => styles),
+  },
 }));
 
 // Mock external dependencies
@@ -161,12 +170,44 @@ jest.mock("@utils/keyUtils", () => ({
 
 jest.mock("@services/calculators/UnitConverter", () => ({
   UnitConverter: {
-    convertWeight: jest.fn(
-      (amount: number, _from: string, _to: string) => amount * 28.35
-    ), // oz to g
-    convertVolume: jest.fn(
-      (amount: number, _from: string, _to: string) => amount * 3
-    ), // tsp to tbsp
+    convertWeight: jest.fn((amount: number, from: string, to: string) => {
+      // oz → g
+      if (from === "oz" && to === "g") {
+        return amount * 28.35;
+      }
+      // g → oz
+      if (from === "g" && to === "oz") {
+        return amount / 28.35;
+      }
+      // lb → kg
+      if (from === "lb" && to === "kg") {
+        return amount * 0.453592;
+      }
+      // kg → lb
+      if (from === "kg" && to === "lb") {
+        return amount / 0.453592;
+      }
+      // Same unit or unsupported conversion
+      if (from === to) {
+        return amount;
+      }
+      throw new Error(`Unsupported weight conversion: ${from} → ${to}`);
+    }),
+    convertVolume: jest.fn((amount: number, from: string, to: string) => {
+      // tsp → tbsp
+      if (from === "tsp" && to === "tbsp") {
+        return amount / 3;
+      }
+      // tbsp → tsp
+      if (from === "tbsp" && to === "tsp") {
+        return amount * 3;
+      }
+      // Same unit or unsupported conversion
+      if (from === to) {
+        return amount;
+      }
+      throw new Error(`Unsupported volume conversion: ${from} → ${to}`);
+    }),
     isValidWeightUnit: jest.fn((unit: string) =>
       ["oz", "lb", "g", "kg"].includes(unit)
     ),
@@ -483,6 +524,37 @@ describe("IngredientDetailEditor", () => {
       expect(() => {
         render(<IngredientDetailEditor {...props} />);
       }).not.toThrow();
+    });
+
+    it("should show validation error for zero amount", () => {
+      const zeroAmount = { ...mockIngredient, amount: 0 };
+      const props = {
+        ...mockProps,
+        ingredient: zeroAmount,
+        onUpdate: jest.fn(),
+      };
+      const { queryByTestId, getByText, debug } = render(
+        <IngredientDetailEditor {...props} />
+      );
+
+      // Debug: print the component tree
+      // debug();
+
+      // Trigger save to invoke validation
+      const saveButton = queryByTestId(
+        TEST_IDS.patterns.touchableOpacityAction("save")
+      );
+
+      // Verify save button exists
+      expect(saveButton).toBeTruthy();
+
+      if (saveButton) {
+        fireEvent.press(saveButton);
+        // Verify error message appears
+        expect(getByText("Amount must be greater than 0")).toBeTruthy();
+        // Verify onUpdate was NOT called due to validation error
+        expect(props.onUpdate).not.toHaveBeenCalled();
+      }
     });
   });
 

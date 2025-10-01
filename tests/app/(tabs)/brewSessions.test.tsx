@@ -20,7 +20,7 @@ jest.mock("react-native", () => ({
   Alert: {
     alert: jest.fn(),
   },
-  Platform: { OS: "ios" },
+  Platform: { OS: "android" },
   StyleSheet: {
     create: (styles: any) => styles,
     flatten: (styles: any) => styles,

@@ -22,8 +22,8 @@ jest.mock("react-native", () => {
       flatten: jest.fn(styles => styles),
     },
     Platform: {
-      OS: "ios",
-      select: jest.fn(obj => obj.ios || obj.default),
+      OS: "android",
+      select: jest.fn(obj => obj.android || obj.default),
     },
     StatusBar: {
       currentHeight: 24,

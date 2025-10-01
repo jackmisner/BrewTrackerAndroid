@@ -6,7 +6,6 @@ import {
   ScrollView,
   TextInput,
   KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
   Alert,
 } from "react-native";
@@ -286,8 +285,8 @@ export default function EditBrewSessionScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      behavior={"height"}
+      keyboardVerticalOffset={0}
     >
       {/* Header */}
       <View style={styles.header}>

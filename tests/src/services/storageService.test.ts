@@ -55,12 +55,7 @@ describe("StorageService", () => {
       expect(info.hasScopedStorage).toBe(false);
     });
 
-    it("should handle iOS platform", () => {
-      (Platform as any).OS = "ios";
-      const info = StorageService.getStorageInfo();
-      expect(info.platform).toBe("ios");
-      expect(info.androidVersion).toBeNull();
-    });
+    // Removed iOS platform test - this is an Android-only app
 
     it("should provide comprehensive platform info", () => {
       (Platform as any).OS = "android";
@@ -110,20 +105,7 @@ describe("StorageService", () => {
       expect(result).toBe(false);
     });
 
-    it("should handle iOS permissions", async () => {
-      (Platform as any).OS = "ios";
-      mockMediaLibrary.requestPermissionsAsync.mockResolvedValue({
-        status: MediaLibrary.PermissionStatus.GRANTED,
-        granted: true,
-        canAskAgain: true,
-        accessPrivileges: "all",
-        expires: "never",
-      });
-
-      const result = await StorageService.requestMediaPermissions();
-
-      expect(result).toBe(true);
-    });
+    // Removed iOS platform test - this is an Android-only app
 
     it("should handle permission errors", async () => {
       mockMediaLibrary.requestPermissionsAsync.mockRejectedValue(
