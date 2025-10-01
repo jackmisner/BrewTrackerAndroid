@@ -283,7 +283,7 @@ const ResetPasswordScreen: React.FC = () => {
               <TextInput
                 style={[styles.input, { paddingRight: 50 }]}
                 placeholder="Enter new password"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={colors.textMuted}
                 value={formData.newPassword}
                 onChangeText={text => {
                   // Don't trim here to allow spaces within password, but validate on submit
@@ -345,7 +345,7 @@ const ResetPasswordScreen: React.FC = () => {
               <TextInput
                 style={[styles.input, { paddingRight: 50 }]}
                 placeholder="Confirm new password"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={colors.textMuted}
                 value={formData.confirmPassword}
                 onChangeText={text => {
                   setFormData(prev => ({ ...prev, confirmPassword: text }));

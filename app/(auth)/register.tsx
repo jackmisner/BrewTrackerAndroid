@@ -37,7 +37,7 @@
  * - Error handling with user-friendly messages
  * - Authentication context integration for state management
  */
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -64,7 +64,7 @@ export default function RegisterScreen() {
   const { register, error, clearError } = useAuth();
   const router = useRouter();
   const { colors } = useTheme();
-  const styles = registerStyles(colors);
+  const styles = useMemo(() => registerStyles(colors), [colors]);
 
   const validateForm = () => {
     if (!username || !email || !password || !confirmPassword) {

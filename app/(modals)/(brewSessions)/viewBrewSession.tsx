@@ -21,6 +21,7 @@ import { FermentationChart } from "@src/components/brewSessions/FermentationChar
 import { FermentationData } from "@src/components/brewSessions/FermentationData";
 import { useBrewSessions } from "@hooks/offlineV2/useUserData";
 import { ModalHeader } from "@src/components/ui/ModalHeader";
+import { QUERY_KEYS } from "@services/api/queryClient";
 
 export default function ViewBrewSession() {
   const { brewSessionId } = useLocalSearchParams<{ brewSessionId: string }>();
@@ -202,7 +203,7 @@ export default function ViewBrewSession() {
    * Invalidates dashboard cache and navigates to home
    */
   const handleHomeNavigation = () => {
-    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD });
     router.push({ pathname: "/(tabs)" });
   };
 
@@ -263,7 +264,11 @@ export default function ViewBrewSession() {
    */
   const handleRatingUpdate = React.useCallback(
     async (newRating: number) => {
-      if (!brewSessionId || !brewSessionData) {
+      if (
+        !brewSessionId ||
+        !brewSessionData ||
+        newRating === brewSessionData.batch_rating
+      ) {
         return;
       }
 

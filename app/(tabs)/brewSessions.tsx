@@ -299,8 +299,11 @@ export default function BrewSessionsScreen() {
     const endDateString = fermentationEndDate || new Date().toISOString();
     const endDate = new Date(endDateString);
 
-    const daysPassed = Math.floor(
-      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    const daysPassed = Math.max(
+      0,
+      Math.floor(
+        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+      )
     );
 
     // Note: expectedCompletion is not used for day counting anymore
