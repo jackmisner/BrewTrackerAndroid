@@ -138,7 +138,7 @@ export const mockData = {
     };
   },
 
-  // Session with fermentation_entries format (legacy)
+  // Session with fermentation_data format (legacy)
   brewSessionWithEntries: (overrides: Record<string, any> = {}) => {
     mockData._sessionCounter++;
     return {
@@ -153,7 +153,7 @@ export const mockData = {
       actual_fg: null,
       actual_abv: null,
       notes: "Test brew session notes",
-      fermentation_entries: [],
+      fermentation_data: [],
       target_fg: 1.012,
       temperature_unit: "F",
       ...overrides,

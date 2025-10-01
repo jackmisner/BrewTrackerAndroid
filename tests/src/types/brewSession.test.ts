@@ -331,7 +331,7 @@ describe("Brew Session Types", () => {
       const session = createMockBrewSession({
         current_stage: "primary",
         days_fermenting: 7,
-        fermentation_entries: [
+        fermentation_data: [
           {
             entry_date: "2024-01-03",
             temperature: 68,
@@ -347,8 +347,8 @@ describe("Brew Session Types", () => {
 
       expect(session.current_stage).toBe("primary");
       expect(session.days_fermenting).toBe(7);
-      expect(session.fermentation_entries).toHaveLength(2);
-      expect(session.fermentation_entries?.[0].gravity).toBe(1.025);
+      expect(session.fermentation_data).toHaveLength(2);
+      expect(session.fermentation_data?.[0].gravity).toBe(1.025);
     });
 
     it("should track quality metrics", () => {
@@ -615,7 +615,7 @@ describe("Brew Session Types", () => {
         current_stage: "primary",
         original_gravity: 1.055,
         target_fg: 1.012,
-        fermentation_entries: [
+        fermentation_data: [
           {
             entry_date: "2024-01-03",
             temperature: 68,
@@ -637,9 +637,9 @@ describe("Brew Session Types", () => {
 
       expect(session.status).toBe("fermenting");
       expect(session.current_stage).toBe("primary");
-      expect(session.fermentation_entries).toHaveLength(2);
-      expect(session.fermentation_entries?.[0].gravity).toBeGreaterThan(
-        session.fermentation_entries?.[1].gravity || 0
+      expect(session.fermentation_data).toHaveLength(2);
+      expect(session.fermentation_data?.[0].gravity).toBeGreaterThan(
+        session.fermentation_data?.[1].gravity || 0
       );
     });
 

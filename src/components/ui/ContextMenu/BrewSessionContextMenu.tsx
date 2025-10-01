@@ -140,8 +140,8 @@ export function createDefaultBrewSessionActions(handlers: {
       onPress: handlers.onExportData,
       // Hide export for sessions without data
       disabled: brewSession =>
-        !brewSession.fermentation_entries ||
-        brewSession.fermentation_entries.length === 0,
+        !brewSession.fermentation_data ||
+        brewSession.fermentation_data.length === 0,
     },
     {
       id: "archive",

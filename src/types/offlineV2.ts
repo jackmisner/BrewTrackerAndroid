@@ -119,8 +119,14 @@ export interface SyncableItem<T> {
 export interface PendingOperation {
   id: string;
   type: "create" | "update" | "delete";
-  entityType: "recipe" | "brew_session" | "fermentation_entry";
+  entityType:
+    | "recipe"
+    | "brew_session"
+    | "fermentation_entry"
+    | "dry_hop_addition";
   entityId: string;
+  parentId?: string; // For embedded documents: parent brew session ID
+  entryIndex?: number; // For update/delete operations on embedded documents (array index)
   userId?: string;
   data?: any;
   timestamp: number;

@@ -995,7 +995,7 @@ export class UserCacheService {
         created_at: new Date(now).toISOString(),
         updated_at: new Date(now).toISOString(),
         user_id: currentUserId,
-        fermentation_entries: session.fermentation_entries || [],
+        fermentation_data: session.fermentation_data || [],
         // Initialize optional fields
         temperature_unit: session.temperature_unit || "F",
       } as BrewSession;
@@ -1374,32 +1374,61 @@ export class UserCacheService {
       }
 
       // Create new entry with defaults
+      // Note: entry_date must be a full ISO datetime string for backend DateTimeField
       const newEntry: import("@src/types").FermentationEntry = {
-        entry_date: entry.entry_date || new Date().toISOString().split("T")[0],
+        entry_date: entry.entry_date || new Date().toISOString(),
         temperature: entry.temperature,
         gravity: entry.gravity,
         ph: entry.ph,
         notes: entry.notes,
       };
 
-      // Update fermentation entries array
-      const updatedEntries = [
-        ...(session.fermentation_entries || []),
-        newEntry,
-      ];
+      // Update fermentation data array locally (offline-first)
+      const updatedEntries = [...(session.fermentation_data || []), newEntry];
 
-      // Update the brew session with new entry
-      const updatedSession = await this.updateBrewSession(sessionId, {
-        fermentation_entries: updatedEntries,
-      });
+      // Create updated session with new entry
+      const updatedSessionData: BrewSession = {
+        ...session,
+        fermentation_data: updatedEntries,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Update cache immediately (works offline)
+      const now = Date.now();
+      const syncableItem: SyncableItem<BrewSession> = {
+        id: sessionId,
+        data: updatedSessionData,
+        lastModified: now,
+        syncStatus: "pending",
+        needsSync: true,
+      };
+      await this.updateBrewSessionInCache(syncableItem);
+
+      // Queue operation for sync (separate from brew session update)
+      const operation: PendingOperation = {
+        id: `fermentation_entry_create_${sessionId}_${now}`,
+        type: "create",
+        entityType: "fermentation_entry",
+        entityId: `temp_${now}`, // Temp ID for the entry
+        parentId: sessionId,
+        userId,
+        data: newEntry,
+        timestamp: now,
+        retryCount: 0,
+        maxRetries: 3,
+      };
+      await this.addPendingOperation(operation);
+
+      // Try to sync immediately if online (best effort, non-blocking)
+      void this.backgroundSync();
 
       await UnifiedLogger.info(
         "UserCacheService.addFermentationEntry",
-        `Fermentation entry added successfully`,
+        `Fermentation entry added to cache and queued for sync`,
         { sessionId, totalEntries: updatedEntries.length }
       );
 
-      return updatedSession;
+      return updatedSessionData;
     } catch (error) {
       console.error("Error adding fermentation entry:", error);
       throw new OfflineError(
@@ -1441,7 +1470,7 @@ export class UserCacheService {
         throw new OfflineError("Brew session not found", "NOT_FOUND", false);
       }
 
-      const entries = session.fermentation_entries || [];
+      const entries = session.fermentation_data || [];
       if (entryIndex < 0 || entryIndex >= entries.length) {
         throw new OfflineError(
           "Fermentation entry not found",
@@ -1450,25 +1479,57 @@ export class UserCacheService {
         );
       }
 
-      // Update the entry
+      // Update entry locally (offline-first)
       const updatedEntries = [...entries];
       updatedEntries[entryIndex] = {
         ...updatedEntries[entryIndex],
         ...updates,
       };
 
-      // Update the brew session
-      const updatedSession = await this.updateBrewSession(sessionId, {
-        fermentation_entries: updatedEntries,
-      });
+      // Create updated session
+      const updatedSessionData: BrewSession = {
+        ...session,
+        fermentation_data: updatedEntries,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Update cache immediately (works offline)
+      const now = Date.now();
+      const syncableItem: SyncableItem<BrewSession> = {
+        id: sessionId,
+        data: updatedSessionData,
+        lastModified: now,
+        syncStatus: "pending",
+        needsSync: true,
+      };
+      await this.updateBrewSessionInCache(syncableItem);
+
+      // Queue operation for sync
+      const operation: PendingOperation = {
+        id: `fermentation_entry_update_${sessionId}_${entryIndex}_${now}`,
+        type: "update",
+        entityType: "fermentation_entry",
+        entityId: sessionId, // Parent session ID
+        parentId: sessionId,
+        entryIndex: entryIndex,
+        userId,
+        data: updates,
+        timestamp: now,
+        retryCount: 0,
+        maxRetries: 3,
+      };
+      await this.addPendingOperation(operation);
+
+      // Try to sync immediately if online (best effort)
+      void this.backgroundSync();
 
       await UnifiedLogger.info(
         "UserCacheService.updateFermentationEntry",
-        `Fermentation entry updated successfully`,
+        `Fermentation entry updated in cache and queued for sync`,
         { sessionId, entryIndex }
       );
 
-      return updatedSession;
+      return updatedSessionData;
     } catch (error) {
       console.error("Error updating fermentation entry:", error);
       throw new OfflineError(
@@ -1508,7 +1569,7 @@ export class UserCacheService {
         throw new OfflineError("Brew session not found", "NOT_FOUND", false);
       }
 
-      const entries = session.fermentation_entries || [];
+      const entries = session.fermentation_data || [];
       if (entryIndex < 0 || entryIndex >= entries.length) {
         throw new OfflineError(
           "Fermentation entry not found",
@@ -1517,21 +1578,52 @@ export class UserCacheService {
         );
       }
 
-      // Remove the entry
+      // Remove entry locally (offline-first)
       const updatedEntries = entries.filter((_, index) => index !== entryIndex);
 
-      // Update the brew session
-      const updatedSession = await this.updateBrewSession(sessionId, {
-        fermentation_entries: updatedEntries,
-      });
+      // Create updated session
+      const updatedSessionData: BrewSession = {
+        ...session,
+        fermentation_data: updatedEntries,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Update cache immediately (works offline)
+      const now = Date.now();
+      const syncableItem: SyncableItem<BrewSession> = {
+        id: sessionId,
+        data: updatedSessionData,
+        lastModified: now,
+        syncStatus: "pending",
+        needsSync: true,
+      };
+      await this.updateBrewSessionInCache(syncableItem);
+
+      // Queue operation for sync
+      const operation: PendingOperation = {
+        id: `fermentation_entry_delete_${sessionId}_${entryIndex}_${now}`,
+        type: "delete",
+        entityType: "fermentation_entry",
+        entityId: sessionId,
+        parentId: sessionId,
+        entryIndex: entryIndex,
+        userId,
+        timestamp: now,
+        retryCount: 0,
+        maxRetries: 3,
+      };
+      await this.addPendingOperation(operation);
+
+      // Try to sync immediately if online (best effort)
+      void this.backgroundSync();
 
       await UnifiedLogger.info(
         "UserCacheService.deleteFermentationEntry",
-        `Fermentation entry deleted successfully`,
+        `Fermentation entry deleted from cache and queued for sync`,
         { sessionId, remainingEntries: updatedEntries.length }
       );
 
-      return updatedSession;
+      return updatedSessionData;
     } catch (error) {
       console.error("Error deleting fermentation entry:", error);
       throw new OfflineError(
@@ -3220,11 +3312,12 @@ export class UserCacheService {
         "Sanitizing brew session data for API",
         {
           originalFields: Object.keys(updates),
-          hasFermentationEntries: !!(
-            sanitized.fermentation_entries &&
-            sanitized.fermentation_entries.length > 0
+          hasFermentationData: !!(
+            sanitized.fermentation_data &&
+            sanitized.fermentation_data.length > 0
           ),
-          fermentationEntryCount: sanitized.fermentation_entries?.length || 0,
+          fermentationEntryCount: sanitized.fermentation_data?.length || 0,
+          fermentationDataSample: sanitized.fermentation_data?.[0] || null,
         }
       );
     }
@@ -3391,6 +3484,21 @@ export class UserCacheService {
             if (response && response.data && response.data.id) {
               return { realId: response.data.id };
             }
+          } else if (operation.entityType === "fermentation_entry") {
+            // Create fermentation entry using dedicated endpoint
+            await UnifiedLogger.info(
+              "UserCacheService.processPendingOperation",
+              `Syncing fermentation entry creation`,
+              { parentId: operation.parentId }
+            );
+            await ApiService.brewSessions.addFermentationEntry(
+              operation.parentId!,
+              operation.data
+            );
+            await UnifiedLogger.info(
+              "UserCacheService.processPendingOperation",
+              `Fermentation entry synced successfully`
+            );
           } else if (operation.entityType === "brew_session") {
             await UnifiedLogger.info(
               "UserCacheService.processPendingOperation",
@@ -3449,6 +3557,22 @@ export class UserCacheService {
                 operation.data
               );
             }
+          } else if (operation.entityType === "fermentation_entry") {
+            // Update fermentation entry using dedicated endpoint
+            await UnifiedLogger.info(
+              "UserCacheService.processPendingOperation",
+              `Syncing fermentation entry update`,
+              { parentId: operation.parentId, entryIndex: operation.entryIndex }
+            );
+            await ApiService.brewSessions.updateFermentationEntry(
+              operation.parentId!,
+              operation.entryIndex!,
+              operation.data
+            );
+            await UnifiedLogger.info(
+              "UserCacheService.processPendingOperation",
+              `Fermentation entry update synced successfully`
+            );
           } else if (operation.entityType === "brew_session") {
             // Check if this is a temp ID - if so, treat as CREATE instead of UPDATE
             const isTempId = operation.entityId.startsWith("temp_");
@@ -3480,14 +3604,47 @@ export class UserCacheService {
                   sessionName: operation.data?.name || "Unknown",
                 }
               );
-              await ApiService.brewSessions.update(
-                operation.entityId,
-                operation.data
-              );
-              await UnifiedLogger.info(
-                "UserCacheService.processPendingOperation",
-                `UPDATE API call successful for brew session ${operation.entityId}`
-              );
+
+              // Filter out embedded document arrays - they have dedicated sync operations
+              const updateData = { ...operation.data };
+
+              // Remove fermentation_data - synced via fermentation_entry operations
+              if (updateData.fermentation_data) {
+                await UnifiedLogger.info(
+                  "UserCacheService.processPendingOperation",
+                  `Skipping fermentation_data in brew session update - uses dedicated operations`,
+                  { entityId: operation.entityId }
+                );
+                delete updateData.fermentation_data;
+              }
+
+              // Remove dry_hop_additions - synced via dry_hop_addition operations
+              if (updateData.dry_hop_additions) {
+                await UnifiedLogger.info(
+                  "UserCacheService.processPendingOperation",
+                  `Skipping dry_hop_additions in brew session update - uses dedicated operations`,
+                  { entityId: operation.entityId }
+                );
+                delete updateData.dry_hop_additions;
+              }
+
+              // Update brew session fields only (not embedded documents)
+              if (Object.keys(updateData).length > 0) {
+                await ApiService.brewSessions.update(
+                  operation.entityId,
+                  updateData
+                );
+                await UnifiedLogger.info(
+                  "UserCacheService.processPendingOperation",
+                  `UPDATE API call successful for brew session ${operation.entityId}`
+                );
+              } else {
+                await UnifiedLogger.info(
+                  "UserCacheService.processPendingOperation",
+                  `Skipped brew session update - only embedded documents were queued (handled separately)`,
+                  { entityId: operation.entityId }
+                );
+              }
             }
           }
           break;
@@ -3506,6 +3663,21 @@ export class UserCacheService {
             await UnifiedLogger.info(
               "UserCacheService.syncOperation",
               `DELETE API call successful for recipe ${operation.entityId}`
+            );
+          } else if (operation.entityType === "fermentation_entry") {
+            // Delete fermentation entry using dedicated endpoint
+            await UnifiedLogger.info(
+              "UserCacheService.processPendingOperation",
+              `Syncing fermentation entry deletion`,
+              { parentId: operation.parentId, entryIndex: operation.entryIndex }
+            );
+            await ApiService.brewSessions.deleteFermentationEntry(
+              operation.parentId!,
+              operation.entryIndex!
+            );
+            await UnifiedLogger.info(
+              "UserCacheService.processPendingOperation",
+              `Fermentation entry deletion synced successfully`
             );
           } else if (operation.entityType === "brew_session") {
             await UnifiedLogger.info(

@@ -151,7 +151,7 @@ const createMockBrewSession = (
   created_at: "2023-01-01T00:00:00Z",
   updated_at: "2023-01-01T00:00:00Z",
   user_id: "user-1",
-  fermentation_entries: [
+  fermentation_data: [
     { entry_date: "2023-01-01", temperature: 65, gravity: 1.05 },
   ],
   ...overrides,
@@ -455,13 +455,13 @@ describe("createDefaultBrewSessionActions", () => {
       const exportAction = actions.find(a => a.id === "export");
 
       const sessionWithoutEntries = createMockBrewSession({
-        fermentation_entries: undefined,
+        fermentation_data: undefined,
       });
       const sessionWithEmptyEntries = createMockBrewSession({
-        fermentation_entries: [],
+        fermentation_data: [],
       });
       const sessionWithEntries = createMockBrewSession({
-        fermentation_entries: [{ entry_date: "2023-01-01" }],
+        fermentation_data: [{ entry_date: "2023-01-01" }],
       });
 
       expect(exportAction?.disabled?.(sessionWithoutEntries)).toBe(true);

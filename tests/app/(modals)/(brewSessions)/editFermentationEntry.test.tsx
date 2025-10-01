@@ -116,7 +116,6 @@ jest.mock("@tanstack/react-query", () => {
         id: "session-123",
         name: "Test Batch",
         user_id: "user-123",
-        fermentation_entries: [],
         fermentation_data: [],
         temperature_unit: "F",
       },
@@ -520,19 +519,9 @@ describe("EditFermentationEntryScreen", () => {
     });
 
     it("should call updateFermentationEntry when saving changes", async () => {
-      // Create a session with both formats for backward compatibility testing
+      // Create a session with fermentation data
       const mockSession = mockData.brewSessionWithData({
         fermentation_data: [
-          mockData.fermentationEntry({
-            entry_date: "2024-01-01T00:00:00Z",
-            gravity: 1.05,
-            temperature: 68,
-            ph: 4.2,
-            notes: "Initial entry",
-          }),
-        ],
-        // Also include legacy format for mixed API responses
-        fermentation_entries: [
           mockData.fermentationEntry({
             entry_date: "2024-01-01T00:00:00Z",
             gravity: 1.05,

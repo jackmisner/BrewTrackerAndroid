@@ -76,7 +76,6 @@ export interface BrewSession {
   // Progress tracking
   current_stage?: FermentationStage; // Optional since API doesn't always provide
   days_fermenting?: number;
-  fermentation_entries?: FermentationEntry[];
 
   // Quality metrics
   efficiency?: number;
@@ -96,7 +95,7 @@ export interface BrewSession {
 
   // Additional API fields
   temperature_unit?: "C" | "F";
-  fermentation_data?: FermentationEntry[];
+  fermentation_data?: FermentationEntry[]; // Backend uses fermentation_data
   dry_hop_additions?: DryHopAddition[];
 
   // Timestamps
