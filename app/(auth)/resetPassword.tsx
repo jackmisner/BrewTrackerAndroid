@@ -44,12 +44,15 @@ import { router, useLocalSearchParams } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import zxcvbn from "zxcvbn";
 import { useAuth } from "@contexts/AuthContext";
+import { useTheme } from "@contexts/ThemeContext";
 import { loginStyles } from "@styles/auth/loginStyles";
 import { TEST_IDS } from "@src/constants/testIDs";
 
 type Strength = "" | "weak" | "medium" | "strong";
 
 const ResetPasswordScreen: React.FC = () => {
+  const { colors } = useTheme();
+  const styles = loginStyles(colors);
   const { resetPassword, isLoading, error, clearError } = useAuth();
   const searchParams = useLocalSearchParams<{ token?: string | string[] }>();
   const token = Array.isArray(searchParams.token)
@@ -214,32 +217,30 @@ const ResetPasswordScreen: React.FC = () => {
 
   if (success) {
     return (
-      <KeyboardAvoidingView style={loginStyles.container} behavior={"height"}>
-        <ScrollView contentContainerStyle={loginStyles.scrollContainer}>
-          <View style={loginStyles.formContainer}>
-            <View style={loginStyles.header}>
+      <KeyboardAvoidingView style={styles.container} behavior={"height"}>
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <View style={styles.formContainer}>
+            <View style={styles.header}>
               <MaterialIcons name="check-circle" size={64} color="#16a34a" />
-              <Text style={loginStyles.title}>Password Reset Successful</Text>
-              <Text style={loginStyles.subtitle}>
+              <Text style={styles.title}>Password Reset Successful</Text>
+              <Text style={styles.subtitle}>
                 Your password has been successfully reset!
               </Text>
             </View>
 
-            <View style={loginStyles.successContainer}>
-              <Text style={loginStyles.successText}>
+            <View style={styles.successContainer}>
+              <Text style={styles.successText}>
                 You can now log in with your new password.
               </Text>
             </View>
 
-            <View style={loginStyles.buttonContainer}>
+            <View style={styles.buttonContainer}>
               <TouchableOpacity
-                style={loginStyles.resetPrimaryButton}
+                style={styles.resetPrimaryButton}
                 onPress={handleGoToLogin}
                 testID={TEST_IDS.auth.goToLoginButton}
               >
-                <Text style={loginStyles.resetPrimaryButtonText}>
-                  Go to Login
-                </Text>
+                <Text style={styles.resetPrimaryButtonText}>Go to Login</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -249,42 +250,40 @@ const ResetPasswordScreen: React.FC = () => {
   }
 
   return (
-    <KeyboardAvoidingView style={loginStyles.container} behavior={"height"}>
-      <ScrollView contentContainerStyle={loginStyles.scrollContainer}>
-        <View style={loginStyles.formContainer}>
-          <View style={loginStyles.header}>
+    <KeyboardAvoidingView style={styles.container} behavior={"height"}>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.formContainer}>
+          <View style={styles.header}>
             <MaterialIcons name="lock-reset" size={64} color="#2563eb" />
             <Text
-              style={loginStyles.title}
+              style={styles.title}
               testID={TEST_IDS.auth.resetPasswordTitle}
             >
               Reset Password
             </Text>
-            <Text style={loginStyles.subtitle}>
-              Enter your new password below.
-            </Text>
+            <Text style={styles.subtitle}>Enter your new password below.</Text>
           </View>
 
           {error ? (
-            <View style={loginStyles.errorContainer}>
+            <View style={styles.errorContainer}>
               <MaterialIcons name="error-outline" size={20} color="#dc2626" />
-              <Text style={loginStyles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
 
-          <View style={loginStyles.inputContainer}>
+          <View style={styles.inputContainer}>
             {/* New Password Field */}
-            <View style={loginStyles.inputWrapper}>
+            <View style={styles.inputWrapper}>
               <MaterialIcons
                 name="lock"
                 size={20}
                 color="#6b7280"
-                style={loginStyles.inputIcon}
+                style={styles.inputIcon}
               />
               <TextInput
-                style={[loginStyles.input, { paddingRight: 50 }]}
+                style={[styles.input, { paddingRight: 50 }]}
                 placeholder="Enter new password"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={colors.textMuted}
                 value={formData.newPassword}
                 onChangeText={text => {
                   // Don't trim here to allow spaces within password, but validate on submit
@@ -300,7 +299,7 @@ const ResetPasswordScreen: React.FC = () => {
                 returnKeyType="next"
               />
               <TouchableOpacity
-                style={loginStyles.passwordToggle}
+                style={styles.passwordToggle}
                 onPress={() => setShowPassword(!showPassword)}
                 accessibilityRole="button"
                 accessibilityLabel={
@@ -316,13 +315,13 @@ const ResetPasswordScreen: React.FC = () => {
             </View>
 
             {formData.newPassword ? (
-              <View style={loginStyles.passwordStrengthContainer}>
+              <View style={styles.passwordStrengthContainer}>
                 <Text
                   style={[
-                    loginStyles.passwordStrengthText,
-                    passwordStrength === "weak" && loginStyles.passwordWeak,
-                    passwordStrength === "medium" && loginStyles.passwordMedium,
-                    passwordStrength === "strong" && loginStyles.passwordStrong,
+                    styles.passwordStrengthText,
+                    passwordStrength === "weak" && styles.passwordWeak,
+                    passwordStrength === "medium" && styles.passwordMedium,
+                    passwordStrength === "strong" && styles.passwordStrong,
                   ]}
                 >
                   Password strength: {passwordStrength}
@@ -330,23 +329,23 @@ const ResetPasswordScreen: React.FC = () => {
               </View>
             ) : null}
 
-            <Text style={loginStyles.helpText}>
+            <Text style={styles.helpText}>
               Password must be at least 8 characters and contain uppercase,
               lowercase, number, and special character.
             </Text>
 
             {/* Confirm Password Field */}
-            <View style={[loginStyles.inputWrapper, { marginTop: 16 }]}>
+            <View style={[styles.inputWrapper, { marginTop: 16 }]}>
               <MaterialIcons
                 name="lock"
                 size={20}
                 color="#6b7280"
-                style={loginStyles.inputIcon}
+                style={styles.inputIcon}
               />
               <TextInput
-                style={[loginStyles.input, { paddingRight: 50 }]}
+                style={[styles.input, { paddingRight: 50 }]}
                 placeholder="Confirm new password"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={colors.textMuted}
                 value={formData.confirmPassword}
                 onChangeText={text => {
                   setFormData(prev => ({ ...prev, confirmPassword: text }));
@@ -363,7 +362,7 @@ const ResetPasswordScreen: React.FC = () => {
                 testID={TEST_IDS.patterns.inputField("confirm-password")}
               />
               <TouchableOpacity
-                style={loginStyles.passwordToggle}
+                style={styles.passwordToggle}
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                 accessibilityRole="button"
                 accessibilityLabel={
@@ -379,18 +378,18 @@ const ResetPasswordScreen: React.FC = () => {
             </View>
 
             {formData.confirmPassword && !passwordsMatch ? (
-              <Text style={loginStyles.errorText}>Passwords do not match</Text>
+              <Text style={styles.errorText}>Passwords do not match</Text>
             ) : null}
           </View>
 
-          <View style={loginStyles.buttonContainer}>
+          <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[
-                loginStyles.resetPrimaryButton,
+                styles.resetPrimaryButton,
                 (isLoading ||
                   !passwordsMatch ||
                   !isPasswordValid(formData.newPassword, passwordStrength)) &&
-                  loginStyles.primaryButtonDisabled,
+                  styles.primaryButtonDisabled,
               ]}
               onPress={handleResetPassword}
               disabled={
@@ -402,11 +401,11 @@ const ResetPasswordScreen: React.FC = () => {
             >
               <Text
                 style={[
-                  loginStyles.resetPrimaryButtonText,
+                  styles.resetPrimaryButtonText,
                   (isLoading ||
                     !passwordsMatch ||
                     !isPasswordValid(formData.newPassword, passwordStrength)) &&
-                    loginStyles.primaryButtonTextDisabled,
+                    styles.primaryButtonTextDisabled,
                 ]}
               >
                 {isLoading ? "Resetting..." : "Reset Password"}
@@ -414,13 +413,13 @@ const ResetPasswordScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          <View style={loginStyles.footerLinks}>
+          <View style={styles.footerLinks}>
             <TouchableOpacity onPress={handleRequestNewLink}>
-              <Text style={loginStyles.linkText}>Request New Reset Link</Text>
+              <Text style={styles.linkText}>Request New Reset Link</Text>
             </TouchableOpacity>
-            <Text style={loginStyles.linkSeparator}>•</Text>
+            <Text style={styles.linkSeparator}>•</Text>
             <TouchableOpacity onPress={handleGoToLogin}>
-              <Text style={loginStyles.linkText}>Back to Login</Text>
+              <Text style={styles.linkText}>Back to Login</Text>
             </TouchableOpacity>
           </View>
         </View>

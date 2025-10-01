@@ -750,6 +750,7 @@ export default function RecipesScreen() {
             <TextInput
               style={styles.searchInput}
               placeholder="Search public recipes..."
+              placeholderTextColor={theme.colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
               returnKeyType="search"

@@ -21,6 +21,7 @@ interface FermentationDataProps {
   temperatureUnit: string | undefined;
   brewSessionId?: string;
   brewSessionUserId?: string;
+  onDataChange?: () => void; // Callback to notify parent of data changes
 }
 
 export const FermentationData: React.FC<FermentationDataProps> = ({
@@ -30,6 +31,7 @@ export const FermentationData: React.FC<FermentationDataProps> = ({
   temperatureUnit,
   brewSessionId,
   brewSessionUserId,
+  onDataChange,
 }) => {
   const theme = useTheme();
   const {
@@ -254,6 +256,7 @@ export const FermentationData: React.FC<FermentationDataProps> = ({
         brewSessionId={selectedEntry?.brewSessionId || brewSessionId}
         brewSessionUserId={brewSessionUserId}
         onClose={hideContextMenu}
+        onDataChange={onDataChange}
         position={contextMenuPosition}
       />
     </View>

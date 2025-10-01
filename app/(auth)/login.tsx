@@ -31,7 +31,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@contexts/AuthContext";
-import { loginStyles as styles } from "@styles/auth/loginStyles";
+import { useTheme } from "@contexts/ThemeContext";
+import { loginStyles } from "@styles/auth/loginStyles";
 
 export default function LoginScreen() {
   const [username, setUsername] = useState("");
@@ -40,6 +41,8 @@ export default function LoginScreen() {
 
   const { login, error, clearError } = useAuth();
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = loginStyles(colors);
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -87,7 +90,8 @@ export default function LoginScreen() {
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Username or Email"
+              placeholder="Username"
+              placeholderTextColor={colors.textMuted}
               value={username}
               onChangeText={setUsername}
               autoCapitalize="none"
@@ -100,6 +104,7 @@ export default function LoginScreen() {
             <TextInput
               style={styles.input}
               placeholder="Password"
+              placeholderTextColor={colors.textMuted}
               value={password}
               onChangeText={setPassword}
               secureTextEntry

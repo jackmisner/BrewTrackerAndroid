@@ -16,6 +16,7 @@ interface FermentationEntryContextMenuProps {
   brewSessionId: string | undefined;
   brewSessionUserId?: string;
   onClose: () => void;
+  onDataChange?: () => void; // Callback to notify parent of data changes
   position?: { x: number; y: number };
 }
 
@@ -28,6 +29,7 @@ export const FermentationEntryContextMenu: React.FC<
   brewSessionId,
   brewSessionUserId,
   onClose,
+  onDataChange,
   position,
 }) => {
   const brewSessionsHook = useBrewSessions();
@@ -147,6 +149,15 @@ export const FermentationEntryContextMenu: React.FC<
       );
     } finally {
       setIsDeleting(false);
+    }
+
+    // Notify parent component that data has changed (outside deletion error handling)
+    if (onDataChange) {
+      try {
+        onDataChange();
+      } catch (callbackError) {
+        console.error("Error in onDataChange callback:", callbackError);
+      }
     }
   };
 

@@ -282,30 +282,32 @@ export default function BrewSessionsScreen() {
   };
 
   const calculateDaysProgress = (
-    brewDate: string,
-    expectedCompletion?: string
+    fermentationStartDate?: string,
+    fermentationEndDate?: string,
+    brewDate?: string
   ) => {
-    const startDate = new Date(brewDate);
-    const today = new Date();
-    const daysPassed = Math.floor(
-      (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    // Use fermentation_start_date if available, otherwise fall back to brew_date
+    const startDateString = fermentationStartDate || brewDate;
 
-    if (expectedCompletion) {
-      const endDate = new Date(expectedCompletion);
-      const totalDays = Math.floor(
-        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      if (totalDays <= 0) {
-        return { daysPassed, totalDays: null, progress: null };
-      }
-      return {
-        daysPassed,
-        totalDays,
-        progress: Math.min(daysPassed / totalDays, 1),
-      };
+    if (!startDateString) {
+      return { daysPassed: 0, totalDays: null, progress: null };
     }
 
+    const startDate = new Date(startDateString);
+
+    // Use fermentation_end_date if available (for completed sessions), otherwise use today
+    const endDateString = fermentationEndDate || new Date().toISOString();
+    const endDate = new Date(endDateString);
+
+    const daysPassed = Math.max(
+      0,
+      Math.floor(
+        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+      )
+    );
+
+    // Note: expectedCompletion is not used for day counting anymore
+    // Days are always calculated from fermentation start to end (or today)
     return { daysPassed, totalDays: null, progress: null };
   };
 
@@ -318,9 +320,10 @@ export default function BrewSessionsScreen() {
       return null;
     }
 
-    const { daysPassed, totalDays, progress } = calculateDaysProgress(
-      brewSession.brew_date,
-      brewSession.expected_completion_date
+    const { daysPassed } = calculateDaysProgress(
+      brewSession.fermentation_start_date,
+      brewSession.fermentation_end_date,
+      brewSession.brew_date
     );
 
     return (
@@ -362,33 +365,23 @@ export default function BrewSessionsScreen() {
           </Text>
         </View>
 
-        <View style={styles.progressContainer}>
-          <View style={styles.progressInfo}>
-            <Text style={styles.progressLabel}>
-              Day {daysPassed} {totalDays && `of ${totalDays}`}
-            </Text>
-            <Text style={styles.stageText}>
-              {brewSession.brew_date
-                ? `Started: ${formatDate(brewSession.brew_date)}`
-                : brewSession.current_stage
-                  ? brewSession.current_stage.charAt(0).toUpperCase() +
-                    brewSession.current_stage.slice(1) +
-                    " Fermentation"
-                  : "Status: " + (brewSession.status || "Unknown")}
-            </Text>
-          </View>
-
-          {progress !== null ? (
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${Math.max(0, Math.min(progress, 1)) * 100}%` },
-                ]}
-              />
+        {/* Only show progress/day counter for non-completed sessions */}
+        {brewSession.status !== "completed" ? (
+          <View style={styles.progressContainer}>
+            <View style={styles.progressInfo}>
+              <Text style={styles.progressLabel}>Day {daysPassed}</Text>
+              <Text style={styles.stageText}>
+                {brewSession.brew_date
+                  ? `Started: ${formatDate(brewSession.brew_date)}`
+                  : brewSession.current_stage
+                    ? brewSession.current_stage.charAt(0).toUpperCase() +
+                      brewSession.current_stage.slice(1) +
+                      " Fermentation"
+                    : "Status: " + (brewSession.status || "Unknown")}
+              </Text>
             </View>
-          ) : null}
-        </View>
+          </View>
+        ) : null}
 
         <View style={styles.brewSessionMetrics}>
           {brewSession.brew_date ? (

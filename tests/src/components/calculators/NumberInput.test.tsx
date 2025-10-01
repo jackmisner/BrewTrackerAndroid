@@ -32,7 +32,22 @@ jest.mock("@expo/vector-icons", () => ({
   MaterialIcons: ({ name }: { name: string }) => name,
 }));
 
-// ThemeContext is provided by testUtils
+// Mock ThemeContext to avoid conflicts with testUtils
+jest.mock("@contexts/ThemeContext", () => {
+  const React = require("react");
+  return {
+    useTheme: jest.fn(() => ({
+      colors: {
+        background: "#ffffff",
+        text: "#000000",
+        primary: "#f4511e",
+        textSecondary: "#666666",
+        border: "#e0e0e0",
+      },
+    })),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
 
 describe("NumberInput", () => {
   const defaultProps = {

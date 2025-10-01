@@ -42,6 +42,15 @@ export const viewBrewSessionStyles = (theme: ThemeContextValue) =>
       textAlign: "center",
     },
 
+    headerAction: {
+      padding: 8,
+      marginLeft: 8,
+    },
+    headerActionLast: {
+      padding: 8,
+      marginLeft: 12,
+    },
+
     // Title and Status
     titleContainer: {
       backgroundColor: theme.colors.background,
