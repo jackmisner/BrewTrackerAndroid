@@ -288,10 +288,9 @@ export default function ViewBrewSession() {
           return { ...prev, batch_rating: newRating };
         });
 
-        // Provide haptic feedback immediately for responsive feel
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
         // Update in background
+        // Provide haptic feedback immediately for responsive feel
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         await update(brewSessionId, { batch_rating: newRating });
 
         console.log(
@@ -545,7 +544,7 @@ export default function ViewBrewSession() {
         rightActions={
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <TouchableOpacity
-              style={{ padding: 8, marginLeft: 8 }}
+              style={styles.headerAction}
               onPress={handleEditBrewSession}
               testID={TEST_IDS.patterns.touchableOpacityAction(
                 "edit-brew-session"
@@ -558,7 +557,7 @@ export default function ViewBrewSession() {
               />
             </TouchableOpacity>
             <TouchableOpacity
-              style={{ padding: 8, marginLeft: 8 }}
+              style={styles.headerAction}
               onPress={handleAddFermentationEntry}
               testID={TEST_IDS.patterns.touchableOpacityAction(
                 "add-fermentation-entry"

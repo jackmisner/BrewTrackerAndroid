@@ -147,7 +147,11 @@ const ForgotPasswordScreen: React.FC = () => {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.formContainer}>
           <View style={styles.header}>
-            <MaterialIcons name="lock-outline" size={64} color="#2563eb" />
+            <MaterialIcons
+              name="lock-outline"
+              size={64}
+              color={colors.primary}
+            />
             <Text style={styles.title}>Forgot Password</Text>
             <Text style={styles.subtitle}>
               {
@@ -158,7 +162,11 @@ const ForgotPasswordScreen: React.FC = () => {
 
           {error ? (
             <View style={styles.errorContainer}>
-              <MaterialIcons name="error-outline" size={20} color="#dc2626" />
+              <MaterialIcons
+                name="error-outline"
+                size={20}
+                color={colors.error}
+              />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
@@ -168,7 +176,7 @@ const ForgotPasswordScreen: React.FC = () => {
               <MaterialIcons
                 name="email"
                 size={20}
-                color="#6b7280"
+                color={colors.textMuted}
                 style={styles.inputIcon}
               />
               <TextInput
