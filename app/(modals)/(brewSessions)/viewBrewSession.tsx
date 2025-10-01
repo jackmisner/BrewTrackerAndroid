@@ -6,8 +6,10 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import ApiService from "@services/api/apiService";
@@ -18,6 +20,7 @@ import { TEST_IDS } from "@src/constants/testIDs";
 import { FermentationChart } from "@src/components/brewSessions/FermentationChart";
 import { FermentationData } from "@src/components/brewSessions/FermentationData";
 import { useBrewSessions } from "@hooks/offlineV2/useUserData";
+import { ModalHeader } from "@src/components/ui/ModalHeader";
 
 export default function ViewBrewSession() {
   const { brewSessionId } = useLocalSearchParams<{ brewSessionId: string }>();
@@ -35,7 +38,7 @@ export default function ViewBrewSession() {
 
   // Use offline-first brew sessions hook
   const brewSessionsHook = useBrewSessions();
-  const { getById } = brewSessionsHook; // Extract getById to use in dependency array
+  const { getById, update } = brewSessionsHook; // Extract functions to use in dependency array
 
   // Load brew session data using offline-first approach
   useEffect(() => {
@@ -104,11 +107,33 @@ export default function ViewBrewSession() {
     staleTime: 1000 * 60 * 10, // Cache recipe data longer (10 minutes)
   });
 
-  // Force chart refresh when screen comes into focus (handles navigation back from modals)
+  // Force chart refresh and reload brew session when screen comes into focus
+  // This handles navigation back from modals (e.g., after adding/editing fermentation entries)
   useFocusEffect(
     React.useCallback(() => {
       setChartRefreshCounter(prev => prev + 1);
-    }, [])
+
+      // Reload brew session data to get fresh fermentation entries
+      const reloadBrewSession = async () => {
+        if (!brewSessionId) {
+          return;
+        }
+
+        try {
+          const session = await getById(brewSessionId);
+          if (session) {
+            setBrewSessionData(session);
+          }
+        } catch (error) {
+          console.error(
+            "[ViewBrewSession.useFocusEffect] Failed to reload session:",
+            error
+          );
+        }
+      };
+
+      reloadBrewSession();
+    }, [brewSessionId, getById])
   );
 
   /**
@@ -171,6 +196,125 @@ export default function ViewBrewSession() {
   const handleGoBack = () => {
     router.back();
   };
+
+  /**
+   * Navigation handler for home button
+   * Invalidates dashboard cache and navigates to home
+   */
+  const handleHomeNavigation = () => {
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    router.push({ pathname: "/(tabs)" });
+  };
+
+  /**
+   * Navigation handler for editing the brew session
+   */
+  const handleEditBrewSession = () => {
+    if (brewSessionId) {
+      router.push({
+        pathname: "/(modals)/(brewSessions)/editBrewSession",
+        params: { brewSessionId: brewSessionId },
+      });
+    }
+  };
+
+  /**
+   * Navigation handler for adding a fermentation entry
+   */
+  const handleAddFermentationEntry = () => {
+    if (brewSessionId) {
+      router.push({
+        pathname: "/(modals)/(brewSessions)/addFermentationEntry",
+        params: { brewSessionId: brewSessionId },
+      });
+    }
+  };
+
+  /**
+   * Handler for data changes (e.g., after fermentation entry deletion)
+   * Reloads the brew session data to reflect changes
+   */
+  const handleDataChange = React.useCallback(async () => {
+    if (!brewSessionId) {
+      return;
+    }
+
+    try {
+      console.log(
+        `[ViewBrewSession.handleDataChange] Reloading brew session: ${brewSessionId}`
+      );
+      const session = await getById(brewSessionId);
+      if (session) {
+        setBrewSessionData(session);
+        // Also increment chart refresh counter to update the chart
+        setChartRefreshCounter(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error(
+        "[ViewBrewSession.handleDataChange] Failed to reload session:",
+        error
+      );
+    }
+  }, [brewSessionId, getById]);
+
+  /**
+   * Handler for updating batch rating with optimistic UI update
+   * Updates the UI immediately, then syncs with backend
+   */
+  const handleRatingUpdate = React.useCallback(
+    async (newRating: number) => {
+      if (!brewSessionId || !brewSessionData) {
+        return;
+      }
+
+      // Store the previous rating for rollback if needed
+      const previousRating = brewSessionData.batch_rating;
+
+      try {
+        console.log(
+          `[ViewBrewSession.handleRatingUpdate] Optimistically updating rating to: ${newRating}`
+        );
+
+        // Optimistic update - immediately update the UI
+        setBrewSessionData(prev => {
+          if (!prev) {
+            return prev;
+          }
+          return { ...prev, batch_rating: newRating };
+        });
+
+        // Provide haptic feedback immediately for responsive feel
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+        // Update in background
+        await update(brewSessionId, { batch_rating: newRating });
+
+        console.log(
+          `[ViewBrewSession.handleRatingUpdate] Successfully updated rating to: ${newRating}`
+        );
+      } catch (error) {
+        console.error(
+          "[ViewBrewSession.handleRatingUpdate] Failed to update rating:",
+          error
+        );
+
+        // Rollback optimistic update on error
+        setBrewSessionData(prev => {
+          if (!prev) {
+            return prev;
+          }
+          return { ...prev, batch_rating: previousRating };
+        });
+
+        Alert.alert(
+          "Update Failed",
+          "Failed to update batch rating. Please try again.",
+          [{ text: "OK" }]
+        );
+      }
+    },
+    [brewSessionId, brewSessionData, update]
+  );
 
   /**
    * Format date strings for display
@@ -265,20 +409,12 @@ export default function ViewBrewSession() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        {/* Header with back button - always visible */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleGoBack}
-            testID={TEST_IDS.header.backButton}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-          >
-            <MaterialIcons name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Brew Session Details</Text>
-        </View>
+        <ModalHeader
+          title="Brew Session Details"
+          onBack={handleGoBack}
+          showHomeButton={true}
+          testID="header"
+        />
 
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#f4511e" />
@@ -297,19 +433,12 @@ export default function ViewBrewSession() {
 
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleGoBack}
-            testID={TEST_IDS.header.backButton}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-          >
-            <MaterialIcons name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Brew Session Details</Text>
-        </View>
+        <ModalHeader
+          title="Brew Session Details"
+          onBack={handleGoBack}
+          showHomeButton={true}
+          testID="header"
+        />
 
         <View style={styles.errorContainer}>
           <MaterialIcons name="error" size={64} color="#f44336" />
@@ -376,19 +505,12 @@ export default function ViewBrewSession() {
   if (!brewSessionData) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleGoBack}
-            testID={TEST_IDS.header.backButton}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-          >
-            <MaterialIcons name="arrow-back" size={24} color="#333" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Brew Session Details</Text>
-        </View>
+        <ModalHeader
+          title="Brew Session Details"
+          onBack={handleGoBack}
+          showHomeButton={true}
+          testID="header"
+        />
 
         <View style={styles.errorContainer}>
           <MaterialIcons name="help-outline" size={64} color="#ccc" />
@@ -412,20 +534,53 @@ export default function ViewBrewSession() {
 
   return (
     <View style={styles.container}>
-      {/* Header with back button - always visible */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={handleGoBack}
-          testID={TEST_IDS.header.backButton}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-        >
-          <MaterialIcons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Brew Session Details</Text>
-      </View>
+      <ModalHeader
+        title="Brew Session Details"
+        onBack={handleGoBack}
+        rightActions={
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <TouchableOpacity
+              style={{ padding: 8, marginLeft: 8 }}
+              onPress={handleEditBrewSession}
+              testID={TEST_IDS.patterns.touchableOpacityAction(
+                "edit-brew-session"
+              )}
+            >
+              <MaterialIcons
+                name="edit"
+                size={22}
+                color={theme.colors.primary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ padding: 8, marginLeft: 8 }}
+              onPress={handleAddFermentationEntry}
+              testID={TEST_IDS.patterns.touchableOpacityAction(
+                "add-fermentation-entry"
+              )}
+            >
+              <MaterialIcons
+                name="add"
+                size={24}
+                color={theme.colors.primary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ padding: 8, marginLeft: 12 }}
+              onPress={handleHomeNavigation}
+              testID={TEST_IDS.patterns.touchableOpacityAction("home")}
+            >
+              <MaterialIcons
+                name="home"
+                size={24}
+                color={theme.colors.primary}
+              />
+            </TouchableOpacity>
+          </View>
+        }
+        showHomeButton={false}
+        testID="header"
+      />
 
       {/* Scrollable content area */}
       <ScrollView
@@ -519,23 +674,30 @@ export default function ViewBrewSession() {
           </View>
         ) : null}
 
-        {/* Batch Rating */}
-        {brewSession.batch_rating ? (
+        {/* Batch Rating - Clickable Stars */}
+        {brewSession.batch_rating !== undefined &&
+        brewSession.batch_rating !== null ? (
           <View style={styles.detailsContainer}>
             <Text style={styles.detailsTitle}>Batch Rating</Text>
             <View style={styles.ratingContainer}>
               {[1, 2, 3, 4, 5].map(star => (
-                <MaterialIcons
+                <TouchableOpacity
                   key={star}
-                  name="star"
-                  size={24}
-                  color={
-                    star <= (brewSession.batch_rating || 0)
-                      ? "#FFD700"
-                      : "#E0E0E0"
-                  }
-                  style={styles.ratingStar}
-                />
+                  onPress={() => handleRatingUpdate(star)}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
+                >
+                  <MaterialIcons
+                    name="star"
+                    size={24}
+                    color={
+                      star <= (brewSession.batch_rating || 0)
+                        ? "#FFD700"
+                        : "#E0E0E0"
+                    }
+                    style={styles.ratingStar}
+                  />
+                </TouchableOpacity>
               ))}
               <Text style={styles.ratingText}>
                 {brewSession.batch_rating}/5
@@ -564,6 +726,7 @@ export default function ViewBrewSession() {
             temperatureUnit={brewSession.temperature_unit}
             brewSessionId={brewSessionId}
             brewSessionUserId={brewSession.user_id}
+            onDataChange={handleDataChange}
           />
         </View>
       </ScrollView>

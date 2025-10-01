@@ -68,8 +68,28 @@ const setMockAuthState = (overrides: Partial<typeof mockAuthState>) => {
   mockAuthState = { ...mockAuthState, ...overrides };
 };
 
+jest.mock("@contexts/ThemeContext", () => {
+  const React = require("react");
+  return {
+    useTheme: jest.fn(() => ({
+      colors: {
+        background: "#ffffff",
+        primary: "#f4511e",
+        text: "#000000",
+        textSecondary: "#666666",
+        textMuted: "#999999",
+        border: "#e0e0e0",
+        inputBackground: "#f8f9fa",
+        error: "#dc3545",
+        primaryText: "#ffffff",
+      },
+    })),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
 jest.mock("@styles/auth/registerStyles", () => ({
-  registerStyles: {
+  registerStyles: jest.fn(() => ({
     container: { flex: 1 },
     scrollContainer: { flexGrow: 1 },
     header: { marginBottom: 20 },
@@ -86,7 +106,7 @@ jest.mock("@styles/auth/registerStyles", () => ({
     secondaryButtonText: { color: "#007AFF", textAlign: "center" },
     divider: { marginVertical: 20 },
     dividerText: { textAlign: "center", color: "#666" },
-  },
+  })),
 }));
 
 // Alert is now mocked in the react-native mock above

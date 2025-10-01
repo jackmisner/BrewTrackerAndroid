@@ -39,8 +39,26 @@ jest.mock("@contexts/AuthContext", () => ({
   useAuth: jest.fn(),
 }));
 
+jest.mock("@contexts/ThemeContext", () => ({
+  useTheme: jest.fn(() => ({
+    colors: {
+      background: "#ffffff",
+      primary: "#f4511e",
+      text: "#000000",
+      textSecondary: "#666666",
+      textMuted: "#999999",
+      border: "#e0e0e0",
+      inputBackground: "#f8f9fa",
+      error: "#dc3545",
+      success: "#28a745",
+      warning: "#ffc107",
+      primaryText: "#ffffff",
+    },
+  })),
+}));
+
 jest.mock("@styles/auth/loginStyles", () => ({
-  loginStyles: {
+  loginStyles: jest.fn(() => ({
     container: { flex: 1 },
     scrollContainer: { flexGrow: 1 },
     formContainer: { padding: 20 },
@@ -90,7 +108,7 @@ jest.mock("@styles/auth/loginStyles", () => ({
     linkSeparator: { marginHorizontal: 10, color: "#666" },
     successContainer: { marginBottom: 20 },
     successText: { fontSize: 16, textAlign: "center", marginBottom: 10 },
-  },
+  })),
 }));
 
 // Alert is now mocked in the react-native mock above

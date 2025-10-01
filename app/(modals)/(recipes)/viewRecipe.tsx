@@ -689,19 +689,21 @@ export default function ViewRecipeScreen() {
         </View>
 
         {/* Brewing Metrics - Using Reusable Component */}
-        <BrewingMetricsDisplay
-          metrics={{
-            og: recipe.estimated_og,
-            fg: recipe.estimated_fg,
-            abv: recipe.estimated_abv,
-            ibu: recipe.estimated_ibu,
-            srm: recipe.estimated_srm,
-          }}
-          mash_temperature={recipe.mash_temperature}
-          mash_temp_unit={recipe.mash_temp_unit}
-          compact={false}
-          showTitle={true}
-        />
+        <View style={styles.section}>
+          <BrewingMetricsDisplay
+            metrics={{
+              og: recipe.estimated_og,
+              fg: recipe.estimated_fg,
+              abv: recipe.estimated_abv,
+              ibu: recipe.estimated_ibu,
+              srm: recipe.estimated_srm,
+            }}
+            mash_temperature={recipe.mash_temperature}
+            mash_temp_unit={recipe.mash_temp_unit}
+            compact={false}
+            showTitle={true}
+          />
+        </View>
 
         {/* Recipe Details Section */}
         <View style={styles.section}>

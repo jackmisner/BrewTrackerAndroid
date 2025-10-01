@@ -1,5 +1,5 @@
 import React from "react";
-import { renderHook, act } from "@testing-library/react-native";
+import { renderHook, act, waitFor } from "@testing-library/react-native";
 import { Appearance } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { testUtils } from "../../testUtils";
@@ -12,6 +12,7 @@ import {
 
 // Mock React Native modules
 jest.mock("react-native", () => ({
+  View: "View",
   Appearance: {
     getColorScheme: jest.fn(),
     addChangeListener: jest.fn(),
@@ -80,6 +81,13 @@ describe("ThemeContext", () => {
   const createWrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(ThemeProvider, { children });
 
+  // Helper to wait for theme to load (since ThemeProvider returns null initially)
+  const waitForThemeToLoad = async (result: any) => {
+    await waitFor(() => {
+      expect(result.current).not.toBeNull();
+    });
+  };
+
   describe("useTheme hook", () => {
     it("should throw error when used outside provider", () => {
       const consoleSpy = jest
@@ -93,11 +101,15 @@ describe("ThemeContext", () => {
       consoleSpy.mockRestore();
     });
 
-    it("should provide theme context when used within provider", () => {
+    it("should provide theme context when used within provider", async () => {
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
-      expect(result.current).toBeDefined();
+      await waitFor(() => {
+        expect(result.current).toBeDefined();
+        expect(result.current).not.toBeNull();
+      });
+
       expect(result.current.theme).toBe("system");
       expect(result.current.colors).toBeDefined();
       expect(typeof result.current.isDark).toBe("boolean");
@@ -107,22 +119,30 @@ describe("ThemeContext", () => {
   });
 
   describe("ThemeProvider", () => {
-    it("should initialize with system theme and light colors when system is light", () => {
+    it("should initialize with system theme and light colors when system is light", async () => {
       mockAppearance.getColorScheme.mockReturnValue("light");
 
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current).not.toBeNull();
+      });
 
       expect(result.current.theme).toBe("system");
       expect(result.current.isDark).toBe(false);
       expect(result.current.colors.background).toBe("#FFFFFF");
     });
 
-    it("should initialize with system theme and dark colors when system is dark", () => {
+    it("should initialize with system theme and dark colors when system is dark", async () => {
       mockAppearance.getColorScheme.mockReturnValue("dark");
 
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current).not.toBeNull();
+      });
 
       expect(result.current.theme).toBe("system");
       expect(result.current.isDark).toBe(true);
@@ -135,10 +155,8 @@ describe("ThemeContext", () => {
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
-      // Wait for effect to complete
-      await act(async () => {
-        await testUtils.waitForNextTick();
-      });
+      // Wait for theme to load
+      await waitForThemeToLoad(result);
 
       expect(result.current.theme).toBe("dark");
       expect(result.current.isDark).toBe(true);
@@ -150,9 +168,7 @@ describe("ThemeContext", () => {
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
-      await act(async () => {
-        await testUtils.waitForNextTick();
-      });
+      await waitForThemeToLoad(result);
 
       expect(result.current.theme).toBe("system");
     });
@@ -166,9 +182,7 @@ describe("ThemeContext", () => {
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
-      await act(async () => {
-        await testUtils.waitForNextTick();
-      });
+      await waitForThemeToLoad(result);
 
       expect(result.current.theme).toBe("system");
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -179,7 +193,7 @@ describe("ThemeContext", () => {
       consoleSpy.mockRestore();
     });
 
-    it("should listen to system theme changes when theme is system", () => {
+    it("should listen to system theme changes when theme is system", async () => {
       const mockSubscription = { remove: jest.fn() };
       let changeListener: (event: { colorScheme: any }) => void;
 
@@ -190,6 +204,8 @@ describe("ThemeContext", () => {
 
       const wrapper = createWrapper;
       const { result, unmount } = renderHook(() => useTheme(), { wrapper });
+
+      await waitForThemeToLoad(result);
 
       // Initially light
       expect(result.current.isDark).toBe(false);
@@ -218,6 +234,8 @@ describe("ThemeContext", () => {
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
+      await waitForThemeToLoad(result);
+
       // Set to explicit light theme
       await act(async () => {
         await result.current.setTheme("light");
@@ -240,6 +258,8 @@ describe("ThemeContext", () => {
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
+      await waitForThemeToLoad(result);
+
       await act(async () => {
         await result.current.setTheme("light");
       });
@@ -255,6 +275,8 @@ describe("ThemeContext", () => {
     it("should set theme to dark", async () => {
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
+
+      await waitForThemeToLoad(result);
 
       await act(async () => {
         await result.current.setTheme("dark");
@@ -273,6 +295,8 @@ describe("ThemeContext", () => {
 
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
+
+      await waitForThemeToLoad(result);
 
       await act(async () => {
         await result.current.setTheme("system");
@@ -295,6 +319,8 @@ describe("ThemeContext", () => {
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
+      await waitForThemeToLoad(result);
+
       await act(async () => {
         await result.current.setTheme("dark");
       });
@@ -312,6 +338,8 @@ describe("ThemeContext", () => {
     it("should toggle from light to dark", async () => {
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
+
+      await waitForThemeToLoad(result);
 
       // Start with light theme
       await act(async () => {
@@ -332,6 +360,8 @@ describe("ThemeContext", () => {
     it("should toggle from dark to light", async () => {
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
+
+      await waitForThemeToLoad(result);
 
       // Start with dark theme
       await act(async () => {
@@ -355,6 +385,8 @@ describe("ThemeContext", () => {
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
+      await waitForThemeToLoad(result);
+
       // Start with system theme (effective light)
       expect(result.current.theme).toBe("system");
       expect(result.current.isDark).toBe(false);
@@ -374,6 +406,8 @@ describe("ThemeContext", () => {
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
 
+      await waitForThemeToLoad(result);
+
       await act(async () => {
         await result.current.setTheme("light");
       });
@@ -386,6 +420,8 @@ describe("ThemeContext", () => {
     it("should provide dark colors when in dark mode", async () => {
       const wrapper = createWrapper;
       const { result } = renderHook(() => useTheme(), { wrapper });
+
+      await waitForThemeToLoad(result);
 
       await act(async () => {
         await result.current.setTheme("dark");

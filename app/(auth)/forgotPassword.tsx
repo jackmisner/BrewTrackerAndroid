@@ -41,10 +41,13 @@ import {
 import { router } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "@contexts/AuthContext";
+import { useTheme } from "@contexts/ThemeContext";
 import { loginStyles } from "@styles/auth/loginStyles";
 
 const ForgotPasswordScreen: React.FC = () => {
   const { forgotPassword, isLoading, error, clearError } = useAuth();
+  const { colors } = useTheme();
+  const styles = loginStyles(colors);
   const [email, setEmail] = useState<string>("");
   const [emailSent, setEmailSent] = useState<boolean>(false);
 
@@ -103,36 +106,34 @@ const ForgotPasswordScreen: React.FC = () => {
 
   if (emailSent) {
     return (
-      <KeyboardAvoidingView style={loginStyles.container} behavior={"height"}>
-        <ScrollView contentContainerStyle={loginStyles.scrollContainer}>
-          <View style={loginStyles.formContainer}>
-            <View style={loginStyles.header}>
+      <KeyboardAvoidingView style={styles.container} behavior={"height"}>
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <View style={styles.formContainer}>
+            <View style={styles.header}>
               <MaterialIcons name="mail-outline" size={64} color="#2563eb" />
-              <Text style={loginStyles.title}>Check Your Email</Text>
-              <Text style={loginStyles.subtitle}>
+              <Text style={styles.title}>Check Your Email</Text>
+              <Text style={styles.subtitle}>
                 If an account with that email exists, you should receive a
                 password reset link shortly.
               </Text>
             </View>
 
-            <View style={loginStyles.successContainer}>
-              <Text style={loginStyles.successText}>
+            <View style={styles.successContainer}>
+              <Text style={styles.successText}>
                 Please check your email inbox and spam folder for the password
                 reset link.
               </Text>
-              <Text style={loginStyles.successSubtext}>
+              <Text style={styles.successSubtext}>
                 The reset link will expire in 1 hour for security reasons.
               </Text>
             </View>
 
-            <View style={loginStyles.buttonContainer}>
+            <View style={styles.buttonContainer}>
               <TouchableOpacity
-                style={loginStyles.resetPrimaryButton}
+                style={styles.resetPrimaryButton}
                 onPress={handleBackToLogin}
               >
-                <Text style={loginStyles.resetPrimaryButtonText}>
-                  Back to Login
-                </Text>
+                <Text style={styles.resetPrimaryButtonText}>Back to Login</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -142,13 +143,13 @@ const ForgotPasswordScreen: React.FC = () => {
   }
 
   return (
-    <KeyboardAvoidingView style={loginStyles.container} behavior={"height"}>
-      <ScrollView contentContainerStyle={loginStyles.scrollContainer}>
-        <View style={loginStyles.formContainer}>
-          <View style={loginStyles.header}>
+    <KeyboardAvoidingView style={styles.container} behavior={"height"}>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.formContainer}>
+          <View style={styles.header}>
             <MaterialIcons name="lock-outline" size={64} color="#2563eb" />
-            <Text style={loginStyles.title}>Forgot Password</Text>
-            <Text style={loginStyles.subtitle}>
+            <Text style={styles.title}>Forgot Password</Text>
+            <Text style={styles.subtitle}>
               {
                 "Enter your email address and we'll send you a link to reset your password."
               }
@@ -156,22 +157,22 @@ const ForgotPasswordScreen: React.FC = () => {
           </View>
 
           {error ? (
-            <View style={loginStyles.errorContainer}>
+            <View style={styles.errorContainer}>
               <MaterialIcons name="error-outline" size={20} color="#dc2626" />
-              <Text style={loginStyles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
 
-          <View style={loginStyles.inputContainer}>
-            <View style={loginStyles.inputWrapper}>
+          <View style={styles.inputContainer}>
+            <View style={styles.inputWrapper}>
               <MaterialIcons
                 name="email"
                 size={20}
                 color="#6b7280"
-                style={loginStyles.inputIcon}
+                style={styles.inputIcon}
               />
               <TextInput
-                style={loginStyles.input}
+                style={styles.input}
                 placeholder="Enter your email address"
                 placeholderTextColor="#9ca3af"
                 value={email}
@@ -192,12 +193,12 @@ const ForgotPasswordScreen: React.FC = () => {
             </View>
           </View>
 
-          <View style={loginStyles.buttonContainer}>
+          <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[
-                loginStyles.resetPrimaryButton,
+                styles.resetPrimaryButton,
                 (isLoading || !email.trim() || !validateEmail(email.trim())) &&
-                  loginStyles.primaryButtonDisabled,
+                  styles.primaryButtonDisabled,
               ]}
               onPress={handleForgotPassword}
               disabled={
@@ -206,11 +207,11 @@ const ForgotPasswordScreen: React.FC = () => {
             >
               <Text
                 style={[
-                  loginStyles.resetPrimaryButtonText,
+                  styles.resetPrimaryButtonText,
                   (isLoading ||
                     !email.trim() ||
                     !validateEmail(email.trim())) &&
-                    loginStyles.primaryButtonTextDisabled,
+                    styles.primaryButtonTextDisabled,
                 ]}
               >
                 {isLoading ? "Sending..." : "Send Reset Link"}
@@ -218,13 +219,13 @@ const ForgotPasswordScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          <View style={loginStyles.footerLinks}>
+          <View style={styles.footerLinks}>
             <TouchableOpacity onPress={handleBackToLogin}>
-              <Text style={loginStyles.linkText}>Back to Login</Text>
+              <Text style={styles.linkText}>Back to Login</Text>
             </TouchableOpacity>
-            <Text style={loginStyles.linkSeparator}>•</Text>
+            <Text style={styles.linkSeparator}>•</Text>
             <TouchableOpacity onPress={handleCreateAccount}>
-              <Text style={loginStyles.linkText}>Create Account</Text>
+              <Text style={styles.linkText}>Create Account</Text>
             </TouchableOpacity>
           </View>
         </View>

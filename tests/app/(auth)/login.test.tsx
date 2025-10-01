@@ -67,8 +67,28 @@ const setMockAuthState = (overrides: Partial<typeof mockAuthState>) => {
   mockAuthState = { ...mockAuthState, ...overrides };
 };
 
+jest.mock("@contexts/ThemeContext", () => {
+  const React = require("react");
+  return {
+    useTheme: jest.fn(() => ({
+      colors: {
+        background: "#ffffff",
+        primary: "#f4511e",
+        text: "#000000",
+        textSecondary: "#666666",
+        textMuted: "#999999",
+        border: "#e0e0e0",
+        inputBackground: "#f8f9fa",
+        error: "#dc3545",
+        primaryText: "#ffffff",
+      },
+    })),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
 jest.mock("@styles/auth/loginStyles", () => ({
-  loginStyles: {
+  loginStyles: jest.fn(() => ({
     container: { flex: 1 },
     scrollContainer: { flexGrow: 1 },
     header: { marginBottom: 20 },
@@ -87,7 +107,7 @@ jest.mock("@styles/auth/loginStyles", () => ({
     secondaryButtonText: { color: "#007AFF", textAlign: "center" },
     divider: { marginVertical: 20 },
     dividerText: { textAlign: "center", color: "#666" },
-  },
+  })),
 }));
 
 // Alert is now mocked in the react-native mock above
@@ -122,7 +142,7 @@ describe("LoginScreen", () => {
 
       expect(getByText("BrewTracker")).toBeTruthy();
       expect(getByText("Sign in to your account")).toBeTruthy();
-      expect(getByPlaceholderText("Username or Email")).toBeTruthy();
+      expect(getByPlaceholderText("Username")).toBeTruthy();
       expect(getByPlaceholderText("Password")).toBeTruthy();
       expect(getByText("Forgot your password?")).toBeTruthy();
       expect(getByText("Sign In")).toBeTruthy();
@@ -148,7 +168,7 @@ describe("LoginScreen", () => {
   describe("user input", () => {
     it("should update username when typing", () => {
       const { getByPlaceholderText } = renderWithProviders(<LoginScreen />);
-      const usernameInput = getByPlaceholderText("Username or Email");
+      const usernameInput = getByPlaceholderText("Username");
 
       fireEvent.changeText(usernameInput, "testuser");
 
@@ -173,7 +193,7 @@ describe("LoginScreen", () => {
 
     it("should have correct autocomplete and text content types", () => {
       const { getByPlaceholderText } = renderWithProviders(<LoginScreen />);
-      const usernameInput = getByPlaceholderText("Username or Email");
+      const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
 
       expect(usernameInput.props.autoComplete).toBe("username");
@@ -207,7 +227,7 @@ describe("LoginScreen", () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
-      const usernameInput = getByPlaceholderText("Username or Email");
+      const usernameInput = getByPlaceholderText("Username");
       const loginButton = getByText("Sign In");
 
       fireEvent.changeText(usernameInput, "testuser");
@@ -241,7 +261,7 @@ describe("LoginScreen", () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
-      const usernameInput = getByPlaceholderText("Username or Email");
+      const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
 
@@ -268,7 +288,7 @@ describe("LoginScreen", () => {
 
       const { getByText, getByPlaceholderText, queryByText } =
         renderWithProviders(<LoginScreen />);
-      const usernameInput = getByPlaceholderText("Username or Email");
+      const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
 
       fireEvent.changeText(usernameInput, "testuser");
@@ -295,7 +315,7 @@ describe("LoginScreen", () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
-      const usernameInput = getByPlaceholderText("Username or Email");
+      const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
 
@@ -323,7 +343,7 @@ describe("LoginScreen", () => {
 
       const { getByText, getByPlaceholderText, queryByText } =
         renderWithProviders(<LoginScreen />);
-      const usernameInput = getByPlaceholderText("Username or Email");
+      const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
 
       fireEvent.changeText(usernameInput, "testuser");
@@ -353,7 +373,7 @@ describe("LoginScreen", () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
-      const usernameInput = getByPlaceholderText("Username or Email");
+      const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
 
@@ -376,7 +396,7 @@ describe("LoginScreen", () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
-      const usernameInput = getByPlaceholderText("Username or Email");
+      const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
 
@@ -399,7 +419,7 @@ describe("LoginScreen", () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
-      const usernameInput = getByPlaceholderText("Username or Email");
+      const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
 
       fireEvent.changeText(usernameInput, "testuser");
@@ -452,7 +472,7 @@ describe("LoginScreen", () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
-      const usernameInput = getByPlaceholderText("Username or Email");
+      const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
 
@@ -470,7 +490,7 @@ describe("LoginScreen", () => {
   describe("accessibility", () => {
     it("should have appropriate input types and properties", () => {
       const { getByPlaceholderText } = renderWithProviders(<LoginScreen />);
-      const usernameInput = getByPlaceholderText("Username or Email");
+      const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
 
       // Username field should be accessible for autofill
