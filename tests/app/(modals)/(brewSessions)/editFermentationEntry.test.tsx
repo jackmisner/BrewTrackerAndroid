@@ -82,7 +82,10 @@ jest.mock("@expo/vector-icons", () => ({
 
 // Mock useBrewSessions hook
 const mockGetById = jest.fn();
-const mockUpdateFermentationEntry = jest.fn();
+const mockUpdateFermentationEntry = jest.fn<
+  Promise<any>,
+  [string, number, any]
+>();
 
 // Create a stable mock hook object
 const mockBrewSessionsHook = {

@@ -116,23 +116,45 @@ export interface SyncableItem<T> {
   needsSync: boolean;
 }
 
-export interface PendingOperation {
+// Discriminated union types for compile-time safety of embedded operations
+type EmbeddedEntity = "fermentation_entry" | "dry_hop_addition";
+type RootEntity = "recipe" | "brew_session";
+
+type EmbeddedOperation =
+  | {
+      id: string;
+      type: "create";
+      entityType: EmbeddedEntity;
+      entityId: string;
+      parentId: string; // Required for embedded create
+      data: any;
+      // No entryIndex for create operations
+    }
+  | {
+      id: string;
+      type: "update" | "delete";
+      entityType: EmbeddedEntity;
+      entityId: string;
+      parentId: string; // Required for embedded update/delete
+      entryIndex: number; // Required for update/delete operations
+      data?: any;
+    };
+
+type RootOperation = {
   id: string;
   type: "create" | "update" | "delete";
-  entityType:
-    | "recipe"
-    | "brew_session"
-    | "fermentation_entry"
-    | "dry_hop_addition";
+  entityType: RootEntity;
   entityId: string;
-  parentId?: string; // For embedded documents: parent brew session ID
-  entryIndex?: number; // For update/delete operations on embedded documents (array index)
-  userId?: string;
   data?: any;
+  // No parentId or entryIndex for root operations
+};
+
+export type PendingOperation = (EmbeddedOperation | RootOperation) & {
   timestamp: number;
   retryCount: number;
   maxRetries: number;
-}
+  userId?: string;
+};
 
 export interface SyncResult {
   success: boolean;

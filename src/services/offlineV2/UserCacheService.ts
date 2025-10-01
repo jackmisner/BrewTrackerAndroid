@@ -3697,9 +3697,11 @@ export class UserCacheService {
           break;
 
         default:
+          // Exhaustive check - this should never happen at runtime
+          const _exhaustiveCheck: never = operation;
           throw new SyncError(
-            `Unknown operation type: ${operation.type}`,
-            operation
+            `Unknown operation type: ${(_exhaustiveCheck as PendingOperation).type}`,
+            _exhaustiveCheck as PendingOperation
           );
       }
 
