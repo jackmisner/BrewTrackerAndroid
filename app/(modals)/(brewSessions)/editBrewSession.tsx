@@ -100,11 +100,11 @@ export default function EditBrewSessionScreen() {
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
+    const { field } = showDatePicker;
     setShowDatePicker({ field: "", visible: false });
-
     if (selectedDate) {
       const dateString = selectedDate.toISOString().split("T")[0]; // YYYY-MM-DD format
-      handleInputChange(showDatePicker.field, dateString);
+      handleInputChange(field, dateString);
     }
   };
 

@@ -173,11 +173,11 @@ jest.mock("@services/calculators/UnitConverter", () => ({
     convertWeight: jest.fn((amount: number, from: string, to: string) => {
       // oz → g
       if (from === "oz" && to === "g") {
-        return amount * 28.35;
+        return amount * 28.3495;
       }
       // g → oz
       if (from === "g" && to === "oz") {
-        return amount / 28.35;
+        return amount / 28.3495;
       }
       // lb → kg
       if (from === "lb" && to === "kg") {

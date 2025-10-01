@@ -55,7 +55,7 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useBrewSessions } from "@src/hooks/offlineV2";
+import { useBrewSessions } from "@hooks/offlineV2/useUserData";
 import { BrewSession } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUserValidation } from "@utils/userValidation";

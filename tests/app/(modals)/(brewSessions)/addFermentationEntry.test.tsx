@@ -137,7 +137,7 @@ const mockBrewSessionsHook = {
   refresh: jest.fn(),
 };
 
-jest.mock("@src/hooks/offlineV2", () => ({
+jest.mock("@hooks/offlineV2/useUserData", () => ({
   useBrewSessions: jest.fn(() => mockBrewSessionsHook),
 }));
 
@@ -595,7 +595,9 @@ describe("AddFermentationEntryScreen", () => {
 
       // Verify the selected date is properly formatted and displayed
       const dateDisplay = getByTestId("date-display-text");
-      expect(dateDisplay.props.children).toBe("3/15/2024"); // US locale format for test date
+      expect(dateDisplay.props.children).toBe(
+        new Date("2024-03-15T10:30:00.000Z").toLocaleDateString()
+      );
     });
   });
 

@@ -12,11 +12,10 @@
  * - Temperature recording with unit conversion support
  * - Notes field for fermentation observations
  * - Form validation preventing invalid data entry
- * - Real-time API integration with React Query
+ * - Offline-first data management with automatic sync
  * - Loading states and comprehensive error handling
  * - Navigation back to brew session details
  * - Keyboard-aware layout for mobile input
- * - Optimistic updates with rollback on failure
  *
  * Data Validation:
  * - Gravity: 0.990-1.200 range (covers full fermentation span)
@@ -29,8 +28,8 @@
  * 2. Existing entry data is loaded and pre-populated
  * 3. User modifies fermentation data as needed
  * 4. Form validation ensures data quality and consistency
- * 5. Submit updates fermentation entry via API
- * 6. Success navigates back with cache invalidation
+ * 5. Submit updates fermentation entry via offline hook
+ * 6. Success navigates back with local cache update
  * 7. Error states provide user feedback and retry options
  *
  * @example
@@ -54,7 +53,7 @@ import {
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useBrewSessions } from "@src/hooks/offlineV2";
+import { useBrewSessions } from "@hooks/offlineV2/useUserData";
 import { BrewSession } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUserValidation } from "@utils/userValidation";
@@ -135,8 +134,8 @@ export default function EditFermentationEntryScreen() {
       errors.push("Gravity is required");
     } else {
       const gravity = parseFloat(formData.gravity);
-      if (isNaN(gravity) || gravity < 0.8 || gravity > 1.2) {
-        errors.push("Gravity must be between 0.800 and 1.200");
+      if (isNaN(gravity) || gravity < 0.99 || gravity > 1.2) {
+        errors.push("Gravity must be between 0.990 and 1.200");
       }
     }
 
@@ -244,14 +243,16 @@ export default function EditFermentationEntryScreen() {
       ...(formData.notes.trim() && { notes: formData.notes.trim() }),
     };
 
-    // Log fermentation entry update for security monitoring
-    console.log("📝 Updating fermentation entry:", {
-      brewSessionId,
-      brewSessionName: brewSessionData?.name,
-      entryIndex,
-      hasBrewSessionUserId: !!brewSessionData?.user_id,
-      entryDate: entryData.entry_date,
-    });
+    // Log fermentation entry update for security monitoring (dev only)
+    if (__DEV__) {
+      console.log("📝 Updating fermentation entry:", {
+        brewSessionId,
+        brewSessionName: brewSessionData?.name,
+        entryIndex,
+        hasBrewSessionUserId: !!brewSessionData?.user_id,
+        entryDate: entryData.entry_date,
+      });
+    }
 
     try {
       setIsSaving(true);

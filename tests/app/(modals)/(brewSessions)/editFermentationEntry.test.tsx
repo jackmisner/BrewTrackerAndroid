@@ -102,7 +102,7 @@ const mockBrewSessionsHook = {
   refresh: jest.fn(),
 };
 
-jest.mock("@src/hooks/offlineV2", () => ({
+jest.mock("@hooks/offlineV2/useUserData", () => ({
   useBrewSessions: jest.fn(() => mockBrewSessionsHook),
 }));
 
