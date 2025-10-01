@@ -111,6 +111,23 @@ const CATEGORY_LABELS: Record<string, string> = {
 // Legacy constants for basic quantity form removed - IngredientDetailEditor has its own unit/hop handling
 
 /**
+ * Type guard to validate HopFormat values
+ */
+const isValidHopFormat = (value: string | undefined): value is HopFormat => {
+  if (!value) {
+    return false;
+  }
+  const validFormats: HopFormat[] = [
+    "Pellet",
+    "Leaf",
+    "Plug",
+    "Whole",
+    "Extract",
+  ];
+  return validFormats.includes(value as HopFormat);
+};
+
+/**
  * Converts an Ingredient to a RecipeIngredient with required fields
  */
 const convertIngredientToRecipeIngredient = (
@@ -122,8 +139,10 @@ const convertIngredientToRecipeIngredient = (
     type: ingredient.type as IngredientType,
     amount: ingredient.amount || 0,
     unit: (ingredient.unit as IngredientUnit) || "oz",
-    // Cast hop_type to HopFormat if present
-    hop_type: ingredient.hop_type as HopFormat | undefined,
+    // Validate and safely cast hop_type to HopFormat if present
+    hop_type: isValidHopFormat(ingredient.hop_type)
+      ? ingredient.hop_type
+      : undefined,
     // Defer actual instance_id assignment; created in createRecipeIngredientWithDefaults
     instance_id: "",
   };

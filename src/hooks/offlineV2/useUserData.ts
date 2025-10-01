@@ -5,7 +5,7 @@
  * offline CRUD operations and automatic sync capabilities.
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { UserCacheService } from "@services/offlineV2/UserCacheService";
 import { UseUserDataReturn, SyncResult, Recipe, BrewSession } from "@src/types";
 import { useAuth } from "@contexts/AuthContext";
@@ -257,21 +257,38 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
     loadDataIfAuthenticated();
   }, [getUserIdForOperations]);
 
-  return {
-    data,
-    isLoading,
-    error,
-    pendingCount,
-    conflictCount, // TODO: Implement conflict tracking
-    lastSync,
-    create,
-    update,
-    delete: deleteRecipe,
-    clone,
-    getById,
-    sync,
-    refresh,
-  };
+  return useMemo(
+    () => ({
+      data,
+      isLoading,
+      error,
+      pendingCount,
+      conflictCount, // TODO: Implement conflict tracking
+      lastSync,
+      create,
+      update,
+      delete: deleteRecipe,
+      clone,
+      getById,
+      sync,
+      refresh,
+    }),
+    [
+      data,
+      isLoading,
+      error,
+      pendingCount,
+      conflictCount,
+      lastSync,
+      create,
+      update,
+      deleteRecipe,
+      clone,
+      getById,
+      sync,
+      refresh,
+    ]
+  );
 }
 
 /**
@@ -616,27 +633,50 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
     loadDataIfAuthenticated();
   }, [getUserIdForOperations]);
 
-  return {
-    data,
-    isLoading,
-    error,
-    pendingCount,
-    conflictCount, // TODO: Implement conflict tracking
-    lastSync,
-    create,
-    update,
-    delete: deleteSession,
-    clone,
-    getById,
-    sync,
-    refresh,
-    // Fermentation entry operations
-    addFermentationEntry,
-    updateFermentationEntry,
-    deleteFermentationEntry,
-    // Dry-hop operations
-    addDryHopFromRecipe,
-    removeDryHop,
-    deleteDryHopAddition,
-  };
+  return useMemo(
+    () => ({
+      data,
+      isLoading,
+      error,
+      pendingCount,
+      conflictCount, // TODO: Implement conflict tracking
+      lastSync,
+      create,
+      update,
+      delete: deleteSession,
+      clone,
+      getById,
+      sync,
+      refresh,
+      // Fermentation entry operations
+      addFermentationEntry,
+      updateFermentationEntry,
+      deleteFermentationEntry,
+      // Dry-hop operations
+      addDryHopFromRecipe,
+      removeDryHop,
+      deleteDryHopAddition,
+    }),
+    [
+      data,
+      isLoading,
+      error,
+      pendingCount,
+      conflictCount,
+      lastSync,
+      create,
+      update,
+      deleteSession,
+      clone,
+      getById,
+      sync,
+      refresh,
+      addFermentationEntry,
+      updateFermentationEntry,
+      deleteFermentationEntry,
+      addDryHopFromRecipe,
+      removeDryHop,
+      deleteDryHopAddition,
+    ]
+  );
 }
