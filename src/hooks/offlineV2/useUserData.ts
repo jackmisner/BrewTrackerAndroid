@@ -10,6 +10,7 @@ import { UserCacheService } from "@services/offlineV2/UserCacheService";
 import { UseUserDataReturn, SyncResult, Recipe, BrewSession } from "@src/types";
 import { useAuth } from "@contexts/AuthContext";
 import { useUnits } from "@contexts/UnitContext";
+import UnifiedLogger from "@services/logger/UnifiedLogger";
 
 /**
  * Hook for managing recipes with offline capabilities
@@ -31,7 +32,6 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
   const getUserIdForOperations = useCallback(async () => {
     const userId = user?.id;
     if (!userId) {
-      console.log(`[useRecipes] No user ID available`);
       setData(null);
       setIsLoading(false);
       return null;
@@ -43,7 +43,6 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
     async (showLoading = true) => {
       const userId = await getUserIdForOperations();
       if (!userId) {
-        console.log(`[useRecipes.loadData] No user ID found`);
         return;
       }
 
@@ -54,9 +53,6 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
         setError(null);
 
         const recipes = await UserCacheService.getRecipes(userId, unitSystem);
-        console.log(
-          `[useRecipes.loadData] UserCacheService returned ${recipes.length} recipes`
-        );
         setData(recipes);
 
         // Update sync status
@@ -161,10 +157,25 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
     async (id: string): Promise<Recipe | null> => {
       const userId = await getUserIdForOperations();
       if (!userId) {
-        console.log(`[useRecipes.getById] No user ID available`);
         return null;
       }
-      return await UserCacheService.getRecipeById(id, userId);
+
+      const recipe = await UserCacheService.getRecipeById(id, userId);
+
+      if (recipe) {
+        await UnifiedLogger.info(
+          "useRecipes.getById",
+          `Retrieved recipe: ${recipe.name}`,
+          {
+            recipeId: id,
+            userId,
+            source: "offline_cache",
+            style: recipe.style,
+          }
+        );
+      }
+
+      return recipe;
     },
     [getUserIdForOperations]
   );
@@ -172,25 +183,15 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
   const refresh = useCallback(async (): Promise<void> => {
     const userIdForCache = await getUserIdForOperations();
     if (!userIdForCache) {
-      console.log(`[useRecipes.refresh] No user ID found for refresh`);
       return;
     }
 
     try {
       setIsLoading(true);
-      // Don't clear error state immediately - preserve it if refresh fails
-      // setError(null);
-
-      console.log(
-        `[useRecipes.refresh] Refreshing recipes from server for user: "${userIdForCache}"`
-      );
 
       const refreshedRecipes = await UserCacheService.refreshRecipesFromServer(
         userIdForCache,
         unitSystem
-      );
-      console.log(
-        `[useRecipes.refresh] Refresh completed, got ${refreshedRecipes.length} recipes`
       );
 
       setData(refreshedRecipes);
@@ -201,37 +202,20 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
       setPendingCount(pending);
       setLastSync(Date.now());
     } catch (error) {
-      console.error(`[useRecipes.refresh] Refresh failed:`, error);
-
       // Don't set error state for refresh failures - preserve offline cache
-      // Instead, try to load existing offline data to ensure offline-created recipes are available
-      console.log(
-        `[useRecipes.refresh] Refresh failed, loading offline cache to preserve data`
-      );
-
+      // Try to load existing offline data to ensure offline-created recipes are available
       try {
         const offlineRecipes = await UserCacheService.getRecipes(
           userIdForCache,
           unitSystem
-        );
-        console.log(
-          `[useRecipes.refresh] Loaded ${offlineRecipes.length} recipes from offline cache`
         );
         setData(offlineRecipes);
 
         // Update sync status to reflect pending operations
         const pending = await UserCacheService.getPendingOperationsCount();
         setPendingCount(pending);
-
-        // Don't update error state - let existing cache be shown
-        console.log(
-          `[useRecipes.refresh] Preserved offline cache despite refresh failure`
-        );
       } catch (cacheError) {
-        console.error(
-          `[useRecipes.refresh] Failed to load offline cache:`,
-          cacheError
-        );
+        console.error("Failed to load offline recipe cache:", cacheError);
         // Only set error if we can't even load offline cache
         setError(
           error instanceof Error ? error.message : "Failed to refresh recipes"
@@ -311,7 +295,6 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
   const getUserIdForOperations = useCallback(async () => {
     const userId = user?.id;
     if (!userId) {
-      console.log(`[useBrewSessions] No user ID available`);
       setData(null);
       setIsLoading(false);
       return null;
@@ -323,7 +306,6 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
     async (showLoading = true) => {
       const userId = await getUserIdForOperations();
       if (!userId) {
-        console.log(`[useBrewSessions.loadData] No user ID found`);
         return;
       }
 
@@ -337,9 +319,13 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
           userId,
           unitSystem
         );
-        console.log(
-          `[useBrewSessions.loadData] UserCacheService returned ${sessions.length} sessions`
+
+        await UnifiedLogger.info(
+          "useBrewSessions.loadData",
+          `Loaded ${sessions.length} brew sessions`,
+          { userId, sessionCount: sessions.length }
         );
+
         setData(sessions);
 
         // Update sync status
@@ -434,10 +420,26 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
     async (id: string): Promise<BrewSession | null> => {
       const userId = await getUserIdForOperations();
       if (!userId) {
-        console.log(`[useBrewSessions.getById] No user ID available`);
         return null;
       }
-      return await UserCacheService.getBrewSessionById(id, userId);
+
+      const session = await UserCacheService.getBrewSessionById(id, userId);
+
+      if (session) {
+        await UnifiedLogger.info(
+          "useBrewSessions.getById",
+          `Retrieved brew session: ${session.name}`,
+          {
+            sessionId: id,
+            realSessionId: session.id,
+            userId,
+            source: "offline_cache",
+            status: session.status,
+          }
+        );
+      }
+
+      return session;
     },
     [getUserIdForOperations]
   );
@@ -445,16 +447,16 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
   const refresh = useCallback(async (): Promise<void> => {
     const userIdForCache = await getUserIdForOperations();
     if (!userIdForCache) {
-      console.log(`[useBrewSessions.refresh] No user ID found for refresh`);
       return;
     }
 
     try {
       setIsLoading(true);
-      // Don't clear error state immediately - preserve it if refresh fails
 
-      console.log(
-        `[useBrewSessions.refresh] Refreshing sessions from server for user: "${userIdForCache}"`
+      await UnifiedLogger.info(
+        "useBrewSessions.refresh",
+        "Refreshing brew sessions from server",
+        { userId: userIdForCache }
       );
 
       const refreshedSessions =
@@ -462,8 +464,11 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
           userIdForCache,
           unitSystem
         );
-      console.log(
-        `[useBrewSessions.refresh] Refresh completed, got ${refreshedSessions.length} sessions`
+
+      await UnifiedLogger.info(
+        "useBrewSessions.refresh",
+        `Refresh completed: ${refreshedSessions.length} sessions`,
+        { sessionCount: refreshedSessions.length }
       );
 
       setData(refreshedSessions);
@@ -474,37 +479,29 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
       setPendingCount(pending);
       setLastSync(Date.now());
     } catch (error) {
-      console.error(`[useBrewSessions.refresh] Refresh failed:`, error);
+      console.error("Brew sessions refresh failed:", error);
 
       // Don't set error state for refresh failures - preserve offline cache
-      // Instead, try to load existing offline data to ensure offline-created sessions are available
-      console.log(
-        `[useBrewSessions.refresh] Refresh failed, loading offline cache to preserve data`
-      );
-
+      // Try to load existing offline data to ensure offline-created sessions are available
       try {
         const offlineSessions = await UserCacheService.getBrewSessions(
           userIdForCache,
           unitSystem
         );
-        console.log(
-          `[useBrewSessions.refresh] Loaded ${offlineSessions.length} sessions from offline cache`
+
+        await UnifiedLogger.info(
+          "useBrewSessions.refresh",
+          "Using offline cache after refresh failure",
+          { offlineSessionCount: offlineSessions.length }
         );
+
         setData(offlineSessions);
 
         // Update sync status to reflect pending operations
         const pending = await UserCacheService.getPendingOperationsCount();
         setPendingCount(pending);
-
-        // Don't update error state - let existing cache be shown
-        console.log(
-          `[useBrewSessions.refresh] Preserved offline cache despite refresh failure`
-        );
       } catch (cacheError) {
-        console.error(
-          `[useBrewSessions.refresh] Failed to load offline cache:`,
-          cacheError
-        );
+        console.error("Failed to load offline brew session cache:", cacheError);
         // Only set error if we can't even load offline cache
         setError(
           error instanceof Error ? error.message : "Failed to refresh sessions"
@@ -524,6 +521,12 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
       const updatedSession = await UserCacheService.addFermentationEntry(
         sessionId,
         entry
+      );
+
+      await UnifiedLogger.info(
+        "useBrewSessions.addFermentationEntry",
+        `Added fermentation entry to session ${sessionId}`,
+        { sessionId, gravity: entry.gravity, temperature: entry.temperature }
       );
 
       // Refresh data
@@ -546,6 +549,12 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
         updates
       );
 
+      await UnifiedLogger.info(
+        "useBrewSessions.updateFermentationEntry",
+        `Updated fermentation entry ${entryIndex} in session ${sessionId}`,
+        { sessionId, entryIndex }
+      );
+
       // Refresh data
       await loadData(false);
 
@@ -559,6 +568,12 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
       const updatedSession = await UserCacheService.deleteFermentationEntry(
         sessionId,
         entryIndex
+      );
+
+      await UnifiedLogger.info(
+        "useBrewSessions.deleteFermentationEntry",
+        `Deleted fermentation entry ${entryIndex} from session ${sessionId}`,
+        { sessionId, entryIndex }
       );
 
       // Refresh data
@@ -580,6 +595,12 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
         dryHopData
       );
 
+      await UnifiedLogger.info(
+        "useBrewSessions.addDryHopFromRecipe",
+        `Added dry-hop ${dryHopData.hop_name} to session ${sessionId}`,
+        { sessionId, hopName: dryHopData.hop_name, amount: dryHopData.amount }
+      );
+
       // Refresh data
       await loadData(false);
 
@@ -595,6 +616,12 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
         dryHopIndex
       );
 
+      await UnifiedLogger.info(
+        "useBrewSessions.removeDryHop",
+        `Removed dry-hop ${dryHopIndex} from session ${sessionId}`,
+        { sessionId, dryHopIndex }
+      );
+
       // Refresh data
       await loadData(false);
 
@@ -608,6 +635,12 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
       const updatedSession = await UserCacheService.deleteDryHopAddition(
         sessionId,
         dryHopIndex
+      );
+
+      await UnifiedLogger.info(
+        "useBrewSessions.deleteDryHopAddition",
+        `Deleted dry-hop ${dryHopIndex} from session ${sessionId}`,
+        { sessionId, dryHopIndex }
       );
 
       // Refresh data

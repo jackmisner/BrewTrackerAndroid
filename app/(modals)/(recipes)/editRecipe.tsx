@@ -175,8 +175,10 @@ type RecipeBuilderAction =
  *
  * Handles field updates, ingredient management (add, remove, update), state reset,
  * and loading existing recipes for editing.
+ *
+ * @internal Exported for testing purposes only
  */
-function recipeBuilderReducer(
+export function recipeBuilderReducer(
   state: RecipeFormData,
   action: RecipeBuilderAction
 ): RecipeFormData {

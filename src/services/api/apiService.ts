@@ -91,6 +91,8 @@ import {
   FermentationEntriesResponse,
   FermentationStatsResponse,
   DashboardResponse,
+  CreateDryHopFromRecipeRequest,
+  UpdateDryHopRequest,
 
   // Common types
   ID,
@@ -830,6 +832,31 @@ const ApiService = {
     ): Promise<AxiosResponse<FermentationStatsResponse>> =>
       withRetry(() =>
         api.get(ENDPOINTS.BREW_SESSIONS.FERMENTATION_STATS(brewSessionId))
+      ),
+
+    // Dry-hop addition endpoints
+    addDryHopAddition: (
+      brewSessionId: ID,
+      dryHopData: CreateDryHopFromRecipeRequest
+    ): Promise<AxiosResponse<any>> =>
+      api.post(ENDPOINTS.BREW_SESSIONS.DRY_HOPS(brewSessionId), dryHopData),
+
+    updateDryHopAddition: (
+      brewSessionId: ID,
+      additionIndex: number,
+      dryHopData: UpdateDryHopRequest
+    ): Promise<AxiosResponse<any>> =>
+      api.put(
+        ENDPOINTS.BREW_SESSIONS.DRY_HOP_ENTRY(brewSessionId, additionIndex),
+        dryHopData
+      ),
+
+    deleteDryHopAddition: (
+      brewSessionId: ID,
+      additionIndex: number
+    ): Promise<AxiosResponse<{ message: string }>> =>
+      api.delete(
+        ENDPOINTS.BREW_SESSIONS.DRY_HOP_ENTRY(brewSessionId, additionIndex)
       ),
 
     analyzeCompletion: (

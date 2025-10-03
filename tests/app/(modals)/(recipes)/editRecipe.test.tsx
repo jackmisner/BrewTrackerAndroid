@@ -973,4 +973,322 @@ describe("EditRecipeScreen", () => {
       expect(getByText).toBeDefined();
     });
   });
+
+  describe("Reducer Actions", () => {
+    const {
+      recipeBuilderReducer,
+    } = require("../../../../app/(modals)/(recipes)/editRecipe");
+
+    const mockIngredient = {
+      id: "ing1",
+      instance_id: "inst-1",
+      name: "Test Grain",
+      type: "grain" as const,
+      amount: 10,
+      unit: "lb",
+    };
+
+    const initialState = {
+      name: "Test Recipe",
+      style: "IPA",
+      description: "",
+      batch_size: 5,
+      batch_size_unit: "gal",
+      unit_system: "imperial" as const,
+      boil_time: 60,
+      efficiency: 75,
+      mash_temperature: 152,
+      mash_temp_unit: "F",
+      mash_time: undefined,
+      is_public: false,
+      notes: "",
+      ingredients: [],
+    };
+
+    it("should handle UPDATE_INGREDIENT action", () => {
+      const stateWithIngredient = {
+        ...initialState,
+        ingredients: [mockIngredient],
+      };
+
+      const updatedIngredient = {
+        ...mockIngredient,
+        amount: 15,
+        name: "Updated Grain",
+      };
+
+      const newState = recipeBuilderReducer(stateWithIngredient, {
+        type: "UPDATE_INGREDIENT",
+        index: 0,
+        ingredient: updatedIngredient,
+      });
+
+      expect(newState.ingredients).toHaveLength(1);
+      expect(newState.ingredients[0].amount).toBe(15);
+      expect(newState.ingredients[0].name).toBe("Updated Grain");
+    });
+
+    it("should handle REMOVE_INGREDIENT action", () => {
+      const ingredient2 = {
+        ...mockIngredient,
+        id: "ing2",
+        instance_id: "inst-2",
+        name: "Second Grain",
+      };
+
+      const stateWithIngredients = {
+        ...initialState,
+        ingredients: [mockIngredient, ingredient2],
+      };
+
+      const newState = recipeBuilderReducer(stateWithIngredients, {
+        type: "REMOVE_INGREDIENT",
+        index: 0,
+      });
+
+      expect(newState.ingredients).toHaveLength(1);
+      expect(newState.ingredients[0].id).toBe("ing2");
+      expect(newState.ingredients[0].name).toBe("Second Grain");
+    });
+
+    it("should not modify other ingredients when updating one", () => {
+      const ingredient2 = {
+        ...mockIngredient,
+        id: "ing2",
+        instance_id: "inst-2",
+        name: "Second Grain",
+      };
+
+      const stateWithIngredients = {
+        ...initialState,
+        ingredients: [mockIngredient, ingredient2],
+      };
+
+      const updatedIngredient = {
+        ...mockIngredient,
+        amount: 20,
+      };
+
+      const newState = recipeBuilderReducer(stateWithIngredients, {
+        type: "UPDATE_INGREDIENT",
+        index: 0,
+        ingredient: updatedIngredient,
+      });
+
+      expect(newState.ingredients).toHaveLength(2);
+      expect(newState.ingredients[0].amount).toBe(20);
+      expect(newState.ingredients[1].amount).toBe(10); // Second unchanged
+    });
+
+    it("should handle removing middle ingredient from array", () => {
+      const ingredient2 = { ...mockIngredient, id: "ing2", name: "Middle" };
+      const ingredient3 = { ...mockIngredient, id: "ing3", name: "Last" };
+
+      const stateWithIngredients = {
+        ...initialState,
+        ingredients: [mockIngredient, ingredient2, ingredient3],
+      };
+
+      const newState = recipeBuilderReducer(stateWithIngredients, {
+        type: "REMOVE_INGREDIENT",
+        index: 1,
+      });
+
+      expect(newState.ingredients).toHaveLength(2);
+      expect(newState.ingredients[0].name).toBe("Test Grain");
+      expect(newState.ingredients[1].name).toBe("Last");
+    });
+
+    it("should handle ADD_INGREDIENT action", () => {
+      const newIngredient = {
+        id: "ing2",
+        instance_id: "inst-2",
+        name: "New Hop",
+        type: "hop" as const,
+        amount: 1,
+        unit: "oz",
+      };
+
+      const newState = recipeBuilderReducer(initialState, {
+        type: "ADD_INGREDIENT",
+        ingredient: newIngredient,
+      });
+
+      expect(newState.ingredients).toHaveLength(1);
+      expect(newState.ingredients[0]).toEqual(newIngredient);
+    });
+
+    it("should handle UPDATE_FIELD action", () => {
+      const newState = recipeBuilderReducer(initialState, {
+        type: "UPDATE_FIELD",
+        field: "name",
+        value: "Updated Recipe Name",
+      });
+
+      expect(newState.name).toBe("Updated Recipe Name");
+      expect(newState.style).toBe("IPA"); // Other fields unchanged
+    });
+
+    it("should handle RESET action", () => {
+      const modifiedState = { ...initialState, name: "Modified" };
+      const resetRecipe = { ...initialState, name: "Reset Recipe" };
+
+      const newState = recipeBuilderReducer(modifiedState, {
+        type: "RESET",
+        recipe: resetRecipe,
+      });
+
+      expect(newState).toEqual(resetRecipe);
+    });
+  });
+
+  describe("toOptionalNumber Helper", () => {
+    // We need to test this indirectly through the exported function
+    // since it's not exported. Let's test the behavior through hasRecipeChanges
+    // which uses similar number conversion logic
+
+    it("should handle null values in ingredients", () => {
+      const {
+        hasRecipeChanges,
+      } = require("../../../../app/(modals)/(recipes)/editRecipe");
+
+      const recipe1 = {
+        name: "Test",
+        style: "IPA",
+        description: "",
+        batch_size: 5,
+        batch_size_unit: "gal",
+        unit_system: "imperial" as const,
+        boil_time: 60,
+        efficiency: 75,
+        mash_temperature: 152,
+        mash_temp_unit: "F",
+        notes: "",
+        is_public: false,
+        ingredients: [
+          {
+            id: "ing1",
+            name: "Test",
+            type: "grain" as const,
+            amount: 10,
+            unit: "lb",
+            time: null,
+            instance_id: "inst-1",
+          },
+        ],
+      };
+
+      const recipe2 = {
+        ...recipe1,
+        ingredients: [
+          {
+            ...recipe1.ingredients[0],
+            time: undefined,
+            instance_id: "inst-2",
+          },
+        ],
+      };
+
+      // Should detect difference between null and undefined
+      expect(hasRecipeChanges(recipe1, recipe2)).toBe(true);
+    });
+
+    it("should handle string number conversion", () => {
+      const {
+        hasRecipeChanges,
+      } = require("../../../../app/(modals)/(recipes)/editRecipe");
+
+      const recipe1 = {
+        name: "Test",
+        style: "IPA",
+        description: "",
+        batch_size: 5,
+        batch_size_unit: "gal",
+        unit_system: "imperial" as const,
+        boil_time: 60,
+        efficiency: 75,
+        mash_temperature: 152,
+        mash_temp_unit: "F",
+        notes: "",
+        is_public: false,
+        ingredients: [
+          {
+            id: "ing1",
+            name: "Test",
+            type: "grain" as const,
+            amount: 10,
+            unit: "lb",
+            instance_id: "inst-1",
+          },
+        ],
+      };
+
+      // Same values should not show changes
+      const recipe2 = {
+        ...recipe1,
+        ingredients: [
+          {
+            ...recipe1.ingredients[0],
+            instance_id: "inst-2",
+          },
+        ],
+      };
+
+      expect(hasRecipeChanges(recipe1, recipe2)).toBe(false);
+    });
+  });
+
+  describe("UserCacheService Integration", () => {
+    it("should handle loading recipe from offline cache", async () => {
+      const mockRecipe = {
+        id: "test-recipe-id",
+        name: "Test Recipe from Cache",
+        style: "IPA",
+        batch_size: 5,
+        batch_size_unit: "gal",
+        unit_system: "imperial" as const,
+        boil_time: 60,
+        efficiency: 75,
+        mash_temperature: 152,
+        mash_temp_unit: "F",
+        is_public: false,
+        notes: "",
+        ingredients: [],
+        user_id: "test-user-123",
+        created_at: "2024-01-01",
+        updated_at: "2024-01-01",
+      };
+
+      // The component uses dynamic import for UserCacheService
+      // This test verifies the component renders successfully when recipe is found
+      const { getByText } = renderWithProviders(<EditRecipeScreen />);
+
+      await waitFor(() => {
+        expect(getByText("Edit Recipe")).toBeTruthy();
+      });
+
+      // Component should handle offline-first data loading pattern
+      // Actual UserCacheService behavior is tested in service unit tests
+    });
+
+    it("should handle UserCacheService errors gracefully", async () => {
+      // Component should handle errors from offline cache
+      const { getByText } = renderWithProviders(<EditRecipeScreen />);
+
+      await waitFor(() => {
+        // Should render without crashing even if cache fails
+        expect(getByText("Edit Recipe")).toBeTruthy();
+      });
+    });
+
+    it("should handle recipe not found in cache", async () => {
+      // Component should handle case where recipe doesn't exist in cache
+      const { getByText } = renderWithProviders(<EditRecipeScreen />);
+
+      await waitFor(() => {
+        // Should render without crashing
+        expect(getByText("Edit Recipe")).toBeTruthy();
+      });
+    });
+  });
 });

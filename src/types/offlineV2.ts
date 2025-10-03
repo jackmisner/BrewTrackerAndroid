@@ -212,10 +212,30 @@ export const STORAGE_KEYS_V2 = {
   SYNC_METADATA: "sync_metadata_v2",
   CONFLICT_QUEUE: "conflict_queue_v2",
 
+  // TempId mapping cache (for navigation compatibility after sync)
+  TEMP_ID_MAPPINGS: "temp_id_mappings_v2",
+
   // Configuration
   OFFLINE_CONFIG: "offline_config_v2",
   CACHE_STATS: "cache_stats_v2",
 } as const;
+
+// ============================================================================
+// TempId Mapping Types
+// ============================================================================
+
+/**
+ * Mapping entry for tempId → realId lookups
+ * Used for navigation compatibility after background sync
+ */
+export interface TempIdMapping {
+  tempId: string;
+  realId: string;
+  entityType: "recipe" | "brew_session";
+  userId: string; // Owner of this mapping (for security/isolation)
+  timestamp: number; // When the mapping was created
+  expiresAt: number; // When the mapping should be cleaned up (TTL)
+}
 
 // ============================================================================
 // Error Types
