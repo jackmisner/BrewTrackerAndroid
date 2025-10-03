@@ -4,7 +4,7 @@ A production-ready React Native mobile app for the BrewTracker homebrewing platf
 
 **Version:** 2.4.10 | **Platform:** Android | **Architecture:** React Native 0.81.4 + Expo 54
 
-## 📚 Table of Contents
+## Table of Contents
 
 - [Features](#features)
 - [Quick Start](#quick-start)
@@ -622,7 +622,7 @@ EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
 
 ## **Offline Functionality**
 
-### **V2 System Complete: Comprehensive Offline-First Architecture** ✅
+### **V2 System Complete: Comprehensive Offline-First Architecture**
 
 BrewTrackerAndroid features a fully implemented V2 offline-first system with comprehensive caching, version-based synchronization, and automatic conflict resolution, ensuring brewers can work seamlessly regardless of network connectivity.
 
@@ -709,7 +709,7 @@ BrewTrackerAndroid features a fully implemented V2 offline-first system with com
 
 ## **Development Achievements & Architecture**
 
-### **Phase 5 Completion Status: ~85% Feature Parity** ✅
+### **Phase 5 Completion Status: ~85% Feature Parity**
 
 ### Core Features Complete
 
