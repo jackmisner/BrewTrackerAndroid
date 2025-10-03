@@ -327,7 +327,9 @@ export default function ViewBrewSession() {
         // Update in background
         // Provide haptic feedback immediately for responsive feel
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        await update(brewSessionId, { batch_rating: newRating });
+        // Use the actual session ID from loaded data (handles tempId→realId mapping)
+        const targetId = brewSessionData?.id ?? brewSessionId;
+        await update(targetId, { batch_rating: newRating });
       } catch (error) {
         await UnifiedLogger.error(
           "ViewBrewSession.handleRatingUpdate",

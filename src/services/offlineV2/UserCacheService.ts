@@ -1603,6 +1603,8 @@ export class UserCacheService {
         throw new OfflineError("Brew session not found", "NOT_FOUND", false);
       }
 
+      // IMPORTANT: Use session.id (real ID) not sessionId parameter (could be temp ID)
+      const realSessionId = session.id;
       const entries = session.fermentation_data || [];
       if (entryIndex < 0 || entryIndex >= entries.length) {
         throw new OfflineError(
@@ -1625,7 +1627,7 @@ export class UserCacheService {
       // Update cache immediately (works offline)
       const now = Date.now();
       const syncableItem: SyncableItem<BrewSession> = {
-        id: sessionId,
+        id: realSessionId,
         data: updatedSessionData,
         lastModified: now,
         syncStatus: "pending",
@@ -1635,11 +1637,11 @@ export class UserCacheService {
 
       // Queue operation for sync
       const operation: PendingOperation = {
-        id: `fermentation_entry_delete_${sessionId}_${entryIndex}_${now}`,
+        id: `fermentation_entry_delete_${realSessionId}_${entryIndex}_${now}`,
         type: "delete",
         entityType: "fermentation_entry",
-        entityId: sessionId,
-        parentId: sessionId,
+        entityId: realSessionId,
+        parentId: realSessionId,
         entryIndex: entryIndex,
         userId,
         timestamp: now,
