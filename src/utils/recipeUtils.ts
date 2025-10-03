@@ -6,6 +6,7 @@
 
 import { RecipeIngredient } from "@src/types/recipe";
 import { CreateDryHopFromRecipeRequest } from "@src/types/brewSession";
+import { convertMinutesToDays } from "@utils/timeUtils";
 
 /**
  * Checks if a recipe ID is a temporary ID (used for offline-created recipes)
@@ -60,7 +61,10 @@ export function getDryHopsFromRecipe(
     hop_type: ingredient.hop_type,
     amount: ingredient.amount,
     amount_unit: ingredient.unit,
-    duration_days: ingredient.time, // time in recipe is duration in days for dry-hops
+    duration_days: ingredient.time
+      ? convertMinutesToDays(ingredient.time)
+      : undefined, // Convert from minutes (storage) to days (dry-hop duration)
     phase: "primary", // Default to primary fermentation
+    recipe_instance_id: ingredient.instance_id, // Preserve unique instance ID for handling duplicate hops
   }));
 }

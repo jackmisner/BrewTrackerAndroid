@@ -110,6 +110,9 @@ export const ENDPOINTS = {
       `/brew-sessions/${id}/fermentation/stats`,
     ANALYZE_COMPLETION: (id: string) =>
       `/brew-sessions/${id}/fermentation/analyze-completion`,
+    DRY_HOPS: (id: string) => `/brew-sessions/${id}/dry-hops`,
+    DRY_HOP_ENTRY: (id: string, index: number) =>
+      `/brew-sessions/${id}/dry-hops/${index}`,
   },
 
   // BeerXML

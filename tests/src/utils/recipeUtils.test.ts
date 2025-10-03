@@ -140,7 +140,7 @@ describe("recipeUtils", () => {
           hop_type: "Pellet",
           amount: 2,
           unit: "oz",
-          time: 7,
+          time: 10080, // 7 days in minutes (7 * 1440)
           instance_id: "mock-uuid-hop-1",
         },
         {
@@ -151,7 +151,7 @@ describe("recipeUtils", () => {
           hop_type: "Whole",
           amount: 1.5,
           unit: "oz",
-          time: 5,
+          time: 7200, // 5 days in minutes (5 * 1440)
           instance_id: "mock-uuid-hop-2",
         },
         {
@@ -176,6 +176,7 @@ describe("recipeUtils", () => {
         amount_unit: "oz",
         duration_days: 7,
         phase: "primary",
+        recipe_instance_id: "mock-uuid-hop-1",
       });
       expect(result[1]).toEqual({
         hop_name: "Citra",
@@ -184,6 +185,7 @@ describe("recipeUtils", () => {
         amount_unit: "oz",
         duration_days: 5,
         phase: "primary",
+        recipe_instance_id: "mock-uuid-hop-2",
       });
     });
 

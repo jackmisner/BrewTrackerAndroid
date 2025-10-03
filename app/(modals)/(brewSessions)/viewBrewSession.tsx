@@ -19,9 +19,12 @@ import { useTheme } from "@contexts/ThemeContext";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { FermentationChart } from "@src/components/brewSessions/FermentationChart";
 import { FermentationData } from "@src/components/brewSessions/FermentationData";
+import { DryHopTracker } from "@src/components/brewSessions/DryHopTracker";
 import { useBrewSessions } from "@hooks/offlineV2/useUserData";
 import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { QUERY_KEYS } from "@services/api/queryClient";
+import UnifiedLogger from "@services/logger/UnifiedLogger";
+import { DevIdDebugger } from "@src/components/debug/DevIdDebugger";
 
 export default function ViewBrewSession() {
   const { brewSessionId } = useLocalSearchParams<{ brewSessionId: string }>();
@@ -39,7 +42,8 @@ export default function ViewBrewSession() {
 
   // Use offline-first brew sessions hook
   const brewSessionsHook = useBrewSessions();
-  const { getById, update } = brewSessionsHook; // Extract functions to use in dependency array
+  const { getById, update, addDryHopFromRecipe, removeDryHop } =
+    brewSessionsHook; // Extract functions to use in dependency array
 
   // Load brew session data using offline-first approach
   useEffect(() => {
@@ -59,13 +63,8 @@ export default function ViewBrewSession() {
         }
         setIsLoading(true);
         setError(null);
-        console.log(`[ViewBrewSession] Loading brew session: ${brewSessionId}`);
 
         const session = await getById(brewSessionId);
-        console.log(
-          `[ViewBrewSession] Loaded session:`,
-          session ? "found" : "not found"
-        );
         if (session) {
           setBrewSessionData(session);
         } else {
@@ -147,25 +146,54 @@ export default function ViewBrewSession() {
       return;
     }
 
+    await UnifiedLogger.info(
+      "ViewBrewSession.onRefresh",
+      "Pull-to-refresh started",
+      {
+        brewSessionId,
+        currentDryHopCount: brewSessionData?.dry_hop_additions?.length || 0,
+      }
+    );
+
     setRefreshing(true);
     const currentRecipeId = brewSessionData?.recipe_id;
     try {
-      console.log(
-        `[ViewBrewSession.onRefresh] Refreshing brew session: ${brewSessionId}`
-      );
-
       // First try to refresh the overall brew sessions data
+      await UnifiedLogger.debug(
+        "ViewBrewSession.onRefresh",
+        "Calling brewSessionsHook.refresh() to fetch from server"
+      );
       await brewSessionsHook.refresh();
+
+      await UnifiedLogger.debug(
+        "ViewBrewSession.onRefresh",
+        "Server refresh complete, now getting specific session from cache"
+      );
 
       // Then reload the specific session
       const session = await brewSessionsHook.getById(brewSessionId);
+
+      await UnifiedLogger.info(
+        "ViewBrewSession.onRefresh",
+        "Retrieved session from cache after refresh",
+        {
+          brewSessionId,
+          foundSession: !!session,
+          dryHopCount: session?.dry_hop_additions?.length || 0,
+          dryHopDetails:
+            session?.dry_hop_additions?.map(dh => ({
+              hop_name: dh.hop_name,
+              recipe_instance_id: dh.recipe_instance_id,
+              addition_date: dh.addition_date,
+              removal_date: dh.removal_date,
+            })) || [],
+        }
+      );
+
       if (session) {
         setBrewSessionData(session);
         setError(null);
       } else {
-        console.warn(
-          `[ViewBrewSession.onRefresh] Session ${brewSessionId} not found after refresh`
-        );
         // Session was deleted - clear data and show error
         setBrewSessionData(null);
         setError("This brew session has been deleted");
@@ -180,10 +208,19 @@ export default function ViewBrewSession() {
 
       // Force chart refresh for foldable devices
       setChartRefreshCounter(prev => prev + 1);
+
+      await UnifiedLogger.info(
+        "ViewBrewSession.onRefresh",
+        "Pull-to-refresh completed successfully"
+      );
     } catch (error) {
-      console.error(
-        "[ViewBrewSession.onRefresh] Error refreshing brew session:",
-        error
+      await UnifiedLogger.error(
+        "ViewBrewSession.onRefresh",
+        "Error during pull-to-refresh",
+        {
+          error: error instanceof Error ? error.message : String(error),
+          brewSessionId,
+        }
       );
       // Don't set error state on refresh failure - preserve offline data
     } finally {
@@ -241,9 +278,6 @@ export default function ViewBrewSession() {
     }
 
     try {
-      console.log(
-        `[ViewBrewSession.handleDataChange] Reloading brew session: ${brewSessionId}`
-      );
       const session = await getById(brewSessionId);
       if (session) {
         setBrewSessionData(session);
@@ -252,7 +286,7 @@ export default function ViewBrewSession() {
       }
     } catch (error) {
       console.error(
-        "[ViewBrewSession.handleDataChange] Failed to reload session:",
+        "[ViewBrewSession] Failed to reload session after data change:",
         error
       );
     }
@@ -276,10 +310,6 @@ export default function ViewBrewSession() {
       const previousRating = brewSessionData.batch_rating;
 
       try {
-        console.log(
-          `[ViewBrewSession.handleRatingUpdate] Optimistically updating rating to: ${newRating}`
-        );
-
         // Optimistic update - immediately update the UI
         setBrewSessionData(prev => {
           if (!prev) {
@@ -292,13 +322,9 @@ export default function ViewBrewSession() {
         // Provide haptic feedback immediately for responsive feel
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         await update(brewSessionId, { batch_rating: newRating });
-
-        console.log(
-          `[ViewBrewSession.handleRatingUpdate] Successfully updated rating to: ${newRating}`
-        );
       } catch (error) {
         console.error(
-          "[ViewBrewSession.handleRatingUpdate] Failed to update rating:",
+          "[ViewBrewSession] Failed to update batch rating:",
           error
         );
 
@@ -433,8 +459,6 @@ export default function ViewBrewSession() {
    * Show error message and retry button when loading fails
    */
   if (error) {
-    console.log(`[ViewBrewSession] Rendering error state: ${error}`);
-
     return (
       <View style={styles.container}>
         <ModalHeader
@@ -451,32 +475,19 @@ export default function ViewBrewSession() {
           <TouchableOpacity
             style={styles.retryButton}
             onPress={async () => {
-              console.log(
-                `[ViewBrewSession] Retry button pressed for session: ${brewSessionId}`
-              );
               if (!brewSessionId) {
-                console.warn(
-                  `[ViewBrewSession] No brew session ID available for retry`
-                );
                 return;
               }
 
               try {
                 setIsLoading(true);
                 setError(null);
-                console.log(
-                  `[ViewBrewSession] Retrying load for session: ${brewSessionId}`
-                );
 
                 // Try to refresh the data first
                 await brewSessionsHook.refresh();
 
                 // Then get the specific session
                 const session = await brewSessionsHook.getById(brewSessionId);
-                console.log(
-                  `[ViewBrewSession] Retry result:`,
-                  session ? "found" : "not found"
-                );
 
                 if (session) {
                   setBrewSessionData(session);
@@ -597,6 +608,15 @@ export default function ViewBrewSession() {
           />
         }
       >
+        {/* Dev ID Debugger - Only shows in __DEV__ */}
+        <DevIdDebugger
+          id={brewSession.id}
+          label="Brew Session"
+          metadata={{
+            name: brewSession.name,
+          }}
+        />
+
         {/* Brew Session Title and Status */}
         <View style={styles.titleContainer}>
           <Text style={styles.title}>{brewSession.name}</Text>
@@ -733,6 +753,67 @@ export default function ViewBrewSession() {
             onDataChange={handleDataChange}
           />
         </View>
+
+        {/* Dry Hop Tracker */}
+        {recipeData && (
+          <DryHopTracker
+            recipe={recipeData}
+            sessionDryHops={brewSession.dry_hop_additions || []}
+            onAddDryHop={async dryHopData => {
+              if (!addDryHopFromRecipe) {
+                console.error("addDryHopFromRecipe not available");
+                return;
+              }
+              await UnifiedLogger.info(
+                "viewBrewSession.onAddDryHop",
+                `Calling addDryHopFromRecipe`,
+                {
+                  brewSessionId,
+                  hop_name: dryHopData.hop_name,
+                  recipe_instance_id: dryHopData.recipe_instance_id,
+                  hasInstanceId: !!dryHopData.recipe_instance_id,
+                  fullDryHopData: dryHopData,
+                }
+              );
+              await addDryHopFromRecipe(brewSessionId, dryHopData);
+              await UnifiedLogger.info(
+                "viewBrewSession.onAddDryHop",
+                `Dry-hop added, reloading session`,
+                { brewSessionId }
+              );
+              // Reload brew session data
+              const updatedSession = await getById(brewSessionId);
+              if (updatedSession) {
+                setBrewSessionData(updatedSession);
+                await UnifiedLogger.debug(
+                  "viewBrewSession.onAddDryHop",
+                  `Session reloaded with ${updatedSession.dry_hop_additions?.length || 0} dry-hops`,
+                  {
+                    dryHopAdditions: updatedSession.dry_hop_additions?.map(
+                      dh => ({
+                        hop_name: dh.hop_name,
+                        recipe_instance_id: dh.recipe_instance_id,
+                        hasInstanceId: !!dh.recipe_instance_id,
+                      })
+                    ),
+                  }
+                );
+              }
+            }}
+            onRemoveDryHop={async dryHopIndex => {
+              if (!removeDryHop) {
+                console.error("removeDryHop not available");
+                return;
+              }
+              await removeDryHop(brewSessionId, dryHopIndex);
+              // Reload brew session data
+              const updatedSession = await getById(brewSessionId);
+              if (updatedSession) {
+                setBrewSessionData(updatedSession);
+              }
+            }}
+          />
+        )}
       </ScrollView>
     </View>
   );

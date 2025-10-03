@@ -28,6 +28,8 @@ import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/Br
 import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { formatHopTime, formatHopUsage } from "@src/utils/formatUtils";
 import { isTempId } from "@utils/recipeUtils";
+import { DevIdDebugger } from "@src/components/debug/DevIdDebugger";
+import { useRecipes } from "@src/hooks/offlineV2";
 
 /**
  * Displays detailed information about a specific brewing recipe, including metrics, ingredients, and instructions.
@@ -40,6 +42,7 @@ export default function ViewRecipeScreen() {
   const queryClient = useQueryClient();
   const { getUserId } = useAuth();
   const { unitSystem } = useUnits();
+  const recipesHook = useRecipes();
   // State for pull-to-refresh functionality
   const [refreshing, setRefreshing] = useState(false);
 
@@ -193,11 +196,15 @@ export default function ViewRecipeScreen() {
 
   /**
    * Pull-to-refresh handler
-   * Manually triggers a refetch of the recipe data
+   * Forces cache invalidation and refetches fresh data from server
    */
   const onRefresh = async () => {
     setRefreshing(true);
     try {
+      // Force refresh from server - invalidates offline V2 cache and fetches fresh data
+      await recipesHook.refresh();
+
+      // Also refetch React Query cache to ensure consistency
       await refetch();
     } catch (error) {
       console.error("Error refreshing recipe:", error);
@@ -530,6 +537,15 @@ export default function ViewRecipeScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
+        {/* Dev ID Debugger - Only shows in __DEV__ */}
+        <DevIdDebugger
+          id={recipe.id}
+          label="Recipe"
+          metadata={{
+            name: recipe.name,
+          }}
+        />
+
         {/* Recipe Basic Info Card */}
         <View style={styles.recipeCard}>
           <Text style={styles.recipeName}>

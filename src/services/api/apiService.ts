@@ -832,6 +832,23 @@ const ApiService = {
         api.get(ENDPOINTS.BREW_SESSIONS.FERMENTATION_STATS(brewSessionId))
       ),
 
+    // Dry-hop addition endpoints
+    addDryHopAddition: (
+      brewSessionId: ID,
+      dryHopData: any
+    ): Promise<AxiosResponse<any>> =>
+      api.post(ENDPOINTS.BREW_SESSIONS.DRY_HOPS(brewSessionId), dryHopData),
+
+    updateDryHopAddition: (
+      brewSessionId: ID,
+      additionIndex: number,
+      dryHopData: any
+    ): Promise<AxiosResponse<any>> =>
+      api.put(
+        ENDPOINTS.BREW_SESSIONS.DRY_HOP_ENTRY(brewSessionId, additionIndex),
+        dryHopData
+      ),
+
     analyzeCompletion: (
       brewSessionId: ID
     ): Promise<

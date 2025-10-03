@@ -17,6 +17,7 @@ import { UserValidationService } from "@utils/userValidation";
 import UnifiedLogger from "@services/logger/UnifiedLogger";
 import { isTempId } from "@utils/recipeUtils";
 import {
+  TempIdMapping,
   SyncableItem,
   PendingOperation,
   SyncResult,
@@ -797,7 +798,7 @@ export class UserCacheService {
       const userSessions = await this.getCachedBrewSessions(userId);
 
       // Find the session by matching ID and confirm user ownership
-      const sessionItem = userSessions.find(
+      let sessionItem = userSessions.find(
         item =>
           (item.id === sessionId ||
             item.data.id === sessionId ||
@@ -805,6 +806,33 @@ export class UserCacheService {
           item.data.user_id === userId &&
           !item.isDeleted
       );
+
+      // FALLBACK: If not found and sessionId looks like a tempId, check the mapping cache
+      if (!sessionItem && sessionId.startsWith("temp_")) {
+        const realId = await this.getRealIdFromTempId(
+          sessionId,
+          "brew_session",
+          userId
+        );
+        if (realId) {
+          await UnifiedLogger.info(
+            "UserCacheService.getBrewSessionById",
+            `TempId lookup fallback successful`,
+            {
+              tempId: sessionId,
+              realId,
+              userId,
+            }
+          );
+          // Retry with the real ID
+          sessionItem = userSessions.find(
+            item =>
+              (item.id === realId || item.data.id === realId) &&
+              item.data.user_id === userId &&
+              !item.isDeleted
+          );
+        }
+      }
 
       if (!sessionItem) {
         return null;
@@ -1373,6 +1401,9 @@ export class UserCacheService {
         throw new OfflineError("Brew session not found", "NOT_FOUND", false);
       }
 
+      // IMPORTANT: Use session.id (real ID) not sessionId parameter (could be temp ID)
+      const realSessionId = session.id;
+
       // Create new entry with defaults
       // Note: entry_date must be a full ISO datetime string for backend DateTimeField
       const newEntry: import("@src/types").FermentationEntry = {
@@ -1396,7 +1427,7 @@ export class UserCacheService {
       // Update cache immediately (works offline)
       const now = Date.now();
       const syncableItem: SyncableItem<BrewSession> = {
-        id: sessionId,
+        id: realSessionId,
         data: updatedSessionData,
         lastModified: now,
         syncStatus: "pending",
@@ -1406,11 +1437,11 @@ export class UserCacheService {
 
       // Queue operation for sync (separate from brew session update)
       const operation: PendingOperation = {
-        id: `fermentation_entry_create_${sessionId}_${now}`,
+        id: `fermentation_entry_create_${realSessionId}_${now}`,
         type: "create",
         entityType: "fermentation_entry",
         entityId: `temp_${now}`, // Temp ID for the entry
-        parentId: sessionId,
+        parentId: realSessionId,
         userId,
         data: newEntry,
         timestamp: now,
@@ -1470,6 +1501,9 @@ export class UserCacheService {
         throw new OfflineError("Brew session not found", "NOT_FOUND", false);
       }
 
+      // IMPORTANT: Use session.id (real ID) not sessionId parameter (could be temp ID)
+      const realSessionId = session.id;
+
       const entries = session.fermentation_data || [];
       if (entryIndex < 0 || entryIndex >= entries.length) {
         throw new OfflineError(
@@ -1496,7 +1530,7 @@ export class UserCacheService {
       // Update cache immediately (works offline)
       const now = Date.now();
       const syncableItem: SyncableItem<BrewSession> = {
-        id: sessionId,
+        id: realSessionId,
         data: updatedSessionData,
         lastModified: now,
         syncStatus: "pending",
@@ -1506,11 +1540,11 @@ export class UserCacheService {
 
       // Queue operation for sync
       const operation: PendingOperation = {
-        id: `fermentation_entry_update_${sessionId}_${entryIndex}_${now}`,
+        id: `fermentation_entry_update_${realSessionId}_${entryIndex}_${now}`,
         type: "update",
         entityType: "fermentation_entry",
-        entityId: sessionId, // Parent session ID
-        parentId: sessionId,
+        entityId: realSessionId, // Parent session ID
+        parentId: realSessionId,
         entryIndex: entryIndex,
         userId,
         data: updates,
@@ -1659,7 +1693,13 @@ export class UserCacheService {
       await UnifiedLogger.info(
         "UserCacheService.addDryHopFromRecipe",
         `Adding dry-hop to session ${sessionId}`,
-        { userId, sessionId, hopName: dryHopData.hop_name }
+        {
+          userId,
+          sessionId,
+          hopName: dryHopData.hop_name,
+          recipeInstanceId: dryHopData.recipe_instance_id,
+          dryHopData,
+        }
       );
 
       // Get the brew session
@@ -1667,6 +1707,19 @@ export class UserCacheService {
       if (!session) {
         throw new OfflineError("Brew session not found", "NOT_FOUND", false);
       }
+
+      // IMPORTANT: Use session.id (real ID) not sessionId parameter (could be temp ID)
+      const realSessionId = session.id;
+
+      await UnifiedLogger.debug(
+        "UserCacheService.addDryHopFromRecipe",
+        `Using session ID for operation`,
+        {
+          paramSessionId: sessionId,
+          realSessionId,
+          sessionName: session.name,
+        }
+      );
 
       // Create new dry-hop addition with automatic timestamp
       const newDryHop: import("@src/types").DryHopAddition = {
@@ -1678,27 +1731,69 @@ export class UserCacheService {
         amount_unit: dryHopData.amount_unit,
         duration_days: dryHopData.duration_days,
         phase: dryHopData.phase || "primary",
+        recipe_instance_id: dryHopData.recipe_instance_id, // CRITICAL: Preserve instance ID for uniqueness
       };
 
-      // Update dry-hop additions array
+      await UnifiedLogger.debug(
+        "UserCacheService.addDryHopFromRecipe",
+        `Created dry-hop addition object`,
+        {
+          newDryHop,
+          hasInstanceId: !!newDryHop.recipe_instance_id,
+          instanceId: newDryHop.recipe_instance_id,
+        }
+      );
+
+      // Update dry-hop additions array locally (offline-first)
       const updatedDryHops = [...(session.dry_hop_additions || []), newDryHop];
 
-      // Update the brew session with new dry-hop
-      const updatedSession = await this.updateBrewSession(sessionId, {
+      // Create updated session with new dry-hop
+      const updatedSessionData: import("@src/types").BrewSession = {
+        ...session,
         dry_hop_additions: updatedDryHops,
-      });
+        updated_at: new Date().toISOString(),
+      };
+
+      // Update cache immediately (works offline)
+      const now = Date.now();
+      const syncableItem: SyncableItem<import("@src/types").BrewSession> = {
+        id: realSessionId,
+        data: updatedSessionData,
+        lastModified: now,
+        syncStatus: "pending",
+        needsSync: true,
+      };
+      await this.updateBrewSessionInCache(syncableItem);
+
+      // Queue operation for sync (separate from brew session update)
+      const operation: PendingOperation = {
+        id: `dry_hop_addition_create_${realSessionId}_${now}`,
+        type: "create",
+        entityType: "dry_hop_addition",
+        entityId: `temp_${now}`, // Temp ID for the addition
+        parentId: realSessionId,
+        userId,
+        data: newDryHop,
+        timestamp: now,
+        retryCount: 0,
+        maxRetries: 3,
+      };
+      await this.addPendingOperation(operation);
+
+      // Try to sync immediately if online (best effort, non-blocking)
+      void this.backgroundSync();
 
       await UnifiedLogger.info(
         "UserCacheService.addDryHopFromRecipe",
-        `Dry-hop added successfully`,
+        `Dry-hop added to cache and queued for sync`,
         {
-          sessionId,
+          sessionId: realSessionId,
           hopName: dryHopData.hop_name,
           totalDryHops: updatedDryHops.length,
         }
       );
 
-      return updatedSession;
+      return updatedSessionData;
     } catch (error) {
       console.error("Error adding dry-hop:", error);
       throw new OfflineError("Failed to add dry-hop", "CREATE_ERROR", true);
@@ -1735,6 +1830,9 @@ export class UserCacheService {
         throw new OfflineError("Brew session not found", "NOT_FOUND", false);
       }
 
+      // IMPORTANT: Use session.id (real ID) not sessionId parameter (could be temp ID)
+      const realSessionId = session.id;
+
       const dryHops = session.dry_hop_additions || [];
       if (dryHopIndex < 0 || dryHopIndex >= dryHops.length) {
         throw new OfflineError("Dry-hop not found", "NOT_FOUND", false);
@@ -1747,18 +1845,50 @@ export class UserCacheService {
         removal_date: new Date().toISOString().split("T")[0],
       };
 
-      // Update the brew session
-      const updatedSession = await this.updateBrewSession(sessionId, {
+      // Create updated session with modified dry-hop
+      const updatedSessionData: import("@src/types").BrewSession = {
+        ...session,
         dry_hop_additions: updatedDryHops,
-      });
+        updated_at: new Date().toISOString(),
+      };
+
+      // Update cache immediately (works offline)
+      const now = Date.now();
+      const syncableItem: SyncableItem<import("@src/types").BrewSession> = {
+        id: realSessionId,
+        data: updatedSessionData,
+        lastModified: now,
+        syncStatus: "pending",
+        needsSync: true,
+      };
+      await this.updateBrewSessionInCache(syncableItem);
+
+      // Queue operation for sync (separate from brew session update)
+      const operation: PendingOperation = {
+        id: `dry_hop_addition_update_${realSessionId}_${dryHopIndex}_${now}`,
+        type: "update",
+        entityType: "dry_hop_addition",
+        entityId: `${realSessionId}_${dryHopIndex}`,
+        parentId: realSessionId,
+        entryIndex: dryHopIndex,
+        userId,
+        data: { removal_date: updatedDryHops[dryHopIndex].removal_date },
+        timestamp: now,
+        retryCount: 0,
+        maxRetries: 3,
+      };
+      await this.addPendingOperation(operation);
+
+      // Try to sync immediately if online (best effort, non-blocking)
+      void this.backgroundSync();
 
       await UnifiedLogger.info(
         "UserCacheService.removeDryHop",
-        `Dry-hop marked as removed successfully`,
-        { sessionId, dryHopIndex }
+        `Dry-hop marked as removed and queued for sync`,
+        { sessionId: realSessionId, dryHopIndex }
       );
 
-      return updatedSession;
+      return updatedSessionData;
     } catch (error) {
       console.error("Error removing dry-hop:", error);
       throw new OfflineError("Failed to remove dry-hop", "UPDATE_ERROR", true);
@@ -1893,6 +2023,21 @@ export class UserCacheService {
               operation.entityId,
               operationResult.realId
             );
+
+            // Save tempId mapping for navigation compatibility (fallback lookup)
+            if (
+              operation.userId &&
+              (operation.entityType === "recipe" ||
+                operation.entityType === "brew_session")
+            ) {
+              await this.saveTempIdMapping(
+                operation.entityId,
+                operationResult.realId,
+                operation.entityType,
+                operation.userId
+              );
+            }
+
             // CRITICAL: Reload operations after ID mapping to get updated recipe_id references
             // This ensures subsequent operations (like brew sessions) use the new real IDs
             operations = await this.getPendingOperations();
@@ -3135,10 +3280,37 @@ export class UserCacheService {
 
       // Fetch user's brew sessions from server
       const response = await ApiService.brewSessions.getAll(1, 100); // Get first 100 sessions
+
+      // Log RAW response before any processing
+      await UnifiedLogger.debug(
+        "UserCacheService.hydrateBrewSessionsFromServer",
+        `RAW response from API (before any processing)`,
+        {
+          hasBrewSessions: "brew_sessions" in (response.data || {}),
+          sessionCount: response.data?.brew_sessions?.length || 0,
+          firstSessionDryHops:
+            response.data?.brew_sessions?.[0]?.dry_hop_additions?.length || 0,
+          rawFirstSession: response.data?.brew_sessions?.[0]
+            ? {
+                id: response.data.brew_sessions[0].id,
+                name: response.data.brew_sessions[0].name,
+                hasDryHopField:
+                  "dry_hop_additions" in response.data.brew_sessions[0],
+                dryHopCount:
+                  response.data.brew_sessions[0].dry_hop_additions?.length || 0,
+                dryHops:
+                  response.data.brew_sessions[0].dry_hop_additions || "MISSING",
+              }
+            : "NO_SESSIONS",
+        }
+      );
+
       const serverSessions = response.data?.brew_sessions || [];
 
       // Initialize offline created sessions array
       let offlineCreatedSessions: SyncableItem<BrewSession>[] = [];
+      // Build tempId mapping to preserve navigation compatibility
+      const tempIdToRealIdMap = new Map<string, string>();
 
       // If force refresh and we successfully got server data, clear and replace cache
       if (forceRefresh && serverSessions.length >= 0) {
@@ -3153,33 +3325,42 @@ export class UserCacheService {
         );
         if (cached) {
           const allSessions: SyncableItem<BrewSession>[] = JSON.parse(cached);
+
+          // Build tempId mapping for all sessions (for navigation compatibility)
+          allSessions.forEach(item => {
+            if (item.tempId && item.id !== item.tempId) {
+              tempIdToRealIdMap.set(item.tempId, item.id);
+            }
+          });
+
           offlineCreatedSessions = allSessions.filter(item => {
             // Only preserve sessions for this user
             if (item.data.user_id !== userId) {
               return false;
             }
 
-            // Always preserve sessions that need sync (including pending deletions)
-            if (item.needsSync || item.syncStatus === "pending") {
-              return true;
-            }
-
-            // Always preserve temp sessions (newly created offline)
+            // CRITICAL FIX: During force refresh, ONLY preserve truly offline-created sessions (with tempId)
+            // Sessions that exist on server (have real IDs) should be replaced by server version
+            // even if they have pending local changes - those changes will be handled by sync
             if (item.tempId) {
               return true;
             }
 
-            // Don't preserve deleted sessions that have already been synced
-            if (item.isDeleted && !item.needsSync) {
-              return false;
-            }
-
+            // Don't preserve anything else during force refresh
             return false;
           });
 
           await UnifiedLogger.debug(
             "UserCacheService.hydrateBrewSessionsFromServer",
-            `Found ${offlineCreatedSessions.length} V2 offline-created sessions to preserve`
+            `Found ${offlineCreatedSessions.length} V2 offline-created sessions (with tempId) to preserve`,
+            {
+              tempIdMappings: Array.from(tempIdToRealIdMap.entries()).map(
+                ([tempId, realId]) => ({
+                  tempId,
+                  realId,
+                })
+              ),
+            }
           );
         }
 
@@ -3197,9 +3378,24 @@ export class UserCacheService {
         );
       }
 
-      await UnifiedLogger.debug(
+      await UnifiedLogger.info(
         "UserCacheService.hydrateBrewSessionsFromServer",
-        `Fetched ${serverSessions.length} sessions from server`
+        `Fetched ${serverSessions.length} sessions from server`,
+        {
+          sessionCount: serverSessions.length,
+          sessionsWithDryHops: serverSessions.map(s => ({
+            id: s.id,
+            name: s.name,
+            dryHopCount: s.dry_hop_additions?.length || 0,
+            dryHops:
+              s.dry_hop_additions?.map(dh => ({
+                hop_name: dh.hop_name,
+                recipe_instance_id: dh.recipe_instance_id,
+                addition_date: dh.addition_date,
+                removal_date: dh.removal_date,
+              })) || [],
+          })),
+        }
       );
 
       // Only process and cache server sessions if we have them
@@ -3219,22 +3415,45 @@ export class UserCacheService {
 
         // Convert server sessions to syncable items
         const now = Date.now();
-        const syncableSessions = filteredServerSessions.map(session => ({
-          id: session.id,
-          data: session,
-          lastModified: now,
-          syncStatus: "synced" as const,
-          needsSync: false,
-        }));
+        const syncableSessions = filteredServerSessions.map(session => {
+          // Check if this session was previously created with a tempId
+          const tempId = Array.from(tempIdToRealIdMap.entries()).find(
+            ([_, realId]) => realId === session.id
+          )?.[0];
+
+          return {
+            id: session.id,
+            data: session,
+            lastModified: now,
+            syncStatus: "synced" as const,
+            needsSync: false,
+            // Preserve tempId for navigation compatibility
+            ...(tempId ? { tempId } : {}),
+          };
+        });
 
         // Store all sessions in cache
         for (const session of syncableSessions) {
           await this.addBrewSessionToCache(session);
         }
 
-        await UnifiedLogger.debug(
+        await UnifiedLogger.info(
           "UserCacheService.hydrateBrewSessionsFromServer",
-          `Successfully cached ${syncableSessions.length} sessions`
+          `Successfully cached ${syncableSessions.length} sessions`,
+          {
+            cachedSessionDetails: syncableSessions.map(s => ({
+              id: s.id,
+              name: s.data.name,
+              hasTempId: !!s.tempId,
+              tempId: s.tempId,
+              dryHopCount: s.data.dry_hop_additions?.length || 0,
+              dryHops:
+                s.data.dry_hop_additions?.map(dh => ({
+                  hop_name: dh.hop_name,
+                  recipe_instance_id: dh.recipe_instance_id,
+                })) || [],
+            })),
+          }
         );
       } else if (!forceRefresh) {
         // Only log this for non-force refresh (normal hydration)
@@ -3485,6 +3704,20 @@ export class UserCacheService {
               return { realId: response.data.id };
             }
           } else if (operation.entityType === "fermentation_entry") {
+            // Check if parent brew session has temp ID - skip if so (parent must be synced first)
+            if (operation.parentId?.startsWith("temp_")) {
+              await UnifiedLogger.info(
+                "UserCacheService.processPendingOperation",
+                `Skipping fermentation entry - parent brew session not synced yet`,
+                { parentId: operation.parentId }
+              );
+              throw new OfflineError(
+                "Parent brew session not synced yet",
+                "DEPENDENCY_ERROR",
+                true
+              );
+            }
+
             // Create fermentation entry using dedicated endpoint
             await UnifiedLogger.info(
               "UserCacheService.processPendingOperation",
@@ -3498,6 +3731,48 @@ export class UserCacheService {
             await UnifiedLogger.info(
               "UserCacheService.processPendingOperation",
               `Fermentation entry synced successfully`
+            );
+          } else if (operation.entityType === "dry_hop_addition") {
+            // Check if parent brew session has temp ID - skip if so (parent must be synced first)
+            if (operation.parentId?.startsWith("temp_")) {
+              await UnifiedLogger.info(
+                "UserCacheService.processPendingOperation",
+                `Skipping dry-hop addition - parent brew session not synced yet`,
+                {
+                  parentId: operation.parentId,
+                  hopName: operation.data?.hop_name,
+                }
+              );
+              throw new OfflineError(
+                "Parent brew session not synced yet",
+                "DEPENDENCY_ERROR",
+                true
+              );
+            }
+
+            // Create dry-hop addition using dedicated endpoint
+            await UnifiedLogger.info(
+              "UserCacheService.processPendingOperation",
+              `Syncing dry-hop addition creation`,
+              {
+                parentId: operation.parentId,
+                hopName: operation.data?.hop_name,
+                recipeInstanceId: operation.data?.recipe_instance_id,
+                hasInstanceId: !!operation.data?.recipe_instance_id,
+                fullDryHopData: operation.data,
+              }
+            );
+            await ApiService.brewSessions.addDryHopAddition(
+              operation.parentId!,
+              operation.data
+            );
+            await UnifiedLogger.info(
+              "UserCacheService.processPendingOperation",
+              `Dry-hop addition synced successfully`,
+              {
+                hopName: operation.data?.hop_name,
+                recipeInstanceId: operation.data?.recipe_instance_id,
+              }
             );
           } else if (operation.entityType === "brew_session") {
             await UnifiedLogger.info(
@@ -3558,6 +3833,23 @@ export class UserCacheService {
               );
             }
           } else if (operation.entityType === "fermentation_entry") {
+            // Check if parent brew session has temp ID - skip if so (parent must be synced first)
+            if (operation.parentId?.startsWith("temp_")) {
+              await UnifiedLogger.info(
+                "UserCacheService.processPendingOperation",
+                `Skipping fermentation entry update - parent brew session not synced yet`,
+                {
+                  parentId: operation.parentId,
+                  entryIndex: operation.entryIndex,
+                }
+              );
+              throw new OfflineError(
+                "Parent brew session not synced yet",
+                "DEPENDENCY_ERROR",
+                true
+              );
+            }
+
             // Update fermentation entry using dedicated endpoint
             await UnifiedLogger.info(
               "UserCacheService.processPendingOperation",
@@ -3572,6 +3864,42 @@ export class UserCacheService {
             await UnifiedLogger.info(
               "UserCacheService.processPendingOperation",
               `Fermentation entry update synced successfully`
+            );
+          } else if (operation.entityType === "dry_hop_addition") {
+            // Check if parent brew session has temp ID - skip if so (parent must be synced first)
+            if (operation.parentId?.startsWith("temp_")) {
+              await UnifiedLogger.info(
+                "UserCacheService.processPendingOperation",
+                `Skipping dry-hop addition update - parent brew session not synced yet`,
+                {
+                  parentId: operation.parentId,
+                  additionIndex: operation.entryIndex,
+                }
+              );
+              throw new OfflineError(
+                "Parent brew session not synced yet",
+                "DEPENDENCY_ERROR",
+                true
+              );
+            }
+
+            // Update dry-hop addition using dedicated endpoint
+            await UnifiedLogger.info(
+              "UserCacheService.processPendingOperation",
+              `Syncing dry-hop addition update`,
+              {
+                parentId: operation.parentId,
+                additionIndex: operation.entryIndex,
+              }
+            );
+            await ApiService.brewSessions.updateDryHopAddition(
+              operation.parentId!,
+              operation.entryIndex!,
+              operation.data
+            );
+            await UnifiedLogger.info(
+              "UserCacheService.processPendingOperation",
+              `Dry-hop addition update synced successfully`
             );
           } else if (operation.entityType === "brew_session") {
             // Check if this is a temp ID - if so, treat as CREATE instead of UPDATE
@@ -3764,6 +4092,10 @@ export class UserCacheService {
             "UserCacheService.backgroundSync",
             "Executing background sync now"
           );
+
+          // Cleanup expired tempId mappings periodically
+          await this.cleanupExpiredTempIdMappings();
+
           await this.syncPendingOperations();
         } catch (error) {
           const errorMessage =
@@ -3957,6 +4289,26 @@ export class UserCacheService {
                 }
               );
             }
+          }
+          // Update parentId for fermentation_entry and dry_hop_addition operations
+          if (
+            (op.entityType === "fermentation_entry" ||
+              op.entityType === "dry_hop_addition") &&
+            op.parentId === tempId
+          ) {
+            op.parentId = realId;
+            updated = true;
+            await UnifiedLogger.debug(
+              "UserCacheService.mapTempIdToRealId",
+              `Updated parentId in pending ${op.entityType} operation`,
+              {
+                operationId: op.id,
+                operationType: op.type,
+                entityType: op.entityType,
+                oldParentId: tempId,
+                newParentId: realId,
+              }
+            );
           }
         }
         if (updated) {
@@ -4299,5 +4651,191 @@ export class UserCacheService {
     }
 
     return sanitized;
+  }
+
+  // ============================================================================
+  // TempId Mapping Cache Methods
+  // ============================================================================
+
+  /**
+   * Save a tempId → realId mapping for navigation compatibility
+   * @param tempId The temporary ID used during creation
+   * @param realId The real server ID after sync
+   * @param entityType The type of entity (recipe or brew_session)
+   * @param userId The user who owns this entity (for security/isolation)
+   */
+  private static async saveTempIdMapping(
+    tempId: string,
+    realId: string,
+    entityType: "recipe" | "brew_session",
+    userId: string
+  ): Promise<void> {
+    try {
+      const cached = await AsyncStorage.getItem(
+        STORAGE_KEYS_V2.TEMP_ID_MAPPINGS
+      );
+      const mappings: TempIdMapping[] = cached ? JSON.parse(cached) : [];
+
+      // Remove any existing mapping for this tempId (shouldn't happen, but be safe)
+      const filtered = mappings.filter(m => m.tempId !== tempId);
+
+      // Add new mapping with 24-hour TTL
+      const now = Date.now();
+      const ttl = 24 * 60 * 60 * 1000; // 24 hours
+      filtered.push({
+        tempId,
+        realId,
+        entityType,
+        userId, // Store userId for security verification
+        timestamp: now,
+        expiresAt: now + ttl,
+      });
+
+      await AsyncStorage.setItem(
+        STORAGE_KEYS_V2.TEMP_ID_MAPPINGS,
+        JSON.stringify(filtered)
+      );
+
+      await UnifiedLogger.debug(
+        "UserCacheService.saveTempIdMapping",
+        `Saved tempId mapping for ${entityType}`,
+        {
+          tempId,
+          realId,
+          entityType,
+          userId,
+          expiresIn: `${ttl / (60 * 60 * 1000)} hours`,
+        }
+      );
+    } catch (error) {
+      await UnifiedLogger.error(
+        "UserCacheService.saveTempIdMapping",
+        `Failed to save tempId mapping: ${error instanceof Error ? error.message : "Unknown"}`,
+        { tempId, realId, entityType }
+      );
+      // Don't throw - this is a non-critical operation
+    }
+  }
+
+  /**
+   * Look up the real ID for a given tempId
+   * @param tempId The temporary ID to look up
+   * @param entityType The type of entity
+   * @param userId The user ID requesting the lookup (for security verification)
+   * @returns The real ID if found and user matches, null otherwise
+   */
+  private static async getRealIdFromTempId(
+    tempId: string,
+    entityType: "recipe" | "brew_session",
+    userId: string
+  ): Promise<string | null> {
+    try {
+      const cached = await AsyncStorage.getItem(
+        STORAGE_KEYS_V2.TEMP_ID_MAPPINGS
+      );
+      if (!cached) {
+        return null;
+      }
+
+      const mappings: TempIdMapping[] = JSON.parse(cached);
+      const now = Date.now();
+
+      // Find matching mapping that hasn't expired AND belongs to the requesting user
+      const mapping = mappings.find(
+        m =>
+          m.tempId === tempId &&
+          m.entityType === entityType &&
+          m.userId === userId && // SECURITY: Verify user ownership
+          m.expiresAt > now
+      );
+
+      if (mapping) {
+        await UnifiedLogger.debug(
+          "UserCacheService.getRealIdFromTempId",
+          `Found tempId mapping`,
+          {
+            tempId,
+            realId: mapping.realId,
+            entityType,
+            userId,
+            age: `${Math.round((now - mapping.timestamp) / 1000)}s`,
+          }
+        );
+        return mapping.realId;
+      }
+
+      // Log if we found a mapping but user doesn't match (potential security issue)
+      const wrongUserMapping = mappings.find(
+        m =>
+          m.tempId === tempId &&
+          m.entityType === entityType &&
+          m.expiresAt > now
+      );
+      if (wrongUserMapping && wrongUserMapping.userId !== userId) {
+        await UnifiedLogger.warn(
+          "UserCacheService.getRealIdFromTempId",
+          `TempId mapping found but userId mismatch - blocking access`,
+          {
+            tempId,
+            requestedBy: userId,
+            ownedBy: wrongUserMapping.userId,
+            entityType,
+          }
+        );
+      }
+
+      return null;
+    } catch (error) {
+      await UnifiedLogger.error(
+        "UserCacheService.getRealIdFromTempId",
+        `Failed to lookup tempId: ${error instanceof Error ? error.message : "Unknown"}`,
+        { tempId, entityType, userId }
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Clean up expired tempId mappings
+   * Called periodically to prevent unbounded growth
+   */
+  private static async cleanupExpiredTempIdMappings(): Promise<void> {
+    try {
+      const cached = await AsyncStorage.getItem(
+        STORAGE_KEYS_V2.TEMP_ID_MAPPINGS
+      );
+      if (!cached) {
+        return;
+      }
+
+      const mappings: TempIdMapping[] = JSON.parse(cached);
+      const now = Date.now();
+
+      // Filter out expired mappings
+      const validMappings = mappings.filter(m => m.expiresAt > now);
+
+      if (validMappings.length !== mappings.length) {
+        await AsyncStorage.setItem(
+          STORAGE_KEYS_V2.TEMP_ID_MAPPINGS,
+          JSON.stringify(validMappings)
+        );
+
+        await UnifiedLogger.info(
+          "UserCacheService.cleanupExpiredTempIdMappings",
+          `Cleaned up expired tempId mappings`,
+          {
+            totalMappings: mappings.length,
+            validMappings: validMappings.length,
+            removed: mappings.length - validMappings.length,
+          }
+        );
+      }
+    } catch (error) {
+      await UnifiedLogger.error(
+        "UserCacheService.cleanupExpiredTempIdMappings",
+        `Failed to cleanup: ${error instanceof Error ? error.message : "Unknown"}`
+      );
+      // Don't throw - this is a non-critical operation
+    }
   }
 }

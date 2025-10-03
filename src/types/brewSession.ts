@@ -173,6 +173,7 @@ export interface DryHopAddition {
   removal_date?: string; // ISO date string when removed
   notes?: string;
   phase?: string; // fermentation, secondary, etc.
+  recipe_instance_id?: string; // Unique ID from recipe ingredient to handle duplicate hops
 }
 
 // Create dry-hop from recipe ingredient
@@ -184,6 +185,7 @@ export interface CreateDryHopFromRecipeRequest {
   duration_days?: number;
   addition_date?: string; // Defaults to now
   phase?: string;
+  recipe_instance_id?: string; // Unique ID from recipe ingredient to handle duplicate hops
 }
 
 // Update dry-hop addition
