@@ -791,14 +791,14 @@ export default function ViewBrewSession() {
                   fullDryHopData: dryHopData,
                 }
               );
-              await addDryHopFromRecipe(brewSessionId, dryHopData);
+              await addDryHopFromRecipe(brewSession.id, dryHopData);
               void UnifiedLogger.info(
                 "viewBrewSession.onAddDryHop",
                 `Dry-hop added, reloading session`,
                 { brewSessionId }
               );
               // Reload brew session data
-              const updatedSession = await getById(brewSessionId);
+              const updatedSession = await getById(brewSession.id);
               if (updatedSession) {
                 setBrewSessionData(updatedSession);
                 await UnifiedLogger.debug(
@@ -825,7 +825,7 @@ export default function ViewBrewSession() {
                 return;
               }
               try {
-                await removeDryHop(brewSessionId, dryHopIndex);
+                await removeDryHop(brewSession.id, dryHopIndex);
               } catch (error) {
                 await UnifiedLogger.error(
                   "viewBrewSession.onRemoveDryHop",
@@ -839,7 +839,7 @@ export default function ViewBrewSession() {
                 throw error; // Re-throw to let DryHopTracker show alert
               }
               // Reload brew session data
-              const updatedSession = await getById(brewSessionId);
+              const updatedSession = await getById(brewSession.id);
               if (updatedSession) {
                 setBrewSessionData(updatedSession);
               }

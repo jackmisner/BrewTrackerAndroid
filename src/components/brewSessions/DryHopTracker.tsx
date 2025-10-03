@@ -146,13 +146,20 @@ export function DryHopTracker({
       // Calculate days in fermenter
       let daysInFermenter: number | null = null;
       if (sessionData?.addition_date) {
-        const addDate = new Date(sessionData.addition_date);
-        const endDate = sessionData.removal_date
-          ? new Date(sessionData.removal_date)
-          : new Date();
-        const diffTime = endDate.getTime() - addDate.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        daysInFermenter = diffDays >= 0 ? diffDays : null;
+        const toUtcMidnight = (s: string): number => {
+          const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+          if (m) {
+            const [_, y, mo, d] = m;
+            return Date.UTC(Number(y), Number(mo) - 1, Number(d));
+          }
+          return new Date(s).getTime();
+        };
+        const startMs = toUtcMidnight(sessionData.addition_date);
+        const endMs = sessionData.removal_date
+          ? toUtcMidnight(sessionData.removal_date)
+          : Date.now();
+        const diffDays = Math.max(0, Math.ceil((endMs - startMs) / 86400000));
+        daysInFermenter = Number.isFinite(diffDays) ? diffDays : null;
       }
 
       return {
@@ -192,7 +199,6 @@ export function DryHopTracker({
         }
       );
     } catch (error) {
-      console.error("Error adding dry-hop:", error);
       await UnifiedLogger.error(
         "DryHopTracker.handleAddDryHop",
         `Failed to add dry-hop: ${hopName}`,
@@ -208,7 +214,13 @@ export function DryHopTracker({
   };
 
   const handleRemoveDryHop = async (dryHop: RecipeDryHopWithStatus) => {
-    if (dryHop.sessionIndex === null) {
+    // Recompute index at click time to avoid stale indices
+    const idx = sessionDryHops.findIndex(
+      s =>
+        s.hop_name.toLowerCase() === dryHop.recipeData.hop_name.toLowerCase() &&
+        s.recipe_instance_id === dryHop.recipeData.recipe_instance_id
+    );
+    if (idx < 0) {
       return;
     }
 
@@ -216,9 +228,13 @@ export function DryHopTracker({
     const key = dryHop.recipeData.recipe_instance_id ?? hopName;
     try {
       setProcessingKey(key);
-      await onRemoveDryHop(dryHop.sessionIndex);
+      await onRemoveDryHop(idx);
     } catch (error) {
-      console.error("Error removing dry-hop:", error);
+      await UnifiedLogger.error(
+        "DryHopTracker.handleRemoveDryHop",
+        `Failed to remove dry-hop: ${hopName}`,
+        { error, hop_name: hopName }
+      );
       Alert.alert(
         "Error",
         `Failed to remove ${hopName} from fermenter. Please try again.`

@@ -4680,42 +4680,44 @@ export class UserCacheService {
     userId: string
   ): Promise<void> {
     try {
-      const cached = await AsyncStorage.getItem(
-        STORAGE_KEYS_V2.TEMP_ID_MAPPINGS
-      );
-      const mappings: TempIdMapping[] = cached ? JSON.parse(cached) : [];
+      await withKeyQueue(STORAGE_KEYS_V2.TEMP_ID_MAPPINGS, async () => {
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.TEMP_ID_MAPPINGS
+        );
+        const mappings: TempIdMapping[] = cached ? JSON.parse(cached) : [];
 
-      // Remove any existing mapping for this tempId (shouldn't happen, but be safe)
-      const filtered = mappings.filter(m => m.tempId !== tempId);
+        // Remove any existing mapping for this tempId (shouldn't happen, but be safe)
+        const filtered = mappings.filter(m => m.tempId !== tempId);
 
-      // Add new mapping with 24-hour TTL
-      const now = Date.now();
-      const ttl = 24 * 60 * 60 * 1000; // 24 hours
-      filtered.push({
-        tempId,
-        realId,
-        entityType,
-        userId, // Store userId for security verification
-        timestamp: now,
-        expiresAt: now + ttl,
-      });
-
-      await AsyncStorage.setItem(
-        STORAGE_KEYS_V2.TEMP_ID_MAPPINGS,
-        JSON.stringify(filtered)
-      );
-
-      await UnifiedLogger.debug(
-        "UserCacheService.saveTempIdMapping",
-        `Saved tempId mapping for ${entityType}`,
-        {
+        // Add new mapping with 24-hour TTL
+        const now = Date.now();
+        const ttl = 24 * 60 * 60 * 1000; // 24 hours
+        filtered.push({
           tempId,
           realId,
           entityType,
-          userId,
-          expiresIn: `${ttl / (60 * 60 * 1000)} hours`,
-        }
-      );
+          userId, // Store userId for security verification
+          timestamp: now,
+          expiresAt: now + ttl,
+        });
+
+        await AsyncStorage.setItem(
+          STORAGE_KEYS_V2.TEMP_ID_MAPPINGS,
+          JSON.stringify(filtered)
+        );
+
+        await UnifiedLogger.debug(
+          "UserCacheService.saveTempIdMapping",
+          `Saved tempId mapping for ${entityType}`,
+          {
+            tempId,
+            realId,
+            entityType,
+            userId,
+            expiresIn: `${ttl / (60 * 60 * 1000)} hours`,
+          }
+        );
+      });
     } catch (error) {
       await UnifiedLogger.error(
         "UserCacheService.saveTempIdMapping",
@@ -4739,61 +4741,63 @@ export class UserCacheService {
     userId: string
   ): Promise<string | null> {
     try {
-      const cached = await AsyncStorage.getItem(
-        STORAGE_KEYS_V2.TEMP_ID_MAPPINGS
-      );
-      if (!cached) {
+      return await withKeyQueue(STORAGE_KEYS_V2.TEMP_ID_MAPPINGS, async () => {
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.TEMP_ID_MAPPINGS
+        );
+        if (!cached) {
+          return null;
+        }
+
+        const mappings: TempIdMapping[] = JSON.parse(cached);
+        const now = Date.now();
+
+        // Find matching mapping that hasn't expired AND belongs to the requesting user
+        const mapping = mappings.find(
+          m =>
+            m.tempId === tempId &&
+            m.entityType === entityType &&
+            m.userId === userId && // SECURITY: Verify user ownership
+            m.expiresAt > now
+        );
+
+        if (mapping) {
+          await UnifiedLogger.debug(
+            "UserCacheService.getRealIdFromTempId",
+            `Found tempId mapping`,
+            {
+              tempId,
+              realId: mapping.realId,
+              entityType,
+              userId,
+              age: `${Math.round((now - mapping.timestamp) / 1000)}s`,
+            }
+          );
+          return mapping.realId;
+        }
+
+        // Log if we found a mapping but user doesn't match (potential security issue)
+        const wrongUserMapping = mappings.find(
+          m =>
+            m.tempId === tempId &&
+            m.entityType === entityType &&
+            m.expiresAt > now
+        );
+        if (wrongUserMapping && wrongUserMapping.userId !== userId) {
+          await UnifiedLogger.warn(
+            "UserCacheService.getRealIdFromTempId",
+            `TempId mapping found but userId mismatch - blocking access`,
+            {
+              tempId,
+              requestedBy: userId,
+              ownedBy: wrongUserMapping.userId,
+              entityType,
+            }
+          );
+        }
+
         return null;
-      }
-
-      const mappings: TempIdMapping[] = JSON.parse(cached);
-      const now = Date.now();
-
-      // Find matching mapping that hasn't expired AND belongs to the requesting user
-      const mapping = mappings.find(
-        m =>
-          m.tempId === tempId &&
-          m.entityType === entityType &&
-          m.userId === userId && // SECURITY: Verify user ownership
-          m.expiresAt > now
-      );
-
-      if (mapping) {
-        await UnifiedLogger.debug(
-          "UserCacheService.getRealIdFromTempId",
-          `Found tempId mapping`,
-          {
-            tempId,
-            realId: mapping.realId,
-            entityType,
-            userId,
-            age: `${Math.round((now - mapping.timestamp) / 1000)}s`,
-          }
-        );
-        return mapping.realId;
-      }
-
-      // Log if we found a mapping but user doesn't match (potential security issue)
-      const wrongUserMapping = mappings.find(
-        m =>
-          m.tempId === tempId &&
-          m.entityType === entityType &&
-          m.expiresAt > now
-      );
-      if (wrongUserMapping && wrongUserMapping.userId !== userId) {
-        await UnifiedLogger.warn(
-          "UserCacheService.getRealIdFromTempId",
-          `TempId mapping found but userId mismatch - blocking access`,
-          {
-            tempId,
-            requestedBy: userId,
-            ownedBy: wrongUserMapping.userId,
-            entityType,
-          }
-        );
-      }
-
-      return null;
+      });
     } catch (error) {
       await UnifiedLogger.error(
         "UserCacheService.getRealIdFromTempId",
@@ -4810,35 +4814,37 @@ export class UserCacheService {
    */
   private static async cleanupExpiredTempIdMappings(): Promise<void> {
     try {
-      const cached = await AsyncStorage.getItem(
-        STORAGE_KEYS_V2.TEMP_ID_MAPPINGS
-      );
-      if (!cached) {
-        return;
-      }
-
-      const mappings: TempIdMapping[] = JSON.parse(cached);
-      const now = Date.now();
-
-      // Filter out expired mappings
-      const validMappings = mappings.filter(m => m.expiresAt > now);
-
-      if (validMappings.length !== mappings.length) {
-        await AsyncStorage.setItem(
-          STORAGE_KEYS_V2.TEMP_ID_MAPPINGS,
-          JSON.stringify(validMappings)
+      await withKeyQueue(STORAGE_KEYS_V2.TEMP_ID_MAPPINGS, async () => {
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.TEMP_ID_MAPPINGS
         );
+        if (!cached) {
+          return;
+        }
 
-        await UnifiedLogger.info(
-          "UserCacheService.cleanupExpiredTempIdMappings",
-          `Cleaned up expired tempId mappings`,
-          {
-            totalMappings: mappings.length,
-            validMappings: validMappings.length,
-            removed: mappings.length - validMappings.length,
-          }
-        );
-      }
+        const mappings: TempIdMapping[] = JSON.parse(cached);
+        const now = Date.now();
+
+        // Filter out expired mappings
+        const validMappings = mappings.filter(m => m.expiresAt > now);
+
+        if (validMappings.length !== mappings.length) {
+          await AsyncStorage.setItem(
+            STORAGE_KEYS_V2.TEMP_ID_MAPPINGS,
+            JSON.stringify(validMappings)
+          );
+
+          await UnifiedLogger.info(
+            "UserCacheService.cleanupExpiredTempIdMappings",
+            `Cleaned up expired tempId mappings`,
+            {
+              totalMappings: mappings.length,
+              validMappings: validMappings.length,
+              removed: mappings.length - validMappings.length,
+            }
+          );
+        }
+      });
     } catch (error) {
       await UnifiedLogger.error(
         "UserCacheService.cleanupExpiredTempIdMappings",
