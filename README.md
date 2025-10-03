@@ -1,110 +1,184 @@
 # BrewTracker Android
 
-A React Native mobile app for the BrewTracker homebrewing platform, built with Expo.
+A production-ready React Native mobile app for the BrewTracker homebrewing platform, built with Expo. Features comprehensive offline-first architecture, advanced brewing tools, and seamless synchronization with the Flask backend.
 
-## Getting Started
+**Version:** 2.4.10 | **Platform:** Android | **Architecture:** React Native 0.81.4 + Expo 54
+
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [Development](#development)
+- [Building for Production](#building-for-production)
+- [Offline Functionality](#offline-functionality)
+- [Development Achievements](#development-achievements--architecture)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Features
+
+### Core Functionality
+
+- **Recipe Management**: Create, edit, delete, and clone recipes with 4-step wizard
+- **Brew Session Tracking**: Track brewing sessions with fermentation data and interactive charts
+- **BeerXML Support**: Import and export recipes with ingredient matching workflow
+- **Version History**: Track recipe versions with visual timeline and navigation
+- **Brewing Calculators**: ABV, dilution, strike water, hydrometer correction, unit converter, boil timer
+
+### Offline-First Architecture
+
+- **Complete Offline Support**: Work without internet connection
+- **Automatic Synchronization**: Background sync when network returns
+- **Version-Based Caching**: Smart cache invalidation for ingredients and beer styles
+- **Conflict Resolution**: Last-write-wins strategy for concurrent edits
+- **Pending Operation Queue**: Retry logic with exponential backoff
+
+### User Experience
+
+- **Theme Support**: Light/dark mode with automatic system detection
+- **Touch-Optimized**: 48dp touch targets for comfortable mobile interaction
+- **Context Menus**: Long-press actions for recipes and brew sessions
+- **Gesture Navigation**: Swipe gestures and smooth animations
+- **Responsive Design**: Support for various screen sizes including foldables
+
+### Security & Authentication
+
+- **JWT Authentication**: Secure token storage in Expo SecureStore
+- **Email Verification**: Complete registration flow with email confirmation
+- **Password Reset**: Forgot password workflow with token validation
+- **Secure API**: Hardened API service with retry logic and error normalization
+
+### Brewing Tools
+
+- **Real-Time Calculations**: Live recipe metrics as you edit
+- **Fermentation Tracking**: Interactive charts with dual-axis display
+- **Dry Hop Tracker**: Track hop additions during fermentation
+- **Ingredient Database**: Search and filter comprehensive ingredient library
+- **Unit Conversion**: Seamless imperial/metric conversion
+
+## Quick Start
 
 ### Prerequisites
 
-- Expo CLI - for React Native development (`npm install -g @expo/cli`)
-- Android Studio or Android device - for mobile app testing
-- Java JDK 17+ - for Android development
-- Node.js 18+
-- BrewTracker backend running (see main project README)
+- **Node.js 18+** and npm
+- **Expo CLI**: `npm install -g @expo/cli`
+- **Android Device or Emulator**: Physical device or Android Studio
+- **BrewTracker Backend**: Flask backend must be running (see main project README)
 
-### Installation
+### Installation & Setup
 
-1. Clone the project and navigate to the Android directory:
+```bash
+# 1. Navigate to the project directory
+cd BrewTrackerAndroid
 
-   ```bash
-   cd BrewTrackerAndroid
-   ```
+# 2. Install dependencies
+npm install
 
-2. Install dependencies:
+# 3. Configure environment variables
+cp .env.example .env
 
-   ```bash
-   npm install
-   ```
+# 4. Update .env with your backend IP address
+# For physical devices:
+EXPO_PUBLIC_API_URL=http://192.168.1.100:5000/api
+# For Android emulators:
+EXPO_PUBLIC_API_URL=http://10.0.2.2:5000/api
 
-3. Configure environment variables:
+# 5. Start the Flask backend with network access
+# (In the BrewTracker backend directory)
+flask run --host=0.0.0.0
 
-   ```bash
-   cp .env.example .env
-   ```
+# 6. Start the Expo development server
+npm start
+```
 
-   Update `.env` with your backend URL:
+### Development Workflow
 
-   ```
-   EXPO_PUBLIC_API_URL=http://YOUR_BACKEND_IP:5000/api
-   ```
+```bash
+# Run type checking
+npm run type-check
 
-4. Start the development server:
+# Run linter (oxlint - 100x faster)
+npm run lint
 
-   ```bash
-   npm start
-   ```
+# Run tests
+npm test
 
-5. Use the Expo Go app on your Android device to scan the QR code, or use an Android emulator.
+# Run tests with coverage
+npm run coverage
+
+# Format code
+npm run format
+```
+
+### First Time Setup
+
+1. **Physical Device**: Install Expo Go from Google Play Store
+2. **Scan QR Code**: Use Expo Go to scan the QR code from `npm start`
+3. **Android Emulator**: Press 'a' in the terminal after `npm start`
+4. **Create Account**: Register a new account in the app
+5. **Verify Email**: Check your email for verification link (if backend email is configured)
 
 ## Architecture
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 BrewTrackerAndroid/                                   # React Native Android application
 ├── app/                                              # Expo Router file-based routing structure
 │   ├── (auth)/                                       # Authentication flow screens
+│   │   ├── _layout.tsx                               # Authentication stack layout configuration
 │   │   ├── login.tsx                                 # Login screen with JWT authentication and navigation
 │   │   ├── register.tsx                              # User registration with real-time validation
 │   │   ├── verifyEmail.tsx                           # Email verification with token input and resend functionality
 │   │   ├── forgotPassword.tsx                        # Password reset request with email validation
-│   │   ├── resetPassword.tsx                         # Password reset confirmation with token validation
-│   │   └── _layout.tsx                               # Authentication layout configuration
+│   │   └── resetPassword.tsx                         # Password reset confirmation with token validation
 │   ├── (tabs)/                                       # Main application tab navigation
-│   │   ├── index.tsx                                 # Dashboard/home screen with brewing overview
-│   │   ├── recipes.tsx                               # Recipe management and browsing
-│   │   ├── brewSessions.tsx                          # Brew session tracking and management
-│   │   ├── utilities.tsx                             # Brewing calculators and utility tools
-│   │   ├── profile.tsx                               # User profile and settings with secure logout
-│   │   └── _layout.tsx                               # Tab navigation layout with Material Icons
+│   │   ├── _layout.tsx                               # Tab navigation layout with Material Icons
+│   │   ├── index.tsx                                 # Dashboard/home screen with brewing overview and recent activity
+│   │   ├── recipes.tsx                               # Recipe management and browsing with search and filtering
+│   │   ├── brewSessions.tsx                          # Brew session tracking and management with status filtering
+│   │   ├── utilities.tsx                             # Brewing calculators and utility tools grid
+│   │   └── profile.tsx                               # User profile and settings with secure logout
 │   ├── (modals)/                                     # Modal/detail screens (not in tab navigation)
 │   │   ├── _layout.tsx                               # Modal navigation layout configuration
 │   │   ├── (recipes)/                                # Recipe-related detail and creation screens
-│   │   │   ├── _layout.tsx                           # Recipe modals layout
+│   │   │   ├── _layout.tsx                           # Recipe modals stack layout
 │   │   │   ├── viewRecipe.tsx                        # Individual recipe detail view with ingredients and metrics
-│   │   │   ├── createRecipe.tsx                      # Multi-step recipe creation wizard
-│   │   │   ├── editRecipe.tsx                        # Recipe editing interface
-│   │   │   ├── versionHistory.tsx                    # Recipe version history timeline navigation (358 lines)
+│   │   │   ├── createRecipe.tsx                      # Multi-step recipe creation wizard (4 steps)
+│   │   │   ├── editRecipe/[id].tsx                   # Recipe editing interface with dynamic route parameter
+│   │   │   ├── versionHistory.tsx                    # Recipe version history timeline navigation
 │   │   │   └── ingredientPicker.tsx                  # Full-screen ingredient selection with search and filtering
 │   │   ├── (beerxml)/                                # BeerXML import/export workflow screens
 │   │   │   ├── importBeerXML.tsx                     # BeerXML file selection and parsing
 │   │   │   ├── ingredientMatching.tsx                # Ingredient matching and approval workflow
 │   │   │   └── importReview.tsx                      # Final import review and recipe creation
 │   │   ├── (brewSessions)/                           # Brew session detail screens
-│   │   │   ├── _layout.tsx                           # Brew session modals layout
+│   │   │   ├── _layout.tsx                           # Brew session modals stack layout
 │   │   │   ├── viewBrewSession.tsx                   # Individual brew session detail view with metrics and status
 │   │   │   ├── createBrewSession.tsx                 # Multi-step brew session creation wizard
-│   │   │   ├── editBrewSession.tsx                   # Brew session editing interface
-│   │   │   ├── addFermentationEntry.tsx              # Add new fermentation data entries
-│   │   │   └── editFermentationEntry.tsx             # Fermentation entry editing interface
+│   │   │   ├── editBrewSession/[id].tsx              # Brew session editing interface with dynamic route parameter
+│   │   │   ├── addFermentationEntry.tsx              # Add new fermentation data entries with validation
+│   │   │   └── editFermentationEntry/[id].tsx        # Fermentation entry editing interface with dynamic route parameter
 │   │   ├── (calculators)/                            # Brewing calculator tools
-│   │   │   ├── _layout.tsx                           # Calculator modals layout
+│   │   │   ├── _layout.tsx                           # Calculator modals stack layout
 │   │   │   ├── abv.tsx                               # ABV (Alcohol by Volume) calculator
 │   │   │   ├── dilution.tsx                          # Water dilution calculator
 │   │   │   ├── strikeWater.tsx                       # Strike water temperature calculator
 │   │   │   ├── hydrometerCorrection.tsx              # Hydrometer temperature correction calculator
-│   │   │   ├── unitConverter.tsx                     # Unit conversion calculator
-│   │   │   └── boilTimer.tsx                         # Boil timer with hop addition alerts
+│   │   │   ├── unitConverter.tsx                     # Unit conversion calculator (volume, weight, temperature)
+│   │   │   └── boilTimer.tsx                         # Boil timer with hop addition alerts and notifications
 │   │   └── (settings)/                               # Settings screens
-│   │       ├── _layout.tsx                           # Settings modals layout
-│   │       └── settings.tsx                          # User settings and preferences
-│   ├── index.tsx                                     # Entry point with auth routing
-│   └── _layout.tsx                                   # Root layout with AuthProvider and QueryClient
+│   │       ├── _layout.tsx                           # Settings modals stack layout
+│   │       └── settings.tsx                          # User settings and preferences (units, theme, notifications)
+│   ├── index.tsx                                     # Entry point with auth routing and splash screen
+│   └── _layout.tsx                                   # Root layout with providers (Auth, Theme, Network, Query)
 ├── src/                                              # Source code for React Native components and services
 │   ├── components/                                   # Reusable UI components organized by feature
 │   │   ├── boilTimer/                                # Boil timer specific components
-│   │   │   └── RecipeSelector.tsx                    # Recipe selection component for boil timer
+│   │   │   └── RecipeSelector.tsx                    # Recipe selection component for boil timer with search
 │   │   ├── brewSessions/                             # Brew session specific components
+│   │   │   ├── DryHopTracker.tsx                     # Dry hop additions tracker with schedule display
 │   │   │   ├── FermentationChart.tsx                 # Interactive fermentation tracking charts with dual-axis
 │   │   │   ├── FermentationData.tsx                  # Fermentation data display and management component
 │   │   │   └── FermentationEntryContextMenu.tsx      # Context menu for fermentation entry actions
@@ -114,33 +188,36 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── ResultDisplay.tsx                     # Standardized result display component for calculations
 │   │   │   ├── UnitToggle.tsx                        # Unit system toggle component for calculator inputs
 │   │   │   └── NumberInput.tsx                       # Specialized number input component for calculator forms
+│   │   ├── debug/                                    # Debug and development components
+│   │   │   └── DevIdDebugger.tsx                     # Development ID debugging component for troubleshooting
 │   │   ├── recipes/                                  # Recipe management components
 │   │   │   ├── BrewingMetrics/                       # Recipe metrics display components
 │   │   │   │   └── BrewingMetricsDisplay.tsx         # Reusable brewing metrics with SRM color visualization
 │   │   │   ├── IngredientEditor/                     # Advanced ingredient editing components
 │   │   │   │   └── IngredientDetailEditor.tsx        # Complete ingredient editing with type-specific UI
 │   │   │   └── RecipeForm/                           # Multi-step recipe creation forms
-│   │   │       ├── BasicInfoForm.tsx                 # Recipe name, style, batch size input
-│   │   │       ├── ParametersForm.tsx                # Brewing parameters (boil time, efficiency, mash temp)
-│   │   │       ├── IngredientsForm.tsx               # Ingredient list management interface
-│   │   │       └── ReviewForm.tsx                    # Final recipe review and submission
-│   │   ├── NetworkStatusBanner.tsx                   # Network connectivity status banner component
+│   │   │       ├── BasicInfoForm.tsx                 # Recipe name, style, batch size input (Step 1)
+│   │   │       ├── ParametersForm.tsx                # Brewing parameters (boil time, efficiency, mash temp) (Step 2)
+│   │   │       ├── IngredientsForm.tsx               # Ingredient list management interface (Step 3)
+│   │   │       └── ReviewForm.tsx                    # Final recipe review and submission (Step 4)
 │   │   ├── splash/                                   # Splash screen components
-│   │   │   └── SplashScreen.tsx                      # App loading splash screen component
-│   │   └── ui/                                       # Generic UI components
-│   │       └── ContextMenu/                          # Context menu implementations
-│   │           ├── BaseContextMenu.tsx               # Base context menu component with common functionality
-│   │           ├── RecipeContextMenu.tsx             # Recipe-specific context menu actions
-│   │           ├── BrewSessionContextMenu.tsx        # Brew session-specific context menu actions
-│   │           └── contextMenuUtils.ts               # Shared utilities for context menu operations
+│   │   │   └── SplashScreen.tsx                      # App loading splash screen component with animations
+│   │   ├── ui/                                       # Generic UI components
+│   │   │   ├── ContextMenu/                          # Context menu implementations
+│   │   │   │   ├── BaseContextMenu.tsx               # Base context menu component with common functionality
+│   │   │   │   ├── RecipeContextMenu.tsx             # Recipe-specific context menu actions (view, edit, delete, clone, version)
+│   │   │   │   ├── BrewSessionContextMenu.tsx        # Brew session-specific context menu actions (view, edit, delete)
+│   │   │   │   └── contextMenuUtils.ts               # Shared utilities for context menu operations
+│   │   │   └── ModalHeader.tsx                       # Reusable modal header component with close button
+│   │   └── NetworkStatusBanner.tsx                   # Network connectivity status banner component with online/offline indicator
 │   ├── contexts/                                     # React contexts for global state
-│   │   ├── AuthContext.tsx                           # Authentication context with secure token storage
-│   │   ├── CalculatorsContext.tsx                    # Calculator state management and shared logic
-│   │   ├── DeveloperContext.tsx                      # Developer options and debugging context
-│   │   ├── NetworkContext.tsx                        # Network connectivity detection for offline functionality
+│   │   ├── AuthContext.tsx                           # Authentication context with secure token storage (JWT in SecureStore)
+│   │   ├── CalculatorsContext.tsx                    # Calculator state management and shared logic with useReducer
+│   │   ├── DeveloperContext.tsx                      # Developer options and debugging context for dev mode
+│   │   ├── NetworkContext.tsx                        # Network connectivity detection for offline functionality (NetInfo)
 │   │   ├── ScreenDimensionsContext.tsx               # Screen dimensions management with support for foldable devices
 │   │   ├── ThemeContext.tsx                          # Theme management with light/dark mode support
-│   │   └── UnitContext.tsx                           # Unit system management (imperial/metric)
+│   │   └── UnitContext.tsx                           # Unit system management (imperial/metric) with AsyncStorage persistence
 │   ├── hooks/                                        # Custom React hooks
 │   │   ├── offlineV2/                                # V2 offline system hooks
 │   │   │   ├── index.ts                              # Centralized exports for V2 offline hooks
@@ -148,16 +225,16 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── useUserData.ts                        # Offline-first user data (recipes) management with sync
 │   │   │   ├── useOfflineSync.ts                     # Sync status monitoring and manual sync triggers
 │   │   │   └── useStartupHydration.ts                # App startup data hydration and cache warming
-│   │   ├── useDebounce.ts                            # Performance optimization for search inputs
-│   │   ├── useRecipeMetrics.ts                       # Real-time recipe calculations hook
+│   │   ├── useDebounce.ts                            # Performance optimization for search inputs (300ms debounce)
+│   │   ├── useRecipeMetrics.ts                       # Real-time recipe calculations hook (OG, FG, ABV, IBU, SRM)
 │   │   └── useStoragePermissions.ts                  # Storage permission management for file operations
 │   ├── services/                                     # API services and business logic
 │   │   ├── api/                                      # API layer with React Query integration
 │   │   │   ├── apiService.ts                         # Hardened API service with validated base URL, timeout, error normalization, and retry logic
-│   │   │   ├── queryClient.ts                        # React Query client configuration
-│   │   │   └── idInterceptor.ts                      # MongoDB ObjectId to string normalization
+│   │   │   ├── queryClient.ts                        # React Query client configuration with AsyncStorage persistence
+│   │   │   └── idInterceptor.ts                      # MongoDB ObjectId to string normalization for consistent IDs
 │   │   ├── beerxml/                                  # BeerXML processing services
-│   │   │   └── BeerXMLService.ts                     # BeerXML import/export with mobile file integration
+│   │   │   └── BeerXMLService.ts                     # BeerXML import/export with mobile file integration (expo-document-picker)
 │   │   ├── offlineV2/                                # V2 offline system services
 │   │   │   ├── index.ts                              # Centralized exports for V2 offline services
 │   │   │   ├── StaticDataService.ts                  # Permanent caching of ingredients/beer styles with version-based invalidation
@@ -165,7 +242,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── LegacyMigrationService.ts             # Migration utilities for V1 to V2 system transition
 │   │   │   └── StartupHydrationService.ts            # App startup data hydration and cache warming system
 │   │   ├── brewing/                                  # Brewing-specific services
-│   │   │   └── OfflineMetricsCalculator.ts           # Offline brewing calculations and recipe metrics
+│   │   │   └── OfflineMetricsCalculator.ts           # Offline brewing calculations and recipe metrics (OG, FG, ABV, IBU, SRM)
 │   │   ├── logger/                                   # Logging and debugging services
 │   │   │   ├── Logger.ts                             # Base logging service interface
 │   │   │   ├── UnifiedLogger.ts                      # Unified logging with development and production modes
@@ -176,16 +253,16 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── ABVCalculator.ts                      # Alcohol by Volume calculation logic
 │   │   │   ├── BoilTimerCalculator.ts                # Boil timer and hop addition scheduling
 │   │   │   ├── DilutionCalculator.ts                 # Water dilution and blending calculations
-│   │   │   ├── EfficiencyCalculator.ts               # Mash and brewhouse efficiency calculations (Service created, modal route not implemented yet)
+│   │   │   ├── EfficiencyCalculator.ts               # Mash and brewhouse efficiency calculations
 │   │   │   ├── HydrometerCorrectionCalculator.ts     # Temperature-corrected hydrometer readings
-│   │   │   ├── PrimingSugarCalculator.ts             # Carbonation and priming sugar calculations (Service created, modal route not implemented yet)
+│   │   │   ├── PrimingSugarCalculator.ts             # Carbonation and priming sugar calculations
 │   │   │   ├── StrikeWaterCalculator.ts              # Mash strike water temperature calculations
-│   │   │   ├── UnitConverter.ts                      # Unit conversion utilities and logic
-│   │   │   └── YeastPitchRateCalculator.ts           # Yeast pitching rate and viability calculations (Service created, modal route not implemented yet)
-│   │   ├── config.ts                                 # Service configuration and constants
-│   │   ├── NotificationService.ts                    # Local notification service for timers and alerts
+│   │   │   ├── UnitConverter.ts                      # Unit conversion utilities and logic (volume, weight, temperature)
+│   │   │   └── YeastPitchRateCalculator.ts           # Yeast pitching rate and viability calculations
+│   │   ├── config.ts                                 # Service configuration and constants (API URLs, timeouts)
+│   │   ├── NotificationService.ts                    # Local notification service for timers and alerts (expo-notifications)
 │   │   ├── storageService.ts                         # Storage service for file operations and permissions
-│   │   └── TimerPersistenceService.ts                # Timer state persistence for boil timer
+│   │   └── TimerPersistenceService.ts                # Timer state persistence for boil timer (AsyncStorage)
 │   ├── constants/                                    # Shared constants and configuration
 │   │   ├── hopConstants.ts                           # Hop usage options, time presets, and type definitions
 │   │   └── testIDs.ts                                # Centralized test IDs for consistent testing across components
@@ -194,8 +271,10 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   ├── idNormalization.ts                        # MongoDB ObjectId normalization utilities
 │   │   ├── jwtUtils.ts                               # JWT token validation and management utilities
 │   │   ├── keyUtils.ts                               # Secure key generation and management utilities
+│   │   ├── recipeUtils.ts                            # Recipe data manipulation and transformation utilities
+│   │   ├── syncUtils.ts                              # Offline sync utilities for conflict resolution
 │   │   ├── timeUtils.ts                              # Time calculation and conversion utilities
-│   │   └── userValidation.ts                         # User input validation utilities
+│   │   └── userValidation.ts                         # User input validation utilities (email, password strength)
 │   ├── types/                                        # TypeScript type definitions for mobile app
 │   │   ├── api.ts                                    # API request/response interfaces
 │   │   ├── common.ts                                 # Shared utility types
@@ -229,50 +308,87 @@ BrewTrackerAndroid/                                   # React Native Android app
 │       │   └── settingsStyles.ts                     # Settings screen styling
 │       ├── components/                               # Component-specific styles
 │       │   ├── brewingMetricsStyles.ts               # Brewing metrics display styling
+│       │   ├── brewSessions/                         # Brew session component styles
+│       │   │   └── dryHopTrackerStyles.ts            # Dry hop tracker component styling
 │       │   ├── calculators/                          # Calculator component styles
 │       │   │   ├── calculatorCardStyles.ts           # Calculator card component styling
 │       │   │   ├── calculatorHeaderStyles.ts         # Calculator header component styling
 │       │   │   ├── numberInputStyles.ts              # Number input component styling
 │       │   │   ├── resultDisplayStyles.ts            # Result display component styling
 │       │   │   └── unitToggleStyles.ts               # Unit toggle component styling
-│       │   └── charts/                               # Chart component styles
-│       │       └── fermentationChartStyles.ts        # Fermentation chart styling
+│       │   ├── charts/                               # Chart component styles
+│       │   │   └── fermentationChartStyles.ts        # Fermentation chart styling
+│       │   └── modalHeaderStyles.ts                  # Modal header component styling
 │       ├── recipes/                                  # Recipe component styles
 │       │   └── ingredientDetailEditorStyles.ts       # Ingredient editor styling
 │       ├── ui/                                       # UI component styles
 │       │   ├── baseContextMenuStyles.ts              # Base context menu styling
 │       │   └── recipeContextMenuStyles.ts            # Recipe context menu styling
 │       └── common/                                   # Shared styling utilities
-│           ├── colors.ts                             # Theme color definitions
+│           ├── colors.ts                             # Theme color definitions (light/dark mode)
 │           ├── buttons.ts                            # Reusable button styles
 │           └── sharedStyles.ts                       # Common shared styling utilities
-├── tests/                                            # Test files and configuration
+├── tests/                                            # Comprehensive test suite (3148 tests across 129 suites)
+├── plugins/                                          # Expo config plugins
+│   ├── withConditionalNetworkSecurity.js             # Network security configuration for development/production
+│   └── withSingleTaskLaunchMode.js                   # Android launch mode configuration
+├── scripts/                                          # Build and development scripts
+│   ├── build-helper.js                               # Environment-specific build configuration
+│   ├── build-info.js                                 # Display current build information
+│   ├── bump-version.js                               # Version bumping script (patch/minor/major)
+│   └── detect-ip.js                                  # Auto-detect local IP for development
 ├── assets/                                           # Static assets (images, fonts, icons)
-├── app.json                                          # Expo configuration for Android-only development
-├── package.json                                      # React Native dependencies and Expo configuration
-├── eslint.config.js                                  # ESLint configuration (fallback)
-├── .oxlintrc.json                                    # oxlint configuration (primary linter)
-├── tsconfig.json                                     # TypeScript configuration with path aliases
+├── app.json                                          # Expo configuration (Android-only, New Architecture enabled)
+├── package.json                                      # Dependencies and scripts (v2.4.10)
+├── eas.json                                          # EAS Build configuration (dev/preview/production)
+├── eslint.config.js                                  # ESLint configuration (fallback linter)
+├── .oxlintrc.json                                    # oxlint configuration (primary linter - 100x faster)
+├── tsconfig.json                                     # TypeScript configuration with path aliases (@/, @services/, etc.)
+├── jest.config.js                                    # Jest testing configuration
+├── metro.config.js                                   # Metro bundler configuration
+├── babel.config.js                                   # Babel configuration with module resolver
+├── dev-log-server.js                                 # Development log server for mobile debugging
+├── expo-env.d.ts                                     # Expo TypeScript environment definitions
 ├── LICENSE                                           # GPL-3.0-or-later license
 ├── LICENSE-HEADER.txt                                # License header for source files
-└── .env                                              # Environment variables for API URL and mobile configuration
+└── .env                                              # Environment variables (API URL, debug mode, etc.)
 ```
 
 ### Key Technologies
 
-- **Expo Router**: File-based navigation with nested route groups and modal presentation
-- **React Query**: Server state management with caching, optimistic updates, and offline persistence
-- **Expo Secure Store**: Secure JWT token storage for authentication
-- **AsyncStorage**: Local data persistence for user preferences and offline data
-- **NetInfo**: Network connectivity detection for offline functionality
-- **Axios**: HTTP client with request/response interceptors
-- **React Native Reanimated**: High-performance animations and gestures
-- **React Native Gesture Handler**: Advanced touch and gesture handling
-- **Expo Notifications**: Local notification support for timers and alerts
-- **React Native Gifted Charts**: Interactive charts for fermentation tracking
-- **TypeScript**: Full type safety across the application
-- **oxlint**: Ultra-fast Rust-based linter (100x performance improvement over ESLint)
-- **Material Icons**: Consistent iconography from @expo/vector-icons
+**Core Framework:**
+
+- **React 19.1.0**: Latest React with concurrent features
+- **React Native 0.81.4**: Modern React Native with New Architecture enabled
+- **Expo 54**: Complete development platform with OTA updates
+- **TypeScript 5.9.2**: Full type safety with strict mode
+
+**Navigation & State:**
+
+- **Expo Router 6.0**: File-based navigation with typed routes
+- **React Query 5.87**: Server state with offline persistence
+- **Expo Secure Store**: Encrypted JWT token storage
+- **AsyncStorage 2.2**: Local data persistence
+
+**Offline & Network:**
+
+- **NetInfo 11.4**: Network connectivity detection
+- **Custom Offline V2 System**: Version-based caching with sync
+- **Query Persistence**: AsyncStorage persister for React Query
+
+**UI & Animation:**
+
+- **React Native Reanimated 4.1**: High-performance animations
+- **React Native Gesture Handler 2.28**: Touch and gesture handling
+- **React Native Gifted Charts 1.4**: Interactive fermentation charts
+- **@expo/vector-icons**: Material Icons for consistent UI
+
+**Development Tools:**
+
+- **oxlint 1.14**: Ultra-fast Rust-based linter (100x faster than ESLint)
+- **Jest 29.7**: Testing framework with 3148 passing tests
+- **Prettier 3.4**: Code formatting
+- **EAS Build**: Production builds with OTA updates
 
 ### File Organization Conventions
 
@@ -348,7 +464,8 @@ This approach provides:
 
 - **TypeScript**: Strict type checking with `npm run type-check` (must pass for all commits)
 - **Linting**: oxlint primary linter (100x faster than ESLint), ESLint fallback available
-- **Testing**: >70% coverage with comprehensive test suite
+- **Testing**: Comprehensive test suite with 3148 passing tests across 129 test suites
+- **Test Coverage**: High coverage across all critical paths
 - **Quality Gates**: All CRUD operations, advanced features, and UI components fully tested
 - **CI/CD**: Automated quality checks ensure code standards
 
@@ -396,22 +513,52 @@ flask run --host=0.0.0.0
 
 ## Building for Production
 
-### Android APK/AAB
+### Production Build Scripts
 
-1. Configure app.json with your app details
-2. Build for Android:
-   ```bash
-   eas build -p android
-   ```
+The app includes automated build scripts for development, preview, and production builds:
 
-### Google Play Store
+```bash
+# Build for development (includes debug tools)
+npm run build:dev
 
-1. Create a Google Play Console account
-2. Configure signing keys and app details
-3. Build AAB for Play Store:
-   ```bash
-   eas build -p android
-   ```
+# Build for preview (production mode with debug)
+npm run build:preview
+
+# Build for production (optimized release)
+npm run build:prod
+
+# Build all profiles
+npm run build:all
+```
+
+### Environment Management
+
+```bash
+# Set development environment (auto-detects local IP)
+npm run env:dev
+
+# Set production environment (uses production API)
+npm run env:prod
+
+# Display current build information
+npm run build:info
+```
+
+### EAS Build Configuration
+
+The app uses Expo Application Services (EAS) for builds:
+
+- **Development builds**: Include dev tools, connect to local backend
+- **Preview builds**: Production mode with debugging enabled
+- **Production builds**: Optimized for Google Play Store release
+
+**Build Configuration:**
+
+- Android package: `com.brewtracker.android`
+- Version: 2.4.10 (build 149)
+- Runtime version: 2.4.10
+- OTA updates: Enabled via EAS Update
+- New Architecture: Enabled for performance
 
 ## API Security & Hardening
 
@@ -473,13 +620,13 @@ EXPO_PUBLIC_API_URL=https://api.brewtracker.com/v1  # Must be valid URL
 EXPO_PUBLIC_DEBUG_MODE=false                        # Optional debug logging
 ```
 
-## 🌐 **Offline Functionality**
+## **Offline Functionality**
 
-### **V2 System Complete: Comprehensive Offline-First Architecture** ✅
+### **V2 System Complete: Comprehensive Offline-First Architecture**
 
 BrewTrackerAndroid features a fully implemented V2 offline-first system with comprehensive caching, version-based synchronization, and automatic conflict resolution, ensuring brewers can work seamlessly regardless of network connectivity.
 
-#### ✅ **V2 System Capabilities**
+#### **V2 System Capabilities**
 
 **Complete Static Data Management:**
 
@@ -501,7 +648,7 @@ BrewTrackerAndroid features a fully implemented V2 offline-first system with com
 - **Legacy Migration**: Seamless transition from V1 to V2 system with data preservation
 - **Performance Optimization**: Efficient startup with background data loading
 
-#### 🏗️ **V2 Technical Architecture**
+#### **V2 Technical Architecture**
 
 **Core V2 Services:**
 
@@ -522,7 +669,7 @@ BrewTrackerAndroid features a fully implemented V2 offline-first system with com
 - `offlineV2.ts` - Complete type definitions for caching, sync, and conflict resolution
 - `logger.ts` - Comprehensive logging system types for debugging and monitoring
 
-#### 📱 **V2 User Experience**
+#### **V2 User Experience**
 
 **Seamless Performance:**
 
@@ -538,15 +685,16 @@ BrewTrackerAndroid features a fully implemented V2 offline-first system with com
 - **Visual Indicators**: Clear indication of pending changes and sync progress
 - **Error Recovery**: Automatic retry with user notification for persistent failures
 
-#### 🧪 **V2 Testing Coverage**
+#### **V2 Testing Coverage**
 
-**Comprehensive Test Suite (101 Tests):**
+**Comprehensive Offline V2 Test Suite (126 Tests):**
 
 - `StaticDataService.test.ts` (23 tests) - Version checking, caching, and filtering
 - `UserCacheService.test.ts` (36 tests) - CRUD operations, sync queue, and conflict resolution
 - `useStaticData.test.tsx` (25 tests) - Hook functionality and cache management
 - `useUserData.test.tsx` (24 tests) - User data operations and sync integration
 - `useOfflineSync.test.tsx` (18 tests) - Sync status monitoring and manual triggers
+- Plus startup hydration, legacy migration, and integration tests
 
 **Data Integrity & Performance:**
 
@@ -555,25 +703,27 @@ BrewTrackerAndroid features a fully implemented V2 offline-first system with com
 - **Sync Conflict Resolution**: Robust handling of concurrent edits across devices
 - **Performance Optimization**: Efficient cache management with memory and storage optimization
 
+**Overall Test Suite:** 3148 passing tests across 129 test suites covering all features
+
 ---
 
-## 💡 **Development Achievements & Architecture**
+## **Development Achievements & Architecture**
 
-### **Phase 5 Completion Status: ~85% Feature Parity** ✅
+### **Phase 5 Completion Status: ~85% Feature Parity**
 
-### ✅ Core Features Complete
+### Core Features Complete
 
-- **Authentication**: Complete login/register flow with email verification and secure JWT token storage
-- **Recipe Management**: Full CRUD operations with 4-step creation wizard and real-time calculations
-- **Offline Recipe Management**: Complete offline-first recipe CRUD with automatic synchronization
-- **Recipe Cloning System**: Differentiated logic for private recipes (versioning) vs public recipes (attribution)
+- **Authentication**: Complete login/register flow with email verification and secure JWT token storage in Expo SecureStore
+- **Offline Recipe Management**: Complete offline-first recipe CRUD with automatic background synchronization
+- **Recipe Cloning System**: Differentiated logic for private recipes (versioning) vs public recipes (attribution with original author)
 - **Version History**: Complete timeline navigation with visual version tree and interactive browsing
-- **BeerXML Import/Export**: 3-screen mobile workflow with ingredient matching and file sharing
-- **Brew Session Tracking**: Full CRUD operations with comprehensive fermentation data management
-- **Advanced UI/UX**: Touch-optimized interface, context menus, gesture navigation, and theme support
-- **Testing Infrastructure**: >70% coverage with comprehensive test suite
+- **BeerXML Import/Export**: 3-screen mobile workflow with ingredient matching, file sharing, and export functionality
+- **Brew Session Tracking**: Full CRUD operations with comprehensive fermentation data management and interactive charts as well as Dry Hop tracking/management
+- **Brewing Calculators**: ABV, dilution, strike water, hydrometer correction, unit converter, and boil timer with notifications
+- **Advanced UI/UX**: Touch-optimized interface (48dp targets), context menus, gesture navigation, and comprehensive theme support
+- **Testing Infrastructure**: 3148 passing tests across 129 test suites with comprehensive coverage
 
-### 🔧 Advanced Technical Features
+### Advanced Technical Features
 
 - **V2 Offline-First Architecture**: Comprehensive caching with version-based invalidation and automatic sync
 - **React Query Integration**: Optimistic updates, cache invalidation, background sync, and offline persistence
@@ -584,7 +734,7 @@ BrewTrackerAndroid features a fully implemented V2 offline-first system with com
 - **Network Resilience**: Hardened API service with retry logic and error normalization
 - **Type Safety**: Full TypeScript coverage with strict type checking
 
-### 🎯 Phase 5+ Roadmap: Final Feature Parity (~15% Remaining)
+### Phase 5+ Roadmap: Final Feature Parity (~15% Remaining)
 
 **Current Focus:** Implementing final advanced features to achieve 100% web app parity
 
@@ -599,6 +749,32 @@ BrewTrackerAndroid features a fully implemented V2 offline-first system with com
 
 This is a companion app to the main BrewTracker project. Follow the same contribution guidelines as the main project.
 
+### Development Standards
+
+- **TypeScript**: All code must pass `npm run type-check` with no errors
+- **Linting**: Use `npm run lint` (oxlint) before committing
+- **Testing**: Maintain high test coverage with meaningful tests
+- **Code Style**: Use Prettier for consistent formatting (`npm run format`)
+- **Commit Messages**: Clear, descriptive commit messages
+- **Pull Requests**: Include tests and documentation for new features
+
+### Testing Requirements
+
+- All new features must include comprehensive tests
+- Bug fixes should include regression tests
+- Maintain >70% code coverage
+- Tests must pass before merging: `npm test`
+
+### Architecture Principles
+
+- **Offline-First**: All features should work offline when possible
+- **Type Safety**: Leverage TypeScript's strict type checking
+- **Mobile-First**: Design for touch interaction and mobile networks
+- **Performance**: Optimize for battery life and data usage
+- **Security**: Follow secure coding practices, especially for authentication
+
 ## License
 
-GPL-3.0-or-later - Same as the main BrewTracker project.
+**GPL-3.0-or-later** - Same as the main BrewTracker project.
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.

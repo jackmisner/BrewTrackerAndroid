@@ -233,7 +233,9 @@ describe("StorageService", () => {
         "test.txt"
       );
       expect(mockFile.create).toHaveBeenCalled();
-      expect(mockFile.write).toHaveBeenCalledWith("test content");
+      expect(mockFile.write).toHaveBeenCalledWith("test content", {
+        encoding: "utf8",
+      });
       expect(mockSharing.shareAsync).toHaveBeenCalledWith(
         "file://cache/test.txt",
         {
@@ -439,7 +441,9 @@ describe("BeerXMLService", () => {
         "My_Recipe_recipe.xml"
       );
       expect(mockFile.create).toHaveBeenCalled();
-      expect(mockFile.write).toHaveBeenCalledWith('<?xml version="1.0"?>...');
+      expect(mockFile.write).toHaveBeenCalledWith('<?xml version="1.0"?>...', {
+        encoding: "utf8",
+      });
       expect(mockSharing.shareAsync).toHaveBeenCalledWith(
         "file://cache/My_Recipe_recipe.xml",
         {
