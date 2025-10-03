@@ -57,7 +57,7 @@ export function DryHopTracker({
 }: DryHopTrackerProps) {
   const theme = useTheme();
   const styles = dryHopTrackerStyles(theme);
-  const [processingHop, setProcessingHop] = useState<string | null>(null);
+  const [processingKey, setProcessingKey] = useState<string | null>(null);
 
   // Extract and match dry-hops from recipe with session data
   const dryHopsWithStatus = useMemo((): RecipeDryHopWithStatus[] => {
@@ -107,15 +107,17 @@ export function DryHopTracker({
 
     return recipeDryHops.map(recipeDryHop => {
       // Find matching session dry-hop by hop name AND recipe_instance_id (for duplicate hops)
-      const sessionIndex = sessionDryHops.findIndex(
+      const foundIndex = sessionDryHops.findIndex(
         sessionHop =>
           sessionHop.hop_name.toLowerCase() ===
             recipeDryHop.hop_name.toLowerCase() &&
           sessionHop.recipe_instance_id === recipeDryHop.recipe_instance_id
       );
 
+      // Guard against -1 index: only use if valid
+      const sessionIndex = foundIndex >= 0 ? foundIndex : null;
       const sessionData =
-        sessionIndex >= 0 ? sessionDryHops[sessionIndex] : null;
+        sessionIndex !== null ? sessionDryHops[sessionIndex] : null;
 
       // Log matching result
       void UnifiedLogger.debug(
@@ -125,7 +127,7 @@ export function DryHopTracker({
           hop_name: recipeDryHop.hop_name,
           recipe_instance_id: recipeDryHop.recipe_instance_id,
           sessionIndex,
-          matched: sessionIndex >= 0,
+          matched: sessionIndex !== null,
           sessionHopInstanceId: sessionData?.recipe_instance_id,
         }
       );
@@ -160,6 +162,8 @@ export function DryHopTracker({
 
   const handleAddDryHop = async (dryHop: RecipeDryHopWithStatus) => {
     const hopName = dryHop.recipeData.hop_name;
+    const key = dryHop.recipeData.recipe_instance_id ?? hopName;
+
     try {
       await UnifiedLogger.info(
         "DryHopTracker.handleAddDryHop",
@@ -171,7 +175,8 @@ export function DryHopTracker({
           fullDryHopData: dryHop.recipeData,
         }
       );
-      setProcessingHop(hopName);
+      setProcessingKey(key);
+
       await onAddDryHop(dryHop.recipeData);
       await UnifiedLogger.info(
         "DryHopTracker.handleAddDryHop",
@@ -193,7 +198,7 @@ export function DryHopTracker({
         `Failed to add ${hopName} to fermenter. Please try again.`
       );
     } finally {
-      setProcessingHop(null);
+      setProcessingKey(null);
     }
   };
 
@@ -203,8 +208,9 @@ export function DryHopTracker({
     }
 
     const hopName = dryHop.recipeData.hop_name;
+    const key = dryHop.recipeData.recipe_instance_id ?? hopName;
     try {
-      setProcessingHop(hopName);
+      setProcessingKey(key);
       await onRemoveDryHop(dryHop.sessionIndex);
     } catch (error) {
       console.error("Error removing dry-hop:", error);
@@ -213,7 +219,7 @@ export function DryHopTracker({
         `Failed to remove ${hopName} from fermenter. Please try again.`
       );
     } finally {
-      setProcessingHop(null);
+      setProcessingKey(null);
     }
   };
 
@@ -320,10 +326,16 @@ export function DryHopTracker({
       >
         {dryHopsWithStatus.map((dryHop, index) => {
           const hopName = dryHop.recipeData.hop_name;
-          const isProcessing = processingHop === hopName;
+          const procKey = dryHop.recipeData.recipe_instance_id ?? hopName;
+          const isProcessing = processingKey === procKey;
 
           return (
-            <View key={`${hopName}-${index}`} style={styles.dryHopItem}>
+            <View
+              key={
+                dryHop.recipeData.recipe_instance_id ?? `${hopName}-${index}`
+              }
+              style={styles.dryHopItem}
+            >
               {/* Hop Info */}
               <View style={styles.hopInfo}>
                 <Text style={styles.hopName}>{hopName}</Text>

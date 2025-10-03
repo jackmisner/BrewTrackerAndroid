@@ -643,4 +643,169 @@ describe("DryHopTracker", () => {
       ).toBeTruthy();
     });
   });
+
+  describe("Duplicate Hop Matching with instance_id", () => {
+    it("disambiguates duplicate hops using recipe_instance_id", () => {
+      // Create recipe with TWO Cascade hops (different instance_ids)
+      const recipeWithDuplicateHops: Recipe = {
+        ...mockRecipe,
+        ingredients: [
+          {
+            id: "ing-1",
+            instance_id: "inst-cascade-1",
+            name: "Cascade",
+            type: "hop",
+            amount: 2,
+            unit: "oz",
+            use: "dry-hop",
+            time: 10080, // 7 days
+            hop_type: "Pellet",
+          },
+          {
+            id: "ing-2",
+            instance_id: "inst-cascade-2",
+            name: "Cascade", // DUPLICATE name, different instance
+            type: "hop",
+            amount: 1,
+            unit: "oz",
+            use: "dry-hop",
+            time: 4320, // 3 days
+            hop_type: "Pellet",
+          },
+        ],
+      };
+
+      // Add ONLY the first Cascade to fermenter
+      const sessionDryHops: DryHopAddition[] = [
+        {
+          hop_name: "Cascade",
+          hop_type: "Pellet",
+          amount: 2,
+          amount_unit: "oz",
+          addition_date: "2024-01-15",
+          duration_days: 7,
+          phase: "primary",
+          recipe_instance_id: "inst-cascade-1", // Matches first Cascade only
+        },
+      ];
+
+      const { getAllByText, getAllByTestId } = render(
+        <DryHopTracker
+          recipe={recipeWithDuplicateHops}
+          sessionDryHops={sessionDryHops}
+          onAddDryHop={mockOnAddDryHop}
+          onRemoveDryHop={mockOnRemoveDryHop}
+        />
+      );
+
+      // Both Cascades should be rendered
+      const cascadeElements = getAllByText("Cascade");
+      expect(cascadeElements).toHaveLength(2);
+
+      // First Cascade (inst-cascade-1) should show "added" status
+      const addedStatuses = getAllByTestId(
+        TEST_IDS.patterns.metricValue("dry-hop-status-added")
+      );
+      expect(addedStatuses).toHaveLength(1);
+
+      // Second Cascade (inst-cascade-2) should show "ready" status
+      const readyStatuses = getAllByTestId(
+        TEST_IDS.patterns.metricValue("dry-hop-status-ready")
+      );
+      expect(readyStatuses).toHaveLength(1);
+
+      // First Cascade should have "Remove from Fermenter" button
+      const removeButton = getAllByTestId(
+        TEST_IDS.patterns.touchableOpacityAction("remove-dry-hop-cascade")
+      );
+      expect(removeButton).toHaveLength(1);
+
+      // Second Cascade should have "Add to Fermenter" button
+      const addButton = getAllByTestId(
+        TEST_IDS.patterns.touchableOpacityAction("add-dry-hop-cascade")
+      );
+      expect(addButton).toHaveLength(1);
+    });
+
+    it("calls onRemoveDryHop with correct index for duplicate hops", async () => {
+      const recipeWithDuplicateHops: Recipe = {
+        ...mockRecipe,
+        ingredients: [
+          {
+            id: "ing-1",
+            instance_id: "inst-cascade-1",
+            name: "Cascade",
+            type: "hop",
+            amount: 2,
+            unit: "oz",
+            use: "dry-hop",
+            time: 10080,
+            hop_type: "Pellet",
+          },
+          {
+            id: "ing-2",
+            instance_id: "inst-cascade-2",
+            name: "Cascade",
+            type: "hop",
+            amount: 1,
+            unit: "oz",
+            use: "dry-hop",
+            time: 4320,
+            hop_type: "Pellet",
+          },
+        ],
+      };
+
+      const sessionDryHops: DryHopAddition[] = [
+        {
+          hop_name: "Cascade",
+          hop_type: "Pellet",
+          amount: 2,
+          amount_unit: "oz",
+          addition_date: "2024-01-15",
+          duration_days: 7,
+          phase: "primary",
+          recipe_instance_id: "inst-cascade-1", // First Cascade
+        },
+        {
+          hop_name: "Cascade",
+          hop_type: "Pellet",
+          amount: 1,
+          amount_unit: "oz",
+          addition_date: "2024-01-16",
+          duration_days: 3,
+          phase: "primary",
+          recipe_instance_id: "inst-cascade-2", // Second Cascade
+        },
+      ];
+
+      const { getAllByTestId } = render(
+        <DryHopTracker
+          recipe={recipeWithDuplicateHops}
+          sessionDryHops={sessionDryHops}
+          onAddDryHop={mockOnAddDryHop}
+          onRemoveDryHop={mockOnRemoveDryHop}
+        />
+      );
+
+      const removeButtons = getAllByTestId(
+        TEST_IDS.patterns.touchableOpacityAction("remove-dry-hop-cascade")
+      );
+      expect(removeButtons).toHaveLength(2);
+
+      // Click first remove button (should call with index 0)
+      fireEvent.press(removeButtons[0]);
+      await waitFor(() => {
+        expect(mockOnRemoveDryHop).toHaveBeenCalledWith(0);
+      });
+
+      jest.clearAllMocks();
+
+      // Click second remove button (should call with index 1)
+      fireEvent.press(removeButtons[1]);
+      await waitFor(() => {
+        expect(mockOnRemoveDryHop).toHaveBeenCalledWith(1);
+      });
+    });
+  });
 });

@@ -71,7 +71,11 @@ export default function ViewBrewSession() {
           setError("Brew session not found");
         }
       } catch (err) {
-        console.error("[ViewBrewSession] Error loading brew session:", err);
+        await UnifiedLogger.error(
+          "ViewBrewSession.loadBrewSession",
+          "Error loading brew session",
+          { error: err instanceof Error ? err.message : String(err) }
+        );
         const errorMessage =
           err instanceof Error ? err.message : "Failed to load brew session";
         if (!cancelled) {
@@ -125,9 +129,10 @@ export default function ViewBrewSession() {
             setBrewSessionData(session);
           }
         } catch (error) {
-          console.error(
-            "[ViewBrewSession.useFocusEffect] Failed to reload session:",
-            error
+          await UnifiedLogger.error(
+            "ViewBrewSession.useFocusEffect",
+            "Failed to reload session",
+            { error: error instanceof Error ? error.message : String(error) }
           );
         }
       };
@@ -285,9 +290,10 @@ export default function ViewBrewSession() {
         setChartRefreshCounter(prev => prev + 1);
       }
     } catch (error) {
-      console.error(
-        "[ViewBrewSession] Failed to reload session after data change:",
-        error
+      await UnifiedLogger.error(
+        "ViewBrewSession.handleDataChange",
+        "Failed to reload session after data change",
+        { error: error instanceof Error ? error.message : String(error) }
       );
     }
   }, [brewSessionId, getById]);
@@ -323,9 +329,10 @@ export default function ViewBrewSession() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         await update(brewSessionId, { batch_rating: newRating });
       } catch (error) {
-        console.error(
-          "[ViewBrewSession] Failed to update batch rating:",
-          error
+        await UnifiedLogger.error(
+          "ViewBrewSession.handleRatingUpdate",
+          "Failed to update batch rating",
+          { error: error instanceof Error ? error.message : String(error) }
         );
 
         // Rollback optimistic update on error
@@ -495,7 +502,11 @@ export default function ViewBrewSession() {
                   setError("Brew session not found");
                 }
               } catch (err) {
-                console.error("[ViewBrewSession] Retry failed:", err);
+                await UnifiedLogger.error(
+                  "ViewBrewSession.handleRetry",
+                  "Failed to reload brew session",
+                  { error: err instanceof Error ? err.message : String(err) }
+                );
                 const errorMessage =
                   err instanceof Error
                     ? err.message
@@ -761,7 +772,10 @@ export default function ViewBrewSession() {
             sessionDryHops={brewSession.dry_hop_additions || []}
             onAddDryHop={async dryHopData => {
               if (!addDryHopFromRecipe) {
-                console.error("addDryHopFromRecipe not available");
+                await UnifiedLogger.error(
+                  "viewBrewSession.onAddDryHop",
+                  "addDryHopFromRecipe not available"
+                );
                 return;
               }
               await UnifiedLogger.info(
@@ -802,7 +816,10 @@ export default function ViewBrewSession() {
             }}
             onRemoveDryHop={async dryHopIndex => {
               if (!removeDryHop) {
-                console.error("removeDryHop not available");
+                await UnifiedLogger.error(
+                  "viewBrewSession.onRemoveDryHop",
+                  "removeDryHop not available"
+                );
                 return;
               }
               await removeDryHop(brewSessionId, dryHopIndex);

@@ -12,6 +12,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
+import { isTempId as isTempIdUtil } from "@/src/utils/recipeUtils";
 
 interface DevIdDebuggerProps {
   /**
@@ -41,7 +42,7 @@ export function DevIdDebugger({ id, label, metadata }: DevIdDebuggerProps) {
     return null;
   }
 
-  const isTempId = id?.startsWith("temp_");
+  const isTempId = isTempIdUtil(id);
   const statusColor = isTempId ? "#FF9800" : "#4CAF50"; // Orange for temp, green for real
   const statusIcon = isTempId ? "warning" : "check-circle";
   const statusText = isTempId ? "TEMP ID" : "SERVER ID";
@@ -54,9 +55,10 @@ export function DevIdDebugger({ id, label, metadata }: DevIdDebuggerProps) {
     failed: "#F44336", // Red
   };
 
-  const syncColor = metadata?.syncStatus
-    ? syncColors[metadata.syncStatus]
-    : undefined;
+  const syncColor =
+    metadata?.syncStatus && metadata.syncStatus in syncColors
+      ? syncColors[metadata.syncStatus as keyof typeof syncColors]
+      : theme.colors.textSecondary;
 
   return (
     <View
@@ -117,7 +119,7 @@ export function DevIdDebugger({ id, label, metadata }: DevIdDebuggerProps) {
               <View
                 style={[
                   styles.syncBadge,
-                  { backgroundColor: syncColor + "20", borderColor: syncColor },
+                  { backgroundColor: `${syncColor}20`, borderColor: syncColor },
                 ]}
               >
                 <Text style={[styles.syncText, { color: syncColor }]}>

@@ -3339,10 +3339,15 @@ export class UserCacheService {
               return false;
             }
 
-            // CRITICAL FIX: During force refresh, ONLY preserve truly offline-created sessions (with tempId)
-            // Sessions that exist on server (have real IDs) should be replaced by server version
-            // even if they have pending local changes - those changes will be handled by sync
+            // CRITICAL FIX: During force refresh, preserve sessions with tempId OR pending local changes
+            // - tempId indicates offline-created sessions
+            // - needsSync/pending status indicates server-backed sessions with queued local edits
             if (item.tempId) {
+              return true;
+            }
+
+            // Also preserve sessions with pending sync (server-backed but locally modified)
+            if (item.needsSync === true || item.syncStatus === "pending") {
               return true;
             }
 
