@@ -151,7 +151,7 @@ export default function ViewBrewSession() {
       return;
     }
 
-    await UnifiedLogger.info(
+    void UnifiedLogger.info(
       "ViewBrewSession.onRefresh",
       "Pull-to-refresh started",
       {
@@ -178,7 +178,7 @@ export default function ViewBrewSession() {
       // Then reload the specific session
       const session = await brewSessionsHook.getById(brewSessionId);
 
-      await UnifiedLogger.info(
+      void UnifiedLogger.info(
         "ViewBrewSession.onRefresh",
         "Retrieved session from cache after refresh",
         {
@@ -214,7 +214,7 @@ export default function ViewBrewSession() {
       // Force chart refresh for foldable devices
       setChartRefreshCounter(prev => prev + 1);
 
-      await UnifiedLogger.info(
+      void UnifiedLogger.info(
         "ViewBrewSession.onRefresh",
         "Pull-to-refresh completed successfully"
       );
@@ -780,7 +780,7 @@ export default function ViewBrewSession() {
                 );
                 return;
               }
-              await UnifiedLogger.info(
+              void UnifiedLogger.info(
                 "viewBrewSession.onAddDryHop",
                 `Calling addDryHopFromRecipe`,
                 {
@@ -792,7 +792,7 @@ export default function ViewBrewSession() {
                 }
               );
               await addDryHopFromRecipe(brewSessionId, dryHopData);
-              await UnifiedLogger.info(
+              void UnifiedLogger.info(
                 "viewBrewSession.onAddDryHop",
                 `Dry-hop added, reloading session`,
                 { brewSessionId }
@@ -824,7 +824,20 @@ export default function ViewBrewSession() {
                 );
                 return;
               }
-              await removeDryHop(brewSessionId, dryHopIndex);
+              try {
+                await removeDryHop(brewSessionId, dryHopIndex);
+              } catch (error) {
+                await UnifiedLogger.error(
+                  "viewBrewSession.onRemoveDryHop",
+                  "Failed to remove dry-hop",
+                  {
+                    error:
+                      error instanceof Error ? error.message : String(error),
+                    dryHopIndex,
+                  }
+                );
+                throw error; // Re-throw to let DryHopTracker show alert
+              }
               // Reload brew session data
               const updatedSession = await getById(brewSessionId);
               if (updatedSession) {

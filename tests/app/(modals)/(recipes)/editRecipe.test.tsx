@@ -1098,6 +1098,48 @@ describe("EditRecipeScreen", () => {
       expect(newState.ingredients[0].name).toBe("Test Grain");
       expect(newState.ingredients[1].name).toBe("Last");
     });
+
+    it("should handle ADD_INGREDIENT action", () => {
+      const newIngredient = {
+        id: "ing2",
+        instance_id: "inst-2",
+        name: "New Hop",
+        type: "hop" as const,
+        amount: 1,
+        unit: "oz",
+      };
+
+      const newState = recipeBuilderReducer(initialState, {
+        type: "ADD_INGREDIENT",
+        ingredient: newIngredient,
+      });
+
+      expect(newState.ingredients).toHaveLength(1);
+      expect(newState.ingredients[0]).toEqual(newIngredient);
+    });
+
+    it("should handle UPDATE_FIELD action", () => {
+      const newState = recipeBuilderReducer(initialState, {
+        type: "UPDATE_FIELD",
+        field: "name",
+        value: "Updated Recipe Name",
+      });
+
+      expect(newState.name).toBe("Updated Recipe Name");
+      expect(newState.style).toBe("IPA"); // Other fields unchanged
+    });
+
+    it("should handle RESET action", () => {
+      const modifiedState = { ...initialState, name: "Modified" };
+      const resetRecipe = { ...initialState, name: "Reset Recipe" };
+
+      const newState = recipeBuilderReducer(modifiedState, {
+        type: "RESET",
+        recipe: resetRecipe,
+      });
+
+      expect(newState).toEqual(resetRecipe);
+    });
   });
 
   describe("toOptionalNumber Helper", () => {

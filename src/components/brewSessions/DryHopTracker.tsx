@@ -71,40 +71,43 @@ export function DryHopTracker({
         ing.type === "hop" && (ing.use === "dry-hop" || ing.use === "dry_hop")
     );
 
-    void UnifiedLogger.debug(
-      "DryHopTracker.dryHopsWithStatus",
-      `RAW recipe ingredients (dry-hops only)`,
-      {
-        recipeName: recipe.name,
-        totalIngredients: recipe.ingredients.length,
-        dryHopCount: dryHopIngredients.length,
-        rawDryHopIngredients: dryHopIngredients.map(ing => ({
-          id: ing.id,
-          instance_id: ing.instance_id,
-          name: ing.name,
-          type: ing.type,
-          use: ing.use,
-          hasInstanceId: !!ing.instance_id,
-        })),
-      }
-    );
+    if (__DEV__) {
+      void UnifiedLogger.debug(
+        "DryHopTracker.dryHopsWithStatus",
+        `RAW recipe ingredients (dry-hops only)`,
+        {
+          recipeName: recipe.name,
+          totalIngredients: recipe.ingredients.length,
+          dryHopCount: dryHopIngredients.length,
+          rawDryHopIngredients: dryHopIngredients.map(ing => ({
+            id: ing.id,
+            instance_id: ing.instance_id,
+            name: ing.name,
+            type: ing.type,
+            use: ing.use,
+            hasInstanceId: !!ing.instance_id,
+          })),
+        }
+      );
+    }
 
     const recipeDryHops = getDryHopsFromRecipe(recipe.ingredients);
 
     // Log all dry-hops extracted from recipe AFTER transformation
-    void UnifiedLogger.debug(
-      "DryHopTracker.dryHopsWithStatus",
-      `Extracted ${recipeDryHops.length} dry-hops from recipe (AFTER getDryHopsFromRecipe)`,
-      {
-        recipeName: recipe.name,
-        recipeDryHops: recipeDryHops.map(dh => ({
-          hop_name: dh.hop_name,
-          recipe_instance_id: dh.recipe_instance_id,
-          hasInstanceId: !!dh.recipe_instance_id,
-        })),
-      }
-    );
-
+    if (__DEV__) {
+      void UnifiedLogger.debug(
+        "DryHopTracker.dryHopsWithStatus",
+        `Extracted ${recipeDryHops.length} dry-hops from recipe (AFTER getDryHopsFromRecipe)`,
+        {
+          recipeName: recipe.name,
+          recipeDryHops: recipeDryHops.map(dh => ({
+            hop_name: dh.hop_name,
+            recipe_instance_id: dh.recipe_instance_id,
+            hasInstanceId: !!dh.recipe_instance_id,
+          })),
+        }
+      );
+    }
     return recipeDryHops.map(recipeDryHop => {
       // Find matching session dry-hop by hop name AND recipe_instance_id (for duplicate hops)
       const foundIndex = sessionDryHops.findIndex(
@@ -120,17 +123,19 @@ export function DryHopTracker({
         sessionIndex !== null ? sessionDryHops[sessionIndex] : null;
 
       // Log matching result
-      void UnifiedLogger.debug(
-        "DryHopTracker.dryHopsWithStatus",
-        `Matching result for ${recipeDryHop.hop_name}`,
-        {
-          hop_name: recipeDryHop.hop_name,
-          recipe_instance_id: recipeDryHop.recipe_instance_id,
-          sessionIndex,
-          matched: sessionIndex !== null,
-          sessionHopInstanceId: sessionData?.recipe_instance_id,
-        }
-      );
+      if (__DEV__) {
+        void UnifiedLogger.debug(
+          "DryHopTracker.dryHopsWithStatus",
+          `Matching result for ${recipeDryHop.hop_name}`,
+          {
+            hop_name: recipeDryHop.hop_name,
+            recipe_instance_id: recipeDryHop.recipe_instance_id,
+            sessionIndex,
+            matched: sessionIndex !== null,
+            sessionHopInstanceId: sessionData?.recipe_instance_id,
+          }
+        );
+      }
 
       // Determine status
       let status: "ready" | "added" | "removed" = "ready";

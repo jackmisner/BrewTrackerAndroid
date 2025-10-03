@@ -3735,6 +3735,7 @@ export class UserCacheService {
               operation.parentId!,
               operation.data
             );
+            await this.markItemAsSynced(operation.parentId!);
             await UnifiedLogger.info(
               "UserCacheService.processPendingOperation",
               `Fermentation entry synced successfully`
@@ -3773,6 +3774,7 @@ export class UserCacheService {
               operation.parentId!,
               operation.data
             );
+            await this.markItemAsSynced(operation.parentId!);
             await UnifiedLogger.info(
               "UserCacheService.processPendingOperation",
               `Dry-hop addition synced successfully`,
