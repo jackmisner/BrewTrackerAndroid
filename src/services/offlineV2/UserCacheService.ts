@@ -1937,15 +1937,43 @@ export class UserCacheService {
         (_, index) => index !== dryHopIndex
       );
 
-      // Update the brew session
-      const updatedSession = await this.updateBrewSession(sessionId, {
+      // Update cache immediately with updated dry-hops
+      const now = Date.now();
+      const updatedSession = {
+        ...session,
         dry_hop_additions: updatedDryHops,
+        updated_at: new Date().toISOString(),
+      };
+
+      await this.updateBrewSessionInCache({
+        id: session.id,
+        data: updatedSession,
+        lastModified: now,
+        syncStatus: "pending",
+        needsSync: true,
       });
+
+      // Queue dedicated dry-hop deletion operation for sync
+      await this.addPendingOperation({
+        id: `dry_hop_addition_delete_${session.id}_${dryHopIndex}_${now}`,
+        type: "delete",
+        entityType: "dry_hop_addition",
+        entityId: `${session.id}_${dryHopIndex}`,
+        parentId: session.id,
+        entryIndex: dryHopIndex,
+        userId,
+        timestamp: now,
+        retryCount: 0,
+        maxRetries: 3,
+      });
+
+      // Trigger background sync
+      void this.backgroundSync();
 
       await UnifiedLogger.info(
         "UserCacheService.deleteDryHopAddition",
-        `Dry-hop deleted successfully`,
-        { sessionId, remainingDryHops: updatedDryHops.length }
+        `Dry-hop deletion queued for sync`,
+        { sessionId: session.id, remainingDryHops: updatedDryHops.length }
       );
 
       return updatedSession;
@@ -2079,7 +2107,9 @@ export class UserCacheService {
             errorMessage.includes("Simulated offline mode") ||
             errorMessage.includes("Network request failed") ||
             errorMessage.includes("offline") ||
-            errorMessage.includes("ECONNREFUSED");
+            errorMessage.includes("ECONNREFUSED") ||
+            errorMessage.includes("DEPENDENCY_ERROR") ||
+            errorMessage.includes("Parent brew session not synced yet");
 
           if (isOfflineError) {
             // Offline error - don't increment retry count, just stop syncing
@@ -3870,6 +3900,7 @@ export class UserCacheService {
               operation.entryIndex!,
               operation.data
             );
+            await this.markItemAsSynced(operation.parentId!);
             await UnifiedLogger.info(
               "UserCacheService.processPendingOperation",
               `Fermentation entry update synced successfully`
@@ -3906,6 +3937,7 @@ export class UserCacheService {
               operation.entryIndex!,
               operation.data
             );
+            await this.markItemAsSynced(operation.parentId!);
             await UnifiedLogger.info(
               "UserCacheService.processPendingOperation",
               `Dry-hop addition update synced successfully`
@@ -4012,9 +4044,36 @@ export class UserCacheService {
               operation.parentId!,
               operation.entryIndex!
             );
+            await this.markItemAsSynced(operation.parentId!);
             await UnifiedLogger.info(
               "UserCacheService.processPendingOperation",
               `Fermentation entry deletion synced successfully`
+            );
+          } else if (operation.entityType === "dry_hop_addition") {
+            // Delete dry-hop addition using dedicated endpoint
+            if (operation.parentId?.startsWith("temp_")) {
+              throw new OfflineError(
+                "Parent brew session not synced yet",
+                "DEPENDENCY_ERROR",
+                true
+              );
+            }
+            await UnifiedLogger.info(
+              "UserCacheService.processPendingOperation",
+              `Syncing dry-hop addition deletion`,
+              {
+                parentId: operation.parentId,
+                additionIndex: operation.entryIndex,
+              }
+            );
+            await ApiService.brewSessions.deleteDryHopAddition(
+              operation.parentId!,
+              operation.entryIndex!
+            );
+            await this.markItemAsSynced(operation.parentId!);
+            await UnifiedLogger.info(
+              "UserCacheService.processPendingOperation",
+              `Dry-hop addition deletion synced successfully`
             );
           } else if (operation.entityType === "brew_session") {
             await UnifiedLogger.info(

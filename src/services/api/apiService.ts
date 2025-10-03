@@ -851,6 +851,14 @@ const ApiService = {
         dryHopData
       ),
 
+    deleteDryHopAddition: (
+      brewSessionId: ID,
+      additionIndex: number
+    ): Promise<AxiosResponse<{ message: string }>> =>
+      api.delete(
+        ENDPOINTS.BREW_SESSIONS.DRY_HOP_ENTRY(brewSessionId, additionIndex)
+      ),
+
     analyzeCompletion: (
       brewSessionId: ID
     ): Promise<
