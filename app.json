@@ -39,7 +39,8 @@
         }
       ],
       "./plugins/withConditionalNetworkSecurity.js",
-      "./plugins/withSingleTaskLaunchMode.js"
+      "./plugins/withSingleTaskLaunchMode.js",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
