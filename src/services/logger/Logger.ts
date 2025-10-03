@@ -459,7 +459,7 @@ export class Logger {
           }
 
           // Write combined content atomically
-          await logFile.write(existingContent + logLine);
+          await logFile.write(existingContent + logLine, { encoding: "utf8" });
         } catch (fileError) {
           console.warn("Failed to append to log file:", fileError);
           throw fileError;

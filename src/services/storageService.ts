@@ -157,7 +157,7 @@ export class StorageService {
       // Create temporary file
       const file = new File(Paths.cache, filename);
       await file.create();
-      await file.write(content);
+      await file.write(content, { encoding: "utf8" });
       const fileUri = file.uri;
 
       // Share file (allows user to choose where to save)
@@ -416,7 +416,7 @@ export class BeerXMLService {
       }
 
       await file.create();
-      await file.write(xmlContent);
+      await file.write(xmlContent, { encoding: "utf8" });
 
       return {
         success: true,
