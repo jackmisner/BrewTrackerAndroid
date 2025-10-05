@@ -33,6 +33,9 @@ export const STORAGE_KEYS = {
   CACHED_INGREDIENTS: "cached_ingredients",
   LAST_SYNC: "last_sync",
   NETWORK_STATE: "network_state",
+  // Biometric authentication
+  BIOMETRIC_ENABLED: "biometric_enabled",
+  BIOMETRIC_USERNAME: "biometric_username",
 } as const;
 
 /**
@@ -49,6 +52,10 @@ export const ENDPOINTS = {
     VERIFY_EMAIL: "/auth/verify-email",
     RESEND_VERIFICATION: "/auth/resend-verification",
     VALIDATE_USERNAME: "/auth/validate-username",
+    VERIFICATION_STATUS: "/auth/verification-status",
+    FORGOT_PASSWORD: "/auth/forgot-password",
+    RESET_PASSWORD: "/auth/reset-password",
+    REFRESH_TOKEN: "/auth/refresh-token",
   },
 
   // User

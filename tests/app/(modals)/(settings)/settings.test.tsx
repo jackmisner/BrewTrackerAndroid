@@ -45,6 +45,46 @@ jest.mock("@contexts/DeveloperContext", () => ({
   })),
 }));
 
+// Mock BiometricService as the single source of truth for biometric state
+// AuthContext's isBiometricAvailable/isBiometricEnabled should derive from this service
+jest.mock("@services/BiometricService", () => ({
+  BiometricService: {
+    isBiometricAvailable: jest.fn(() => Promise.resolve(false)),
+    getBiometricTypeName: jest.fn(() => Promise.resolve("Biometric")),
+    isBiometricEnabled: jest.fn(() => Promise.resolve(false)),
+    enableBiometrics: jest.fn(() => Promise.resolve(true)),
+    disableBiometrics: jest.fn(() => Promise.resolve(true)),
+  },
+}));
+
+jest.mock("@contexts/AuthContext", () => ({
+  useAuth: jest.fn(() => ({
+    user: { id: "test-user", username: "testuser", email: "test@example.com" },
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    // Biometric state should be derived from BiometricService, not duplicated here
+    isBiometricAvailable: false, // This will match the BiometricService mock default
+    isBiometricEnabled: false, // This will match the BiometricService mock default
+    login: jest.fn(),
+    logout: jest.fn(),
+    register: jest.fn(),
+    refreshUser: jest.fn(),
+    clearError: jest.fn(),
+    signInWithGoogle: jest.fn(),
+    verifyEmail: jest.fn(),
+    resendVerification: jest.fn(),
+    checkVerificationStatus: jest.fn(),
+    forgotPassword: jest.fn(),
+    resetPassword: jest.fn(),
+    loginWithBiometrics: jest.fn(),
+    enableBiometrics: jest.fn(),
+    disableBiometrics: jest.fn(),
+    checkBiometricAvailability: jest.fn(),
+    getUserId: jest.fn(),
+  })),
+}));
+
 // Mock styles
 jest.mock("@styles/modals/settingsStyles", () => ({
   settingsStyles: jest.fn(() => ({

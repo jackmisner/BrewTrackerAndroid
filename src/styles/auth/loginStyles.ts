@@ -187,6 +187,59 @@ export const loginStyles = (colors: ThemeColors) =>
       color: colors.textSecondary,
       marginHorizontal: 12,
     },
+    // Biometric authentication styles
+    biometricButton: {
+      alignItems: "center",
+      marginTop: 24,
+      padding: 16,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      borderStyle: "dashed",
+    },
+    biometricText: {
+      color: colors.primary,
+      fontSize: 14,
+      fontWeight: "600",
+      marginTop: 8,
+    },
+    // Biometric enrollment modal styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    modalContent: {
+      backgroundColor: colors.background,
+      borderRadius: 16,
+      padding: 24,
+      width: "100%",
+      maxWidth: 400,
+      alignItems: "center",
+    },
+    modalIcon: {
+      marginBottom: 16,
+    },
+    modalTitle: {
+      fontSize: 24,
+      fontWeight: "bold",
+      color: colors.text,
+      marginBottom: 12,
+      textAlign: "center",
+    },
+    modalMessage: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginBottom: 24,
+      lineHeight: 24,
+    },
+    modalButton: {
+      width: "100%",
+      marginBottom: 12,
+    },
     // Re-export button styles for consistency
     ...buttonStyles,
   });

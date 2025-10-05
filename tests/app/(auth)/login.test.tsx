@@ -10,6 +10,7 @@ jest.mock("react-native", () => ({
   Text: "Text",
   TextInput: "TextInput",
   TouchableOpacity: "TouchableOpacity",
+  Modal: "Modal",
   Alert: {
     alert: jest.fn(),
   },
@@ -26,6 +27,28 @@ jest.mock("react-native", () => ({
     addChangeListener: jest.fn(),
     removeChangeListener: jest.fn(),
   },
+}));
+
+// Mock Biometric Service
+jest.mock("@services/BiometricService", () => ({
+  BiometricService: {
+    isBiometricAvailable: jest.fn(() => Promise.resolve(false)),
+    getBiometricTypeName: jest.fn(() => Promise.resolve("Biometric")),
+    isBiometricEnabled: jest.fn(() => Promise.resolve(false)),
+    enableBiometrics: jest.fn(() => Promise.resolve(true)),
+    disableBiometrics: jest.fn(() => Promise.resolve(true)),
+    authenticateWithBiometrics: jest.fn(() =>
+      Promise.resolve({
+        success: true,
+        credentials: { username: "test", password: "test" },
+      })
+    ),
+  },
+}));
+
+// Mock MaterialIcons
+jest.mock("@expo/vector-icons", () => ({
+  MaterialIcons: "MaterialIcons",
 }));
 
 // Mock dependencies
@@ -47,6 +70,8 @@ jest.mock("@contexts/AuthContext", () => ({
   ...jest.requireActual("@contexts/AuthContext"),
   useAuth: () => ({
     ...mockAuthState,
+    isBiometricAvailable: false,
+    isBiometricEnabled: false,
     login: mockLogin,
     register: jest.fn(),
     logout: jest.fn(),
@@ -58,6 +83,10 @@ jest.mock("@contexts/AuthContext", () => ({
     checkVerificationStatus: jest.fn(),
     forgotPassword: jest.fn(),
     resetPassword: jest.fn(),
+    loginWithBiometrics: jest.fn(),
+    enableBiometrics: jest.fn(),
+    disableBiometrics: jest.fn(),
+    checkBiometricAvailability: jest.fn(),
     getUserId: jest.fn(),
   }),
 }));
