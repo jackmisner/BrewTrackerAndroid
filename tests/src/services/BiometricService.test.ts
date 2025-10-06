@@ -14,6 +14,16 @@ import {
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 
+// Mock UnifiedLogger
+jest.mock("@services/logger/UnifiedLogger", () => ({
+  UnifiedLogger: {
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
+}));
+
 // Mock expo-local-authentication
 jest.mock("expo-local-authentication", () => ({
   hasHardwareAsync: jest.fn(),
@@ -409,19 +419,11 @@ describe("BiometricService", () => {
       mockAuthenticate.mockResolvedValue({ success: true });
       mockSetItem.mockRejectedValue(new Error("Storage error"));
 
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-
       await expect(
         BiometricService.enableBiometrics("testuser")
       ).rejects.toMatchObject({
         errorCode: BiometricErrorCode.UNKNOWN_ERROR,
       });
-
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Error enabling biometrics:",
-        expect.any(Error)
-      );
-      consoleSpy.mockRestore();
     });
   });
 
@@ -439,15 +441,9 @@ describe("BiometricService", () => {
     it("should return false on SecureStore errors", async () => {
       mockDeleteItem.mockRejectedValue(new Error("Delete error"));
 
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
       const result = await BiometricService.disableBiometrics();
 
       expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Error disabling biometrics:",
-        expect.any(Error)
-      );
-      consoleSpy.mockRestore();
     });
   });
 
@@ -618,7 +614,6 @@ describe("BiometricService", () => {
       mockAuthenticate.mockResolvedValue({ success: true });
       mockDeleteItem.mockResolvedValue(undefined);
 
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
       const result = await BiometricService.authenticateWithBiometrics();
 
       expect(result).toEqual({
@@ -628,10 +623,6 @@ describe("BiometricService", () => {
       });
       expect(mockDeleteItem).toHaveBeenCalledWith("biometric_username");
       expect(mockDeleteItem).toHaveBeenCalledWith("biometric_enabled");
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "BiometricService: Auto-disabled biometrics due to missing stored credentials"
-      );
-      consoleSpy.mockRestore();
     });
 
     it("should handle auto-disable errors gracefully when username missing", async () => {
@@ -643,19 +634,9 @@ describe("BiometricService", () => {
       mockAuthenticate.mockResolvedValue({ success: true });
       mockDeleteItem.mockRejectedValue(new Error("Delete error"));
 
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
-      const consoleLogSpy = jest.spyOn(console, "log").mockImplementation();
-
       const result = await BiometricService.authenticateWithBiometrics();
 
       expect(result.errorCode).toBe(BiometricErrorCode.CREDENTIALS_NOT_FOUND);
-      // Error comes from disableBiometrics() method
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error disabling biometrics:",
-        expect.any(Error)
-      );
-      consoleErrorSpy.mockRestore();
-      consoleLogSpy.mockRestore();
     });
   });
 

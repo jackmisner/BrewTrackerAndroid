@@ -74,6 +74,7 @@ import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
 import { QUERY_KEYS } from "@services/api/queryClient";
 import { useUnits } from "@contexts/UnitContext";
+import { BiometricEnrollmentModal } from "@src/components/BiometricEnrollmentModal";
 
 export default function DashboardScreen() {
   const { user } = useAuth();
@@ -738,157 +739,170 @@ export default function DashboardScreen() {
   const activeBrewSessions = dashboardData?.data.active_brew_sessions || [];
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      <NetworkStatusBanner onRetry={onRefresh} />
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Welcome back, {user?.username}!</Text>
-        <Text style={styles.subtitle}>Ready to brew something amazing?</Text>
-      </View>
-
-      <View style={styles.statsContainer}>
-        <TouchableOpacity style={styles.statCard} onPress={handleViewRecipes}>
-          <MaterialIcons
-            name="menu-book"
-            size={32}
-            color={theme.colors.primary}
-          />
-          <Text style={styles.statNumber}>{stats?.total_recipes || 0}</Text>
-          <Text style={styles.statLabel}>Recipes</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.statCard}
-          onPress={handleViewBrewSessions}
-        >
-          <MaterialIcons
-            name="science"
-            size={32}
-            color={theme.colors.primary}
-          />
-          <Text style={styles.statNumber}>
-            {stats?.active_brew_sessions || 0}
-          </Text>
-          <Text style={styles.statLabel}>Active Brews</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.statCard}
-          onPress={handleViewPublicRecipes}
-        >
-          <MaterialIcons name="public" size={32} color={theme.colors.primary} />
-          <Text style={styles.statNumber}>{stats?.public_recipes || 0}</Text>
-          <Text style={styles.statLabel}>Public</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-
-        <TouchableOpacity
-          style={styles.actionCard}
-          onPress={handleCreateRecipe}
-        >
-          <MaterialIcons name="add" size={24} color={theme.colors.primary} />
-          <View style={styles.actionContent}>
-            <Text style={styles.actionTitle}>Create New Recipe</Text>
-            <Text style={styles.actionSubtitle}>
-              Start building your next brew
-            </Text>
-          </View>
-          <MaterialIcons name="chevron-right" size={24} color="#ccc" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionCard}
-          onPress={handleStartBrewSession}
-        >
-          <MaterialIcons
-            name="play-arrow"
-            size={24}
-            color={theme.colors.primary}
-          />
-          <View style={styles.actionContent}>
-            <Text style={styles.actionTitle}>Start Brew Session</Text>
-            <Text style={styles.actionSubtitle}>Begin tracking a new brew</Text>
-          </View>
-          <MaterialIcons name="chevron-right" size={24} color="#ccc" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionCard}
-          onPress={handleViewPublicRecipes}
-        >
-          <MaterialIcons name="public" size={24} color={theme.colors.primary} />
-          <View style={styles.actionContent}>
-            <Text style={styles.actionTitle}>Browse Public Recipes</Text>
-            <Text style={styles.actionSubtitle}>
-              Discover community favorites
-            </Text>
-          </View>
-          <MaterialIcons name="chevron-right" size={24} color="#ccc" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Recent Recipes */}
-
-      {recentRecipes.length > 0 ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Recipes</Text>
-          <View style={styles.verticalList}>
-            {recentRecipes
-              .filter((recipe: Recipe) => recipe && recipe.name)
-              .map(renderRecentRecipe)}
-          </View>
+    <>
+      <BiometricEnrollmentModal />
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <NetworkStatusBanner onRetry={onRefresh} />
+        <View style={styles.header}>
+          <Text style={styles.greeting}>Welcome back, {user?.username}!</Text>
+          <Text style={styles.subtitle}>Ready to brew something amazing?</Text>
         </View>
-      ) : null}
 
-      {/* Recent Brew Sessions */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Brew Sessions</Text>
-        {activeBrewSessions.length > 0 ? (
-          <View style={styles.verticalList}>
-            {activeBrewSessions
-              .filter(session => session && session.id)
-              .map(renderActiveBrewSession)}
-          </View>
-        ) : (
-          <View style={styles.emptyState}>
-            <MaterialIcons name="science" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>No brew sessions yet</Text>
-            <Text style={styles.emptySubtext}>
-              Start your first brew session to track progress!
+        <View style={styles.statsContainer}>
+          <TouchableOpacity style={styles.statCard} onPress={handleViewRecipes}>
+            <MaterialIcons
+              name="menu-book"
+              size={32}
+              color={theme.colors.primary}
+            />
+            <Text style={styles.statNumber}>{stats?.total_recipes || 0}</Text>
+            <Text style={styles.statLabel}>Recipes</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.statCard}
+            onPress={handleViewBrewSessions}
+          >
+            <MaterialIcons
+              name="science"
+              size={32}
+              color={theme.colors.primary}
+            />
+            <Text style={styles.statNumber}>
+              {stats?.active_brew_sessions || 0}
             </Text>
+            <Text style={styles.statLabel}>Active Brews</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.statCard}
+            onPress={handleViewPublicRecipes}
+          >
+            <MaterialIcons
+              name="public"
+              size={32}
+              color={theme.colors.primary}
+            />
+            <Text style={styles.statNumber}>{stats?.public_recipes || 0}</Text>
+            <Text style={styles.statLabel}>Public</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={handleCreateRecipe}
+          >
+            <MaterialIcons name="add" size={24} color={theme.colors.primary} />
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>Create New Recipe</Text>
+              <Text style={styles.actionSubtitle}>
+                Start building your next brew
+              </Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#ccc" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={handleStartBrewSession}
+          >
+            <MaterialIcons
+              name="play-arrow"
+              size={24}
+              color={theme.colors.primary}
+            />
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>Start Brew Session</Text>
+              <Text style={styles.actionSubtitle}>
+                Begin tracking a new brew
+              </Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#ccc" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={handleViewPublicRecipes}
+          >
+            <MaterialIcons
+              name="public"
+              size={24}
+              color={theme.colors.primary}
+            />
+            <View style={styles.actionContent}>
+              <Text style={styles.actionTitle}>Browse Public Recipes</Text>
+              <Text style={styles.actionSubtitle}>
+                Discover community favorites
+              </Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#ccc" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Recent Recipes */}
+
+        {recentRecipes.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Recent Recipes</Text>
+            <View style={styles.verticalList}>
+              {recentRecipes
+                .filter((recipe: Recipe) => recipe && recipe.name)
+                .map(renderRecentRecipe)}
+            </View>
           </View>
-        )}
-      </View>
+        ) : null}
 
-      <View style={styles.versionFooter}>
-        <Text style={styles.versionFooterText}>
-          BrewTracker Mobile v{Constants.expoConfig?.version || "0.1.0"}
-        </Text>
-      </View>
+        {/* Recent Brew Sessions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recent Brew Sessions</Text>
+          {activeBrewSessions.length > 0 ? (
+            <View style={styles.verticalList}>
+              {activeBrewSessions
+                .filter(session => session && session.id)
+                .map(renderActiveBrewSession)}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <MaterialIcons name="science" size={48} color="#ccc" />
+              <Text style={styles.emptyText}>No brew sessions yet</Text>
+              <Text style={styles.emptySubtext}>
+                Start your first brew session to track progress!
+              </Text>
+            </View>
+          )}
+        </View>
 
-      {/* Context Menus */}
-      <RecipeContextMenu
-        visible={recipeContextMenu.visible}
-        recipe={recipeContextMenu.selectedItem}
-        actions={recipeContextMenuActions}
-        onClose={recipeContextMenu.hideMenu}
-        position={recipeContextMenu.position}
-      />
+        <View style={styles.versionFooter}>
+          <Text style={styles.versionFooterText}>
+            BrewTracker Mobile v{Constants.expoConfig?.version || "0.1.0"}
+          </Text>
+        </View>
 
-      <BrewSessionContextMenu
-        visible={brewSessionContextMenu.visible}
-        brewSession={brewSessionContextMenu.selectedItem}
-        actions={brewSessionContextMenuActions}
-        onClose={brewSessionContextMenu.hideMenu}
-        position={brewSessionContextMenu.position}
-      />
-    </ScrollView>
+        {/* Context Menus */}
+        <RecipeContextMenu
+          visible={recipeContextMenu.visible}
+          recipe={recipeContextMenu.selectedItem}
+          actions={recipeContextMenuActions}
+          onClose={recipeContextMenu.hideMenu}
+          position={recipeContextMenu.position}
+        />
+
+        <BrewSessionContextMenu
+          visible={brewSessionContextMenu.visible}
+          brewSession={brewSessionContextMenu.selectedItem}
+          actions={brewSessionContextMenuActions}
+          onClose={brewSessionContextMenu.hideMenu}
+          position={brewSessionContextMenu.position}
+        />
+      </ScrollView>
+    </>
   );
 }

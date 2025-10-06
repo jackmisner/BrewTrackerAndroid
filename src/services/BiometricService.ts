@@ -36,6 +36,8 @@
 
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
+import { STORAGE_KEYS } from "./config";
 
 /**
  * Biometric error codes
@@ -82,8 +84,10 @@ export interface BiometricCapability {
  */
 export class BiometricService {
   // SecureStore keys for biometric authentication
-  private static readonly BIOMETRIC_USERNAME_KEY = "biometric_username";
-  private static readonly BIOMETRIC_ENABLED_KEY = "biometric_enabled";
+  private static readonly BIOMETRIC_USERNAME_KEY =
+    STORAGE_KEYS.BIOMETRIC_USERNAME;
+  private static readonly BIOMETRIC_ENABLED_KEY =
+    STORAGE_KEYS.BIOMETRIC_ENABLED;
 
   /**
    * Check if biometric authentication is available on the device
@@ -221,13 +225,35 @@ export class BiometricService {
    */
   static async enableBiometrics(username: string): Promise<boolean> {
     try {
+      await UnifiedLogger.info(
+        "biometric",
+        "Enabling biometric authentication",
+        {
+          username: `${username.substring(0, 3)}***`,
+        }
+      );
+
       // Verify biometrics are available
       const isAvailable = await this.isBiometricAvailable();
+      await UnifiedLogger.debug("biometric", "Biometric availability check", {
+        isAvailable,
+      });
+
       if (!isAvailable) {
+        await UnifiedLogger.warn(
+          "biometric",
+          "Cannot enable biometrics - hardware not available"
+        );
         const error = new Error("Biometric authentication is not available");
         (error as any).errorCode = BiometricErrorCode.NOT_AVAILABLE;
         throw error;
       }
+
+      await UnifiedLogger.debug(
+        "biometric",
+        "Prompting user to verify biometric for enrollment"
+      );
+
       // Verify user can authenticate with biometrics before enabling
       const authResult = await LocalAuthentication.authenticateAsync({
         promptMessage: "Verify your biometric to enable this feature",
@@ -235,7 +261,16 @@ export class BiometricService {
         disableDeviceFallback: true,
       });
 
+      await UnifiedLogger.debug("biometric", "Biometric verification result", {
+        success: authResult.success,
+        error: !authResult.success ? authResult.error : undefined,
+      });
+
       if (!authResult.success) {
+        await UnifiedLogger.warn("biometric", "Biometric verification failed", {
+          platformError: authResult.error,
+        });
+
         const error = new Error("Biometric verification failed");
         // Map platform error to structured code
         if (authResult.error === "user_cancel") {
@@ -252,9 +287,21 @@ export class BiometricService {
       await SecureStore.setItemAsync(this.BIOMETRIC_USERNAME_KEY, username);
       await SecureStore.setItemAsync(this.BIOMETRIC_ENABLED_KEY, "true");
 
+      await UnifiedLogger.info(
+        "biometric",
+        "Biometric authentication enabled successfully",
+        {
+          username: `${username.substring(0, 3)}***`,
+        }
+      );
+
       return true;
     } catch (error) {
-      console.error("Error enabling biometrics:", error);
+      await UnifiedLogger.error("biometric", "Failed to enable biometrics", {
+        error: error instanceof Error ? error.message : String(error),
+        errorCode: (error as any).errorCode,
+      });
+
       // Preserve errorCode if it exists, otherwise add UNKNOWN_ERROR
       if (error instanceof Error && !(error as any).errorCode) {
         (error as any).errorCode = BiometricErrorCode.UNKNOWN_ERROR;
@@ -272,12 +319,24 @@ export class BiometricService {
    */
   static async disableBiometrics(): Promise<boolean> {
     try {
+      await UnifiedLogger.info(
+        "biometric",
+        "Disabling biometric authentication"
+      );
+
       await SecureStore.deleteItemAsync(this.BIOMETRIC_USERNAME_KEY);
       await SecureStore.deleteItemAsync(this.BIOMETRIC_ENABLED_KEY);
 
+      await UnifiedLogger.info(
+        "biometric",
+        "Biometric authentication disabled successfully"
+      );
+
       return true;
     } catch (error) {
-      console.error("Error disabling biometrics:", error);
+      await UnifiedLogger.error("biometric", "Failed to disable biometrics", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return false;
     }
   }
@@ -296,9 +355,23 @@ export class BiometricService {
     promptMessage?: string
   ): Promise<BiometricAuthResult> {
     try {
+      await UnifiedLogger.debug(
+        "biometric",
+        "BiometricService.authenticateWithBiometrics called",
+        { hasCustomPrompt: !!promptMessage }
+      );
+
       // Check if biometrics are enabled
       const isEnabled = await this.isBiometricEnabled();
+      await UnifiedLogger.debug("biometric", "Biometric enabled check", {
+        isEnabled,
+      });
+
       if (!isEnabled) {
+        await UnifiedLogger.warn(
+          "biometric",
+          "Biometric authentication not enabled"
+        );
         return {
           success: false,
           error: "Biometric authentication is not enabled",
@@ -308,7 +381,15 @@ export class BiometricService {
 
       // Check if biometrics are available
       const isAvailable = await this.isBiometricAvailable();
+      await UnifiedLogger.debug("biometric", "Biometric hardware check", {
+        isAvailable,
+      });
+
       if (!isAvailable) {
+        await UnifiedLogger.warn(
+          "biometric",
+          "Biometric hardware not available"
+        );
         return {
           success: false,
           error: "Biometric authentication is not available",
@@ -320,6 +401,15 @@ export class BiometricService {
       const biometricType = await this.getBiometricTypeName();
       const defaultMessage = `Authenticate with ${biometricType}`;
 
+      await UnifiedLogger.debug(
+        "biometric",
+        "Prompting user for biometric authentication",
+        {
+          biometricType,
+          promptMessage: promptMessage || defaultMessage,
+        }
+      );
+
       // Attempt biometric authentication
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: promptMessage || defaultMessage,
@@ -327,6 +417,15 @@ export class BiometricService {
         fallbackLabel: "Use Password",
         disableDeviceFallback: false,
       });
+
+      await UnifiedLogger.debug(
+        "biometric",
+        "LocalAuthentication.authenticateAsync result",
+        {
+          success: result.success,
+          error: !result.success ? result.error : undefined,
+        }
+      );
 
       if (!result.success) {
         // Handle authentication failure - map platform errors to structured codes
@@ -350,6 +449,16 @@ export class BiometricService {
           errorCode = BiometricErrorCode.USER_FALLBACK;
         }
 
+        await UnifiedLogger.warn(
+          "biometric",
+          "Biometric authentication failed",
+          {
+            platformError: result.error,
+            mappedErrorCode: errorCode,
+            errorMessage,
+          }
+        );
+
         return {
           success: false,
           error: errorMessage,
@@ -357,22 +466,44 @@ export class BiometricService {
         };
       }
 
+      await UnifiedLogger.debug(
+        "biometric",
+        "Biometric authentication successful, retrieving stored username"
+      );
+
       // Retrieve stored username
       const username = await SecureStore.getItemAsync(
         this.BIOMETRIC_USERNAME_KEY
       );
 
+      await UnifiedLogger.debug("biometric", "Stored username retrieval", {
+        hasUsername: !!username,
+        username: username ? `${username.substring(0, 3)}***` : "null",
+      });
+
       if (!username) {
+        await UnifiedLogger.warn(
+          "biometric",
+          "No stored username found, auto-disabling biometrics"
+        );
+
         // Self-heal: disable biometrics to prevent future failed attempts
         try {
           await this.disableBiometrics();
-          console.log(
-            "BiometricService: Auto-disabled biometrics due to missing stored credentials"
+          await UnifiedLogger.info(
+            "biometric",
+            "Auto-disabled biometrics due to missing stored credentials"
           );
         } catch (disableError) {
-          console.error(
-            "BiometricService: Failed to auto-disable biometrics:",
-            disableError
+          await UnifiedLogger.error(
+            "biometric",
+            "Failed to auto-disable biometrics",
+            {
+              error:
+                disableError instanceof Error
+                  ? disableError.message
+                  : String(disableError),
+            }
           );
         }
 
@@ -383,12 +514,28 @@ export class BiometricService {
         };
       }
 
+      await UnifiedLogger.info(
+        "biometric",
+        "BiometricService.authenticateWithBiometrics successful",
+        {
+          username: `${username.substring(0, 3)}***`,
+        }
+      );
+
       return {
         success: true,
         username,
       };
     } catch (error) {
-      console.error("Error authenticating with biometrics:", error);
+      await UnifiedLogger.error(
+        "biometric",
+        "BiometricService.authenticateWithBiometrics threw exception",
+        {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        }
+      );
+
       return {
         success: false,
         error:

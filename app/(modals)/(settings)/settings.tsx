@@ -205,7 +205,7 @@ export default function SettingsScreen() {
         await checkBiometricAvailability();
         Alert.alert(
           "Success",
-          `${biometricType} authentication has been enabled. You can now use ${biometricType.toLowerCase()} to log in.`
+          `${biometricType} authentication has been enabled. You can now use ${biometricType.toLowerCase()}s to log in.`
         );
       } catch (error: any) {
         console.error("Failed to enable biometrics:", error);
@@ -220,7 +220,7 @@ export default function SettingsScreen() {
           Alert.alert(
             "Error",
             error.message ||
-              `Failed to enable ${biometricType.toLowerCase()} authentication. Please try again.`
+              `Failed to enable ${biometricType.toLowerCase()}s authentication. Please try again.`
           );
         }
       } finally {
@@ -230,7 +230,7 @@ export default function SettingsScreen() {
       // Disable biometrics - confirm and disable
       Alert.alert(
         `Disable ${biometricType}?`,
-        `This will disable ${biometricType.toLowerCase()} login. You'll need to enter your password to log in.`,
+        `This will disable ${biometricType.toLowerCase()}s login. You'll need to enter your password to log in.`,
         [
           { text: "Cancel", style: "cancel" },
           {
@@ -249,7 +249,7 @@ export default function SettingsScreen() {
                 console.error("Failed to disable biometrics:", error);
                 Alert.alert(
                   "Error",
-                  `Failed to disable ${biometricType.toLowerCase()} authentication. Please try again.`
+                  `Failed to disable ${biometricType.toLowerCase()}s authentication. Please try again.`
                 );
               } finally {
                 setIsTogglingBiometric(false);
@@ -438,7 +438,7 @@ export default function SettingsScreen() {
                   testID={TEST_IDS.settings.biometricStatus}
                 >
                   {isBiometricEnabled
-                    ? `Enabled - Use ${biometricType.toLowerCase()} to log in`
+                    ? `Enabled - Use ${biometricType.toLowerCase()}s to log in`
                     : `Disabled - Log in with password`}
                 </Text>
               </View>
