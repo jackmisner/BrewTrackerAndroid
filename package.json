@@ -1,7 +1,7 @@
 {
   "name": "brewtracker",
   "main": "expo-router/entry",
-  "version": "2.4.10",
+  "version": "2.5.3",
   "license": "GPL-3.0-or-later",
   "scripts": {
     "start": "expo start",
@@ -61,6 +61,7 @@
     "expo-image": "~3.0.8",
     "expo-linear-gradient": "~15.0.7",
     "expo-linking": "~8.0.8",
+    "expo-local-authentication": "~17.0.7",
     "expo-media-library": "~18.2.0",
     "expo-notifications": "~0.32.12",
     "expo-router": "~6.0.10",

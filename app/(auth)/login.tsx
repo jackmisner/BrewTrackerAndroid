@@ -18,7 +18,7 @@
  * - Input handling with basic validation
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -29,20 +29,47 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
 import { loginStyles } from "@styles/auth/loginStyles";
+import {
+  BiometricService,
+  BiometricErrorCode,
+} from "@services/BiometricService";
+import { TEST_IDS } from "@src/constants/testIDs";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 export default function LoginScreen() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [biometricType, setBiometricType] = useState<string>("Biometric");
 
-  const { login, error, clearError } = useAuth();
+  const {
+    login,
+    error,
+    clearError,
+    isBiometricAvailable,
+    isBiometricEnabled,
+    loginWithBiometrics,
+    checkBiometricAvailability,
+  } = useAuth();
   const router = useRouter();
   const { colors } = useTheme();
   const styles = loginStyles(colors);
+
+  // Check biometric availability and load biometric type name
+  useEffect(() => {
+    const loadBiometricInfo = async () => {
+      await checkBiometricAvailability();
+      const typeName = await BiometricService.getBiometricTypeName();
+      setBiometricType(typeName);
+    };
+    loadBiometricInfo();
+  }, [checkBiometricAvailability]);
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -55,15 +82,83 @@ export default function LoginScreen() {
       setIsLoading(true);
       await login({ username, password });
 
-      // Add a small delay to ensure state updates are processed
-      setTimeout(() => {
-        router.replace("/");
-      }, 100);
+      // Check biometric state directly (don't rely on context state which updates async)
+      // Wrap in try/catch to prevent blocking navigation on failure
+      try {
+        const isAvailable = await BiometricService.isBiometricAvailable();
+        const isEnabled = await BiometricService.isBiometricEnabled();
+
+        await UnifiedLogger.debug("login", "Post-login biometric check", {
+          isAvailable,
+          isEnabled,
+          willShowPrompt: isAvailable && !isEnabled,
+        });
+
+        // Set flag for dashboard to show biometric enrollment prompt
+        if (isAvailable && !isEnabled) {
+          await UnifiedLogger.info(
+            "login",
+            "Flagging biometric enrollment prompt for dashboard"
+          );
+          await AsyncStorage.setItem("show_biometric_prompt", "true");
+          await AsyncStorage.setItem("biometric_prompt_username", username);
+        } else {
+          await UnifiedLogger.debug("login", "Skipping biometric prompt flag", {
+            reason: !isAvailable
+              ? "Biometrics not available"
+              : "Biometrics already enabled",
+          });
+        }
+      } catch (biometricError: any) {
+        // Silently handle biometric check failures - don't block navigation
+        await UnifiedLogger.error(
+          "login",
+          "Failed biometric check or AsyncStorage operation",
+          {
+            error: biometricError,
+            message: biometricError?.message,
+            username,
+          }
+        );
+        // Continue to navigation - user experience is not affected
+      }
+
+      // Navigate - index.tsx will handle redirect to dashboard
+      // If biometric prompt flag is set, dashboard will show the modal
+      setIsLoading(false);
+      router.replace("/");
     } catch (error: any) {
+      setIsLoading(false);
       Alert.alert(
         "Login Failed",
         error.message || "An error occurred during login"
       );
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    try {
+      setIsLoading(true);
+      clearError();
+      await loginWithBiometrics();
+
+      // Navigate on successful biometric login
+      setTimeout(() => {
+        router.replace("/");
+      }, 100);
+    } catch (error: any) {
+      // Suppress alerts for user-initiated cancellations
+      const errorCode = error.errorCode || error.code;
+      const shouldSuppressAlert =
+        errorCode === BiometricErrorCode.USER_CANCELLED ||
+        errorCode === BiometricErrorCode.SYSTEM_CANCELLED;
+
+      if (!shouldSuppressAlert) {
+        Alert.alert(
+          "Biometric Login Failed",
+          error.message || "An error occurred during biometric authentication"
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -84,6 +179,28 @@ export default function LoginScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>BrewTracker</Text>
           <Text style={styles.subtitle}>Sign in to your account</Text>
+          {isBiometricEnabled && isBiometricAvailable && (
+            <TouchableOpacity
+              style={styles.biometricButton}
+              onPress={handleBiometricLogin}
+              disabled={isLoading}
+              testID={TEST_IDS.auth.biometricLoginButton}
+            >
+              <MaterialIcons
+                name={
+                  biometricType.toLowerCase().includes("face")
+                    ? "face"
+                    : "fingerprint"
+                }
+                size={48}
+                color={colors.primary}
+                testID={TEST_IDS.auth.biometricIcon}
+              />
+              <Text style={styles.biometricText}>
+                Sign in with {biometricType}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.form}>

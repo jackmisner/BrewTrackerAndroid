@@ -168,7 +168,8 @@ export function detectEntityTypeFromUrl(url: string): EntityType | null {
     },
     // Auth endpoints that return user objects
     {
-      pattern: /\/auth\/(profile|login|register|google)(\/|\?|$)/i,
+      pattern:
+        /\/auth\/(profile|login|register|google|refresh-token)(\/|\?|$)/i,
       entityType: "user",
     },
     // Then general resources - allow query parameters

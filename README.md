@@ -2,7 +2,7 @@
 
 A production-ready React Native mobile app for the BrewTracker homebrewing platform, built with Expo. Features comprehensive offline-first architecture, advanced brewing tools, and seamless synchronization with the Flask backend.
 
-**Version:** 2.4.10 | **Platform:** Android | **Architecture:** React Native 0.81.4 + Expo 54
+**Version:** 2.5.3 | **Platform:** Android | **Architecture:** React Native 0.81.4 + Expo 54
 
 ## Table of Contents
 
@@ -44,10 +44,14 @@ A production-ready React Native mobile app for the BrewTracker homebrewing platf
 
 ### Security & Authentication
 
-- **JWT Authentication**: Secure token storage in Expo SecureStore
+- **JWT Authentication**: Secure token storage in Expo SecureStore (hardware-backed encryption)
+- **Biometric Authentication**: Fingerprint/face recognition login with token refresh (no password required after setup)
+- **Token Preservation**: JWT tokens preserved during logout when biometrics enabled for seamless re-authentication
+- **Biometric Enrollment Modal**: Dashboard-based enrollment prompt after first successful login
 - **Email Verification**: Complete registration flow with email confirmation
 - **Password Reset**: Forgot password workflow with token validation
 - **Secure API**: Hardened API service with retry logic and error normalization
+- **Comprehensive Logging**: UnifiedLogger integration for complete authentication flow debugging
 
 ### Brewing Tools
 
@@ -128,14 +132,14 @@ BrewTrackerAndroid/                                   # React Native Android app
 ├── app/                                              # Expo Router file-based routing structure
 │   ├── (auth)/                                       # Authentication flow screens
 │   │   ├── _layout.tsx                               # Authentication stack layout configuration
-│   │   ├── login.tsx                                 # Login screen with JWT authentication and navigation
+│   │   ├── login.tsx                                 # Login screen with JWT + biometric auth, sets enrollment flags
 │   │   ├── register.tsx                              # User registration with real-time validation
 │   │   ├── verifyEmail.tsx                           # Email verification with token input and resend functionality
 │   │   ├── forgotPassword.tsx                        # Password reset request with email validation
 │   │   └── resetPassword.tsx                         # Password reset confirmation with token validation
 │   ├── (tabs)/                                       # Main application tab navigation
 │   │   ├── _layout.tsx                               # Tab navigation layout with Material Icons
-│   │   ├── index.tsx                                 # Dashboard/home screen with brewing overview and recent activity
+│   │   ├── index.tsx                                 # Dashboard with BiometricEnrollmentModal, brewing overview, recent activity
 │   │   ├── recipes.tsx                               # Recipe management and browsing with search and filtering
 │   │   ├── brewSessions.tsx                          # Brew session tracking and management with status filtering
 │   │   ├── utilities.tsx                             # Brewing calculators and utility tools grid
@@ -209,9 +213,10 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   │   ├── BrewSessionContextMenu.tsx        # Brew session-specific context menu actions (view, edit, delete)
 │   │   │   │   └── contextMenuUtils.ts               # Shared utilities for context menu operations
 │   │   │   └── ModalHeader.tsx                       # Reusable modal header component with close button
+│   │   ├── BiometricEnrollmentModal.tsx              # Dashboard biometric enrollment prompt after first login
 │   │   └── NetworkStatusBanner.tsx                   # Network connectivity status banner component with online/offline indicator
 │   ├── contexts/                                     # React contexts for global state
-│   │   ├── AuthContext.tsx                           # Authentication context with secure token storage (JWT in SecureStore)
+│   │   ├── AuthContext.tsx                           # Authentication with JWT, biometric auth, token preservation, UnifiedLogger
 │   │   ├── CalculatorsContext.tsx                    # Calculator state management and shared logic with useReducer
 │   │   ├── DeveloperContext.tsx                      # Developer options and debugging context for dev mode
 │   │   ├── NetworkContext.tsx                        # Network connectivity detection for offline functionality (NetInfo)
@@ -259,7 +264,8 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── StrikeWaterCalculator.ts              # Mash strike water temperature calculations
 │   │   │   ├── UnitConverter.ts                      # Unit conversion utilities and logic (volume, weight, temperature)
 │   │   │   └── YeastPitchRateCalculator.ts           # Yeast pitching rate and viability calculations
-│   │   ├── config.ts                                 # Service configuration and constants (API URLs, timeouts)
+│   │   ├── BiometricService.ts                       # Biometric auth (fingerprint/face) with UnifiedLogger integration
+│   │   ├── config.ts                                 # Service configuration and constants (API URLs, timeouts, storage keys)
 │   │   ├── NotificationService.ts                    # Local notification service for timers and alerts (expo-notifications)
 │   │   ├── storageService.ts                         # Storage service for file operations and permissions
 │   │   └── TimerPersistenceService.ts                # Timer state persistence for boil timer (AsyncStorage)
@@ -287,7 +293,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   └── index.ts                                  # Central type exports
 │   └── styles/                                       # StyleSheet definitions organized by feature
 │       ├── auth/                                     # Authentication screen styles
-│       │   ├── loginStyles.ts                        # Login screen styling with theme support
+│       │   ├── loginStyles.ts                        # Login screen styling with theme support + biometric button
 │       │   ├── registerStyles.ts                     # Registration screen styling
 │       │   └── verifyEmailStyles.ts                  # Email verification screen styling
 │       ├── tabs/                                     # Tab navigation screen styles
@@ -328,7 +334,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │           ├── colors.ts                             # Theme color definitions (light/dark mode)
 │           ├── buttons.ts                            # Reusable button styles
 │           └── sharedStyles.ts                       # Common shared styling utilities
-├── tests/                                            # Comprehensive test suite (3148 tests across 129 suites)
+├── tests/                                            # Comprehensive test suite (3218 tests across 131 suites)
 ├── plugins/                                          # Expo config plugins
 │   ├── withConditionalNetworkSecurity.js             # Network security configuration for development/production
 │   └── withSingleTaskLaunchMode.js                   # Android launch mode configuration
@@ -339,7 +345,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   └── detect-ip.js                                  # Auto-detect local IP for development
 ├── assets/                                           # Static assets (images, fonts, icons)
 ├── app.json                                          # Expo configuration (Android-only, New Architecture enabled)
-├── package.json                                      # Dependencies and scripts (v2.4.10)
+├── package.json                                      # Dependencies and scripts
 ├── eas.json                                          # EAS Build configuration (dev/preview/production)
 ├── eslint.config.js                                  # ESLint configuration (fallback linter)
 ├── .oxlintrc.json                                    # oxlint configuration (primary linter - 100x faster)
@@ -464,8 +470,8 @@ This approach provides:
 
 - **TypeScript**: Strict type checking with `npm run type-check` (must pass for all commits)
 - **Linting**: oxlint primary linter (100x faster than ESLint), ESLint fallback available
-- **Testing**: Comprehensive test suite with 3148 passing tests across 129 test suites
-- **Test Coverage**: High coverage across all critical paths
+- **Testing**: Comprehensive test suite with 3218 passing tests across 131 test suites
+- **Test Coverage**: High coverage across all critical paths including authentication and biometrics
 - **Quality Gates**: All CRUD operations, advanced features, and UI components fully tested
 - **CI/CD**: Automated quality checks ensure code standards
 
@@ -551,14 +557,6 @@ The app uses Expo Application Services (EAS) for builds:
 - **Development builds**: Include dev tools, connect to local backend
 - **Preview builds**: Production mode with debugging enabled
 - **Production builds**: Optimized for Google Play Store release
-
-**Build Configuration:**
-
-- Android package: `com.brewtracker.android`
-- Version: 2.4.10 (build 149)
-- Runtime version: 2.4.10
-- OTA updates: Enabled via EAS Update
-- New Architecture: Enabled for performance
 
 ## API Security & Hardening
 
@@ -703,7 +701,7 @@ BrewTrackerAndroid features a fully implemented V2 offline-first system with com
 - **Sync Conflict Resolution**: Robust handling of concurrent edits across devices
 - **Performance Optimization**: Efficient cache management with memory and storage optimization
 
-**Overall Test Suite:** 3148 passing tests across 129 test suites covering all features
+**Overall Test Suite:** 3218 passing tests across 131 test suites covering all features
 
 ---
 
@@ -721,7 +719,7 @@ BrewTrackerAndroid features a fully implemented V2 offline-first system with com
 - **Brew Session Tracking**: Full CRUD operations with comprehensive fermentation data management and interactive charts as well as Dry Hop tracking/management
 - **Brewing Calculators**: ABV, dilution, strike water, hydrometer correction, unit converter, and boil timer with notifications
 - **Advanced UI/UX**: Touch-optimized interface (48dp targets), context menus, gesture navigation, and comprehensive theme support
-- **Testing Infrastructure**: 3148 passing tests across 129 test suites with comprehensive coverage
+- **Testing Infrastructure**: 3218 passing tests across 131 test suites with comprehensive coverage
 
 ### Advanced Technical Features
 

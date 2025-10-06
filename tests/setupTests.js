@@ -9,11 +9,14 @@ jest.mock("react-native", () => {
   return {
     View: "View",
     Text: "Text",
+    TextInput: "TextInput",
     ScrollView: "ScrollView",
     TouchableOpacity: "TouchableOpacity",
     Switch: "Switch",
     ActivityIndicator: "ActivityIndicator",
     RefreshControl: "RefreshControl",
+    Modal: "Modal",
+    KeyboardAvoidingView: "KeyboardAvoidingView",
     Alert: {
       alert: jest.fn(),
     },
@@ -41,6 +44,20 @@ jest.mock("expo-secure-store", () => ({
   getItemAsync: jest.fn(),
   setItemAsync: jest.fn(),
   deleteItemAsync: jest.fn(),
+}));
+
+jest.mock("expo-local-authentication", () => ({
+  hasHardwareAsync: jest.fn(() => Promise.resolve(true)),
+  isEnrolledAsync: jest.fn(() => Promise.resolve(true)),
+  supportedAuthenticationTypesAsync: jest.fn(() => Promise.resolve([1])), // 1 = FINGERPRINT
+  authenticateAsync: jest.fn(() =>
+    Promise.resolve({ success: true, error: undefined })
+  ),
+  AuthenticationType: {
+    FINGERPRINT: 1,
+    FACIAL_RECOGNITION: 2,
+    IRIS: 3,
+  },
 }));
 
 jest.mock("expo-device", () => ({

@@ -36,7 +36,7 @@
  * ```
  */
 
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -53,8 +53,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme, ThemeMode } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import { useDeveloper } from "@contexts/DeveloperContext";
+import { useAuth } from "@contexts/AuthContext";
 import { UnitSystem, STORAGE_KEYS_V2 } from "@src/types";
 import { StaticDataService } from "@services/offlineV2/StaticDataService";
+import {
+  BiometricService,
+  BiometricErrorCode,
+} from "@services/BiometricService";
 import { settingsStyles } from "@styles/modals/settingsStyles";
 import { TEST_IDS } from "@src/constants/testIDs";
 
@@ -64,7 +69,32 @@ export default function SettingsScreen() {
   const { unitSystem, updateUnitSystem, loading: unitsLoading } = useUnits();
   const { isDeveloperMode, networkSimulationMode, setNetworkSimulationMode } =
     useDeveloper();
+  const {
+    isBiometricAvailable,
+    isBiometricEnabled,
+    enableBiometrics,
+    disableBiometrics,
+    checkBiometricAvailability,
+    user,
+  } = useAuth();
   const styles = settingsStyles(themeContext);
+
+  const [biometricType, setBiometricType] = useState<string>("Biometric");
+  const [isTogglingBiometric, setIsTogglingBiometric] = useState(false);
+
+  // Load biometric type name on mount
+  React.useEffect(() => {
+    const loadBiometricType = async () => {
+      try {
+        const typeName = await BiometricService.getBiometricTypeName();
+        setBiometricType(typeName);
+      } catch (error) {
+        console.warn("Failed to load biometric type:", error);
+        setBiometricType("Biometric");
+      }
+    };
+    loadBiometricType();
+  }, []);
 
   const handleGoBack = () => {
     router.back();
@@ -159,6 +189,76 @@ export default function SettingsScreen() {
         },
       ]
     );
+  };
+
+  const handleBiometricToggle = async (value: boolean) => {
+    if (value) {
+      // Enable biometrics - no password needed, uses JWT token refresh
+      if (!user?.username) {
+        Alert.alert("Error", "Unable to retrieve username");
+        return;
+      }
+
+      try {
+        setIsTogglingBiometric(true);
+        await enableBiometrics(user.username);
+        await checkBiometricAvailability();
+        Alert.alert(
+          "Success",
+          `${biometricType} authentication has been enabled. You can now use ${biometricType.toLowerCase()}s to log in.`
+        );
+      } catch (error: any) {
+        console.error("Failed to enable biometrics:", error);
+
+        // Suppress alerts for user-initiated cancellations
+        const errorCode = error.errorCode || error.code;
+        const shouldSuppressAlert =
+          errorCode === BiometricErrorCode.USER_CANCELLED ||
+          errorCode === BiometricErrorCode.SYSTEM_CANCELLED;
+
+        if (!shouldSuppressAlert) {
+          Alert.alert(
+            "Error",
+            error.message ||
+              `Failed to enable ${biometricType.toLowerCase()}s authentication. Please try again.`
+          );
+        }
+      } finally {
+        setIsTogglingBiometric(false);
+      }
+    } else {
+      // Disable biometrics - confirm and disable
+      Alert.alert(
+        `Disable ${biometricType}?`,
+        `This will disable ${biometricType.toLowerCase()}s login. You'll need to enter your password to log in.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Disable",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                setIsTogglingBiometric(true);
+                await disableBiometrics();
+                await checkBiometricAvailability();
+                Alert.alert(
+                  "Success",
+                  `${biometricType} authentication has been disabled.`
+                );
+              } catch (error) {
+                console.error("Failed to disable biometrics:", error);
+                Alert.alert(
+                  "Error",
+                  `Failed to disable ${biometricType.toLowerCase()}s authentication. Please try again.`
+                );
+              } finally {
+                setIsTogglingBiometric(false);
+              }
+            },
+          },
+        ]
+      );
+    }
   };
 
   const renderThemeOption = (
@@ -311,6 +411,51 @@ export default function SettingsScreen() {
             />
           </TouchableOpacity>
         </View>
+
+        {/* Security Section */}
+        {isBiometricAvailable && (
+          <View
+            style={styles.section}
+            testID={TEST_IDS.settings.securitySection}
+          >
+            <Text style={styles.sectionTitle}>Security</Text>
+
+            <View style={styles.menuItem}>
+              <MaterialIcons
+                name="fingerprint"
+                size={24}
+                color={themeContext.colors.textSecondary}
+              />
+              <View style={styles.menuContent}>
+                <Text
+                  style={styles.menuText}
+                  testID={TEST_IDS.settings.biometricLabel}
+                >
+                  {biometricType} Authentication
+                </Text>
+                <Text
+                  style={styles.menuSubtext}
+                  testID={TEST_IDS.settings.biometricStatus}
+                >
+                  {isBiometricEnabled
+                    ? `Enabled - Use ${biometricType.toLowerCase()}s to log in`
+                    : `Disabled - Log in with password`}
+                </Text>
+              </View>
+              <Switch
+                value={isBiometricEnabled}
+                onValueChange={handleBiometricToggle}
+                disabled={isTogglingBiometric}
+                trackColor={{
+                  false: themeContext.colors.textMuted,
+                  true: themeContext.colors.primary,
+                }}
+                thumbColor={themeContext.colors.background}
+                testID={TEST_IDS.settings.biometricToggle}
+              />
+            </View>
+          </View>
+        )}
 
         {/* Notifications Section */}
         <View style={styles.section}>

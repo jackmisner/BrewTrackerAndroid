@@ -647,18 +647,22 @@ const ApiService = {
 
     getVerificationStatus: (): Promise<
       AxiosResponse<VerificationStatusResponse>
-    > => api.get("/auth/verification-status"),
+    > => api.get(ENDPOINTS.AUTH.VERIFICATION_STATUS),
 
     // Password reset endpoints
     forgotPassword: (
       data: ForgotPasswordRequest
     ): Promise<AxiosResponse<ForgotPasswordResponse>> =>
-      api.post("/auth/forgot-password", data),
+      api.post(ENDPOINTS.AUTH.FORGOT_PASSWORD, data),
 
     resetPassword: (
       data: ResetPasswordRequest
     ): Promise<AxiosResponse<ResetPasswordResponse>> =>
-      api.post("/auth/reset-password", data),
+      api.post(ENDPOINTS.AUTH.RESET_PASSWORD, data),
+
+    // Token refresh for biometric re-authentication
+    refreshToken: (): Promise<AxiosResponse<LoginResponse>> =>
+      api.post(ENDPOINTS.AUTH.REFRESH_TOKEN),
   },
 
   // User settings endpoints

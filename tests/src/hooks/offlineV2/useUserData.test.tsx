@@ -61,6 +61,33 @@ describe("useUserData hooks", () => {
     email: "test@example.com",
   };
 
+  // Helper to create complete mock auth context with biometric fields
+  const createMockAuthValue = (overrides: any = {}) => ({
+    user: mockUser as User,
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    isBiometricAvailable: false,
+    isBiometricEnabled: false,
+    login: jest.fn(),
+    logout: jest.fn(),
+    register: jest.fn(),
+    refreshUser: jest.fn(),
+    clearError: jest.fn(),
+    signInWithGoogle: jest.fn(),
+    verifyEmail: jest.fn(),
+    resendVerification: jest.fn(),
+    checkVerificationStatus: jest.fn(),
+    forgotPassword: jest.fn(),
+    resetPassword: jest.fn(),
+    loginWithBiometrics: jest.fn(),
+    enableBiometrics: jest.fn(),
+    disableBiometrics: jest.fn(),
+    checkBiometricAvailability: jest.fn(),
+    getUserId: jest.fn().mockReturnValue(mockUser.id),
+    ...overrides,
+  });
+
   const mockRecipe: Recipe = {
     id: "recipe-1",
     name: "Test Recipe",
@@ -122,24 +149,7 @@ describe("useUserData hooks", () => {
 
   describe("useRecipes", () => {
     it("should load recipes when user is authenticated", async () => {
-      mockUseAuth.mockReturnValue({
-        user: mockUser as User,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
-      });
+      mockUseAuth.mockReturnValue(createMockAuthValue());
       mockUserCacheService.getRecipes.mockResolvedValue([mockRecipe]);
       mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
 
@@ -162,24 +172,9 @@ describe("useUserData hooks", () => {
     });
 
     it("should not load recipes when user is not authenticated", async () => {
-      mockUseAuth.mockReturnValue({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(null),
-      });
+      mockUseAuth.mockReturnValue(
+        createMockAuthValue({ user: null, isAuthenticated: false })
+      );
 
       const { result } = renderHook(() => useRecipes(), {
         wrapper: createWrapper(),
@@ -194,24 +189,7 @@ describe("useUserData hooks", () => {
     });
 
     it("should create a new recipe", async () => {
-      mockUseAuth.mockReturnValue({
-        user: mockUser as User,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
-      });
+      mockUseAuth.mockReturnValue(createMockAuthValue());
       mockUserCacheService.getRecipes.mockResolvedValue([mockRecipe]);
       mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
       mockUserCacheService.createRecipe.mockResolvedValue(mockRecipe);
@@ -239,24 +217,9 @@ describe("useUserData hooks", () => {
     });
 
     it("should throw error when creating recipe without authenticated user", async () => {
-      mockUseAuth.mockReturnValue({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(null),
-      });
+      mockUseAuth.mockReturnValue(
+        createMockAuthValue({ user: null, isAuthenticated: false })
+      );
 
       const { result } = renderHook(() => useRecipes(), {
         wrapper: createWrapper(),
@@ -272,24 +235,7 @@ describe("useUserData hooks", () => {
     });
 
     it("should update an existing recipe", async () => {
-      mockUseAuth.mockReturnValue({
-        user: mockUser as User,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
-      });
+      mockUseAuth.mockReturnValue(createMockAuthValue());
       mockUserCacheService.getRecipes.mockResolvedValue([mockRecipe]);
       mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
 
@@ -318,24 +264,7 @@ describe("useUserData hooks", () => {
     });
 
     it("should delete a recipe", async () => {
-      mockUseAuth.mockReturnValue({
-        user: mockUser as User,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
-      });
+      mockUseAuth.mockReturnValue(createMockAuthValue());
       mockUserCacheService.getRecipes.mockResolvedValue([mockRecipe]);
       mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
       mockUserCacheService.deleteRecipe.mockResolvedValue();
@@ -357,24 +286,7 @@ describe("useUserData hooks", () => {
     });
 
     it("should sync pending operations", async () => {
-      mockUseAuth.mockReturnValue({
-        user: mockUser as User,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
-      });
+      mockUseAuth.mockReturnValue(createMockAuthValue());
       mockUserCacheService.getRecipes.mockResolvedValue([mockRecipe]);
       mockUserCacheService.getPendingOperationsCount.mockResolvedValue(1);
 
@@ -403,24 +315,7 @@ describe("useUserData hooks", () => {
     });
 
     it("should handle loading error", async () => {
-      mockUseAuth.mockReturnValue({
-        user: mockUser as User,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
-      });
+      mockUseAuth.mockReturnValue(createMockAuthValue());
       mockUserCacheService.getRecipes.mockRejectedValue(
         new Error("Failed to load recipes")
       );
@@ -438,24 +333,7 @@ describe("useUserData hooks", () => {
     });
 
     it("should track pending operations count", async () => {
-      mockUseAuth.mockReturnValue({
-        user: mockUser as User,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
-      });
+      mockUseAuth.mockReturnValue(createMockAuthValue());
       mockUserCacheService.getRecipes.mockResolvedValue([mockRecipe]);
       mockUserCacheService.getPendingOperationsCount.mockResolvedValue(3);
 
@@ -472,24 +350,9 @@ describe("useUserData hooks", () => {
 
     it("should reload data when user changes", async () => {
       // Initially no user
-      mockUseAuth.mockReturnValue({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(null),
-      });
+      mockUseAuth.mockReturnValue(
+        createMockAuthValue({ user: null, isAuthenticated: false })
+      );
 
       const { rerender } = renderHook(() => useRecipes(), {
         wrapper: createWrapper(),
@@ -498,24 +361,7 @@ describe("useUserData hooks", () => {
       rerender(undefined);
 
       // User logs in
-      mockUseAuth.mockReturnValue({
-        user: mockUser as User,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
-      });
+      mockUseAuth.mockReturnValue(createMockAuthValue());
       mockUserCacheService.getRecipes.mockResolvedValue([mockRecipe]);
       mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
 
@@ -530,24 +376,7 @@ describe("useUserData hooks", () => {
     });
 
     it("should get a recipe by ID", async () => {
-      mockUseAuth.mockReturnValue({
-        user: mockUser as User,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
-      });
+      mockUseAuth.mockReturnValue(createMockAuthValue());
 
       mockUserCacheService.getRecipes.mockResolvedValue([mockRecipe]);
       mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
@@ -573,24 +402,7 @@ describe("useUserData hooks", () => {
 
   describe("useBrewSessions", () => {
     it("should load brew sessions when user is authenticated", async () => {
-      mockUseAuth.mockReturnValue({
-        user: mockUser as User,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
-      });
+      mockUseAuth.mockReturnValue(createMockAuthValue());
 
       mockUserCacheService.getBrewSessions.mockResolvedValue([mockBrewSession]);
       mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
@@ -614,24 +426,7 @@ describe("useUserData hooks", () => {
     });
 
     it("should create a new brew session", async () => {
-      mockUseAuth.mockReturnValue({
-        user: mockUser as User,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
-      });
+      mockUseAuth.mockReturnValue(createMockAuthValue());
 
       mockUserCacheService.getBrewSessions.mockResolvedValue([mockBrewSession]);
       mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
@@ -661,24 +456,7 @@ describe("useUserData hooks", () => {
     });
 
     it("should update an existing brew session", async () => {
-      mockUseAuth.mockReturnValue({
-        user: mockUser as User,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
-      });
+      mockUseAuth.mockReturnValue(createMockAuthValue());
 
       mockUserCacheService.getBrewSessions.mockResolvedValue([mockBrewSession]);
       mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
@@ -708,24 +486,7 @@ describe("useUserData hooks", () => {
     });
 
     it("should delete a brew session", async () => {
-      mockUseAuth.mockReturnValue({
-        user: mockUser as User,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
-      });
+      mockUseAuth.mockReturnValue(createMockAuthValue());
 
       mockUserCacheService.getBrewSessions.mockResolvedValue([mockBrewSession]);
       mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);
@@ -748,24 +509,7 @@ describe("useUserData hooks", () => {
     });
 
     it("should sync pending operations", async () => {
-      mockUseAuth.mockReturnValue({
-        user: mockUser as User,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
-      });
+      mockUseAuth.mockReturnValue(createMockAuthValue());
 
       mockUserCacheService.getBrewSessions.mockResolvedValue([mockBrewSession]);
       mockUserCacheService.getPendingOperationsCount.mockResolvedValue(1);
@@ -795,24 +539,7 @@ describe("useUserData hooks", () => {
     });
 
     it("should get a brew session by ID", async () => {
-      mockUseAuth.mockReturnValue({
-        user: mockUser as User,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: jest.fn(),
-        logout: jest.fn(),
-        register: jest.fn(),
-        refreshUser: jest.fn(),
-        clearError: jest.fn(),
-        signInWithGoogle: jest.fn(),
-        verifyEmail: jest.fn(),
-        resendVerification: jest.fn(),
-        checkVerificationStatus: jest.fn(),
-        forgotPassword: jest.fn(),
-        resetPassword: jest.fn(),
-        getUserId: jest.fn().mockReturnValue(mockUser.id),
-      });
+      mockUseAuth.mockReturnValue(createMockAuthValue());
 
       mockUserCacheService.getBrewSessions.mockResolvedValue([mockBrewSession]);
       mockUserCacheService.getPendingOperationsCount.mockResolvedValue(0);

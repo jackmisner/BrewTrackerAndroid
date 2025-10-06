@@ -41,6 +41,8 @@ import { STORAGE_KEYS } from "@services/config";
 import { extractUserIdFromJWT, debugJWTToken } from "@utils/jwtUtils";
 import { cacheUtils } from "@services/api/queryClient";
 import { StaticDataService } from "@services/offlineV2/StaticDataService";
+import { BiometricService } from "@services/BiometricService";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 /**
  * Authentication context interface defining all available state and actions
@@ -51,6 +53,8 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   error: string | null;
+  isBiometricAvailable: boolean;
+  isBiometricEnabled: boolean;
 
   // Actions
   login: (credentials: LoginRequest) => Promise<void>;
@@ -70,6 +74,12 @@ interface AuthContextValue {
   // Password reset
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
+
+  // Biometric authentication
+  loginWithBiometrics: () => Promise<void>;
+  enableBiometrics: (username: string) => Promise<void>;
+  disableBiometrics: () => Promise<void>;
+  checkBiometricAvailability: () => Promise<void>;
 
   // JWT utilities
   getUserId: () => Promise<string | null>;
@@ -120,12 +130,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   const [error, setError] = useState<string | null>(
     initialAuthState?.error || null
   );
+  const [isBiometricAvailable, setIsBiometricAvailable] =
+    useState<boolean>(false);
+  const [isBiometricEnabled, setIsBiometricEnabled] = useState<boolean>(false);
 
   // Initialize authentication state on app start (skip if initial state provided for testing)
   useEffect(() => {
     if (!initialAuthState) {
       initializeAuth();
     }
+    // Check biometric availability on mount
+    checkBiometricAvailability();
   }, [initialAuthState]);
 
   const initializeAuth = async (): Promise<void> => {
@@ -307,13 +322,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       // Get current user ID before clearing state for cache cleanup
       const userId = user?.id;
 
+      await UnifiedLogger.info("auth", "Logout initiated", {
+        userId,
+        username: user?.username,
+      });
+
+      // Check current biometric and token state before clearing
+      const biometricEnabled = await BiometricService.isBiometricEnabled();
+      const tokenExists = !!(await ApiService.token.getToken());
+
+      await UnifiedLogger.debug("auth", "Logout state check", {
+        userId,
+        biometricEnabled,
+        tokenExists,
+      });
+
       // Clear user state FIRST so components can check isAuthenticated
       // and avoid making API calls during cleanup
       setUser(null);
       setError(null);
 
-      // Clear secure storage
-      await ApiService.token.removeToken();
+      // Clear secure storage - but preserve JWT token if biometrics are enabled
+      // This allows users to re-login with biometrics without password
+      if (!biometricEnabled) {
+        await ApiService.token.removeToken();
+        await UnifiedLogger.debug(
+          "auth",
+          "JWT token removed from SecureStore (biometrics not enabled)"
+        );
+      } else {
+        await UnifiedLogger.debug(
+          "auth",
+          "JWT token preserved in SecureStore for biometric re-authentication"
+        );
+      }
 
       // Clear cached data
       await AsyncStorage.multiRemove([
@@ -321,18 +363,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         STORAGE_KEYS.USER_SETTINGS,
         STORAGE_KEYS.CACHED_INGREDIENTS,
       ]);
+      await UnifiedLogger.debug("auth", "AsyncStorage cleared");
 
       // Clear React Query cache and persisted storage
       cacheUtils.clearAll();
       await cacheUtils.clearUserPersistedCache(userId);
+      await UnifiedLogger.debug("auth", "React Query cache cleared");
 
       // Clear user-scoped offline data
       const { UserCacheService } = await import(
         "@services/offlineV2/UserCacheService"
       );
       await UserCacheService.clearUserData(userId);
+      await UnifiedLogger.debug("auth", "User offline data cleared");
+
+      await UnifiedLogger.info("auth", "Logout completed successfully", {
+        userId,
+        biometricEnabled,
+        tokenPreserved: biometricEnabled,
+        note: biometricEnabled
+          ? "JWT token preserved for biometric re-authentication"
+          : "JWT token removed, password required for next login",
+      });
     } catch (error: any) {
-      console.error("Logout failed:", error);
+      await UnifiedLogger.error(
+        "auth",
+        "Logout failed, performing fallback cleanup",
+        { error: error.message, userId: user?.id }
+      );
+
       // Even if logout fails, clear local state and cache
       setUser(null);
       cacheUtils.clearAll();
@@ -473,6 +532,206 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   };
 
   /**
+   * Check biometric availability and update state
+   * Called on app initialization and when needed
+   */
+  const checkBiometricAvailability = async (): Promise<void> => {
+    try {
+      const available = await BiometricService.isBiometricAvailable();
+      const enabled = await BiometricService.isBiometricEnabled();
+      setIsBiometricAvailable(available);
+      setIsBiometricEnabled(enabled);
+    } catch (error) {
+      console.error("Failed to check biometric availability:", error);
+      setIsBiometricAvailable(false);
+      setIsBiometricEnabled(false);
+    }
+  };
+
+  /**
+   * Login with biometric authentication
+   * Uses JWT token refresh instead of stored credentials for security
+   */
+  const loginWithBiometrics = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      await UnifiedLogger.info("auth", "Biometric login initiated");
+
+      // Check biometric availability and enabled status
+      const biometricAvailable = await BiometricService.isBiometricAvailable();
+      const biometricEnabled = await BiometricService.isBiometricEnabled();
+      const hasStoredCredentials =
+        await BiometricService.hasStoredCredentials();
+
+      await UnifiedLogger.debug("auth", "Biometric pre-flight check", {
+        biometricAvailable,
+        biometricEnabled,
+        hasStoredCredentials,
+      });
+
+      // Check if we have a valid token to refresh
+      const token = await ApiService.token.getToken();
+      const tokenExists = !!token;
+
+      await UnifiedLogger.debug("auth", "Token availability check", {
+        tokenExists,
+        tokenPreview: token ? `${token.substring(0, 20)}...` : "null",
+      });
+
+      if (!token) {
+        await UnifiedLogger.warn(
+          "auth",
+          "Biometric login failed: No JWT token found",
+          {
+            biometricEnabled,
+            hasStoredCredentials,
+            reason:
+              "Token was cleared during logout, user must re-authenticate with password",
+          }
+        );
+        throw new Error(
+          "No authentication token found. Please login with your password."
+        );
+      }
+
+      // Authenticate with biometrics
+      await UnifiedLogger.debug(
+        "auth",
+        "Requesting biometric authentication from BiometricService"
+      );
+
+      const result = await BiometricService.authenticateWithBiometrics();
+
+      await UnifiedLogger.debug("auth", "Biometric authentication result", {
+        success: result.success,
+        errorCode: result.errorCode,
+        hasUsername: !!result.username,
+      });
+
+      if (!result.success) {
+        await UnifiedLogger.warn("auth", "Biometric authentication rejected", {
+          error: result.error,
+          errorCode: result.errorCode,
+        });
+
+        const error = new Error(
+          result.error || "Biometric authentication failed"
+        );
+        // Preserve error code for structured error handling
+        if (result.errorCode) {
+          (error as any).errorCode = result.errorCode;
+        }
+        throw error;
+      }
+
+      await UnifiedLogger.debug(
+        "auth",
+        "Biometric authentication successful, attempting token refresh"
+      );
+
+      // Use token refresh to get new access token
+      const response = await ApiService.auth.refreshToken();
+      const { access_token, user: userData } = response.data;
+
+      await UnifiedLogger.debug("auth", "Token refresh successful", {
+        userId: userData.id,
+        username: userData.username,
+        newTokenPreview: `${access_token.substring(0, 20)}...`,
+      });
+
+      // Store new token
+      await ApiService.token.setToken(access_token);
+      await UnifiedLogger.debug("auth", "New JWT token stored in SecureStore");
+
+      // Cache user data
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.USER_DATA,
+        JSON.stringify(userData)
+      );
+      await UnifiedLogger.debug("auth", "User data cached in AsyncStorage");
+
+      setUser(userData);
+
+      await UnifiedLogger.info(
+        "auth",
+        "Biometric login completed successfully",
+        {
+          userId: userData.id,
+          username: userData.username,
+        }
+      );
+
+      // Cache ingredients using V2 system
+      StaticDataService.updateIngredientsCache()
+        .then(() => {
+          StaticDataService.getCacheStats()
+            .then(stats => {
+              console.log("V2 Cache Status:", stats);
+            })
+            .catch(error => console.warn("Failed to get cache stats:", error));
+        })
+        .catch(error => {
+          console.warn(
+            "Failed to cache ingredients after biometric login:",
+            error
+          );
+        });
+    } catch (error: any) {
+      await UnifiedLogger.error("auth", "Biometric login failed", {
+        errorMessage: error.message,
+        errorCode: (error as any).errorCode,
+        stack: error.stack,
+      });
+
+      setError(error.message || "Biometric authentication failed");
+      throw error;
+    } finally {
+      await checkBiometricAvailability();
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Enable biometric authentication
+   * Stores username only for display purposes
+   * Authentication is handled via JWT token refresh
+   */
+  const enableBiometrics = async (username: string): Promise<void> => {
+    try {
+      // Check if biometric authentication is available before attempting to enable
+      const isAvailable = await BiometricService.isBiometricAvailable();
+      if (!isAvailable) {
+        setIsBiometricEnabled(false);
+        throw new Error(
+          "Biometric authentication is not available on this device"
+        );
+      }
+
+      await BiometricService.enableBiometrics(username);
+      await checkBiometricAvailability();
+    } catch (error: any) {
+      console.error("Failed to enable biometrics:", error);
+      throw error;
+    }
+  };
+
+  /**
+   * Disable biometric authentication
+   * Clears stored username and disables biometric login
+   */
+  const disableBiometrics = async (): Promise<void> => {
+    try {
+      await BiometricService.disableBiometrics();
+      await checkBiometricAvailability();
+    } catch (error: any) {
+      console.error("Failed to disable biometrics:", error);
+      throw error;
+    }
+  };
+
+  /**
    * Extract user ID from the stored JWT token
    * Useful for offline functionality where we need the user ID without making API calls
    *
@@ -504,6 +763,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     isLoading,
     isAuthenticated: !!user,
     error,
+    isBiometricAvailable,
+    isBiometricEnabled,
 
     // Actions
     login,
@@ -523,6 +784,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     // Password reset
     forgotPassword,
     resetPassword,
+
+    // Biometric authentication
+    loginWithBiometrics,
+    enableBiometrics,
+    disableBiometrics,
+    checkBiometricAvailability,
 
     // JWT utilities
     getUserId,

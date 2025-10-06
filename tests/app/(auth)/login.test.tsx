@@ -3,6 +3,7 @@ import { fireEvent, waitFor, act } from "@testing-library/react-native";
 import { Alert } from "react-native";
 import { renderWithProviders, testUtils, mockData } from "../../testUtils";
 import LoginScreen from "../../../app/(auth)/login";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 // Comprehensive React Native mocking to avoid ES6 module issues
 jest.mock("react-native", () => ({
@@ -10,6 +11,7 @@ jest.mock("react-native", () => ({
   Text: "Text",
   TextInput: "TextInput",
   TouchableOpacity: "TouchableOpacity",
+  Modal: "Modal",
   Alert: {
     alert: jest.fn(),
   },
@@ -28,6 +30,40 @@ jest.mock("react-native", () => ({
   },
 }));
 
+// Mock Biometric Service
+jest.mock("@services/BiometricService", () => ({
+  BiometricService: {
+    isBiometricAvailable: jest.fn(() => Promise.resolve(false)),
+    getBiometricTypeName: jest.fn(() => Promise.resolve("Biometric")),
+    isBiometricEnabled: jest.fn(() => Promise.resolve(false)),
+    enableBiometrics: jest.fn(() => Promise.resolve(true)),
+    disableBiometrics: jest.fn(() => Promise.resolve(true)),
+    authenticateWithBiometrics: jest.fn(() =>
+      Promise.resolve({
+        success: true,
+        credentials: { username: "test", password: "test" },
+      })
+    ),
+  },
+  BiometricErrorCode: {
+    USER_CANCELLED: "USER_CANCELLED",
+    SYSTEM_CANCELLED: "SYSTEM_CANCELLED",
+    LOCKOUT: "LOCKOUT",
+    NOT_ENROLLED: "NOT_ENROLLED",
+    NOT_AVAILABLE: "NOT_AVAILABLE",
+    NOT_ENABLED: "NOT_ENABLED",
+    VERIFICATION_FAILED: "VERIFICATION_FAILED",
+    USER_FALLBACK: "USER_FALLBACK",
+    CREDENTIALS_NOT_FOUND: "CREDENTIALS_NOT_FOUND",
+    UNKNOWN_ERROR: "UNKNOWN_ERROR",
+  },
+}));
+
+// Mock MaterialIcons
+jest.mock("@expo/vector-icons", () => ({
+  MaterialIcons: "MaterialIcons",
+}));
+
 // Mock dependencies
 
 // Mock functions for authentication
@@ -40,7 +76,14 @@ let mockAuthState = {
   isLoading: false,
   isAuthenticated: false,
   error: null as string | null,
+  isBiometricAvailable: false,
+  isBiometricEnabled: false,
 };
+
+// Create mock functions for biometric operations
+const mockLoginWithBiometrics = jest.fn();
+const mockEnableBiometrics = jest.fn();
+const mockCheckBiometricAvailability = jest.fn();
 
 // Mock the AuthContext hook to return our mock data
 jest.mock("@contexts/AuthContext", () => ({
@@ -58,6 +101,10 @@ jest.mock("@contexts/AuthContext", () => ({
     checkVerificationStatus: jest.fn(),
     forgotPassword: jest.fn(),
     resetPassword: jest.fn(),
+    loginWithBiometrics: mockLoginWithBiometrics,
+    enableBiometrics: mockEnableBiometrics,
+    disableBiometrics: jest.fn(),
+    checkBiometricAvailability: mockCheckBiometricAvailability,
     getUserId: jest.fn(),
   }),
 }));
@@ -119,6 +166,9 @@ describe("LoginScreen", () => {
     jest.clearAllTimers();
     mockLogin.mockClear();
     mockClearError.mockClear();
+    mockLoginWithBiometrics.mockClear();
+    mockEnableBiometrics.mockClear();
+    mockCheckBiometricAvailability.mockClear();
     testUtils.resetCounters();
 
     // Reset auth state to defaults
@@ -127,6 +177,8 @@ describe("LoginScreen", () => {
       isLoading: false,
       isAuthenticated: false,
       error: null,
+      isBiometricAvailable: false,
+      isBiometricEnabled: false,
     });
   });
 
@@ -502,6 +554,88 @@ describe("LoginScreen", () => {
       expect(passwordInput.props.secureTextEntry).toBe(true);
       expect(passwordInput.props.autoComplete).toBe("password");
       expect(passwordInput.props.textContentType).toBe("password");
+    });
+  });
+
+  describe("biometric authentication", () => {
+    it("should show biometric login button when biometrics are enabled and available", () => {
+      setMockAuthState({
+        isBiometricAvailable: true,
+        isBiometricEnabled: true,
+      });
+
+      const { getByTestId } = renderWithProviders(<LoginScreen />);
+
+      expect(getByTestId(TEST_IDS.auth.biometricLoginButton)).toBeTruthy();
+    });
+
+    it("should call loginWithBiometrics when biometric button is pressed", async () => {
+      setMockAuthState({
+        isBiometricAvailable: true,
+        isBiometricEnabled: true,
+      });
+
+      mockLoginWithBiometrics.mockResolvedValue(undefined);
+
+      const { getByTestId } = renderWithProviders(<LoginScreen />);
+      const biometricButton = getByTestId(TEST_IDS.auth.biometricLoginButton);
+
+      await act(async () => {
+        fireEvent.press(biometricButton);
+      });
+
+      expect(mockClearError).toHaveBeenCalled();
+      expect(mockLoginWithBiometrics).toHaveBeenCalled();
+    });
+
+    it("should suppress alert when user cancels biometric login", async () => {
+      const BiometricErrorCode =
+        require("@services/BiometricService").BiometricErrorCode;
+
+      setMockAuthState({
+        isBiometricAvailable: true,
+        isBiometricEnabled: true,
+      });
+
+      const error = new Error("User cancelled");
+      (error as any).errorCode = BiometricErrorCode.USER_CANCELLED;
+      mockLoginWithBiometrics.mockRejectedValue(error);
+
+      const { getByTestId } = renderWithProviders(<LoginScreen />);
+      const biometricButton = getByTestId(TEST_IDS.auth.biometricLoginButton);
+
+      await act(async () => {
+        fireEvent.press(biometricButton);
+      });
+
+      // Should NOT show alert for user cancellation
+      expect(require("react-native").Alert.alert).not.toHaveBeenCalledWith(
+        "Biometric Login Failed",
+        expect.any(String)
+      );
+    });
+
+    it("should show alert when biometric login fails with non-cancellation error", async () => {
+      setMockAuthState({
+        isBiometricAvailable: true,
+        isBiometricEnabled: true,
+      });
+
+      const error = new Error("Authentication failed");
+      mockLoginWithBiometrics.mockRejectedValue(error);
+
+      const { getByTestId } = renderWithProviders(<LoginScreen />);
+      const biometricButton = getByTestId(TEST_IDS.auth.biometricLoginButton);
+
+      await act(async () => {
+        fireEvent.press(biometricButton);
+      });
+
+      // Should show alert for authentication failure
+      expect(require("react-native").Alert.alert).toHaveBeenCalledWith(
+        "Biometric Login Failed",
+        "Authentication failed"
+      );
     });
   });
 });

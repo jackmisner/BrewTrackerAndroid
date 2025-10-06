@@ -127,4 +127,78 @@ export const settingsStyles = (theme: ThemeContextValue) =>
     bottomSpacing: {
       height: 32,
     },
+
+    // Password Confirmation Modal Styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    modalContent: {
+      backgroundColor: theme.colors.background,
+      borderRadius: 16,
+      padding: 24,
+      width: "100%",
+      maxWidth: 400,
+      alignItems: "center",
+    },
+    modalIcon: {
+      marginBottom: 16,
+    },
+    modalTitle: {
+      fontSize: 24,
+      fontWeight: "bold",
+      color: theme.colors.text,
+      marginBottom: 12,
+      textAlign: "center",
+    },
+    modalMessage: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      textAlign: "center",
+      marginBottom: 24,
+      lineHeight: 24,
+    },
+    modalInput: {
+      width: "100%",
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 16,
+      backgroundColor: theme.colors.inputBackground,
+      color: theme.colors.text,
+      marginBottom: 16,
+    },
+    modalButton: {
+      width: "100%",
+      borderRadius: 8,
+      padding: 16,
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    modalPrimaryButton: {
+      backgroundColor: theme.colors.primary,
+    },
+    modalSecondaryButton: {
+      backgroundColor: "transparent",
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    modalButtonDisabled: {
+      backgroundColor: theme.colors.border,
+      opacity: 0.5,
+    },
+    modalButtonText: {
+      color: theme.colors.primaryText,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    modalSecondaryButtonText: {
+      color: theme.colors.text,
+      fontSize: 16,
+      fontWeight: "600",
+    },
   });

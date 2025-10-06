@@ -145,6 +145,11 @@ export const TEST_IDS = {
     resetPasswordButton: "reset-password-button",
     goToLoginButton: "go-to-login-button",
     resetPasswordTitle: "reset-password-title",
+    biometricLoginButton: "biometric-login-button",
+    biometricIcon: "biometric-icon",
+    biometricPromptModal: "biometric-prompt-modal",
+    enableBiometricButton: "enable-biometric-button",
+    skipBiometricButton: "skip-biometric-button",
   },
 
   // Forms
@@ -166,6 +171,10 @@ export const TEST_IDS = {
   settings: {
     themeLabel: "settings-theme-label",
     unitLabel: "settings-unit-label",
+    securitySection: "settings-security-section",
+    biometricToggle: "settings-biometric-toggle",
+    biometricLabel: "settings-biometric-label",
+    biometricStatus: "settings-biometric-status",
   },
 
   // Component Elements
