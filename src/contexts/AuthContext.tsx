@@ -569,6 +569,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       setError(error.message || "Biometric authentication failed");
       throw error;
     } finally {
+      await checkBiometricAvailability();
       setIsLoading(false);
     }
   };
@@ -590,7 +591,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       }
 
       await BiometricService.enableBiometrics(username);
-      setIsBiometricEnabled(true);
+      await checkBiometricAvailability();
     } catch (error: any) {
       console.error("Failed to enable biometrics:", error);
       throw error;
@@ -604,7 +605,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   const disableBiometrics = async (): Promise<void> => {
     try {
       await BiometricService.disableBiometrics();
-      setIsBiometricEnabled(false);
+      await checkBiometricAvailability();
     } catch (error: any) {
       console.error("Failed to disable biometrics:", error);
       throw error;

@@ -44,10 +44,12 @@ A production-ready React Native mobile app for the BrewTracker homebrewing platf
 
 ### Security & Authentication
 
-- **JWT Authentication**: Secure token storage in Expo SecureStore
+- **JWT Authentication**: Secure token storage in Expo SecureStore (hardware-backed encryption)
+- **Biometric Authentication**: Fingerprint/face recognition login with secure credential management
 - **Email Verification**: Complete registration flow with email confirmation
 - **Password Reset**: Forgot password workflow with token validation
 - **Secure API**: Hardened API service with retry logic and error normalization
+- **Auto-Enrollment**: Optional biometric enrollment after successful password login
 
 ### Brewing Tools
 
@@ -128,7 +130,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 ├── app/                                              # Expo Router file-based routing structure
 │   ├── (auth)/                                       # Authentication flow screens
 │   │   ├── _layout.tsx                               # Authentication stack layout configuration
-│   │   ├── login.tsx                                 # Login screen with JWT authentication and navigation
+│   │   ├── login.tsx                                 # Login screen with JWT + biometric authentication, enrollment modal
 │   │   ├── register.tsx                              # User registration with real-time validation
 │   │   ├── verifyEmail.tsx                           # Email verification with token input and resend functionality
 │   │   ├── forgotPassword.tsx                        # Password reset request with email validation
@@ -211,7 +213,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   └── ModalHeader.tsx                       # Reusable modal header component with close button
 │   │   └── NetworkStatusBanner.tsx                   # Network connectivity status banner component with online/offline indicator
 │   ├── contexts/                                     # React contexts for global state
-│   │   ├── AuthContext.tsx                           # Authentication context with secure token storage (JWT in SecureStore)
+│   │   ├── AuthContext.tsx                           # Authentication context with JWT + biometric auth (SecureStore)
 │   │   ├── CalculatorsContext.tsx                    # Calculator state management and shared logic with useReducer
 │   │   ├── DeveloperContext.tsx                      # Developer options and debugging context for dev mode
 │   │   ├── NetworkContext.tsx                        # Network connectivity detection for offline functionality (NetInfo)
@@ -259,7 +261,8 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── StrikeWaterCalculator.ts              # Mash strike water temperature calculations
 │   │   │   ├── UnitConverter.ts                      # Unit conversion utilities and logic (volume, weight, temperature)
 │   │   │   └── YeastPitchRateCalculator.ts           # Yeast pitching rate and viability calculations
-│   │   ├── config.ts                                 # Service configuration and constants (API URLs, timeouts)
+│   │   ├── BiometricService.ts                       # Biometric authentication service (fingerprint/face) with error handling
+│   │   ├── config.ts                                 # Service configuration and constants (API URLs, timeouts, storage keys)
 │   │   ├── NotificationService.ts                    # Local notification service for timers and alerts (expo-notifications)
 │   │   ├── storageService.ts                         # Storage service for file operations and permissions
 │   │   └── TimerPersistenceService.ts                # Timer state persistence for boil timer (AsyncStorage)
@@ -287,7 +290,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   └── index.ts                                  # Central type exports
 │   └── styles/                                       # StyleSheet definitions organized by feature
 │       ├── auth/                                     # Authentication screen styles
-│       │   ├── loginStyles.ts                        # Login screen styling with theme support
+│       │   ├── loginStyles.ts                        # Login screen styling with theme support + biometric button
 │       │   ├── registerStyles.ts                     # Registration screen styling
 │       │   └── verifyEmailStyles.ts                  # Email verification screen styling
 │       ├── tabs/                                     # Tab navigation screen styles

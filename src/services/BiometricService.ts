@@ -24,7 +24,7 @@
  * const isAvailable = await BiometricService.isBiometricAvailable();
  *
  * // Enable biometric login
- * await BiometricService.enableBiometrics('username', 'password');
+ * await BiometricService.enableBiometrics('username');
  *
  * // Authenticate with biometrics
  * const credentials = await BiometricService.authenticateWithBiometrics();
