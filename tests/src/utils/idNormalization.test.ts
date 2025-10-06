@@ -303,6 +303,15 @@ describe("idNormalization", () => {
       expect(detectEntityTypeFromUrl("/api/users/profile")).toBe("user");
     });
 
+    it("should detect auth endpoints that return user objects", () => {
+      expect(detectEntityTypeFromUrl("/api/auth/login")).toBe("user");
+      expect(detectEntityTypeFromUrl("/api/auth/register")).toBe("user");
+      expect(detectEntityTypeFromUrl("/api/auth/profile")).toBe("user");
+      expect(detectEntityTypeFromUrl("/api/auth/google")).toBe("user");
+      expect(detectEntityTypeFromUrl("/api/auth/refresh-token")).toBe("user");
+      expect(detectEntityTypeFromUrl("/API/AUTH/REFRESH-TOKEN")).toBe("user");
+    });
+
     it("should detect fermentation endpoints", () => {
       expect(detectEntityTypeFromUrl("/api/fermentation")).toBe(
         "fermentationEntry"

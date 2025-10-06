@@ -2,7 +2,7 @@
 
 A production-ready React Native mobile app for the BrewTracker homebrewing platform, built with Expo. Features comprehensive offline-first architecture, advanced brewing tools, and seamless synchronization with the Flask backend.
 
-**Version:** 2.5.2 | **Platform:** Android | **Architecture:** React Native 0.81.4 + Expo 54
+**Version:** 2.5.3 | **Platform:** Android | **Architecture:** React Native 0.81.4 + Expo 54
 
 ## Table of Contents
 
@@ -345,7 +345,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   └── detect-ip.js                                  # Auto-detect local IP for development
 ├── assets/                                           # Static assets (images, fonts, icons)
 ├── app.json                                          # Expo configuration (Android-only, New Architecture enabled)
-├── package.json                                      # Dependencies and scripts (v2.4.10)
+├── package.json                                      # Dependencies and scripts
 ├── eas.json                                          # EAS Build configuration (dev/preview/production)
 ├── eslint.config.js                                  # ESLint configuration (fallback linter)
 ├── .oxlintrc.json                                    # oxlint configuration (primary linter - 100x faster)
@@ -557,14 +557,6 @@ The app uses Expo Application Services (EAS) for builds:
 - **Development builds**: Include dev tools, connect to local backend
 - **Preview builds**: Production mode with debugging enabled
 - **Production builds**: Optimized for Google Play Store release
-
-**Build Configuration:**
-
-- Android package: `com.brewtracker.android`
-- Version: 2.4.10 (build 149)
-- Runtime version: 2.4.10
-- OTA updates: Enabled via EAS Update
-- New Architecture: Enabled for performance
 
 ## API Security & Hardening
 

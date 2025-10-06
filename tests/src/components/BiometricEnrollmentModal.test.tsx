@@ -75,7 +75,7 @@ jest.mock("@contexts/ThemeContext", () => ({
 }));
 
 // Mock Alert
-jest.spyOn(Alert, "alert");
+const alertSpy = jest.spyOn(Alert, "alert");
 const mockGetItem = AsyncStorage.getItem as jest.Mock;
 const mockRemoveItem = AsyncStorage.removeItem as jest.Mock;
 const mockGetBiometricTypeName =
@@ -85,6 +85,10 @@ describe("BiometricEnrollmentModal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetBiometricTypeName.mockResolvedValue("Fingerprint");
+  });
+
+  afterAll(() => {
+    alertSpy.mockRestore();
   });
 
   describe("initial render and flag checking", () => {

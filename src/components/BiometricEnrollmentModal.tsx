@@ -42,36 +42,40 @@ export const BiometricEnrollmentModal: React.FC = () => {
         );
 
         if (shouldShow === "true" && storedUsername) {
-          await UnifiedLogger.info(
-            "biometric_modal",
-            "Showing biometric enrollment modal on dashboard"
-          );
-
           try {
-            // Get biometric type name for display
-            const typeName = await BiometricService.getBiometricTypeName();
-            setBiometricType(typeName);
-          } catch (typeError) {
-            // If type name fails, use default but still show modal
-            await UnifiedLogger.warn(
+            await UnifiedLogger.info(
               "biometric_modal",
-              "Failed to get biometric type name, using default",
-              {
-                error:
-                  typeError instanceof Error
-                    ? typeError.message
-                    : String(typeError),
-              }
+              "Showing biometric enrollment modal on dashboard"
             );
-            setBiometricType("Biometric");
+
+            try {
+              const typeName = await BiometricService.getBiometricTypeName();
+              setBiometricType(typeName);
+            } catch (typeError) {
+              await UnifiedLogger.warn(
+                "biometric_modal",
+                "Failed to get biometric type name, using default",
+                {
+                  error:
+                    typeError instanceof Error
+                      ? typeError.message
+                      : String(typeError),
+                }
+              );
+              setBiometricType("Biometric");
+            }
+
+            setUsername(storedUsername);
+            setShowPrompt(true);
+          } finally {
+            // Always clear flags to avoid repeated prompts
+            try {
+              await AsyncStorage.removeItem("show_biometric_prompt");
+            } catch {}
+            try {
+              await AsyncStorage.removeItem("biometric_prompt_username");
+            } catch {}
           }
-
-          setUsername(storedUsername);
-          setShowPrompt(true);
-
-          // Clear the flags immediately so modal doesn't show again
-          await AsyncStorage.removeItem("show_biometric_prompt");
-          await AsyncStorage.removeItem("biometric_prompt_username");
         }
       } catch (error) {
         await UnifiedLogger.error(
@@ -164,7 +168,10 @@ export const BiometricEnrollmentModal: React.FC = () => {
             color={colors.primary}
             style={styles.modalIcon}
           />
-          <Text style={[styles.modalTitle, { color: colors.text }]}>
+          <Text
+            accessibilityRole="header"
+            style={[styles.modalTitle, { color: colors.text }]}
+          >
             Enable {biometricType}s?
           </Text>
           <Text style={[styles.modalMessage, { color: colors.textMuted }]}>
@@ -172,12 +179,14 @@ export const BiometricEnrollmentModal: React.FC = () => {
             You can change this later in settings.
           </Text>
           <TouchableOpacity
+            accessibilityRole="button"
             style={[styles.button, { backgroundColor: colors.primary }]}
             onPress={handleEnableBiometrics}
           >
             <Text style={styles.buttonText}>Enable {biometricType}s</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            accessibilityRole="button"
             style={[
               styles.button,
               styles.secondaryButton,
