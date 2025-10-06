@@ -2,7 +2,7 @@
 
 A production-ready React Native mobile app for the BrewTracker homebrewing platform, built with Expo. Features comprehensive offline-first architecture, advanced brewing tools, and seamless synchronization with the Flask backend.
 
-**Version:** 2.4.10 | **Platform:** Android | **Architecture:** React Native 0.81.4 + Expo 54
+**Version:** 2.5.2 | **Platform:** Android | **Architecture:** React Native 0.81.4 + Expo 54
 
 ## Table of Contents
 

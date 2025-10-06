@@ -47,9 +47,25 @@ export const BiometricEnrollmentModal: React.FC = () => {
             "Showing biometric enrollment modal on dashboard"
           );
 
-          // Get biometric type name for display
-          const typeName = await BiometricService.getBiometricTypeName();
-          setBiometricType(typeName);
+          try {
+            // Get biometric type name for display
+            const typeName = await BiometricService.getBiometricTypeName();
+            setBiometricType(typeName);
+          } catch (typeError) {
+            // If type name fails, use default but still show modal
+            await UnifiedLogger.warn(
+              "biometric_modal",
+              "Failed to get biometric type name, using default",
+              {
+                error:
+                  typeError instanceof Error
+                    ? typeError.message
+                    : String(typeError),
+              }
+            );
+            setBiometricType("Biometric");
+          }
+
           setUsername(storedUsername);
           setShowPrompt(true);
 

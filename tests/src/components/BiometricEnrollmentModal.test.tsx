@@ -444,13 +444,12 @@ describe("BiometricEnrollmentModal", () => {
       // Mock console.error to verify no uncaught errors
       const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
 
-      const { queryByText } = render(<BiometricEnrollmentModal />);
+      const { getByText, queryByText } = render(<BiometricEnrollmentModal />);
 
       await waitFor(() => {
-        // When getBiometricTypeName fails, the error is caught and logged,
-        // and the modal does not render (showPrompt remains false)
-        expect(queryByText(/Enable/i)).toBeNull();
-        expect(queryByText(/Skip/i)).toBeNull();
+        // When getBiometricTypeName fails, modal should still render with default "Biometric" type
+        expect(getByText(/Enable Biometrics\?/i)).toBeTruthy();
+        expect(queryByText(/Skip/i)).toBeTruthy();
       });
 
       // Verify no uncaught errors were thrown
