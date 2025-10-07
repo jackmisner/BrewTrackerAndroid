@@ -219,13 +219,15 @@ Requested via BrewTracker Android App
   };
 
   const toggleFAQ = (id: string) => {
-    const newOpenFAQs = new Set(openFAQs);
-    if (openFAQs.has(id)) {
-      newOpenFAQs.delete(id);
-    } else {
-      newOpenFAQs.add(id);
-    }
-    setOpenFAQs(newOpenFAQs);
+    setOpenFAQs(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
   const categories = [
