@@ -16,8 +16,8 @@
  *
  * Navigation:
  * - Settings: Opens app settings modal
- * - Help & Support: Placeholder for help system
- * - About: Placeholder for app information
+ * - Help & Support: Opens help and support screen with FAQ and GitHub links
+ * - About: Opens about screen with developer info and GPL v3 license
  * - Donate: Opens Ko-fi page in browser or external app
  * - Sign Out: Confirms logout and redirects to login
  *
@@ -80,6 +80,14 @@ export default function ProfileScreen() {
     router.push("/(modals)/(settings)/settings");
   };
 
+  const handleHelpAndSupportPress = () => {
+    router.push("/(modals)/(profile)/helpAndSupport");
+  };
+
+  const handleAboutPress = () => {
+    router.push("/(modals)/(profile)/about");
+  };
+
   // Ko-fi donate button click handler
   const handleDonate = async () => {
     try {
@@ -134,7 +142,10 @@ export default function ProfileScreen() {
           />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={handleHelpAndSupportPress}
+        >
           <MaterialIcons
             name="help"
             size={24}
@@ -148,7 +159,7 @@ export default function ProfileScreen() {
           />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={handleAboutPress}>
           <MaterialIcons
             name="info"
             size={24}

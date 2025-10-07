@@ -14,6 +14,8 @@ export default function ModalsLayout() {
       <Stack.Screen name="(recipes)" />
       <Stack.Screen name="(calculators)" />
       <Stack.Screen name="(settings)" />
+      <Stack.Screen name="(profile)" />
+      <Stack.Screen name="(beerxml)" />
     </Stack>
   );
 }

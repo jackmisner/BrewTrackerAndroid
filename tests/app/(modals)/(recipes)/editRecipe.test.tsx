@@ -139,6 +139,28 @@ jest.mock("@src/hooks/useRecipeMetrics", () => ({
   })),
 }));
 
+jest.mock("@src/hooks/offlineV2", () => ({
+  useRecipes: jest.fn(() => ({
+    update: jest.fn(),
+    create: jest.fn(),
+    delete: jest.fn(),
+  })),
+}));
+
+jest.mock("@tanstack/react-query", () => {
+  const actual = jest.requireActual("@tanstack/react-query");
+  return {
+    ...actual,
+    useQuery: jest.fn(),
+    useMutation: jest.fn(),
+    useQueryClient: jest.fn(() => ({
+      invalidateQueries: jest.fn(),
+    })),
+    QueryClient: jest.fn(),
+    QueryClientProvider: ({ children }: any) => children,
+  };
+});
+
 // Mock form components
 jest.mock("@src/components/recipes/RecipeForm/BasicInfoForm", () => ({
   BasicInfoForm: () => {
@@ -208,6 +230,10 @@ jest.mock("@styles/modals/createRecipeStyles", () => ({
 
 import EditRecipeScreen from "../../../../app/(modals)/(recipes)/editRecipe";
 const mockApiService = require("@services/api/apiService").default;
+import { TEST_IDS } from "@constants/testIDs";
+import { useQuery } from "@tanstack/react-query";
+
+const mockUseQuery = useQuery as jest.MockedFunction<typeof useQuery>;
 
 // Setup Auth mock return values
 require("@contexts/AuthContext").useAuth.mockReturnValue({
@@ -219,6 +245,15 @@ require("@contexts/AuthContext").useAuth.mockReturnValue({
 describe("EditRecipeScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Default useQuery mock for all tests
+    mockUseQuery.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+      isError: false,
+      refetch: jest.fn(),
+    } as any);
   });
 
   describe("Basic Rendering", () => {
@@ -1288,6 +1323,181 @@ describe("EditRecipeScreen", () => {
       await waitFor(() => {
         // Should render without crashing
         expect(getByText("Edit Recipe")).toBeTruthy();
+      });
+    });
+  });
+
+  describe("Functional Tests", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+
+      // Reset useQuery mock to default loading state
+      mockUseQuery.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        error: null,
+        isError: false,
+        refetch: jest.fn(),
+      } as any);
+    });
+
+    it("should load and display recipe data successfully", async () => {
+      const mockRecipe = {
+        id: "test-recipe-id",
+        name: "Test IPA Recipe",
+        style: "American IPA",
+        description: "A hoppy IPA",
+        batch_size: 5,
+        batch_size_unit: "gal",
+        unit_system: "imperial" as const,
+        boil_time: 60,
+        efficiency: 75,
+        mash_temperature: 152,
+        mash_temp_unit: "F",
+        mash_time: 60,
+        is_public: false,
+        notes: "Test notes",
+        ingredients: [],
+        user_id: "test-user-123",
+        created_at: "2024-01-01",
+        updated_at: "2024-01-01",
+      };
+
+      // Mock successful recipe loading
+      mockUseQuery.mockReturnValue({
+        data: mockRecipe,
+        isLoading: false,
+        error: null,
+        isError: false,
+        refetch: jest.fn(),
+      } as any);
+
+      const { getByText } = renderWithProviders(<EditRecipeScreen />);
+
+      // Should render the screen title
+      await waitFor(() => {
+        expect(getByText("Edit Recipe")).toBeTruthy();
+      });
+
+      // Should render the first step form
+      await waitFor(() => {
+        expect(getByText("Basic Info Form")).toBeTruthy();
+      });
+    });
+
+    it("should navigate through recipe steps with next/back buttons", async () => {
+      const mockRecipe = {
+        id: "test-recipe-id",
+        name: "Test Recipe",
+        style: "IPA",
+        batch_size: 5,
+        batch_size_unit: "gal",
+        unit_system: "imperial" as const,
+        boil_time: 60,
+        efficiency: 75,
+        mash_temperature: 152,
+        mash_temp_unit: "F",
+        is_public: false,
+        notes: "",
+        ingredients: [
+          {
+            id: "ing1",
+            name: "Pale Malt",
+            amount: 10,
+            unit: "lb",
+            type: "grain" as const,
+          },
+        ],
+        user_id: "test-user-123",
+        created_at: "2024-01-01",
+        updated_at: "2024-01-01",
+      };
+
+      mockUseQuery.mockReturnValue({
+        data: mockRecipe,
+        isLoading: false,
+        error: null,
+        isError: false,
+        refetch: jest.fn(),
+      } as any);
+
+      const { getByText, queryByText } = renderWithProviders(
+        <EditRecipeScreen />
+      );
+
+      // Should start at Basic Info step
+      await waitFor(() => {
+        expect(getByText("Basic Info Form")).toBeTruthy();
+      });
+
+      // Should have Next button
+      const nextButton = getByText("Next");
+      expect(nextButton).toBeTruthy();
+
+      // Should NOT have Back button on first step
+      expect(queryByText("Back")).toBeNull();
+
+      // Click Next to go to Parameters step
+      fireEvent.press(nextButton);
+
+      // Should now show Parameters Form
+      await waitFor(() => {
+        expect(getByText("Parameters Form")).toBeTruthy();
+      });
+
+      // Should now have Back button
+      const backButton = getByText("Back");
+      expect(backButton).toBeTruthy();
+
+      // Click Back to return to Basic Info
+      fireEvent.press(backButton);
+
+      // Should be back at Basic Info
+      await waitFor(() => {
+        expect(getByText("Basic Info Form")).toBeTruthy();
+      });
+    });
+
+    it("should display error state when recipe fails to load", async () => {
+      // Mock recipe loading error
+      mockUseQuery.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error("Recipe not found"),
+        isError: true,
+        refetch: jest.fn(),
+      } as any);
+
+      const { getByText } = renderWithProviders(<EditRecipeScreen />);
+
+      // Should show error state
+      await waitFor(() => {
+        expect(getByText("Failed to Load Recipe")).toBeTruthy();
+      });
+
+      // Should show error message
+      expect(getByText("Recipe not found")).toBeTruthy();
+
+      // Should have Go Back button
+      const goBackButton = getByText("Go Back");
+      expect(goBackButton).toBeTruthy();
+    });
+
+    it("should display loading state while fetching recipe", async () => {
+      // Mock loading state
+      mockUseQuery.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        error: null,
+        isError: false,
+        refetch: jest.fn(),
+      } as any);
+
+      const { getByText } = renderWithProviders(<EditRecipeScreen />);
+
+      // Should show loading indicator
+      await waitFor(() => {
+        expect(getByText("Loading recipe...")).toBeTruthy();
       });
     });
   });

@@ -21,6 +21,7 @@ module.exports = {
     "^@types/(.*)$": "<rootDir>/src/types/$1",
     "^@utils/(.*)$": "<rootDir>/src/utils/$1",
     "^@hooks/(.*)$": "<rootDir>/src/hooks/$1",
+    "^@assets/(.*)$": "<rootDir>/assets/$1",
   },
   collectCoverageFrom: [
     "src/**/*.{ts,tsx}",
@@ -30,6 +31,19 @@ module.exports = {
     "!src/types/**/*",
     "!src/styles/**/*",
     "!**/*.styles.{ts,tsx}",
+    // Exclude layout files (pure routing configuration, no testable logic)
+    "!**/_layout.tsx",
+    // Exclude barrel/index files (re-exports only, no testable logic)
+    "!**/index.ts",
+    // Exclude static info pages (presentational only, no testable logic)
+    "!app/(modals)/(profile)/about.tsx",
+    "!app/(modals)/(profile)/helpAndSupport.tsx",
+    "!app/(modals)/(settings)/privacyPolicy.tsx",
+    "!app/(modals)/(settings)/termsOfService.tsx",
+    "!**/about.tsx",
+    "!**/helpAndSupport.tsx",
+    "!**/privacyPolicy.tsx",
+    "!**/termsOfService.tsx",
   ],
   coverageReporters: ["text", "lcov", "html"],
   coverageThreshold: {
