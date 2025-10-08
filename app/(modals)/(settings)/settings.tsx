@@ -585,7 +585,7 @@ export default function SettingsScreen() {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => handlePlaceholderAction("Privacy policy")}
+            onPress={() => router.push("/(modals)/(settings)/privacyPolicy")}
           >
             <MaterialIcons
               name="privacy-tip"
@@ -605,7 +605,7 @@ export default function SettingsScreen() {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => handlePlaceholderAction("Terms of service")}
+            onPress={() => router.push("/(modals)/(settings)/termsOfService")}
           >
             <MaterialIcons
               name="gavel"

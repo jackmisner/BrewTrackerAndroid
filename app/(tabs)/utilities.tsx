@@ -40,6 +40,7 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { useRouter } from "expo-router";
+import { withAlpha } from "@/src/utils/colorUtils";
 
 /**
  * Calculator item configuration interface
@@ -102,58 +103,6 @@ const calculators: CalculatorItem[] = [
     route: "/(modals)/(calculators)/boilTimer",
   },
 ];
-
-/**
- * Applies alpha transparency to color values
- * Supports both hex (#RRGGBB / #RRGGBBAA) and rgb()/rgba() color formats
- *
- * @param color - Color value in hex or rgb format
- * @param alpha - Alpha value between 0 and 1
- * @returns Color string with applied alpha transparency
- *
- * @example
- * ```typescript
- * withAlpha('#FF0000', 0.5) // Returns '#FF000080'
- * withAlpha('rgb(255, 0, 0)', 0.5) // Returns 'rgba(255, 0, 0, 0.5)'
- * ```
- */
-function withAlpha(color: string, alpha: number): string {
-  if (color.startsWith("#")) {
-    const hex = color.slice(1);
-    let rgb: string | null = null;
-
-    if (hex.length === 3) {
-      rgb = hex
-        .split("")
-        .map(ch => ch.repeat(2))
-        .join("");
-    } else if (hex.length === 4) {
-      rgb = hex
-        .slice(0, 3)
-        .split("")
-        .map(ch => ch.repeat(2))
-        .join("");
-    } else if (hex.length === 6 || hex.length === 8) {
-      rgb = hex.slice(0, 6);
-    }
-
-    if (!rgb) {
-      return color;
-    }
-
-    const a = Math.round(Math.min(1, Math.max(0, alpha)) * 255)
-      .toString(16)
-      .padStart(2, "0");
-    return `#${rgb}${a}`;
-  }
-  const m = color.match(
-    /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+))?\s*\)$/i
-  );
-  if (m) {
-    return `rgba(${m[1]}, ${m[2]}, ${m[3]}, ${alpha})`;
-  }
-  return color; // fallback
-}
 
 export default function UtilitiesScreen() {
   const theme = useTheme();

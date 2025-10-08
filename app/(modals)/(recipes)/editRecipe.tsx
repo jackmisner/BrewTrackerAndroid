@@ -25,6 +25,7 @@ import { ReviewForm } from "@src/components/recipes/RecipeForm/ReviewForm";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 import { generateUniqueId } from "@utils/keyUtils";
 import { QUERY_KEYS } from "@services/api/queryClient";
+import { TEST_IDS } from "@constants/testIDs";
 
 // Recipe builder steps
 enum RecipeStep {
@@ -643,7 +644,11 @@ export default function EditRecipeScreen() {
               ? loadError.message
               : "Recipe not found or could not be loaded."}
           </Text>
-          <TouchableOpacity style={styles.retryButton} onPress={handleCancel}>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={handleCancel}
+            testID={TEST_IDS.patterns.touchableOpacityAction("go-back")}
+          >
             <Text style={styles.retryButtonText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -756,6 +761,7 @@ export default function EditRecipeScreen() {
             ]}
             onPress={handlePrevious}
             disabled={isModalOpen}
+            testID={TEST_IDS.patterns.touchableOpacityAction("previous-step")}
           >
             <MaterialIcons
               name="arrow-back"
@@ -782,6 +788,7 @@ export default function EditRecipeScreen() {
               ]}
               onPress={handleNext}
               disabled={!canProceed() || isModalOpen}
+              testID={TEST_IDS.patterns.touchableOpacityAction("next-step")}
             >
               <Text
                 style={[
