@@ -2,7 +2,7 @@
 
 A production-ready React Native mobile app for the BrewTracker homebrewing platform, built with Expo. Features comprehensive offline-first architecture, advanced brewing tools, and seamless synchronization with the Flask backend.
 
-**Version:** 2.6.3 | **Platform:** Android | **Architecture:** React Native 0.81.4 + Expo 54
+**Version:** 2.7.5 | **Platform:** Android | **Architecture:** React Native 0.81.4 + Expo 54
 
 ## Table of Contents
 
@@ -25,6 +25,7 @@ A production-ready React Native mobile app for the BrewTracker homebrewing platf
 - **BeerXML Support**: Import and export recipes with ingredient matching workflow
 - **Version History**: Track recipe versions with visual timeline and navigation
 - **Brewing Calculators**: ABV, dilution, strike water, hydrometer correction, unit converter, boil timer
+- **Beer Style Analysis**: Real-time recipe comparison against style guidelines with match percentage and spec-by-spec breakdown
 
 ### Offline-First Architecture
 
@@ -59,6 +60,7 @@ A production-ready React Native mobile app for the BrewTracker homebrewing platf
 - **Fermentation Tracking**: Interactive charts with dual-axis display
 - **Dry Hop Tracker**: Track hop additions during fermentation
 - **Ingredient Database**: Search and filter comprehensive ingredient library
+- **Beer Style Analysis**: Real-time comparison of recipe metrics against style specifications
 - **Unit Conversion**: Seamless imperial/metric conversion
 
 ## Quick Start
@@ -199,11 +201,12 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   │   └── BrewingMetricsDisplay.tsx         # Reusable brewing metrics with SRM color visualization
 │   │   │   ├── IngredientEditor/                     # Advanced ingredient editing components
 │   │   │   │   └── IngredientDetailEditor.tsx        # Complete ingredient editing with type-specific UI
-│   │   │   └── RecipeForm/                           # Multi-step recipe creation forms
-│   │   │       ├── BasicInfoForm.tsx                 # Recipe name, style, batch size input (Step 1)
-│   │   │       ├── ParametersForm.tsx                # Brewing parameters (boil time, efficiency, mash temp) (Step 2)
-│   │   │       ├── IngredientsForm.tsx               # Ingredient list management interface (Step 3)
-│   │   │       └── ReviewForm.tsx                    # Final recipe review and submission (Step 4)
+│   │   │   ├── RecipeForm/                           # Multi-step recipe creation forms
+│   │   │   │   ├── BasicInfoForm.tsx                 # Recipe name, style, batch size input (Step 1)
+│   │   │   │   ├── ParametersForm.tsx                # Brewing parameters (boil time, efficiency, mash temp) (Step 2)
+│   │   │   │   ├── IngredientsForm.tsx               # Ingredient list management interface (Step 3)
+│   │   │   │   └── ReviewForm.tsx                    # Final recipe review and submission (Step 4)
+│   │   │   └── StyleAnalysis.tsx                     # Real-time beer style adherence analysis with match percentage and spec breakdown
 │   │   ├── splash/                                   # Splash screen components
 │   │   │   └── SplashScreen.tsx                      # App loading splash screen component with animations
 │   │   ├── ui/                                       # Generic UI components
@@ -238,6 +241,8 @@ BrewTrackerAndroid/                                   # React Native Android app
 │   │   │   ├── apiService.ts                         # Hardened API service with validated base URL, timeout, error normalization, and retry logic
 │   │   │   ├── queryClient.ts                        # React Query client configuration with AsyncStorage persistence
 │   │   │   └── idInterceptor.ts                      # MongoDB ObjectId to string normalization for consistent IDs
+│   │   ├── beerStyles/                               # Beer style analysis services
+│   │   │   └── BeerStyleAnalysisService.ts           # Offline style comparison and recipe-to-style matching (OG, FG, ABV, IBU, SRM)
 │   │   ├── beerxml/                                  # BeerXML processing services
 │   │   │   └── BeerXMLService.ts                     # BeerXML import/export with mobile file integration (expo-document-picker)
 │   │   ├── offlineV2/                                # V2 offline system services
@@ -327,6 +332,7 @@ BrewTrackerAndroid/                                   # React Native Android app
 │       │   └── modalHeaderStyles.ts                  # Modal header component styling
 │       ├── recipes/                                  # Recipe component styles
 │       │   └── ingredientDetailEditorStyles.ts       # Ingredient editor styling
+│       ├── components/styleAnalysisStyles.ts         # Style analysis component styling with color-coded match indicators
 │       ├── ui/                                       # UI component styles
 │       │   ├── baseContextMenuStyles.ts              # Base context menu styling
 │       │   └── recipeContextMenuStyles.ts            # Recipe context menu styling
@@ -718,6 +724,7 @@ BrewTrackerAndroid features a fully implemented V2 offline-first system with com
 - **BeerXML Import/Export**: 3-screen mobile workflow with ingredient matching, file sharing, and export functionality
 - **Brew Session Tracking**: Full CRUD operations with comprehensive fermentation data management and interactive charts as well as Dry Hop tracking/management
 - **Brewing Calculators**: ABV, dilution, strike water, hydrometer correction, unit converter, and boil timer with notifications
+- **Beer Style Analysis**: Offline recipe-to-style comparison with match percentage, spec-by-spec breakdown, and match quality categorization
 - **Advanced UI/UX**: Touch-optimized interface (48dp targets), context menus, gesture navigation, and comprehensive theme support
 - **Testing Infrastructure**: 3218 passing tests across 131 test suites with comprehensive coverage
 

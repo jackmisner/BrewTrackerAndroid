@@ -403,14 +403,11 @@ export class StaticDataService {
             // Item is a category with styles array
             const catName = item.name ?? item.category;
             allStyles.push(
-              ...item.styles.map((s: any) => ({
-                ...s,
-                category: s?.category ?? catName ?? s?.category,
-              }))
+              ...item.styles.map((s: any) => this.mapStyleWithId(s, catName))
             );
           } else {
             // Item is already a style
-            allStyles.push(item);
+            allStyles.push(this.mapStyleWithId(item));
           }
         });
       } else if (
@@ -428,10 +425,9 @@ export class StaticDataService {
           if (Array.isArray(category?.styles)) {
             const catName = category.name ?? category.category;
             allStyles.push(
-              ...category.styles.map((s: any) => ({
-                ...s,
-                category: s?.category ?? catName ?? s?.category,
-              }))
+              ...category.styles.map((s: any) =>
+                this.mapStyleWithId(s, catName)
+              )
             );
           }
         });
@@ -577,6 +573,33 @@ export class StaticDataService {
     } finally {
       this.versionCheckInProgress[dataType] = false;
     }
+  }
+
+  // ============================================================================
+  // Style Mapping Helper
+  // ============================================================================
+
+  /**
+   * Map a style object with validated ID and category
+   * Throws OfflineError if no valid ID found
+   */
+  private static mapStyleWithId(style: any, categoryName?: string): BeerStyle {
+    const id = style.id || style.style_guide_id || style._id;
+    const styleId = style.style_id || style.style_guide_id || id;
+
+    if (!id) {
+      throw new OfflineError(
+        `Beer style missing required ID fields: ${JSON.stringify(style)}`,
+        "MISSING_STYLE_ID"
+      );
+    }
+
+    return {
+      ...style,
+      id,
+      style_id: styleId,
+      category: style?.category ?? categoryName,
+    };
   }
 
   // ============================================================================

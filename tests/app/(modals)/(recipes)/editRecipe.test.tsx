@@ -1429,7 +1429,7 @@ describe("EditRecipeScreen", () => {
         refetch: jest.fn(),
       } as any);
 
-      const { getByText, queryByText } = renderWithProviders(
+      const { getByText, getByTestId, queryByTestId } = renderWithProviders(
         <EditRecipeScreen />
       );
 
@@ -1439,11 +1439,15 @@ describe("EditRecipeScreen", () => {
       });
 
       // Should have Next button
-      const nextButton = getByText("Next");
+      const nextButton = getByTestId(
+        TEST_IDS.patterns.touchableOpacityAction("next-step")
+      );
       expect(nextButton).toBeTruthy();
 
       // Should NOT have Back button on first step
-      expect(queryByText("Back")).toBeNull();
+      expect(
+        queryByTestId(TEST_IDS.patterns.touchableOpacityAction("previous-step"))
+      ).toBeNull();
 
       // Click Next to go to Parameters step
       fireEvent.press(nextButton);
@@ -1454,7 +1458,9 @@ describe("EditRecipeScreen", () => {
       });
 
       // Should now have Back button
-      const backButton = getByText("Back");
+      const backButton = getByTestId(
+        TEST_IDS.patterns.touchableOpacityAction("previous-step")
+      );
       expect(backButton).toBeTruthy();
 
       // Click Back to return to Basic Info
@@ -1476,7 +1482,9 @@ describe("EditRecipeScreen", () => {
         refetch: jest.fn(),
       } as any);
 
-      const { getByText } = renderWithProviders(<EditRecipeScreen />);
+      const { getByText, getByTestId } = renderWithProviders(
+        <EditRecipeScreen />
+      );
 
       // Should show error state
       await waitFor(() => {
@@ -1486,8 +1494,10 @@ describe("EditRecipeScreen", () => {
       // Should show error message
       expect(getByText("Recipe not found")).toBeTruthy();
 
-      // Should have Go Back button
-      const goBackButton = getByText("Go Back");
+      // Should have Go Back button with testID
+      const goBackButton = getByTestId(
+        TEST_IDS.patterns.touchableOpacityAction("go-back")
+      );
       expect(goBackButton).toBeTruthy();
     });
 
@@ -1507,6 +1517,84 @@ describe("EditRecipeScreen", () => {
       await waitFor(() => {
         expect(getByText("Loading recipe...")).toBeTruthy();
       });
+    });
+
+    it("should render update button on review step", async () => {
+      const mockRecipe = {
+        id: "test-recipe-id",
+        name: "Original Recipe",
+        style: "IPA",
+        batch_size: 5,
+        batch_size_unit: "gal",
+        unit_system: "imperial" as const,
+        boil_time: 60,
+        efficiency: 75,
+        mash_temperature: 152,
+        mash_temp_unit: "F",
+        is_public: false,
+        notes: "",
+        ingredients: [
+          {
+            id: "ing1",
+            name: "Pale Malt",
+            amount: 10,
+            unit: "lb",
+            type: "grain" as const,
+          },
+        ],
+        user_id: "test-user-123",
+        created_at: "2024-01-01",
+        updated_at: "2024-01-01",
+      };
+
+      // Mock successful recipe loading
+      mockUseQuery.mockReturnValue({
+        data: mockRecipe,
+        isLoading: false,
+        error: null,
+        isError: false,
+        refetch: jest.fn(),
+      } as any);
+
+      const { getByTestId, getByText } = renderWithProviders(
+        <EditRecipeScreen />
+      );
+
+      // Wait for recipe to load
+      await waitFor(() => {
+        expect(getByText("Basic Info Form")).toBeTruthy();
+      });
+
+      // Navigate to review step (need to go through all steps)
+      // Step 1 -> 2
+      fireEvent.press(
+        getByTestId(TEST_IDS.patterns.touchableOpacityAction("next-step"))
+      );
+      await waitFor(() => {
+        expect(getByText("Parameters Form")).toBeTruthy();
+      });
+
+      // Step 2 -> 3
+      fireEvent.press(
+        getByTestId(TEST_IDS.patterns.touchableOpacityAction("next-step"))
+      );
+      await waitFor(() => {
+        expect(getByText("Ingredients Form")).toBeTruthy();
+      });
+
+      // Step 3 -> 4 (Review)
+      fireEvent.press(
+        getByTestId(TEST_IDS.patterns.touchableOpacityAction("next-step"))
+      );
+      await waitFor(() => {
+        expect(getByText("Review Form")).toBeTruthy();
+      });
+
+      // Verify update button is rendered on review step
+      const updateButton = getByTestId(
+        TEST_IDS.patterns.touchableOpacityAction("update-recipe")
+      );
+      expect(updateButton).toBeTruthy();
     });
   });
 });

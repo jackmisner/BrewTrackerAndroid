@@ -109,22 +109,7 @@ jest.mock("@styles/modals/createRecipeStyles", () => ({
   }),
 }));
 
-// Mock BrewingMetricsDisplay component
-jest.mock(
-  "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay",
-  () => {
-    const React = require("react");
-    const { Text } = require("react-native");
-    const { TEST_IDS } = require("@src/constants/testIDs");
-    return {
-      BrewingMetricsDisplay: () => (
-        <Text testID={TEST_IDS.components.brewingMetricsDisplay}>
-          BrewingMetricsDisplay
-        </Text>
-      ),
-    };
-  }
-);
+// BrewingMetricsDisplay component removed - now integrated into StyleAnalysis
 
 // Mock IngredientDetailEditor component
 jest.mock(
@@ -133,6 +118,28 @@ jest.mock(
     IngredientDetailEditor: "IngredientDetailEditor",
   })
 );
+
+// Mock StyleAnalysis component
+jest.mock("@src/components/recipes/StyleAnalysis", () => {
+  const React = require("react");
+  const { Text } = require("react-native");
+
+  return {
+    StyleAnalysis: ({ testID }: { testID?: string }) => {
+      return <Text testID={testID}>Style Analysis</Text>;
+    },
+  };
+});
+
+// Mock useBeerStyles hook
+jest.mock("@src/hooks/offlineV2", () => ({
+  ...jest.requireActual("@src/hooks/offlineV2"),
+  useBeerStyles: jest.fn(() => ({
+    data: [],
+    isLoading: false,
+    error: null,
+  })),
+}));
 
 // Mock useRecipeMetrics hook
 const mockMetricsData = {
@@ -264,18 +271,21 @@ describe("IngredientsForm", () => {
       expect(addButtons).toHaveLength(4); // One for each ingredient type
     });
 
-    it("should render BrewingMetricsDisplay component", () => {
+    it("should render StyleAnalysis component when style is selected", () => {
+      const recipeWithStyle = {
+        ...defaultRecipeData,
+        style: "American IPA",
+      };
+
       const { getByTestId } = render(
         <IngredientsForm
-          recipeData={defaultRecipeData}
+          recipeData={recipeWithStyle}
           onUpdateField={mockOnUpdateField}
         />
       );
 
-      // Verify the mocked BrewingMetricsDisplay component is rendered
-      expect(
-        getByTestId(TEST_IDS.components.brewingMetricsDisplay)
-      ).toBeTruthy();
+      // Verify StyleAnalysis component is rendered with metrics
+      expect(getByTestId(TEST_IDS.recipes.styleAnalysisDetailed)).toBeTruthy();
     });
   });
 
@@ -709,18 +719,20 @@ describe("IngredientsForm", () => {
         error: null,
         refetch: jest.fn(),
       });
-      const { getByText, getByTestId } = render(
+      const recipeWithStyle = {
+        ...defaultRecipeData,
+        style: "American IPA",
+      };
+
+      const { getByTestId } = render(
         <IngredientsForm
-          recipeData={defaultRecipeData}
+          recipeData={recipeWithStyle}
           onUpdateField={mockOnUpdateField}
         />
       );
 
-      // BrewingMetricsDisplay should be rendered with the metrics data
-      // Verify the mocked component is actually present in the DOM
-      expect(
-        getByTestId(TEST_IDS.components.brewingMetricsDisplay)
-      ).toBeTruthy();
+      // StyleAnalysis component should be rendered with metrics
+      expect(getByTestId(TEST_IDS.recipes.styleAnalysisDetailed)).toBeTruthy();
     });
 
     it("should handle metrics loading state", () => {

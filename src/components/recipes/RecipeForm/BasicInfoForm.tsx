@@ -13,6 +13,7 @@ import { useTheme } from "@contexts/ThemeContext";
 import { RecipeFormData, BatchSizeUnit } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { useBeerStyles } from "@src/hooks/offlineV2";
+import { StyleAnalysis } from "@src/components/recipes/StyleAnalysis";
 import { TEST_IDS } from "@src/constants/testIDs";
 
 interface BasicInfoFormProps {
@@ -258,6 +259,16 @@ export function BasicInfoForm({
           <Text style={styles.inputError}>{errors.style}</Text>
         ) : null}
       </View>
+
+      {/* Style Guidelines - show target ranges for selected style */}
+      {recipeData.style && (
+        <StyleAnalysis
+          styleName={recipeData.style}
+          mode="ranges"
+          variant="compact"
+          testID={TEST_IDS.recipes.styleAnalysisCompact}
+        />
+      )}
 
       {/* Batch Size */}
       <View style={styles.inputContainer}>

@@ -815,6 +815,7 @@ export default function EditRecipeScreen() {
               ]}
               onPress={handleSubmit}
               disabled={!canSave()}
+              testID={TEST_IDS.patterns.touchableOpacityAction("update-recipe")}
             >
               {updateRecipeMutation.isPending ? (
                 <>

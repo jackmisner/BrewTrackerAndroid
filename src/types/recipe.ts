@@ -34,6 +34,9 @@ export type IngredientUnit =
   | "ml"
   | "l";
 
+// Recipe metric specification types
+export type MetricType = "og" | "fg" | "abv" | "ibu" | "srm";
+
 // Hop format/type (applies to all hop ingredients)
 export type HopFormat = "Pellet" | "Leaf" | "Plug" | "Whole" | "Extract";
 
