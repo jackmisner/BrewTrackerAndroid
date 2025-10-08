@@ -6,11 +6,12 @@ import { router, useGlobalSearchParams } from "expo-router";
 import { useTheme } from "@contexts/ThemeContext";
 import { RecipeFormData, RecipeIngredient } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
-import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
 import { IngredientDetailEditor } from "@src/components/recipes/IngredientEditor/IngredientDetailEditor";
+import { StyleAnalysis } from "@src/components/recipes/StyleAnalysis";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 import { formatHopTime } from "@src/utils/timeUtils";
 import { generateIngredientKey, generateUniqueId } from "@utils/keyUtils";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 // Hop usage display mapping (database value -> display value)
 const HOP_USAGE_DISPLAY_MAPPING: Record<string, string> = {
@@ -69,9 +70,9 @@ export function IngredientsForm({
   // Real-time recipe metrics calculation
   const {
     data: metricsData,
-    isLoading: metricsLoading,
-    error: metricsError,
-    refetch: retryMetrics,
+    isLoading: _metricsLoading,
+    error: _metricsError,
+    refetch: _retryMetrics,
   } = useRecipeMetrics(recipeData);
 
   const ingredientsByType = {
@@ -307,21 +308,16 @@ export function IngredientsForm({
         yeast, and any other ingredients.
       </Text>
 
-      {/* Real-time recipe metrics */}
-      <BrewingMetricsDisplay
-        metrics={metricsData}
-        mash_temperature={recipeData.mash_temperature}
-        mash_temp_unit={recipeData.mash_temp_unit}
-        loading={metricsLoading}
-        error={
-          metricsError
-            ? (metricsError as any)?.message || "Metrics calculation error"
-            : null
-        }
-        compact={true}
-        showTitle={true}
-        onRetry={retryMetrics}
-      />
+      {/* Style Adherence with Metrics */}
+      {recipeData.style && (
+        <StyleAnalysis
+          styleName={recipeData.style}
+          metrics={metricsData}
+          mode="adherence"
+          variant="detailed"
+          testID={TEST_IDS.recipes.styleAnalysisDetailed}
+        />
+      )}
 
       {renderIngredientSection("grain", "Grains & Fermentables")}
       {renderIngredientSection("hop", "Hops")}

@@ -1,5 +1,5 @@
 import { HOP_USAGE_OPTIONS } from "@src/constants/hopConstants";
-import { RecipeIngredient } from "@src/types";
+import { RecipeIngredient, MetricType } from "@src/types";
 
 /**
  * Formats hop time for display based on usage type
@@ -346,4 +346,43 @@ export const formatIngredientDetails = (
   }
 
   return details.join(" • ");
+};
+
+/**
+ * Formats a metric value for style analysis display
+ * @param metric - The metric type (og, fg, abv, ibu, srm)
+ * @param value - The metric value
+ * @returns Formatted metric string with default values when undefined
+ */
+export const formatMetricValue = (
+  metric: MetricType,
+  value: number | null | undefined
+): string => {
+  // Show default values when undefined instead of N/A
+  // This gives users immediate visibility of starting point
+  if (value === null || value === undefined) {
+    switch (metric) {
+      case "og":
+      case "fg":
+        return "1.000";
+      case "abv":
+        return "0.0%";
+      case "ibu":
+        return "0";
+      case "srm":
+        return "0.0";
+    }
+  }
+
+  switch (metric) {
+    case "og":
+    case "fg":
+      return formatGravity(value);
+    case "abv":
+      return formatABV(value);
+    case "ibu":
+      return formatIBU(value);
+    case "srm":
+      return formatSRM(value);
+  }
 };

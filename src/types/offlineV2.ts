@@ -39,7 +39,25 @@ export interface Ingredient {
 }
 
 /**
+ * Unit value wrapper from backend
+ */
+export interface UnitValue {
+  unit: string;
+  value: number;
+}
+
+/**
+ * Style range value following BeerJSON specification
+ * Backend returns: { minimum: { unit: "sg", value: 1.048 }, maximum: { unit: "sg", value: 1.056 } }
+ */
+export interface StyleRangeValue {
+  minimum?: UnitValue;
+  maximum?: UnitValue;
+}
+
+/**
  * Beer style type (from API responses)
+ * Uses nested BeerJSON format from backend
  */
 export interface BeerStyle {
   id: string;
@@ -47,18 +65,23 @@ export interface BeerStyle {
   name: string;
   category: string;
   description?: string;
+  overall_impression?: string;
 
-  // Style guidelines
-  og_min?: number;
-  og_max?: number;
-  fg_min?: number;
-  fg_max?: number;
-  abv_min?: number;
-  abv_max?: number;
-  ibu_min?: number;
-  ibu_max?: number;
-  srm_min?: number;
-  srm_max?: number;
+  // Style guidelines - nested format from backend (BeerJSON spec)
+  original_gravity?: StyleRangeValue;
+  final_gravity?: StyleRangeValue;
+  alcohol_by_volume?: StyleRangeValue;
+  international_bitterness_units?: StyleRangeValue;
+  color?: StyleRangeValue;
+}
+
+/**
+ * Helper type for representing a numeric range with min/max values
+ * Used for style adherence calculations
+ */
+export interface StyleRange {
+  min: number;
+  max: number;
 }
 
 export interface StaticDataVersion {

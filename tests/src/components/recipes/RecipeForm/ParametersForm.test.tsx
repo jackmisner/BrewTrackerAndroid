@@ -50,6 +50,28 @@ jest.mock("@contexts/UnitContext", () => ({
   useUnits: () => mockUnitContext,
 }));
 
+// Mock StyleAnalysis component
+jest.mock("@src/components/recipes/StyleAnalysis", () => {
+  const React = require("react");
+  const { Text } = require("react-native");
+
+  return {
+    StyleAnalysis: ({ testID }: { testID?: string }) => {
+      return <Text testID={testID}>Style Analysis</Text>;
+    },
+  };
+});
+
+// Mock useBeerStyles hook
+jest.mock("@src/hooks/offlineV2", () => ({
+  ...jest.requireActual("@src/hooks/offlineV2"),
+  useBeerStyles: jest.fn(() => ({
+    data: [],
+    isLoading: false,
+    error: null,
+  })),
+}));
+
 // Mock styles
 jest.mock("@styles/modals/createRecipeStyles", () => ({
   createRecipeStyles: () => ({

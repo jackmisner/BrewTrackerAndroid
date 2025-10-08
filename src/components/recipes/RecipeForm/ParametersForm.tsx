@@ -6,6 +6,7 @@ import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import { RecipeFormData } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
+import { StyleAnalysis } from "@src/components/recipes/StyleAnalysis";
 import { TEST_IDS } from "@src/constants/testIDs";
 
 interface ParametersFormProps {
@@ -124,6 +125,16 @@ export function ParametersForm({
 
   return (
     <View style={styles.formContainer}>
+      {/* Style Guidelines - show target ranges for selected style */}
+      {recipeData.style && (
+        <StyleAnalysis
+          styleName={recipeData.style}
+          mode="ranges"
+          variant="compact"
+          testID={TEST_IDS.recipes.styleAnalysisCompact}
+        />
+      )}
+
       {/* Boil Time */}
       <View style={styles.inputContainer}>
         <Text style={styles.inputLabel}>

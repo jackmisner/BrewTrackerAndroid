@@ -29,8 +29,10 @@ import { useTheme } from "@contexts/ThemeContext";
 import { RecipeFormData } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
+import { StyleAnalysis } from "@src/components/recipes/StyleAnalysis";
 import { formatHopTime } from "@src/utils/timeUtils";
 import { generateIngredientKey, generateListItemKey } from "@utils/keyUtils";
+import { TEST_IDS } from "@src/constants/testIDs";
 
 // Hop usage display mapping (database value -> display value)
 const HOP_USAGE_DISPLAY_MAPPING: Record<string, string> = {
@@ -302,6 +304,17 @@ export function ReviewForm({
       {renderParameters()}
       {renderIngredients()}
       {renderEstimatedMetrics()}
+
+      {/* Style Adherence Analysis - final summary */}
+      {recipeData.style && (
+        <StyleAnalysis
+          styleName={recipeData.style}
+          metrics={metrics || undefined}
+          variant="detailed"
+          mode="adherence"
+          testID={TEST_IDS.recipes.styleAnalysisDetailed}
+        />
+      )}
 
       <View style={styles.infoSection}>
         <View style={styles.infoHeader}>

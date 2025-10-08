@@ -184,6 +184,14 @@ export const TEST_IDS = {
     brewingMetricsDisplay: "brewing-metrics-display",
   },
 
+  // Recipe Components
+  recipes: {
+    styleAnalysis: "style-analysis",
+    styleAnalysisCompact: "style-analysis-compact",
+    styleAnalysisDetailed: "style-analysis-detailed",
+    styleAnalysisSpec: (metric: string) => `style-analysis-spec-${metric}`,
+  },
+
   // Context Menu Elements
   contextMenu: {
     modal: "context-menu-modal",
