@@ -585,6 +585,7 @@ export class StaticDataService {
    */
   private static mapStyleWithId(style: any, categoryName?: string): BeerStyle {
     const id = style.id || style.style_guide_id || style._id;
+    const styleId = style.style_id || style.style_guide_id || id;
 
     if (!id) {
       throw new OfflineError(
@@ -596,6 +597,7 @@ export class StaticDataService {
     return {
       ...style,
       id,
+      style_id: styleId,
       category: style?.category ?? categoryName,
     };
   }

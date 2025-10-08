@@ -88,33 +88,32 @@ export class BeerStyleAnalysisService {
     style: BeerStyle,
     metrics: Partial<RecipeMetrics>
   ): StyleMatchResult {
-    const matches = {
-      og:
-        metrics.og && metrics.og > 0
-          ? this.isInRange(metrics.og, this.getRange(style, "og"))
-          : false,
-      fg:
-        metrics.fg && metrics.fg > 0
-          ? this.isInRange(metrics.fg, this.getRange(style, "fg"))
-          : false,
-      abv:
-        metrics.abv && metrics.abv > 0
-          ? this.isInRange(metrics.abv, this.getRange(style, "abv"))
-          : false,
-      ibu:
-        metrics.ibu && metrics.ibu > 0
-          ? this.isInRange(metrics.ibu, this.getRange(style, "ibu"))
-          : false,
-      srm:
-        metrics.srm && metrics.srm > 0
-          ? this.isInRange(metrics.srm, this.getRange(style, "srm"))
-          : false,
+    const metricKeys: MetricType[] = ["og", "fg", "abv", "ibu", "srm"];
+    const matches: StyleMatchResult["matches"] = {
+      og: false,
+      fg: false,
+      abv: false,
+      ibu: false,
+      srm: false,
     };
-
-    const totalSpecs = 5;
-    const matchingSpecs = Object.values(matches).filter(Boolean).length;
+    let totalSpecs = 0;
+    let matchingSpecs = 0;
+    for (const metricKey of metricKeys) {
+      const range = this.getRange(style, metricKey);
+      if (!range) {
+        continue;
+      }
+      totalSpecs += 1;
+      const value = metrics[metricKey];
+      const hasValue = typeof value === "number" && value > 0;
+      if (hasValue && this.isInRange(value, range)) {
+        matches[metricKey] = true;
+        matchingSpecs += 1;
+      } else {
+        matches[metricKey] = false;
+      }
+    }
     const percentage = totalSpecs > 0 ? (matchingSpecs / totalSpecs) * 100 : 0;
-
     return {
       matches,
       percentage,
