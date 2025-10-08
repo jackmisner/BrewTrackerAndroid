@@ -138,8 +138,11 @@ export default function HelpAndSupportScreen() {
   };
 
   const handleBugReport = async () => {
-    const appVersion = Constants.expoConfig?.version || "N/A";
-    const versionCode = `${Constants.platform?.android?.versionCode || "N/A"}`;
+    const appVersion =
+      Constants.nativeAppVersion ?? Constants.expoConfig?.version ?? "N/A";
+    const versionCode =
+      Constants.nativeBuildVersion ??
+      `${Constants.platform?.android?.versionCode ?? "N/A"}`;
 
     const issueTemplate = encodeURIComponent(
       `
@@ -172,7 +175,8 @@ Reported via BrewTracker Android App
   };
 
   const handleFeatureRequest = async () => {
-    const appVersion = Constants.expoConfig?.version || "0.1.0";
+    const appVersion =
+      Constants.nativeAppVersion ?? Constants.expoConfig?.version ?? "N/A";
 
     const featureRequestTemplate = encodeURIComponent(
       `
