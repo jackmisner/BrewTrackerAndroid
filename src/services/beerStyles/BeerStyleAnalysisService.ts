@@ -47,7 +47,7 @@ export interface StyleMatchResult {
    */
   matchingSpecs: number;
   /**
-   * Total number of specs evaluated (always 5)
+   * Total number of specs evaluated (based on available style ranges)
    */
   totalSpecs: number;
 }
@@ -297,13 +297,15 @@ export class BeerStyleAnalysisService {
    * @returns Color identifier for theming
    */
   getMatchStatusColor(percentage: number): "success" | "warning" | "danger" {
-    if (percentage >= 80) {
-      return "success";
+    const status = this.getMatchStatus(percentage);
+    switch (status) {
+      case "excellent":
+        return "success";
+      case "good":
+        return "warning";
+      case "needs-adjustment":
+        return "danger";
     }
-    if (percentage >= 60) {
-      return "warning";
-    }
-    return "danger";
   }
 }
 
