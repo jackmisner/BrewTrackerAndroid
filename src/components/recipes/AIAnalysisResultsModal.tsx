@@ -135,6 +135,34 @@ export function AIAnalysisResultsModal({
     }
   };
 
+  // Helper to extract min/max from nested BeerStyle range objects
+  const getMetricRange = (
+    metric: MetricType
+  ): { min?: number; max?: number } => {
+    if (!style) {
+      return {};
+    }
+
+    // Map metric keys to BeerStyle property names
+    const rangeMap: Record<MetricType, keyof BeerStyle> = {
+      og: "original_gravity",
+      fg: "final_gravity",
+      abv: "alcohol_by_volume",
+      ibu: "international_bitterness_units",
+      srm: "color",
+    };
+
+    const rangeProp = rangeMap[metric];
+    const rangeValue = style[rangeProp] as
+      | { minimum?: { value: number }; maximum?: { value: number } }
+      | undefined;
+
+    return {
+      min: rangeValue?.minimum?.value,
+      max: rangeValue?.maximum?.value,
+    };
+  };
+
   // Render loading state
   if (loading) {
     return (
@@ -330,12 +358,7 @@ export function AIAnalysisResultsModal({
                     {metrics.map((metric, index) => {
                       const original = result.original_metrics?.[metric.key];
                       const optimised = result.optimized_metrics?.[metric.key];
-                      const min = style?.[
-                        `${metric.key}_min` as keyof BeerStyle
-                      ] as number | undefined;
-                      const max = style?.[
-                        `${metric.key}_max` as keyof BeerStyle
-                      ] as number | undefined;
+                      const { min, max } = getMetricRange(metric.key);
 
                       const improved =
                         original !== undefined &&
