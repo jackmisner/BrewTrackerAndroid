@@ -127,6 +127,7 @@ export const QUERY_KEYS = {
 
   // AI
   AI_HEALTH: ["ai", "health"] as const,
+  AI_ANALYSIS: (recipeId: string) => ["ai", "analysis", recipeId] as const,
 } as const;
 
 /**

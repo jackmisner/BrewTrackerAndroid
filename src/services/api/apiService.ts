@@ -98,6 +98,8 @@ import {
   ID,
   IngredientType,
   StaticDataVersionResponse,
+  AIAnalysisRequest,
+  AIAnalysisResponse,
 } from "@src/types";
 
 /**
@@ -1009,6 +1011,22 @@ const ApiService = {
       ingredients: any[];
     }): Promise<AxiosResponse<{ created_ingredients: any[] }>> =>
       api.post(ENDPOINTS.BEERXML.CREATE_INGREDIENTS, data),
+  },
+
+  // AI endpoints
+  ai: {
+    analyzeRecipe: (
+      request: AIAnalysisRequest
+    ): Promise<AxiosResponse<AIAnalysisResponse>> =>
+      api.post(ENDPOINTS.AI.ANALYZE_RECIPE, request, { timeout: 30000 }), // 30s timeout for AI analysis
+
+    checkHealth: (): Promise<
+      AxiosResponse<{
+        status: string;
+        service: string;
+        components: Record<string, string>;
+      }>
+    > => withRetry(() => api.get(ENDPOINTS.AI.HEALTH)),
   },
 
   // Network status check
