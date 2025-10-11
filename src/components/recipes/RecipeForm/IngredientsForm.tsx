@@ -8,6 +8,7 @@ import { RecipeFormData, RecipeIngredient } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { IngredientDetailEditor } from "@src/components/recipes/IngredientEditor/IngredientDetailEditor";
 import { StyleAnalysis } from "@src/components/recipes/StyleAnalysis";
+import { AIAnalysisButton } from "@src/components/recipes/AIAnalysisButton";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 import { formatHopTime } from "@src/utils/timeUtils";
 import { generateIngredientKey, generateUniqueId } from "@utils/keyUtils";
@@ -33,6 +34,7 @@ interface IngredientsFormProps {
   recipeData: RecipeFormData;
   onUpdateField: (field: keyof RecipeFormData, value: any) => void;
   onModalStateChange?: (isOpen: boolean) => void;
+  onAIAnalysis?: () => void;
 }
 
 /**
@@ -49,6 +51,7 @@ export function IngredientsForm({
   recipeData,
   onUpdateField,
   onModalStateChange,
+  onAIAnalysis,
 }: IngredientsFormProps) {
   const theme = useTheme();
   const styles = createRecipeStyles(theme);
@@ -317,6 +320,11 @@ export function IngredientsForm({
           variant="detailed"
           testID={TEST_IDS.recipes.styleAnalysisDetailed}
         />
+      )}
+
+      {/* AI Analysis Button */}
+      {safeIngredients.length > 0 && onAIAnalysis && (
+        <AIAnalysisButton onPress={onAIAnalysis} disabled={!recipeData.style} />
       )}
 
       {renderIngredientSection("grain", "Grains & Fermentables")}
