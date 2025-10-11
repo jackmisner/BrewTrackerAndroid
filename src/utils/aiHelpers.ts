@@ -119,7 +119,11 @@ export function calculatePercentageChange(
   original: number,
   optimized: number
 ): number {
-  if (original === 0) return 0;
+  if (original === 0) {
+    // Cannot calculate percentage change from zero
+    // Return 0 to indicate no baseline for comparison
+    return 0;
+  }
   return ((optimized - original) / original) * 100;
 }
 

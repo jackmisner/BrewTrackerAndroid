@@ -103,6 +103,9 @@ type PatternFns = {
     modalName: string,
     action: string
   ) => ModalHeaderActionTestId;
+  aiComponent: (val: string) => AIComponentTestId;
+  aiMetricRow: (val: string) => AIMetricRowTestId;
+  aiChangeItem: (val: string) => AIChangeItemTestId;
 };
 
 const PATTERN_GENERATORS = {
@@ -118,6 +121,9 @@ const PATTERN_GENERATORS = {
   iconElement: makeId("icon-", ""),
   modalHeaderAction: (modalName: string, action: string) =>
     `${toSlug(modalName)}-${toSlug(action)}-button` as ModalHeaderActionTestId,
+  aiComponent: makeId("ai-", ""),
+  aiMetricRow: makeId("ai-metric-", ""),
+  aiChangeItem: makeId("ai-change-", ""),
 } satisfies PatternFns;
 
 // Template literal types for dynamic test IDs
@@ -132,6 +138,9 @@ export type ModalComponentTestId = `${string}-modal`;
 export type SectionContainerTestId = `${string}-section`;
 export type IconElementTestId = `icon-${string}`;
 export type ModalHeaderActionTestId = `${string}-${string}-button`;
+export type AIComponentTestId = `ai-${string}`;
+export type AIMetricRowTestId = `ai-metric-${string}`;
+export type AIChangeItemTestId = `ai-change-${string}`;
 
 export const TEST_IDS = {
   // Navigation & Headers
@@ -190,6 +199,27 @@ export const TEST_IDS = {
     styleAnalysisCompact: "style-analysis-compact",
     styleAnalysisDetailed: "style-analysis-detailed",
     styleAnalysisSpec: (metric: string) => `style-analysis-spec-${metric}`,
+  },
+
+  // AI Analysis Components
+  ai: {
+    analysisButton: "ai-analysis-button",
+    analysisIconButton: "ai-analysis-icon-button",
+    onlineRequirement: "ai-online-requirement",
+    resultsModal: "ai-results-modal",
+    resultsModalOverlay: "ai-results-modal-overlay",
+    resultsModalContent: "ai-results-modal-content",
+    resultsModalHeader: "ai-results-modal-header",
+    resultsModalTitle: "ai-results-modal-title",
+    closeButton: "ai-close-button",
+    summaryContainer: "ai-summary-container",
+    metricsContainer: "ai-metrics-container",
+    changesContainer: "ai-changes-container",
+    applyButton: "ai-apply-button",
+    dismissButton: "ai-dismiss-button",
+    loadingContainer: "ai-loading-container",
+    errorContainer: "ai-error-container",
+    retryButton: "ai-retry-button",
   },
 
   // Context Menu Elements

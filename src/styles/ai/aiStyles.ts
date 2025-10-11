@@ -39,6 +39,18 @@ export const createAIStyles = (theme: ThemeContextValue) =>
       marginRight: 4,
     },
 
+    // Icon Button Styles (compact variant)
+    iconButton: {
+      padding: 8,
+      minHeight: 48,
+      minWidth: 48,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    iconButtonDisabled: {
+      opacity: 0.5,
+    },
+
     // Results Modal Container
     modalOverlay: {
       flex: 1,
