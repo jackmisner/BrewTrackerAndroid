@@ -44,6 +44,7 @@ import {
   formatMetricForComparison,
   isMetricImproved,
 } from "@utils/aiHelpers";
+import { beerStyleAnalysisService } from "@services/beerStyles/BeerStyleAnalysisService";
 
 interface AIAnalysisResultsModalProps {
   /**
@@ -133,34 +134,6 @@ export function AIAnalysisResultsModal({
     if (result?.optimized_recipe) {
       onApply(result.optimized_recipe);
     }
-  };
-
-  // Helper to extract min/max from nested BeerStyle range objects
-  const getMetricRange = (
-    metric: MetricType
-  ): { min?: number; max?: number } => {
-    if (!style) {
-      return {};
-    }
-
-    // Map metric keys to BeerStyle property names
-    const rangeMap: Record<MetricType, keyof BeerStyle> = {
-      og: "original_gravity",
-      fg: "final_gravity",
-      abv: "alcohol_by_volume",
-      ibu: "international_bitterness_units",
-      srm: "color",
-    };
-
-    const rangeProp = rangeMap[metric];
-    const rangeValue = style[rangeProp] as
-      | { minimum?: { value: number }; maximum?: { value: number } }
-      | undefined;
-
-    return {
-      min: rangeValue?.minimum?.value,
-      max: rangeValue?.maximum?.value,
-    };
   };
 
   // Render loading state
@@ -358,7 +331,13 @@ export function AIAnalysisResultsModal({
                     {metrics.map((metric, index) => {
                       const original = result.original_metrics?.[metric.key];
                       const optimised = result.optimized_metrics?.[metric.key];
-                      const { min, max } = getMetricRange(metric.key);
+
+                      // Use existing BeerStyleAnalysisService to extract ranges
+                      const range = style
+                        ? beerStyleAnalysisService.getRange(style, metric.key)
+                        : undefined;
+                      const min = range?.min;
+                      const max = range?.max;
 
                       const improved =
                         original !== undefined &&
@@ -367,10 +346,8 @@ export function AIAnalysisResultsModal({
 
                       const inRange =
                         optimised !== undefined &&
-                        min !== undefined &&
-                        max !== undefined &&
-                        optimised >= min &&
-                        optimised <= max;
+                        range !== undefined &&
+                        beerStyleAnalysisService.isInRange(optimised, range);
 
                       return (
                         <View
