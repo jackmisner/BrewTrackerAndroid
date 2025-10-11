@@ -172,6 +172,13 @@ export interface AISuggestion {
 }
 
 /**
+ * Possible value types for AI-suggested changes
+ * Covers numeric values (amounts, times, percentages, temperatures),
+ * strings (names, uses, parameters), and booleans
+ */
+export type AIChangeValue = string | number | boolean | null;
+
+/**
  * Individual ingredient change suggestion
  *
  * Details a specific change to an ingredient
@@ -187,10 +194,10 @@ export interface AIIngredientChange {
   field: string;
 
   /** Current value of the field */
-  current_value: any;
+  current_value: AIChangeValue;
 
   /** Suggested new value for the field */
-  suggested_value: any;
+  suggested_value: AIChangeValue;
 
   /** Unit for the value (g, oz, min, etc.) */
   unit?: string;
@@ -236,10 +243,10 @@ export interface RecipeChange {
   field?: string;
 
   /** Original value before optimization */
-  original_value?: any;
+  original_value?: AIChangeValue;
 
   /** New value after optimization */
-  optimized_value?: any;
+  optimized_value?: AIChangeValue;
 
   /** Unit for the values */
   unit?: string;
