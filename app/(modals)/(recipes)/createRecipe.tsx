@@ -39,7 +39,12 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import { useRecipes } from "@src/hooks/offlineV2";
-import { RecipeFormData, RecipeIngredient, Recipe, AIAnalysisResponse } from "@src/types";
+import {
+  RecipeFormData,
+  RecipeIngredient,
+  Recipe,
+  AIAnalysisResponse,
+} from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
 import { ParametersForm } from "@src/components/recipes/RecipeForm/ParametersForm";
@@ -165,7 +170,8 @@ export default function CreateRecipeScreen() {
 
   // AI Analysis state
   const [showAIModal, setShowAIModal] = useState(false);
-  const [aiAnalysisResult, setAIAnalysisResult] = useState<AIAnalysisResponse | null>(null);
+  const [aiAnalysisResult, setAIAnalysisResult] =
+    useState<AIAnalysisResponse | null>(null);
   const [aiAnalysisLoading, setAIAnalysisLoading] = useState(false);
   const [aiAnalysisError, setAIAnalysisError] = useState<string | null>(null);
 
@@ -332,7 +338,8 @@ export default function CreateRecipeScreen() {
 
       setAIAnalysisResult(response.data);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to analyse recipe";
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to analyse recipe";
 
       UnifiedLogger.error("AIAnalysis", "AI analysis failed", {
         error: errorMessage,
@@ -357,17 +364,44 @@ export default function CreateRecipeScreen() {
     });
 
     // Apply the optimized recipe to the current form state
-    dispatch({ type: "UPDATE_FIELD", field: "ingredients", value: optimizedRecipe.ingredients });
-    dispatch({ type: "UPDATE_FIELD", field: "boil_time", value: optimizedRecipe.boil_time });
-    dispatch({ type: "UPDATE_FIELD", field: "efficiency", value: optimizedRecipe.efficiency });
-    dispatch({ type: "UPDATE_FIELD", field: "mash_temperature", value: optimizedRecipe.mash_temperature });
-    dispatch({ type: "UPDATE_FIELD", field: "mash_temp_unit", value: optimizedRecipe.mash_temp_unit });
+    dispatch({
+      type: "UPDATE_FIELD",
+      field: "ingredients",
+      value: optimizedRecipe.ingredients,
+    });
+    dispatch({
+      type: "UPDATE_FIELD",
+      field: "boil_time",
+      value: optimizedRecipe.boil_time,
+    });
+    dispatch({
+      type: "UPDATE_FIELD",
+      field: "efficiency",
+      value: optimizedRecipe.efficiency,
+    });
+    dispatch({
+      type: "UPDATE_FIELD",
+      field: "mash_temperature",
+      value: optimizedRecipe.mash_temperature,
+    });
+    dispatch({
+      type: "UPDATE_FIELD",
+      field: "mash_temp_unit",
+      value: optimizedRecipe.mash_temp_unit,
+    });
     if (optimizedRecipe.mash_time) {
-      dispatch({ type: "UPDATE_FIELD", field: "mash_time", value: optimizedRecipe.mash_time });
+      dispatch({
+        type: "UPDATE_FIELD",
+        field: "mash_time",
+        value: optimizedRecipe.mash_time,
+      });
     }
 
     setShowAIModal(false);
-    Alert.alert("Optimisation Applied", "Your recipe has been updated with the AI-optimised values.");
+    Alert.alert(
+      "Optimisation Applied",
+      "Your recipe has been updated with the AI-optimised values."
+    );
 
     UnifiedLogger.info("AIAnalysis", "AI optimisation applied successfully", {
       recipeName: recipeState.name,
