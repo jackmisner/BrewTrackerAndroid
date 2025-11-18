@@ -38,7 +38,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
-import { useRecipes } from "@src/hooks/offlineV2";
+import { useRecipes, useBeerStyles } from "@src/hooks/offlineV2";
 import {
   RecipeFormData,
   RecipeIngredient,
@@ -54,7 +54,10 @@ import { AIAnalysisResultsModal } from "@src/components/recipes/AIAnalysisResult
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { TEST_IDS } from "@src/constants/testIDs";
-import { generateUniqueId } from "@utils/keyUtils";
+import {
+  generateUniqueId,
+  generateIngredientInstanceId,
+} from "@utils/keyUtils";
 import { QUERY_KEYS } from "@services/api/queryClient";
 import ApiService from "@services/api/apiService";
 import { UnifiedLogger } from "@services/logger/UnifiedLogger";
@@ -174,6 +177,9 @@ export default function CreateRecipeScreen() {
     useState<AIAnalysisResponse | null>(null);
   const [aiAnalysisLoading, setAIAnalysisLoading] = useState(false);
   const [aiAnalysisError, setAIAnalysisError] = useState<string | null>(null);
+
+  // Fetch beer styles to get the full BeerStyle object for the modal
+  const { data: beerStyles } = useBeerStyles({});
 
   // Get calculated recipe metrics for saving
   const {
@@ -308,20 +314,35 @@ export default function CreateRecipeScreen() {
 
   // AI Analysis handlers
   const handleAIAnalysis = async () => {
+    // Validate that we have a style database ID
+    if (!recipeState.style_database_id) {
+      Alert.alert(
+        "Beer Style Required",
+        "Please select a beer style before analysing the recipe."
+      );
+      return;
+    }
+
     setAIAnalysisLoading(true);
     setAIAnalysisError(null);
     setShowAIModal(true);
 
     const requestPayload = {
       complete_recipe: recipeState as any, // API expects Recipe type
-      style_id: recipeState.style,
+      style_id: recipeState.style_database_id, // MongoDB ObjectId for backend
       unit_system: recipeState.unit_system,
     };
 
     UnifiedLogger.info("AIAnalysis", "Starting AI recipe analysis", {
       recipeName: recipeState.name,
       style: recipeState.style,
-      ingredientCount: recipeState.ingredients.length,
+      styleDatabaseId: recipeState.style_database_id,
+      ingredients: recipeState.ingredients.map(ing => [
+        ing.name,
+        ing.amount,
+        ing.unit,
+        ing.type,
+      ]),
       unitSystem: recipeState.unit_system,
     });
 
@@ -329,10 +350,13 @@ export default function CreateRecipeScreen() {
       const response = await ApiService.ai.analyzeRecipe(requestPayload);
 
       UnifiedLogger.info("AIAnalysis", "AI analysis completed successfully", {
+        data: response.data,
+        currentMetrics: response.data.current_metrics,
+        styleAnalysis: response.data.style_analysis,
+        suggestionsCount: response.data.suggestions?.length || 0,
         optimizationPerformed: response.data.optimization_performed,
         iterationsCompleted: response.data.iterations_completed,
         changesCount: response.data.recipe_changes?.length || 0,
-        suggestionsCount: response.data.suggestions?.length || 0,
         hasOptimizedRecipe: !!response.data.optimized_recipe,
       });
 
@@ -363,11 +387,20 @@ export default function CreateRecipeScreen() {
       efficiencyChange: `${recipeState.efficiency} → ${optimizedRecipe.efficiency}`,
     });
 
+    // Normalize ingredients to ensure all have instance_id for client-side tracking
+    // AI-provided ingredients may lack instance_id, which breaks editor functionality
+    const normalizedIngredients = optimizedRecipe.ingredients.map(
+      ingredient => ({
+        ...ingredient,
+        instance_id: ingredient.instance_id || generateIngredientInstanceId(),
+      })
+    );
+
     // Apply the optimized recipe to the current form state
     dispatch({
       type: "UPDATE_FIELD",
       field: "ingredients",
-      value: optimizedRecipe.ingredients,
+      value: normalizedIngredients,
     });
     dispatch({
       type: "UPDATE_FIELD",
@@ -658,6 +691,10 @@ export default function CreateRecipeScreen() {
       <AIAnalysisResultsModal
         visible={showAIModal}
         result={aiAnalysisResult}
+        style={
+          beerStyles?.find(s => s.id === recipeState.style_database_id) || null
+        }
+        originalRecipe={recipeState}
         loading={aiAnalysisLoading}
         error={aiAnalysisError}
         onApply={handleApplyOptimization}

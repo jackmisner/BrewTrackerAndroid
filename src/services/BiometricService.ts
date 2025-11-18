@@ -13,23 +13,30 @@
  * - Error handling and fallback logic
  *
  * Security:
- * - Credentials stored in hardware-backed SecureStore
+ * - Credentials stored in hardware-backed Android SecureStore
  * - Biometric verification required before credential access
- * - No plaintext password storage
+ * - Encrypted password storage in Android keystore
  * - User can disable anytime
+ *
+ * Architecture:
+ * - Biometric authentication is equivalent to password authentication
+ * - Successful biometric scan retrieves stored credentials
+ * - Credentials are used for full login (not token refresh)
+ * - Works indefinitely - no token expiration issues
  *
  * @example
  * ```typescript
  * // Check if biometrics are available
  * const isAvailable = await BiometricService.isBiometricAvailable();
  *
- * // Enable biometric login
- * await BiometricService.enableBiometrics('username');
+ * // Enable biometric login after successful password login
+ * await BiometricService.enableBiometrics('username', 'password');
  *
  * // Authenticate with biometrics
- * const credentials = await BiometricService.authenticateWithBiometrics();
- * if (credentials) {
- *   // Login with credentials
+ * const result = await BiometricService.authenticateWithBiometrics();
+ * if (result.success && result.credentials) {
+ *   // Login with retrieved credentials
+ *   await login(result.credentials);
  * }
  * ```
  */
@@ -56,13 +63,21 @@ export enum BiometricErrorCode {
 }
 
 /**
+ * Stored biometric credentials
+ */
+export interface BiometricCredentials {
+  username: string;
+  password: string;
+}
+
+/**
  * Biometric authentication result
  */
 export interface BiometricAuthResult {
   success: boolean;
   error?: string;
   errorCode?: BiometricErrorCode;
-  username?: string;
+  credentials?: BiometricCredentials;
 }
 
 /**
@@ -86,6 +101,7 @@ export class BiometricService {
   // SecureStore keys for biometric authentication
   private static readonly BIOMETRIC_USERNAME_KEY =
     STORAGE_KEYS.BIOMETRIC_USERNAME;
+  private static readonly BIOMETRIC_PASSWORD_KEY = "biometric_password";
   private static readonly BIOMETRIC_ENABLED_KEY =
     STORAGE_KEYS.BIOMETRIC_ENABLED;
 
@@ -214,16 +230,20 @@ export class BiometricService {
   }
 
   /**
-   * Enable biometric authentication and store username
+   * Enable biometric authentication and store credentials
    *
-   * Stores username in SecureStore after successful biometric enrollment.
-   * Does NOT store password - relies on JWT token refresh for re-authentication.
+   * Stores username and password in SecureStore after successful biometric enrollment.
+   * Credentials are encrypted and stored in Android's hardware-backed keystore.
    *
-   * @param username - User's username (for display purposes)
+   * @param username - User's username
+   * @param password - User's password (will be encrypted)
    * @returns True if biometric authentication was enabled successfully
    * @throws Error with errorCode property for structured error handling
    */
-  static async enableBiometrics(username: string): Promise<boolean> {
+  static async enableBiometrics(
+    username: string,
+    password: string
+  ): Promise<boolean> {
     try {
       await UnifiedLogger.info(
         "biometric",
@@ -283,8 +303,13 @@ export class BiometricService {
         throw error;
       }
 
-      // Store username for display purposes only
-      await SecureStore.setItemAsync(this.BIOMETRIC_USERNAME_KEY, username);
+      // Store credentials securely in Android keystore
+      await SecureStore.setItemAsync(this.BIOMETRIC_USERNAME_KEY, username, {
+        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      });
+      await SecureStore.setItemAsync(this.BIOMETRIC_PASSWORD_KEY, password, {
+        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      });
       await SecureStore.setItemAsync(this.BIOMETRIC_ENABLED_KEY, "true");
 
       await UnifiedLogger.info(
@@ -313,7 +338,7 @@ export class BiometricService {
   /**
    * Disable biometric authentication and clear stored data
    *
-   * Removes all biometric-related data from SecureStore.
+   * Removes all biometric-related data from SecureStore including credentials.
    *
    * @returns True if biometric authentication was disabled successfully
    */
@@ -325,6 +350,7 @@ export class BiometricService {
       );
 
       await SecureStore.deleteItemAsync(this.BIOMETRIC_USERNAME_KEY);
+      await SecureStore.deleteItemAsync(this.BIOMETRIC_PASSWORD_KEY);
       await SecureStore.deleteItemAsync(this.BIOMETRIC_ENABLED_KEY);
 
       await UnifiedLogger.info(
@@ -342,14 +368,14 @@ export class BiometricService {
   }
 
   /**
-   * Authenticate user with biometrics and retrieve stored username
+   * Authenticate user with biometrics and retrieve stored credentials
    *
-   * Prompts user for biometric authentication and returns stored username
-   * on success. Actual authentication is handled via JWT token refresh.
+   * Prompts user for biometric authentication and returns stored credentials
+   * on success. Credentials can then be used for full login authentication.
    * Handles various authentication scenarios and errors.
    *
    * @param promptMessage - Custom message to display in biometric prompt
-   * @returns BiometricAuthResult with success status and username
+   * @returns BiometricAuthResult with success status and credentials
    */
   static async authenticateWithBiometrics(
     promptMessage?: string
@@ -468,23 +494,27 @@ export class BiometricService {
 
       await UnifiedLogger.debug(
         "biometric",
-        "Biometric authentication successful, retrieving stored username"
+        "Biometric authentication successful, retrieving stored credentials"
       );
 
-      // Retrieve stored username
+      // Retrieve stored credentials from Android SecureStore
       const username = await SecureStore.getItemAsync(
         this.BIOMETRIC_USERNAME_KEY
       );
+      const password = await SecureStore.getItemAsync(
+        this.BIOMETRIC_PASSWORD_KEY
+      );
 
-      await UnifiedLogger.debug("biometric", "Stored username retrieval", {
+      await UnifiedLogger.debug("biometric", "Stored credentials retrieval", {
         hasUsername: !!username,
+        hasPassword: !!password,
         username: username ? `${username.substring(0, 3)}***` : "null",
       });
 
-      if (!username) {
+      if (!username || !password) {
         await UnifiedLogger.warn(
           "biometric",
-          "No stored username found, auto-disabling biometrics"
+          "Stored credentials incomplete, auto-disabling biometrics"
         );
 
         // Self-heal: disable biometrics to prevent future failed attempts
@@ -509,7 +539,7 @@ export class BiometricService {
 
         return {
           success: false,
-          error: "Stored username not found",
+          error: "Stored credentials not found",
           errorCode: BiometricErrorCode.CREDENTIALS_NOT_FOUND,
         };
       }
@@ -524,7 +554,10 @@ export class BiometricService {
 
       return {
         success: true,
-        username,
+        credentials: {
+          username,
+          password,
+        },
       };
     } catch (error) {
       await UnifiedLogger.error(
@@ -548,32 +581,39 @@ export class BiometricService {
   }
 
   /**
-   * Verify if stored username exists without triggering authentication
+   * Verify if stored credentials exist without triggering authentication
    *
    * Useful for checking if user has previously enabled biometrics.
    *
-   * @returns True if username is stored
+   * @returns True if both username and password are stored
    */
   static async hasStoredCredentials(): Promise<boolean> {
     try {
       const username = await SecureStore.getItemAsync(
         this.BIOMETRIC_USERNAME_KEY
       );
+      const password = await SecureStore.getItemAsync(
+        this.BIOMETRIC_PASSWORD_KEY
+      );
 
-      return !!username;
+      return !!username && !!password;
     } catch (error) {
-      console.error("Error checking stored username:", error);
+      console.error("Error checking stored credentials:", error);
       return false;
     }
   }
 
   /**
-   * Update stored username (e.g., after username change)
+   * Update stored credentials (e.g., after password change)
    *
    * @param username - Updated username
-   * @returns True if username was updated successfully
+   * @param password - Updated password
+   * @returns True if credentials were updated successfully
    */
-  static async updateStoredUsername(username: string): Promise<boolean> {
+  static async updateStoredCredentials(
+    username: string,
+    password: string
+  ): Promise<boolean> {
     try {
       // Only update if biometrics are currently enabled
       const isEnabled = await this.isBiometricEnabled();
@@ -581,11 +621,16 @@ export class BiometricService {
         return false;
       }
 
-      await SecureStore.setItemAsync(this.BIOMETRIC_USERNAME_KEY, username);
+      await SecureStore.setItemAsync(this.BIOMETRIC_USERNAME_KEY, username, {
+        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      });
+      await SecureStore.setItemAsync(this.BIOMETRIC_PASSWORD_KEY, password, {
+        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      });
 
       return true;
     } catch (error) {
-      console.error("Error updating stored username:", error);
+      console.error("Error updating stored credentials:", error);
       return false;
     }
   }

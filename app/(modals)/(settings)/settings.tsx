@@ -193,39 +193,58 @@ export default function SettingsScreen() {
 
   const handleBiometricToggle = async (value: boolean) => {
     if (value) {
-      // Enable biometrics - no password needed, uses JWT token refresh
+      // Enable biometrics - prompt for password for secure credential storage
       if (!user?.username) {
         Alert.alert("Error", "Unable to retrieve username");
         return;
       }
 
-      try {
-        setIsTogglingBiometric(true);
-        await enableBiometrics(user.username);
-        await checkBiometricAvailability();
-        Alert.alert(
-          "Success",
-          `${biometricType} authentication has been enabled. You can now use ${biometricType.toLowerCase()}s to log in.`
-        );
-      } catch (error: any) {
-        console.error("Failed to enable biometrics:", error);
+      // Prompt for password
+      Alert.prompt(
+        `Enable ${biometricType}`,
+        `Enter your password to enable ${biometricType.toLowerCase()}s authentication`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Enable",
+            onPress: async (password?: string) => {
+              if (!password) {
+                Alert.alert("Error", "Password is required");
+                return;
+              }
 
-        // Suppress alerts for user-initiated cancellations
-        const errorCode = error.errorCode || error.code;
-        const shouldSuppressAlert =
-          errorCode === BiometricErrorCode.USER_CANCELLED ||
-          errorCode === BiometricErrorCode.SYSTEM_CANCELLED;
+              try {
+                setIsTogglingBiometric(true);
+                await enableBiometrics(user.username, password);
+                await checkBiometricAvailability();
+                Alert.alert(
+                  "Success",
+                  `${biometricType} authentication has been enabled. You can now use ${biometricType.toLowerCase()}s to log in.`
+                );
+              } catch (error: any) {
+                console.error("Failed to enable biometrics:", error);
 
-        if (!shouldSuppressAlert) {
-          Alert.alert(
-            "Error",
-            error.message ||
-              `Failed to enable ${biometricType.toLowerCase()}s authentication. Please try again.`
-          );
-        }
-      } finally {
-        setIsTogglingBiometric(false);
-      }
+                // Suppress alerts for user-initiated cancellations
+                const errorCode = error.errorCode || error.code;
+                const shouldSuppressAlert =
+                  errorCode === BiometricErrorCode.USER_CANCELLED ||
+                  errorCode === BiometricErrorCode.SYSTEM_CANCELLED;
+
+                if (!shouldSuppressAlert) {
+                  Alert.alert(
+                    "Error",
+                    error.message ||
+                      `Failed to enable ${biometricType.toLowerCase()}s authentication. Please try again.`
+                  );
+                }
+              } finally {
+                setIsTogglingBiometric(false);
+              }
+            },
+          },
+        ],
+        "secure-text"
+      );
     } else {
       // Disable biometrics - confirm and disable
       Alert.alert(

@@ -4,6 +4,11 @@
  * Shows a modal prompt to enable biometric authentication after successful login.
  * Checks AsyncStorage for a flag set during login and displays the enrollment prompt.
  * Automatically clears the flag after showing or when dismissed.
+ *
+ * Security:
+ * - Reads password from SecureStore (hardware-backed encryption)
+ * - Migrates legacy AsyncStorage passwords to SecureStore
+ * - Credentials only exist temporarily during enrollment flow
  */
 
 import React, { useEffect, useState } from "react";
@@ -16,6 +21,7 @@ import {
   Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
@@ -28,6 +34,7 @@ import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 export const BiometricEnrollmentModal: React.FC = () => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
+  const [password, setPassword] = useState<string | null>(null);
   const [biometricType, setBiometricType] = useState<string>("Biometrics");
   const { enableBiometrics } = useAuth();
   const { colors } = useTheme();
@@ -41,7 +48,56 @@ export const BiometricEnrollmentModal: React.FC = () => {
           "biometric_prompt_username"
         );
 
-        if (shouldShow === "true" && storedUsername) {
+        // SECURITY FIX: Read password from SecureStore instead of AsyncStorage
+        let storedPassword = await SecureStore.getItemAsync(
+          "biometric_prompt_password"
+        );
+
+        // MIGRATION: Check for legacy insecure password in AsyncStorage
+        if (!storedPassword) {
+          const legacyPassword = await AsyncStorage.getItem(
+            "biometric_prompt_password"
+          );
+          if (legacyPassword) {
+            await UnifiedLogger.warn(
+              "biometric_modal",
+              "Found legacy password in AsyncStorage, migrating to SecureStore"
+            );
+            // Migrate to SecureStore
+            try {
+              await SecureStore.setItemAsync(
+                "biometric_prompt_password",
+                legacyPassword,
+                {
+                  keychainAccessible:
+                    SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+                }
+              );
+              storedPassword = legacyPassword;
+              // Clean up legacy insecure storage
+              await AsyncStorage.removeItem("biometric_prompt_password");
+              await UnifiedLogger.info(
+                "biometric_modal",
+                "Successfully migrated password to SecureStore"
+              );
+            } catch (migrationError) {
+              await UnifiedLogger.error(
+                "biometric_modal",
+                "Failed to migrate password to SecureStore",
+                {
+                  error:
+                    migrationError instanceof Error
+                      ? migrationError.message
+                      : String(migrationError),
+                }
+              );
+              // Clean up anyway for security
+              await AsyncStorage.removeItem("biometric_prompt_password");
+            }
+          }
+        }
+
+        if (shouldShow === "true" && storedUsername && storedPassword) {
           try {
             await UnifiedLogger.info(
               "biometric_modal",
@@ -66,16 +122,45 @@ export const BiometricEnrollmentModal: React.FC = () => {
             }
 
             setUsername(storedUsername);
+            setPassword(storedPassword);
             setShowPrompt(true);
           } finally {
-            // Always clear flags to avoid repeated prompts
+            // Always clear flags to avoid repeated prompts (including password for security)
             try {
               await AsyncStorage.removeItem("show_biometric_prompt");
             } catch {}
             try {
               await AsyncStorage.removeItem("biometric_prompt_username");
             } catch {}
+            try {
+              await SecureStore.deleteItemAsync("biometric_prompt_password");
+            } catch {}
+            // MIGRATION: Also clean up any legacy AsyncStorage password
+            try {
+              await AsyncStorage.removeItem("biometric_prompt_password");
+            } catch {}
           }
+        } else if (
+          !storedPassword &&
+          (shouldShow === "true" || storedUsername)
+        ) {
+          // Handle case where credentials are incomplete/expired
+          await UnifiedLogger.warn(
+            "biometric_modal",
+            "Incomplete biometric prompt credentials, cleaning up flags",
+            {
+              hasFlag: shouldShow === "true",
+              hasUsername: !!storedUsername,
+              hasPassword: false,
+            }
+          );
+          // Clean up incomplete enrollment attempt
+          try {
+            await AsyncStorage.removeItem("show_biometric_prompt");
+            await AsyncStorage.removeItem("biometric_prompt_username");
+            await AsyncStorage.removeItem("biometric_prompt_password");
+            await SecureStore.deleteItemAsync("biometric_prompt_password");
+          } catch {}
         }
       } catch (error) {
         await UnifiedLogger.error(
@@ -83,6 +168,13 @@ export const BiometricEnrollmentModal: React.FC = () => {
           "Failed to check biometric prompt flag",
           { error: error instanceof Error ? error.message : String(error) }
         );
+        // Clean up on error for security
+        try {
+          await AsyncStorage.removeItem("show_biometric_prompt");
+          await AsyncStorage.removeItem("biometric_prompt_username");
+          await AsyncStorage.removeItem("biometric_prompt_password");
+          await SecureStore.deleteItemAsync("biometric_prompt_password");
+        } catch {}
       }
     };
 
@@ -90,7 +182,7 @@ export const BiometricEnrollmentModal: React.FC = () => {
   }, []);
 
   const handleEnableBiometrics = async () => {
-    if (!username) {
+    if (!username || !password) {
       setShowPrompt(false);
       return;
     }
@@ -101,7 +193,7 @@ export const BiometricEnrollmentModal: React.FC = () => {
         "User accepted biometrics enrollment"
       );
 
-      await enableBiometrics(username);
+      await enableBiometrics(username, password);
       setShowPrompt(false);
 
       Alert.alert(

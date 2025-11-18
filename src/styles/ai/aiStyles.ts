@@ -119,6 +119,9 @@ export const createAIStyles = (theme: ThemeContextValue) =>
     // Metrics Comparison Section
     metricsContainer: {
       marginBottom: 16,
+      backgroundColor: theme.colors.backgroundSecondary,
+      borderRadius: 8,
+      padding: 8,
     },
     metricsSectionTitle: {
       fontSize: 16,
@@ -126,15 +129,72 @@ export const createAIStyles = (theme: ThemeContextValue) =>
       color: theme.colors.text,
       marginBottom: 12,
     },
+
+    // 4-column table layout
+    metricHeaderRow: {
+      flexDirection: "row",
+      paddingVertical: 8,
+      paddingHorizontal: 4,
+      borderBottomWidth: 2,
+      borderBottomColor: theme.colors.border,
+      marginBottom: 4,
+    },
+    metricHeaderCell: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: theme.colors.textSecondary,
+      textTransform: "uppercase",
+      flex: 1,
+      textAlign: "center",
+    },
+    metricDataRow: {
+      flexDirection: "row",
+      paddingVertical: 10,
+      paddingHorizontal: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: withAlpha(theme.colors.border, 0.3),
+      alignItems: "center",
+    },
+    metricRowLast: {
+      borderBottomWidth: 0,
+    },
+    metricNameCell: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: theme.colors.text,
+      flex: 1,
+    },
+    metricValueCell: {
+      fontSize: 13,
+      color: theme.colors.text,
+      flex: 1,
+      textAlign: "center",
+    },
+    metricRangeCell: {
+      fontSize: 12,
+      color: theme.colors.textMuted,
+      flex: 1,
+      textAlign: "center",
+    },
+    metricValueInRange: {
+      color: theme.colors.success,
+      fontWeight: "600",
+    },
+    metricValueImproved: {
+      color: theme.colors.warning,
+      fontWeight: "600",
+    },
+    metricValueUnchanged: {
+      color: theme.colors.textSecondary,
+    },
+
+    // Deprecated - kept for backward compatibility
     metricRow: {
       flexDirection: "row",
       alignItems: "center",
       paddingVertical: 10,
       borderBottomWidth: 1,
       borderBottomColor: withAlpha(theme.colors.border, 0.5),
-    },
-    metricRowLast: {
-      borderBottomWidth: 0,
     },
     metricName: {
       fontSize: 14,

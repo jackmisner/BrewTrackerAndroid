@@ -7,7 +7,13 @@
  * @module utils/aiHelpers
  */
 
-import { RecipeChange, AIChangeValue } from "@src/types";
+import {
+  RecipeChange,
+  AIChangeValue,
+  RecipeFormData,
+  RecipeIngredient,
+  RecipeMetrics,
+} from "@src/types";
 import {
   formatGravity,
   formatABV,
@@ -15,6 +21,44 @@ import {
   formatSRM,
   formatIngredientAmount,
 } from "./formatUtils";
+
+/**
+ * Backend metrics format with uppercase keys
+ */
+interface BackendMetrics {
+  OG?: number;
+  FG?: number;
+  ABV?: number;
+  IBU?: number;
+  SRM?: number;
+  attenuation?: number;
+}
+
+/**
+ * Normalizes backend metrics (uppercase keys) to RecipeMetrics format (lowercase keys)
+ *
+ * Backend sends metrics with uppercase keys (OG, FG, ABV, IBU, SRM)
+ * but our RecipeMetrics type uses lowercase keys (og, fg, abv, ibu, srm)
+ *
+ * @param backendMetrics - Metrics object from backend with uppercase keys
+ * @returns Normalized metrics with lowercase keys matching RecipeMetrics type
+ */
+export function normalizeBackendMetrics(
+  backendMetrics: BackendMetrics | undefined
+): RecipeMetrics | undefined {
+  if (!backendMetrics) {
+    return undefined;
+  }
+
+  return {
+    og: backendMetrics.OG ?? 0,
+    fg: backendMetrics.FG ?? 0,
+    abv: backendMetrics.ABV ?? 0,
+    ibu: backendMetrics.IBU ?? 0,
+    srm: backendMetrics.SRM ?? 0,
+    attenuation: backendMetrics.attenuation,
+  };
+}
 
 /**
  * Grouped recipe changes for organized display
@@ -70,12 +114,13 @@ export function formatChangeValue(
   if (typeof value === "number") {
     // Use existing formatters for specific fields
     if (field === "amount" && unit) {
-      return formatIngredientAmount(value, unit);
+      const formattedAmount = formatIngredientAmount(value, unit);
+      return `${formattedAmount} ${unit}`;
     }
 
     // Round to 1 decimal place for display
     const rounded = Math.round(value * 10) / 10;
-    return unit ? `${rounded}${unit}` : rounded.toString();
+    return unit ? `${rounded} ${unit}` : rounded.toString();
   }
 
   // Handle string and boolean values
@@ -86,22 +131,48 @@ export function formatChangeValue(
 /**
  * Formats a recipe change into a human-readable description
  *
+ * Always includes units for clarity and uses actual ingredient values
+ *
  * @param change - The recipe change to format
- * @returns Formatted description string
+ * @returns Formatted description string with units
  */
 export function formatChangeDescription(change: RecipeChange): string {
   switch (change.type) {
-    case "ingredient_modified":
-      return `${change.ingredient_name}: ${formatChangeValue(change.original_value, change.unit, change.field)} → ${formatChangeValue(change.optimized_value, change.unit, change.field)}`;
+    case "ingredient_modified": {
+      const originalFormatted = formatChangeValue(
+        change.original_value,
+        change.unit,
+        change.field
+      );
+      const optimizedFormatted = formatChangeValue(
+        change.optimized_value,
+        change.unit,
+        change.field
+      );
+      return `${change.ingredient_name}: ${originalFormatted} → ${optimizedFormatted}`;
+    }
 
-    case "ingredient_added":
-      return `Add ${change.ingredient_name} (${formatChangeValue(change.optimized_value ?? change.amount, change.unit, "amount")})`;
+    case "ingredient_added": {
+      const amount = change.optimized_value ?? change.amount;
+      const amountFormatted = formatChangeValue(amount, change.unit, "amount");
+      return `Add ${change.ingredient_name} (${amountFormatted})`;
+    }
 
     case "ingredient_removed":
       return `Remove ${change.ingredient_name}`;
 
-    case "modify_recipe_parameter":
-      return `${change.parameter}: ${formatChangeValue(change.original_value)} → ${formatChangeValue(change.optimized_value)}`;
+    case "modify_recipe_parameter": {
+      const paramName = change.parameter || "parameter";
+      // Format parameter changes with appropriate units
+      const unit =
+        change.unit || (paramName.toLowerCase().includes("temp") ? "°" : "");
+      const originalFormatted = formatChangeValue(change.original_value, unit);
+      const optimizedFormatted = formatChangeValue(
+        change.optimized_value,
+        unit
+      );
+      return `${paramName}: ${originalFormatted} → ${optimizedFormatted}`;
+    }
 
     default:
       return "Unknown change";
@@ -243,4 +314,62 @@ export function getTotalChanges(grouped: GroupedRecipeChanges): number {
     grouped.additions.length +
     grouped.removals.length
   );
+}
+
+/**
+ * Enriches recipe changes with actual original values from the user's recipe
+ *
+ * The backend may send intermediate values from optimization steps.
+ * This function ensures changes display what the user actually entered.
+ *
+ * @param changes - Recipe changes from optimization
+ * @param originalRecipe - The user's original recipe data
+ * @returns Enriched recipe changes with correct original values
+ */
+export function enrichRecipeChanges(
+  changes: RecipeChange[],
+  originalRecipe: RecipeFormData
+): RecipeChange[] {
+  return changes.map(change => {
+    if (change.type === "ingredient_modified" && change.ingredient_name) {
+      // Find the original ingredient in the user's recipe
+      const originalIngredient = originalRecipe.ingredients.find(
+        ing => ing.name === change.ingredient_name
+      );
+
+      if (originalIngredient && change.field) {
+        // Get the actual original value from the user's ingredient
+        const actualOriginalValue =
+          originalIngredient[change.field as keyof RecipeIngredient];
+
+        return {
+          ...change,
+          original_value: actualOriginalValue as AIChangeValue,
+        };
+      }
+    }
+
+    if (change.type === "modify_recipe_parameter" && change.parameter) {
+      // Get the actual original parameter value from the user's recipe
+      const parameterMap: Record<string, keyof RecipeFormData> = {
+        mash_temperature: "mash_temperature",
+        mash_time: "mash_time",
+        boil_time: "boil_time",
+        efficiency: "efficiency",
+        batch_size: "batch_size",
+      };
+
+      const recipeField = parameterMap[change.parameter];
+      if (recipeField) {
+        const actualOriginalValue = originalRecipe[recipeField];
+        return {
+          ...change,
+          original_value: actualOriginalValue as AIChangeValue,
+        };
+      }
+    }
+
+    // Return unchanged for additions and removals
+    return change;
+  });
 }

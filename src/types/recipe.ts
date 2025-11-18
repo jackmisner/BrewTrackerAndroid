@@ -82,6 +82,7 @@ export interface RecipeMetrics {
   abv: number;
   ibu: number;
   srm: number;
+  attenuation?: number; // optional attenuation percentage from backend
   estimated_og?: number; // optional for display purposes
   estimated_fg?: number; // optional for display purposes
   estimated_abv?: number; // optional for display purposes
@@ -93,7 +94,8 @@ export interface RecipeMetrics {
 export interface Recipe {
   id: ID; // Normalized by API interceptors
   name: string;
-  style: string;
+  style: string; // Beer style name for display (e.g., "American IPA")
+  style_database_id?: string; // MongoDB ObjectId for backend operations (optional for backward compatibility)
   description: string;
   batch_size: number;
   batch_size_unit: BatchSizeUnit;
@@ -133,7 +135,8 @@ export interface Recipe {
 // Recipe form data (for creation/editing)
 export interface RecipeFormData {
   name: string;
-  style: string;
+  style: string; // Beer style name for display (e.g., "American IPA")
+  style_database_id?: string; // MongoDB ObjectId for backend operations
   description: string;
   batch_size: number;
   batch_size_unit: BatchSizeUnit;

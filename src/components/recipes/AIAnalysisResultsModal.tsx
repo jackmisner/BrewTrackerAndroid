@@ -37,14 +37,23 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { createAIStyles } from "@styles/ai/aiStyles";
 import { TEST_IDS } from "@src/constants/testIDs";
-import { AIAnalysisResponse, Recipe, MetricType, BeerStyle } from "@src/types";
+import {
+  AIAnalysisResponse,
+  Recipe,
+  MetricType,
+  BeerStyle,
+  RecipeFormData,
+} from "@src/types";
 import {
   groupRecipeChanges,
   formatChangeDescription,
   formatMetricForComparison,
   isMetricImproved,
+  enrichRecipeChanges,
+  normalizeBackendMetrics,
 } from "@utils/aiHelpers";
 import { beerStyleAnalysisService } from "@services/beerStyles/BeerStyleAnalysisService";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 interface AIAnalysisResultsModalProps {
   /**
@@ -61,6 +70,11 @@ interface AIAnalysisResultsModalProps {
    * Beer style for style guidelines (optional)
    */
   style?: BeerStyle | null;
+
+  /**
+   * Original recipe data (for enriching changes with actual user values)
+   */
+  originalRecipe?: RecipeFormData;
 
   /**
    * Loading state
@@ -100,6 +114,7 @@ export function AIAnalysisResultsModal({
   visible,
   result,
   style,
+  originalRecipe,
   loading = false,
   error = null,
   onApply,
@@ -110,13 +125,30 @@ export function AIAnalysisResultsModal({
   const theme = useTheme();
   const styles = createAIStyles(theme);
 
-  // Group recipe changes for organized display
+  // Normalize backend metrics (uppercase keys) to RecipeMetrics format (lowercase keys)
+  const normalizedOriginalMetrics = useMemo(
+    () => normalizeBackendMetrics(result?.original_metrics as any),
+    [result?.original_metrics]
+  );
+
+  const normalizedOptimizedMetrics = useMemo(
+    () => normalizeBackendMetrics(result?.optimized_metrics as any),
+    [result?.optimized_metrics]
+  );
+
+  // Enrich and group recipe changes for organized display
   const groupedChanges = useMemo(() => {
     if (!result?.recipe_changes) {
       return null;
     }
-    return groupRecipeChanges(result.recipe_changes);
-  }, [result?.recipe_changes]);
+
+    // Enrich changes with actual original values from user's recipe
+    const enrichedChanges = originalRecipe
+      ? enrichRecipeChanges(result.recipe_changes, originalRecipe)
+      : result.recipe_changes;
+
+    return groupRecipeChanges(enrichedChanges);
+  }, [result?.recipe_changes, originalRecipe]);
 
   // Metrics to display with proper MetricType
   const metrics = useMemo<Array<{ key: MetricType; label: string }>>(
@@ -248,8 +280,51 @@ export function AIAnalysisResultsModal({
     return null;
   }
 
-  const hasOptimisation =
-    result.optimization_performed && result.optimized_recipe;
+  const hasOptimisation = !!(
+    result.optimization_performed && result.optimized_recipe
+  );
+
+  // Debug logging
+  UnifiedLogger.debug("AIAnalysisResultsModal", "Rendering modal", {
+    hasOptimisation,
+    hasStyle: !!style,
+    styleName: style?.name,
+    styleId: style?.id,
+    recipeChangesCount: result.recipe_changes?.length || 0,
+    hasOriginalMetrics: !!result.original_metrics,
+    hasOptimizedMetrics: !!result.optimized_metrics,
+    iterationsCompleted: result.iterations_completed,
+  });
+
+  // Debug grouped changes
+  UnifiedLogger.debug("AIAnalysisResultsModal", "Grouped changes", {
+    hasGroupedChanges: !!groupedChanges,
+    parametersCount: groupedChanges?.parameters.length || 0,
+    modificationsCount: groupedChanges?.modifications.length || 0,
+    additionsCount: groupedChanges?.additions.length || 0,
+    removalsCount: groupedChanges?.removals.length || 0,
+  });
+
+  // Debug conditionals - ensure all are explicit booleans
+  const showSummary = hasOptimisation;
+  const showMetrics =
+    hasOptimisation &&
+    !!normalizedOriginalMetrics &&
+    !!normalizedOptimizedMetrics;
+  const showChanges = hasOptimisation && !!groupedChanges;
+
+  UnifiedLogger.debug("AIAnalysisResultsModal", "Boolean check", {
+    hasOptimisationType: typeof hasOptimisation,
+    hasOptimisationValue: hasOptimisation,
+    showSummaryType: typeof showSummary,
+    showSummaryValue: showSummary,
+  });
+
+  UnifiedLogger.debug("AIAnalysisResultsModal", "Section visibility", {
+    showSummary,
+    showMetrics,
+    showChanges,
+  });
 
   return (
     <Modal
@@ -264,7 +339,7 @@ export function AIAnalysisResultsModal({
         testID={TEST_IDS.ai.resultsModalOverlay}
       >
         <View
-          style={styles.modalContent}
+          style={[styles.modalContent, { height: "80%" }]}
           testID={TEST_IDS.ai.resultsModalContent}
         >
           {/* Header */}
@@ -295,7 +370,7 @@ export function AIAnalysisResultsModal({
             showsVerticalScrollIndicator
           >
             {/* Summary section */}
-            {hasOptimisation && (
+            {showSummary && (
               <View
                 style={styles.summaryContainer}
                 testID={TEST_IDS.ai.summaryContainer}
@@ -307,95 +382,95 @@ export function AIAnalysisResultsModal({
                   adherence
                   {style ? ` for ${style.name}` : ""}.
                 </Text>
-                {result.iterations_completed && (
-                  <Text style={styles.iterationsText}>
-                    Completed in {result.iterations_completed} iteration
-                    {result.iterations_completed !== 1 ? "s" : ""}
-                  </Text>
-                )}
               </View>
             )}
 
             {/* Metrics comparison */}
-            {hasOptimisation &&
-              result.original_metrics &&
-              result.optimized_metrics && (
-                <>
-                  <Text style={styles.metricsSectionTitle}>
-                    Metrics Comparison
-                  </Text>
-                  <View
-                    style={styles.metricsContainer}
-                    testID={TEST_IDS.ai.metricsContainer}
-                  >
-                    {metrics.map((metric, index) => {
-                      const original = result.original_metrics?.[metric.key];
-                      const optimised = result.optimized_metrics?.[metric.key];
-
-                      // Use existing BeerStyleAnalysisService to extract ranges
-                      const range = style
-                        ? beerStyleAnalysisService.getRange(style, metric.key)
-                        : undefined;
-                      const min = range?.min;
-                      const max = range?.max;
-
-                      const improved =
-                        original !== undefined &&
-                        optimised !== undefined &&
-                        isMetricImproved(original, optimised, min, max);
-
-                      const inRange =
-                        optimised !== undefined &&
-                        range !== undefined &&
-                        beerStyleAnalysisService.isInRange(optimised, range);
-
-                      return (
-                        <View
-                          key={metric.key}
-                          style={[
-                            styles.metricRow,
-                            index === metrics.length - 1 &&
-                              styles.metricRowLast,
-                          ]}
-                          testID={TEST_IDS.patterns.aiMetricRow(metric.key)}
-                        >
-                          <Text style={styles.metricName}>{metric.label}</Text>
-                          <View style={styles.metricValues}>
-                            <Text style={styles.metricOriginal}>
-                              {formatMetricForComparison(
-                                metric.label,
-                                original
-                              )}
-                            </Text>
-                            <Text style={styles.metricArrow}>→</Text>
-                            <View
-                              style={inRange ? styles.metricInRange : undefined}
-                            >
-                              <Text
-                                style={[
-                                  styles.metricOptimized,
-                                  improved
-                                    ? styles.metricImproved
-                                    : styles.metricUnchanged,
-                                ]}
-                              >
-                                {formatMetricForComparison(
-                                  metric.label,
-                                  optimised
-                                )}
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-                      );
-                    })}
+            {showMetrics && (
+              <>
+                <Text style={styles.metricsSectionTitle}>
+                  Metrics Comparison
+                </Text>
+                <View
+                  style={styles.metricsContainer}
+                  testID={TEST_IDS.ai.metricsContainer}
+                >
+                  {/* Header Row */}
+                  <View style={styles.metricHeaderRow}>
+                    <Text style={styles.metricHeaderCell}>Metric</Text>
+                    <Text style={styles.metricHeaderCell}>Original</Text>
+                    <Text style={styles.metricHeaderCell}>Optimised</Text>
+                    <Text style={styles.metricHeaderCell}>Style Range</Text>
                   </View>
-                  <View style={styles.divider} />
-                </>
-              )}
+
+                  {metrics.map((metric, index) => {
+                    // Access normalized metrics with lowercase keys
+                    const original = normalizedOriginalMetrics?.[metric.key];
+                    const optimised = normalizedOptimizedMetrics?.[metric.key];
+
+                    // Use existing BeerStyleAnalysisService to extract ranges
+                    const range = style
+                      ? beerStyleAnalysisService.getRange(style, metric.key)
+                      : undefined;
+                    const min = range?.min;
+                    const max = range?.max;
+
+                    const improved =
+                      original !== undefined &&
+                      optimised !== undefined &&
+                      isMetricImproved(original, optimised, min, max);
+
+                    const inRange =
+                      optimised !== undefined &&
+                      range !== undefined &&
+                      beerStyleAnalysisService.isInRange(optimised, range);
+
+                    // Format range string
+                    const rangeString =
+                      min !== undefined && max !== undefined
+                        ? `${formatMetricForComparison(metric.label, min)} - ${formatMetricForComparison(metric.label, max)}`
+                        : "—";
+
+                    return (
+                      <View
+                        key={metric.key}
+                        style={[
+                          styles.metricDataRow,
+                          index === metrics.length - 1 && styles.metricRowLast,
+                        ]}
+                        testID={TEST_IDS.patterns.aiMetricRow(metric.key)}
+                      >
+                        <Text style={styles.metricNameCell}>
+                          {metric.label}
+                        </Text>
+                        <Text style={styles.metricValueCell}>
+                          {formatMetricForComparison(metric.label, original)}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.metricValueCell,
+                            inRange
+                              ? styles.metricValueInRange
+                              : improved
+                                ? styles.metricValueImproved
+                                : styles.metricValueUnchanged,
+                          ]}
+                        >
+                          {formatMetricForComparison(metric.label, optimised)}
+                        </Text>
+                        <Text style={styles.metricRangeCell}>
+                          {rangeString}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+                <View style={styles.divider} />
+              </>
+            )}
 
             {/* Recipe changes */}
-            {hasOptimisation && groupedChanges && (
+            {showChanges && (
               <>
                 <Text style={styles.changesSectionTitle}>Recipe Changes</Text>
                 <View
