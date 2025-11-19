@@ -11,15 +11,8 @@
  * - Credentials only exist temporarily during enrollment flow
  */
 
-import React, { useEffect, useState } from "react";
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-} from "react-native";
+import React, { useEffect, useState, useRef } from "react";
+import { Modal, View, Text, TouchableOpacity, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -30,6 +23,7 @@ import {
   BiometricErrorCode,
 } from "@services/BiometricService";
 import { UnifiedLogger } from "@services/logger/UnifiedLogger";
+import { createBiometricEnrollmentModalStyles } from "@styles/components/biometricEnrollmentModalStyles";
 
 export const BiometricEnrollmentModal: React.FC = () => {
   const [showPrompt, setShowPrompt] = useState(false);
@@ -37,10 +31,17 @@ export const BiometricEnrollmentModal: React.FC = () => {
   const [password, setPassword] = useState<string | null>(null);
   const [biometricType, setBiometricType] = useState<string>("Biometrics");
   const { enableBiometrics } = useAuth();
-  const { colors } = useTheme();
+  const theme = useTheme();
+  const hasChecked = useRef(false);
+  const styles = createBiometricEnrollmentModalStyles(theme);
 
   // Check on mount if we should show the biometric enrollment prompt
   useEffect(() => {
+    // Prevent multiple executions
+    if (hasChecked.current) {
+      return;
+    }
+    hasChecked.current = true;
     const checkForPrompt = async () => {
       try {
         const shouldShow = await AsyncStorage.getItem("show_biometric_prompt");
@@ -161,6 +162,22 @@ export const BiometricEnrollmentModal: React.FC = () => {
             await AsyncStorage.removeItem("biometric_prompt_password");
             await SecureStore.deleteItemAsync("biometric_prompt_password");
           } catch {}
+        } else if (storedPassword && shouldShow !== "true") {
+          // Clean up any stray stored credentials if flag is not set
+          await UnifiedLogger.warn(
+            "biometric_modal",
+            "Stray biometric prompt credentials found without flag, cleaning up",
+            {
+              hasFlag: false,
+              hasUsername: !!storedUsername,
+              hasPassword: true,
+            }
+          );
+          try {
+            await AsyncStorage.removeItem("biometric_prompt_username");
+            await AsyncStorage.removeItem("biometric_prompt_password");
+            await SecureStore.deleteItemAsync("biometric_prompt_password");
+          } catch {}
         }
       } catch (error) {
         await UnifiedLogger.error(
@@ -184,6 +201,8 @@ export const BiometricEnrollmentModal: React.FC = () => {
   const handleEnableBiometrics = async () => {
     if (!username || !password) {
       setShowPrompt(false);
+      setUsername(null);
+      setPassword(null);
       return;
     }
 
@@ -204,6 +223,8 @@ export const BiometricEnrollmentModal: React.FC = () => {
       );
     } catch (error: any) {
       setShowPrompt(false);
+      setUsername(null);
+      setPassword(null);
 
       // Suppress alerts for user-initiated cancellations
       const errorCode = error.errorCode || error.code;
@@ -239,6 +260,7 @@ export const BiometricEnrollmentModal: React.FC = () => {
     setPassword(null);
   };
 
+  // Don't call setState during render - just return early
   if (!showPrompt) {
     return null;
   }
@@ -251,9 +273,7 @@ export const BiometricEnrollmentModal: React.FC = () => {
       onRequestClose={handleSkip}
     >
       <View style={styles.modalOverlay}>
-        <View
-          style={[styles.modalContent, { backgroundColor: colors.background }]}
-        >
+        <View style={styles.modalContent}>
           <MaterialIcons
             name={
               biometricType.toLowerCase().includes("face")
@@ -261,102 +281,32 @@ export const BiometricEnrollmentModal: React.FC = () => {
                 : "fingerprint"
             }
             size={64}
-            color={colors.primary}
+            color={theme.colors.primary}
             style={styles.modalIcon}
           />
-          <Text
-            accessibilityRole="header"
-            style={[styles.modalTitle, { color: colors.text }]}
-          >
+          <Text accessibilityRole="header" style={styles.modalTitle}>
             Enable {biometricType}s?
           </Text>
-          <Text style={[styles.modalMessage, { color: colors.textMuted }]}>
+          <Text style={styles.modalMessage}>
             Use {biometricType.toLowerCase()} to sign in quickly and securely.
             You can change this later in settings.
           </Text>
           <TouchableOpacity
             accessibilityRole="button"
-            style={[styles.button, { backgroundColor: colors.primary }]}
+            style={styles.button}
             onPress={handleEnableBiometrics}
           >
             <Text style={styles.buttonText}>Enable {biometricType}s</Text>
           </TouchableOpacity>
           <TouchableOpacity
             accessibilityRole="button"
-            style={[
-              styles.button,
-              styles.secondaryButton,
-              {
-                backgroundColor: "transparent",
-                borderWidth: 1,
-                borderColor: colors.primary,
-              },
-            ]}
+            style={[styles.button, styles.secondaryButton]}
             onPress={handleSkip}
           >
-            <Text
-              style={[styles.secondaryButtonText, { color: colors.primary }]}
-            >
-              Skip
-            </Text>
+            <Text style={styles.secondaryButtonText}>Skip</Text>
           </TouchableOpacity>
         </View>
       </View>
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    borderRadius: 12,
-    padding: 24,
-    width: "85%",
-    maxWidth: 400,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  modalIcon: {
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  modalMessage: {
-    fontSize: 14,
-    textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  button: {
-    width: "100%",
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  secondaryButton: {
-    marginBottom: 0,
-  },
-  secondaryButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});

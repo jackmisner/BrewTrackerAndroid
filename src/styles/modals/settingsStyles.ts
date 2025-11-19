@@ -205,8 +205,11 @@ export const settingsStyles = (theme: ThemeContextValue) =>
       width: "100%",
       padding: 16,
       borderWidth: 1,
+      borderColor: theme.colors.border,
       borderRadius: 8,
       fontSize: 16,
+      backgroundColor: theme.colors.inputBackground,
+      color: theme.colors.text,
       marginBottom: 24,
     },
     modalButtons: {
@@ -218,9 +221,11 @@ export const settingsStyles = (theme: ThemeContextValue) =>
       flex: 1,
       backgroundColor: "transparent",
       borderWidth: 1,
+      borderColor: theme.colors.border,
     },
     modalButtonTextSecondary: {
       fontSize: 16,
       fontWeight: "600",
+      color: theme.colors.text,
     },
   });
