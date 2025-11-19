@@ -349,13 +349,11 @@ describe("BiometricService", () => {
       });
       expect(mockSetItem).toHaveBeenCalledWith(
         "biometric_username",
-        "testuser",
-        { keychainAccessible: 1 }
+        "testuser"
       );
       expect(mockSetItem).toHaveBeenCalledWith(
         "biometric_password",
-        "testpass",
-        { keychainAccessible: 1 }
+        "testpass"
       );
       expect(mockSetItem).toHaveBeenCalledWith("biometric_enabled", "true");
     });
@@ -715,20 +713,8 @@ describe("BiometricService", () => {
 
       expect(result).toBe(true);
       expect(mockGetItem).toHaveBeenCalledWith("biometric_enabled");
-      expect(mockSetItem).toHaveBeenCalledWith(
-        "biometric_username",
-        "newuser",
-        {
-          keychainAccessible: 1,
-        }
-      );
-      expect(mockSetItem).toHaveBeenCalledWith(
-        "biometric_password",
-        "newpass",
-        {
-          keychainAccessible: 1,
-        }
-      );
+      expect(mockSetItem).toHaveBeenCalledWith("biometric_username", "newuser");
+      expect(mockSetItem).toHaveBeenCalledWith("biometric_password", "newpass");
     });
 
     it("should not update credentials when biometrics are disabled", async () => {

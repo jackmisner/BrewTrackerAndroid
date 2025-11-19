@@ -304,12 +304,8 @@ export class BiometricService {
       }
 
       // Store credentials securely in Android keystore
-      await SecureStore.setItemAsync(this.BIOMETRIC_USERNAME_KEY, username, {
-        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-      });
-      await SecureStore.setItemAsync(this.BIOMETRIC_PASSWORD_KEY, password, {
-        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-      });
+      await SecureStore.setItemAsync(this.BIOMETRIC_USERNAME_KEY, username);
+      await SecureStore.setItemAsync(this.BIOMETRIC_PASSWORD_KEY, password);
       await SecureStore.setItemAsync(this.BIOMETRIC_ENABLED_KEY, "true");
 
       await UnifiedLogger.info(
@@ -621,12 +617,8 @@ export class BiometricService {
         return false;
       }
 
-      await SecureStore.setItemAsync(this.BIOMETRIC_USERNAME_KEY, username, {
-        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-      });
-      await SecureStore.setItemAsync(this.BIOMETRIC_PASSWORD_KEY, password, {
-        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-      });
+      await SecureStore.setItemAsync(this.BIOMETRIC_USERNAME_KEY, username);
+      await SecureStore.setItemAsync(this.BIOMETRIC_PASSWORD_KEY, password);
 
       return true;
     } catch (error) {

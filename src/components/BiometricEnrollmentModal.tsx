@@ -42,8 +42,13 @@ export const BiometricEnrollmentModal: React.FC = () => {
       await AsyncStorage.removeItem("biometric_prompt_username");
       await AsyncStorage.removeItem("biometric_prompt_password");
       await SecureStore.deleteItemAsync("biometric_prompt_password");
-    } catch {
-      // Swallow cleanup errors
+    } catch (error) {
+      // Swallow cleanup errors but log for observability
+      await UnifiedLogger.warn(
+        "biometric_modal",
+        "Failed to clean up biometric prompt credentials",
+        { error: error instanceof Error ? error.message : String(error) }
+      );
     }
   };
 
