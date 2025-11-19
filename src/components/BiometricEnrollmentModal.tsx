@@ -11,7 +11,7 @@
  * - Credentials only exist temporarily during enrollment flow
  */
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { Modal, View, Text, TouchableOpacity, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
@@ -25,6 +25,14 @@ import {
 import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 import { createBiometricEnrollmentModalStyles } from "@styles/components/biometricEnrollmentModalStyles";
 
+// Storage keys for biometric enrollment prompt
+// Exported for use in login screen and other components
+export const BIOMETRIC_PROMPT_STORAGE_KEYS = {
+  SHOW_PROMPT: "show_biometric_prompt",
+  USERNAME: "biometric_prompt_username",
+  PASSWORD: "biometric_prompt_password",
+} as const;
+
 export const BiometricEnrollmentModal: React.FC = () => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
@@ -33,15 +41,20 @@ export const BiometricEnrollmentModal: React.FC = () => {
   const { enableBiometrics } = useAuth();
   const theme = useTheme();
   const hasChecked = useRef(false);
-  const styles = createBiometricEnrollmentModalStyles(theme);
+
+  // Memoize style creation to avoid re-creating StyleSheet on every render
+  const styles = useMemo(
+    () => createBiometricEnrollmentModalStyles(theme),
+    [theme]
+  );
 
   // Helper function to clean up biometric prompt credentials and flags
   const cleanupBiometricPromptCredentials = async () => {
     try {
-      await AsyncStorage.removeItem("show_biometric_prompt");
-      await AsyncStorage.removeItem("biometric_prompt_username");
-      await AsyncStorage.removeItem("biometric_prompt_password");
-      await SecureStore.deleteItemAsync("biometric_prompt_password");
+      await AsyncStorage.removeItem(BIOMETRIC_PROMPT_STORAGE_KEYS.SHOW_PROMPT);
+      await AsyncStorage.removeItem(BIOMETRIC_PROMPT_STORAGE_KEYS.USERNAME);
+      await AsyncStorage.removeItem(BIOMETRIC_PROMPT_STORAGE_KEYS.PASSWORD);
+      await SecureStore.deleteItemAsync(BIOMETRIC_PROMPT_STORAGE_KEYS.PASSWORD);
     } catch (error) {
       // Swallow cleanup errors but log for observability
       await UnifiedLogger.warn(
@@ -61,20 +74,22 @@ export const BiometricEnrollmentModal: React.FC = () => {
     hasChecked.current = true;
     const checkForPrompt = async () => {
       try {
-        const shouldShow = await AsyncStorage.getItem("show_biometric_prompt");
+        const shouldShow = await AsyncStorage.getItem(
+          BIOMETRIC_PROMPT_STORAGE_KEYS.SHOW_PROMPT
+        );
         const storedUsername = await AsyncStorage.getItem(
-          "biometric_prompt_username"
+          BIOMETRIC_PROMPT_STORAGE_KEYS.USERNAME
         );
 
         // SECURITY FIX: Read password from SecureStore instead of AsyncStorage
         let storedPassword = await SecureStore.getItemAsync(
-          "biometric_prompt_password"
+          BIOMETRIC_PROMPT_STORAGE_KEYS.PASSWORD
         );
 
         // MIGRATION: Check for legacy insecure password in AsyncStorage
         if (!storedPassword) {
           const legacyPassword = await AsyncStorage.getItem(
-            "biometric_prompt_password"
+            BIOMETRIC_PROMPT_STORAGE_KEYS.PASSWORD
           );
           if (legacyPassword) {
             await UnifiedLogger.warn(
@@ -84,12 +99,14 @@ export const BiometricEnrollmentModal: React.FC = () => {
             // Migrate to SecureStore
             try {
               await SecureStore.setItemAsync(
-                "biometric_prompt_password",
+                BIOMETRIC_PROMPT_STORAGE_KEYS.PASSWORD,
                 legacyPassword
               );
               storedPassword = legacyPassword;
               // Clean up legacy insecure storage
-              await AsyncStorage.removeItem("biometric_prompt_password");
+              await AsyncStorage.removeItem(
+                BIOMETRIC_PROMPT_STORAGE_KEYS.PASSWORD
+              );
               await UnifiedLogger.info(
                 "biometric_modal",
                 "Successfully migrated password to SecureStore"
@@ -106,7 +123,9 @@ export const BiometricEnrollmentModal: React.FC = () => {
                 }
               );
               // Clean up anyway for security
-              await AsyncStorage.removeItem("biometric_prompt_password");
+              await AsyncStorage.removeItem(
+                BIOMETRIC_PROMPT_STORAGE_KEYS.PASSWORD
+              );
             }
           }
         }

@@ -579,9 +579,15 @@ export class BiometricService {
   /**
    * Verify if stored credentials exist without triggering authentication
    *
-   * Useful for checking if user has previously enabled biometrics.
+   * Note: This method ONLY checks for the presence of stored username and password
+   * in SecureStore. It does NOT verify if biometric authentication is currently
+   * enabled (via the `biometric_enabled` flag). For a complete check including
+   * the enabled state, use `isBiometricEnabled()` instead.
    *
-   * @returns True if both username and password are stored
+   * Useful for checking raw credential storage state, such as during credential
+   * migration or cleanup operations.
+   *
+   * @returns True if both username and password are stored in SecureStore
    */
   static async hasStoredCredentials(): Promise<boolean> {
     try {
