@@ -50,7 +50,10 @@ export const createBiometricEnrollmentModalStyles = (
       backgroundColor: theme.colors.primary,
     },
     buttonText: {
-      color: theme.colors.text || "#fff",
+      // Use dedicated button text color for proper contrast on primary background
+      // Priority: buttonText (if exists) -> primaryText -> white (safe default for primary buttons)
+      color:
+        (theme.colors as any).buttonText || theme.colors.primaryText || "#fff",
       fontSize: 16,
       fontWeight: "600",
     },

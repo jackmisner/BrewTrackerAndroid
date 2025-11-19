@@ -35,6 +35,18 @@ export const BiometricEnrollmentModal: React.FC = () => {
   const hasChecked = useRef(false);
   const styles = createBiometricEnrollmentModalStyles(theme);
 
+  // Helper function to clean up biometric prompt credentials and flags
+  const cleanupBiometricPromptCredentials = async () => {
+    try {
+      await AsyncStorage.removeItem("show_biometric_prompt");
+      await AsyncStorage.removeItem("biometric_prompt_username");
+      await AsyncStorage.removeItem("biometric_prompt_password");
+      await SecureStore.deleteItemAsync("biometric_prompt_password");
+    } catch {
+      // Swallow cleanup errors
+    }
+  };
+
   // Check on mount if we should show the biometric enrollment prompt
   useEffect(() => {
     // Prevent multiple executions
@@ -68,11 +80,7 @@ export const BiometricEnrollmentModal: React.FC = () => {
             try {
               await SecureStore.setItemAsync(
                 "biometric_prompt_password",
-                legacyPassword,
-                {
-                  keychainAccessible:
-                    SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-                }
+                legacyPassword
               );
               storedPassword = legacyPassword;
               // Clean up legacy insecure storage
@@ -127,19 +135,7 @@ export const BiometricEnrollmentModal: React.FC = () => {
             setShowPrompt(true);
           } finally {
             // Always clear flags to avoid repeated prompts (including password for security)
-            try {
-              await AsyncStorage.removeItem("show_biometric_prompt");
-            } catch {}
-            try {
-              await AsyncStorage.removeItem("biometric_prompt_username");
-            } catch {}
-            try {
-              await SecureStore.deleteItemAsync("biometric_prompt_password");
-            } catch {}
-            // MIGRATION: Also clean up any legacy AsyncStorage password
-            try {
-              await AsyncStorage.removeItem("biometric_prompt_password");
-            } catch {}
+            await cleanupBiometricPromptCredentials();
           }
         } else if (
           !storedPassword &&
@@ -155,13 +151,7 @@ export const BiometricEnrollmentModal: React.FC = () => {
               hasPassword: false,
             }
           );
-          // Clean up incomplete enrollment attempt
-          try {
-            await AsyncStorage.removeItem("show_biometric_prompt");
-            await AsyncStorage.removeItem("biometric_prompt_username");
-            await AsyncStorage.removeItem("biometric_prompt_password");
-            await SecureStore.deleteItemAsync("biometric_prompt_password");
-          } catch {}
+          await cleanupBiometricPromptCredentials();
         } else if (storedPassword && shouldShow !== "true") {
           // Clean up any stray stored credentials if flag is not set
           await UnifiedLogger.warn(
@@ -173,11 +163,7 @@ export const BiometricEnrollmentModal: React.FC = () => {
               hasPassword: true,
             }
           );
-          try {
-            await AsyncStorage.removeItem("biometric_prompt_username");
-            await AsyncStorage.removeItem("biometric_prompt_password");
-            await SecureStore.deleteItemAsync("biometric_prompt_password");
-          } catch {}
+          await cleanupBiometricPromptCredentials();
         }
       } catch (error) {
         await UnifiedLogger.error(
@@ -186,12 +172,7 @@ export const BiometricEnrollmentModal: React.FC = () => {
           { error: error instanceof Error ? error.message : String(error) }
         );
         // Clean up on error for security
-        try {
-          await AsyncStorage.removeItem("show_biometric_prompt");
-          await AsyncStorage.removeItem("biometric_prompt_username");
-          await AsyncStorage.removeItem("biometric_prompt_password");
-          await SecureStore.deleteItemAsync("biometric_prompt_password");
-        } catch {}
+        await cleanupBiometricPromptCredentials();
       }
     };
 
