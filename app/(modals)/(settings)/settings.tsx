@@ -45,6 +45,8 @@ import {
   Switch,
   Alert,
   ActivityIndicator,
+  TextInput,
+  Modal,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -81,6 +83,8 @@ export default function SettingsScreen() {
 
   const [biometricType, setBiometricType] = useState<string>("Biometric");
   const [isTogglingBiometric, setIsTogglingBiometric] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
 
   // Load biometric type name on mount
   React.useEffect(() => {
@@ -191,6 +195,55 @@ export default function SettingsScreen() {
     );
   };
 
+  const handlePasswordSubmit = async () => {
+    const password = passwordInput.trim();
+
+    // Validate password - reject empty or whitespace-only values
+    if (!password) {
+      Alert.alert("Error", "Password is required");
+      return;
+    }
+
+    if (!user?.username) {
+      Alert.alert("Error", "Unable to retrieve username");
+      setShowPasswordModal(false);
+      setPasswordInput("");
+      return;
+    }
+
+    try {
+      setIsTogglingBiometric(true);
+      setShowPasswordModal(false);
+      setPasswordInput("");
+
+      await enableBiometrics(user.username, password);
+      await checkBiometricAvailability();
+
+      Alert.alert(
+        "Success",
+        `${biometricType} authentication has been enabled. You can now use ${biometricType.toLowerCase()}s to log in.`
+      );
+    } catch (error: any) {
+      console.error("Failed to enable biometrics:", error);
+
+      // Suppress alerts for user-initiated cancellations
+      const errorCode = error.errorCode || error.code;
+      const shouldSuppressAlert =
+        errorCode === BiometricErrorCode.USER_CANCELLED ||
+        errorCode === BiometricErrorCode.SYSTEM_CANCELLED;
+
+      if (!shouldSuppressAlert) {
+        Alert.alert(
+          "Error",
+          error.message ||
+            `Failed to enable ${biometricType.toLowerCase()}s authentication. Please try again.`
+        );
+      }
+    } finally {
+      setIsTogglingBiometric(false);
+    }
+  };
+
   const handleBiometricToggle = async (value: boolean) => {
     if (value) {
       // Enable biometrics - prompt for password for secure credential storage
@@ -199,52 +252,8 @@ export default function SettingsScreen() {
         return;
       }
 
-      // Prompt for password
-      Alert.prompt(
-        `Enable ${biometricType}`,
-        `Enter your password to enable ${biometricType.toLowerCase()}s authentication`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Enable",
-            onPress: async (password?: string) => {
-              if (!password) {
-                Alert.alert("Error", "Password is required");
-                return;
-              }
-
-              try {
-                setIsTogglingBiometric(true);
-                await enableBiometrics(user.username, password);
-                await checkBiometricAvailability();
-                Alert.alert(
-                  "Success",
-                  `${biometricType} authentication has been enabled. You can now use ${biometricType.toLowerCase()}s to log in.`
-                );
-              } catch (error: any) {
-                console.error("Failed to enable biometrics:", error);
-
-                // Suppress alerts for user-initiated cancellations
-                const errorCode = error.errorCode || error.code;
-                const shouldSuppressAlert =
-                  errorCode === BiometricErrorCode.USER_CANCELLED ||
-                  errorCode === BiometricErrorCode.SYSTEM_CANCELLED;
-
-                if (!shouldSuppressAlert) {
-                  Alert.alert(
-                    "Error",
-                    error.message ||
-                      `Failed to enable ${biometricType.toLowerCase()}s authentication. Please try again.`
-                  );
-                }
-              } finally {
-                setIsTogglingBiometric(false);
-              }
-            },
-          },
-        ],
-        "secure-text"
-      );
+      // Show password input modal (Android-compatible)
+      setShowPasswordModal(true);
     } else {
       // Disable biometrics - confirm and disable
       Alert.alert(
@@ -756,6 +765,88 @@ export default function SettingsScreen() {
         {/* Bottom spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {/* Password Input Modal for Biometric Enrollment */}
+      <Modal
+        visible={showPasswordModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowPasswordModal(false);
+          setPasswordInput("");
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: themeContext.colors.background },
+            ]}
+          >
+            <Text
+              style={[styles.modalTitle, { color: themeContext.colors.text }]}
+            >
+              Enable {biometricType}
+            </Text>
+            <Text
+              style={[
+                styles.modalMessage,
+                { color: themeContext.colors.textMuted },
+              ]}
+            >
+              Enter your password to enable {biometricType.toLowerCase()}s
+              authentication
+            </Text>
+            <TextInput
+              style={[
+                styles.passwordInput,
+                {
+                  color: themeContext.colors.text,
+                  backgroundColor: themeContext.colors.background,
+                  borderColor: themeContext.colors.border,
+                },
+              ]}
+              value={passwordInput}
+              onChangeText={setPasswordInput}
+              placeholder="Password"
+              placeholderTextColor={themeContext.colors.textMuted}
+              secureTextEntry
+              onSubmitEditing={handlePasswordSubmit}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  styles.modalButtonSecondary,
+                  { borderColor: themeContext.colors.primary },
+                ]}
+                onPress={() => {
+                  setShowPasswordModal(false);
+                  setPasswordInput("");
+                }}
+              >
+                <Text
+                  style={[
+                    styles.modalButtonTextSecondary,
+                    { color: themeContext.colors.primary },
+                  ]}
+                >
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: themeContext.colors.primary },
+                ]}
+                onPress={handlePasswordSubmit}
+              >
+                <Text style={styles.modalButtonText}>Enable</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

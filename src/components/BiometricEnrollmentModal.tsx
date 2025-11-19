@@ -195,6 +195,8 @@ export const BiometricEnrollmentModal: React.FC = () => {
 
       await enableBiometrics(username, password);
       setShowPrompt(false);
+      setUsername(null);
+      setPassword(null);
 
       Alert.alert(
         "Success",
@@ -233,6 +235,8 @@ export const BiometricEnrollmentModal: React.FC = () => {
       "User skipped biometric enrollment"
     );
     setShowPrompt(false);
+    setUsername(null);
+    setPassword(null);
   };
 
   if (!showPrompt) {
