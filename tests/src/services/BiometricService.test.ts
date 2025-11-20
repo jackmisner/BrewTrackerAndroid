@@ -558,48 +558,6 @@ describe("BiometricService", () => {
 
       expect(result).toBe(false);
     });
-
-    it("should auto-disable when device token is expired/revoked", async () => {
-      mockGetItem
-        .mockResolvedValueOnce("true") // isBiometricEnabled
-        .mockResolvedValueOnce("mock-device-token"); // device token
-      mockHasHardware.mockResolvedValue(true);
-      mockIsEnrolled.mockResolvedValue(true);
-      mockAuthenticate.mockResolvedValue({ success: true });
-
-      // API returns 401 or TOKEN_EXPIRED
-      mockBiometricLogin.mockRejectedValue({
-        response: { status: 401, data: { code: "TOKEN_EXPIRED" } },
-      });
-      mockDeleteItem.mockResolvedValue(undefined);
-
-      const result = await BiometricService.authenticateWithBiometrics();
-
-      expect(result.errorCode).toBe(BiometricErrorCode.TOKEN_ERROR);
-      expect(result.error).toContain("Device token expired or revoked");
-
-      // Verify auto-disable was triggered
-      expect(mockDeleteItem).toHaveBeenCalledWith("biometric_device_token");
-    });
-
-    it("should classify network errors with friendly message", async () => {
-      mockGetItem
-        .mockResolvedValueOnce("true")
-        .mockResolvedValueOnce("mock-device-token");
-      mockHasHardware.mockResolvedValue(true);
-      mockIsEnrolled.mockResolvedValue(true);
-      mockAuthenticate.mockResolvedValue({ success: true });
-
-      mockBiometricLogin.mockRejectedValue({
-        isNetworkError: true,
-        code: "NETWORK_ERROR",
-      });
-
-      const result = await BiometricService.authenticateWithBiometrics();
-
-      expect(result.errorCode).toBe(BiometricErrorCode.NETWORK_ERROR);
-      expect(result.error).toContain("Connection failed");
-    });
   });
 
   describe("revokeAndDisableBiometrics", () => {
@@ -851,6 +809,48 @@ describe("BiometricService", () => {
       const result = await BiometricService.authenticateWithBiometrics();
 
       expect(result.errorCode).toBe(BiometricErrorCode.CREDENTIALS_NOT_FOUND);
+    });
+
+    it("should auto-disable when device token is expired/revoked", async () => {
+      mockGetItem
+        .mockResolvedValueOnce("true") // isBiometricEnabled
+        .mockResolvedValueOnce("mock-device-token"); // device token
+      mockHasHardware.mockResolvedValue(true);
+      mockIsEnrolled.mockResolvedValue(true);
+      mockAuthenticate.mockResolvedValue({ success: true });
+
+      // API returns 401 or TOKEN_EXPIRED
+      mockBiometricLogin.mockRejectedValue({
+        response: { status: 401, data: { code: "TOKEN_EXPIRED" } },
+      });
+      mockDeleteItem.mockResolvedValue(undefined);
+
+      const result = await BiometricService.authenticateWithBiometrics();
+
+      expect(result.errorCode).toBe(BiometricErrorCode.TOKEN_ERROR);
+      expect(result.error).toContain("Device token expired or revoked");
+
+      // Verify auto-disable was triggered
+      expect(mockDeleteItem).toHaveBeenCalledWith("biometric_device_token");
+    });
+
+    it("should classify network errors with friendly message", async () => {
+      mockGetItem
+        .mockResolvedValueOnce("true")
+        .mockResolvedValueOnce("mock-device-token");
+      mockHasHardware.mockResolvedValue(true);
+      mockIsEnrolled.mockResolvedValue(true);
+      mockAuthenticate.mockResolvedValue({ success: true });
+
+      mockBiometricLogin.mockRejectedValue({
+        isNetworkError: true,
+        code: "NETWORK_ERROR",
+      });
+
+      const result = await BiometricService.authenticateWithBiometrics();
+
+      expect(result.errorCode).toBe(BiometricErrorCode.NETWORK_ERROR);
+      expect(result.error).toContain("Connection failed");
     });
   });
 
