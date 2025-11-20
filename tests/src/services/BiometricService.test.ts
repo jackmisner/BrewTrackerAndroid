@@ -509,6 +509,33 @@ describe("BiometricService", () => {
         errorCode: BiometricErrorCode.UNKNOWN_ERROR,
       });
     });
+    it("should rollback backend token when storage fails", async () => {
+      mockHasHardware.mockResolvedValue(true);
+      mockIsEnrolled.mockResolvedValue(true);
+      mockAuthenticate.mockResolvedValue({ success: true });
+
+      // API call succeeds but storage fails
+      mockCreateDeviceToken.mockResolvedValue({
+        data: {
+          device_token: "mock-device-token-123",
+          expires_at: new Date(
+            Date.now() + 90 * 24 * 60 * 60 * 1000
+          ).toISOString(),
+          device_id: "test-device-123",
+        },
+      });
+      mockSetItem.mockRejectedValueOnce(new Error("Storage error"));
+
+      await expect(
+        BiometricService.enableBiometrics("testuser")
+      ).rejects.toThrow("Storage error");
+
+      // Verify rollback: backend token revocation was attempted
+      expect(mockRevokeDeviceToken).toHaveBeenCalledWith("test-device-123");
+
+      // Verify local cleanup was attempted
+      expect(mockDeleteItem).toHaveBeenCalled();
+    });
   });
 
   describe("disableBiometrics", () => {
@@ -530,6 +557,86 @@ describe("BiometricService", () => {
       const result = await BiometricService.disableBiometricsLocally();
 
       expect(result).toBe(false);
+    });
+
+    it("should auto-disable when device token is expired/revoked", async () => {
+      mockGetItem
+        .mockResolvedValueOnce("true") // isBiometricEnabled
+        .mockResolvedValueOnce("mock-device-token"); // device token
+      mockHasHardware.mockResolvedValue(true);
+      mockIsEnrolled.mockResolvedValue(true);
+      mockAuthenticate.mockResolvedValue({ success: true });
+
+      // API returns 401 or TOKEN_EXPIRED
+      mockBiometricLogin.mockRejectedValue({
+        response: { status: 401, data: { code: "TOKEN_EXPIRED" } },
+      });
+      mockDeleteItem.mockResolvedValue(undefined);
+
+      const result = await BiometricService.authenticateWithBiometrics();
+
+      expect(result.errorCode).toBe(BiometricErrorCode.TOKEN_ERROR);
+      expect(result.error).toContain("Device token expired or revoked");
+
+      // Verify auto-disable was triggered
+      expect(mockDeleteItem).toHaveBeenCalledWith("biometric_device_token");
+    });
+
+    it("should classify network errors with friendly message", async () => {
+      mockGetItem
+        .mockResolvedValueOnce("true")
+        .mockResolvedValueOnce("mock-device-token");
+      mockHasHardware.mockResolvedValue(true);
+      mockIsEnrolled.mockResolvedValue(true);
+      mockAuthenticate.mockResolvedValue({ success: true });
+
+      mockBiometricLogin.mockRejectedValue({
+        isNetworkError: true,
+        code: "NETWORK_ERROR",
+      });
+
+      const result = await BiometricService.authenticateWithBiometrics();
+
+      expect(result.errorCode).toBe(BiometricErrorCode.NETWORK_ERROR);
+      expect(result.error).toContain("Connection failed");
+    });
+  });
+
+  describe("revokeAndDisableBiometrics", () => {
+    it("should revoke backend token and disable locally when device ID available", async () => {
+      mockGetItem.mockResolvedValueOnce("test-device-123"); // device ID
+      mockRevokeDeviceToken.mockResolvedValue({
+        data: { message: "Token revoked" },
+      });
+      mockDeleteItem.mockResolvedValue(undefined);
+
+      const result = await BiometricService.revokeAndDisableBiometrics();
+
+      expect(result).toBe(true);
+      expect(mockRevokeDeviceToken).toHaveBeenCalledWith("test-device-123");
+      expect(mockDeleteItem).toHaveBeenCalledTimes(4); // username, token, device_id, enabled
+    });
+
+    it("should skip backend revocation if device ID not available", async () => {
+      mockGetItem.mockResolvedValueOnce(null); // no device ID
+      mockDeleteItem.mockResolvedValue(undefined);
+
+      const result = await BiometricService.revokeAndDisableBiometrics();
+
+      expect(result).toBe(true);
+      expect(mockRevokeDeviceToken).not.toHaveBeenCalled();
+      expect(mockDeleteItem).toHaveBeenCalledTimes(4);
+    });
+
+    it("should proceed with local cleanup if backend revocation fails", async () => {
+      mockGetItem.mockResolvedValueOnce("test-device-123");
+      mockRevokeDeviceToken.mockRejectedValue(new Error("Network error"));
+      mockDeleteItem.mockResolvedValue(undefined);
+
+      const result = await BiometricService.revokeAndDisableBiometrics();
+
+      expect(result).toBe(true);
+      expect(mockDeleteItem).toHaveBeenCalledTimes(4);
     });
   });
 

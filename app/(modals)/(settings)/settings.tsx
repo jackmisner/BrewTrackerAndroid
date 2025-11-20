@@ -206,7 +206,7 @@ export default function SettingsScreen() {
 
       Alert.alert(
         "Success",
-        `${biometricType} authentication has been enabled. You can now use ${biometricType.toLowerCase()}s to log in.`
+        `${biometricType} authentication has been enabled. You can now use biometrics to log in.`
       );
     } catch (error: any) {
       console.error("Failed to enable biometrics:", error);
@@ -221,7 +221,7 @@ export default function SettingsScreen() {
         Alert.alert(
           "Error",
           error.message ||
-            `Failed to enable biometrics authentication. Please try again.`
+            `Failed to enable biometric authentication. Please try again.`
         );
       }
     } finally {
@@ -234,7 +234,7 @@ export default function SettingsScreen() {
       // Enable biometrics - confirm and enable
       Alert.alert(
         `Enable ${biometricType}?`,
-        `This will allow you to log in using ${biometricType.toLowerCase()}s instead of your password. Your device will securely store an authentication token.`,
+        `This will allow you to log in using biometrics instead of your password. Your device will securely store an authentication token.`,
         [
           { text: "Cancel", style: "cancel" },
           {
@@ -247,7 +247,7 @@ export default function SettingsScreen() {
       // Disable biometrics - confirm and disable
       Alert.alert(
         `Disable ${biometricType}?`,
-        `This will disable ${biometricType.toLowerCase()}s login. You'll need to enter your password to log in.`,
+        `This will disable biometric login. You'll need to enter your password to log in.`,
         [
           { text: "Cancel", style: "cancel" },
           {
@@ -266,7 +266,7 @@ export default function SettingsScreen() {
                 console.error("Failed to disable biometrics:", error);
                 Alert.alert(
                   "Error",
-                  `Failed to disable ${biometricType.toLowerCase()}s authentication. Please try again.`
+                  `Failed to disable biometric authentication. Please try again.`
                 );
               } finally {
                 setIsTogglingBiometric(false);
@@ -455,7 +455,7 @@ export default function SettingsScreen() {
                   testID={TEST_IDS.settings.biometricStatus}
                 >
                   {isBiometricEnabled
-                    ? `Enabled - Use ${biometricType.toLowerCase()}s to log in`
+                    ? `Enabled - Use biometrics to log in`
                     : `Disabled - Log in with password`}
                 </Text>
               </View>
