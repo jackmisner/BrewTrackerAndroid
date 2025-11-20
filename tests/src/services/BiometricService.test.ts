@@ -538,7 +538,7 @@ describe("BiometricService", () => {
     });
   });
 
-  describe("disableBiometrics", () => {
+  describe("disableBiometricsLocally", () => {
     it("should disable biometrics successfully and clear all data", async () => {
       mockDeleteItem.mockResolvedValue(undefined);
 
@@ -851,6 +851,8 @@ describe("BiometricService", () => {
 
       expect(result.errorCode).toBe(BiometricErrorCode.NETWORK_ERROR);
       expect(result.error).toContain("Connection failed");
+      // Network errors should not auto-disable biometric credentials
+      expect(mockDeleteItem).not.toHaveBeenCalled();
     });
   });
 
