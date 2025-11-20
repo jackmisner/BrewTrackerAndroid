@@ -9,6 +9,7 @@ import React from "react";
 import { Alert } from "react-native";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import { BiometricEnrollmentModal } from "@src/components/BiometricEnrollmentModal";
 import {
   BiometricService,
@@ -20,6 +21,13 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
   removeItem: jest.fn(),
+}));
+
+jest.mock("expo-secure-store", () => ({
+  getItemAsync: jest.fn(),
+  setItemAsync: jest.fn(),
+  deleteItemAsync: jest.fn(),
+  WHEN_UNLOCKED_THIS_DEVICE_ONLY: 1,
 }));
 
 jest.mock("@services/BiometricService", () => ({
@@ -78,10 +86,29 @@ jest.mock("@contexts/ThemeContext", () => ({
 const alertSpy = jest.spyOn(Alert, "alert");
 const mockGetItem = AsyncStorage.getItem as jest.Mock;
 const mockRemoveItem = AsyncStorage.removeItem as jest.Mock;
+const mockSecureStoreGetItem = SecureStore.getItemAsync as jest.Mock;
+const mockSecureStoreDeleteItem = SecureStore.deleteItemAsync as jest.Mock;
 const mockGetBiometricTypeName =
   BiometricService.getBiometricTypeName as jest.Mock;
 
 describe("BiometricEnrollmentModal", () => {
+  // Helper function to setup biometric enrollment mocks
+  const setupBiometricPrompt = (
+    username: string = "testuser",
+    password: string = "testpass"
+  ) => {
+    mockGetItem.mockImplementation((key: string) => {
+      if (key === "show_biometric_prompt") {
+        return Promise.resolve("true");
+      }
+      if (key === "biometric_prompt_username") {
+        return Promise.resolve(username);
+      }
+      return Promise.resolve(null);
+    });
+    mockSecureStoreGetItem.mockResolvedValue(password);
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetBiometricTypeName.mockResolvedValue("Fingerprint");
@@ -139,15 +166,7 @@ describe("BiometricEnrollmentModal", () => {
     });
 
     it("should render modal when flags are set correctly", async () => {
-      mockGetItem.mockImplementation((key: string) => {
-        if (key === "show_biometric_prompt") {
-          return Promise.resolve("true");
-        }
-        if (key === "biometric_prompt_username") {
-          return Promise.resolve("testuser");
-        }
-        return Promise.resolve(null);
-      });
+      setupBiometricPrompt();
 
       const { getByText } = render(<BiometricEnrollmentModal />);
 
@@ -157,16 +176,9 @@ describe("BiometricEnrollmentModal", () => {
     });
 
     it("should clear AsyncStorage flags after showing modal", async () => {
-      mockGetItem.mockImplementation((key: string) => {
-        if (key === "show_biometric_prompt") {
-          return Promise.resolve("true");
-        }
-        if (key === "biometric_prompt_username") {
-          return Promise.resolve("testuser");
-        }
-        return Promise.resolve(null);
-      });
+      setupBiometricPrompt();
       mockRemoveItem.mockResolvedValue(undefined);
+      mockSecureStoreDeleteItem.mockResolvedValue(undefined);
 
       render(<BiometricEnrollmentModal />);
 
@@ -175,6 +187,9 @@ describe("BiometricEnrollmentModal", () => {
         expect(mockRemoveItem).toHaveBeenCalledWith(
           "biometric_prompt_username"
         );
+        expect(mockSecureStoreDeleteItem).toHaveBeenCalledWith(
+          "biometric_prompt_password"
+        );
       });
     });
   });
@@ -182,15 +197,7 @@ describe("BiometricEnrollmentModal", () => {
   describe("biometric type display", () => {
     it("should display Face Recognition type", async () => {
       mockGetBiometricTypeName.mockResolvedValue("Face Recognition");
-      mockGetItem.mockImplementation((key: string) => {
-        if (key === "show_biometric_prompt") {
-          return Promise.resolve("true");
-        }
-        if (key === "biometric_prompt_username") {
-          return Promise.resolve("testuser");
-        }
-        return Promise.resolve(null);
-      });
+      setupBiometricPrompt();
 
       const { getByText } = render(<BiometricEnrollmentModal />);
 
@@ -201,15 +208,7 @@ describe("BiometricEnrollmentModal", () => {
 
     it("should display Biometric type as fallback", async () => {
       mockGetBiometricTypeName.mockResolvedValue("Biometric");
-      mockGetItem.mockImplementation((key: string) => {
-        if (key === "show_biometric_prompt") {
-          return Promise.resolve("true");
-        }
-        if (key === "biometric_prompt_username") {
-          return Promise.resolve("testuser");
-        }
-        return Promise.resolve(null);
-      });
+      setupBiometricPrompt();
 
       const { getByText } = render(<BiometricEnrollmentModal />);
 
@@ -221,18 +220,10 @@ describe("BiometricEnrollmentModal", () => {
 
   describe("enabling biometrics", () => {
     beforeEach(() => {
-      mockGetItem.mockImplementation((key: string) => {
-        if (key === "show_biometric_prompt") {
-          return Promise.resolve("true");
-        }
-        if (key === "biometric_prompt_username") {
-          return Promise.resolve("testuser");
-        }
-        return Promise.resolve(null);
-      });
+      setupBiometricPrompt();
     });
 
-    it("should call enableBiometrics with username when enable button is pressed", async () => {
+    it("should call enableBiometrics with username enable button is pressed", async () => {
       mockEnableBiometrics.mockResolvedValue(undefined);
 
       const { getByText } = render(<BiometricEnrollmentModal />);
@@ -364,15 +355,7 @@ describe("BiometricEnrollmentModal", () => {
 
   describe("skipping biometrics", () => {
     beforeEach(() => {
-      mockGetItem.mockImplementation((key: string) => {
-        if (key === "show_biometric_prompt") {
-          return Promise.resolve("true");
-        }
-        if (key === "biometric_prompt_username") {
-          return Promise.resolve("testuser");
-        }
-        return Promise.resolve(null);
-      });
+      setupBiometricPrompt();
     });
 
     it("should hide modal when skip button is pressed", async () => {
@@ -435,15 +418,7 @@ describe("BiometricEnrollmentModal", () => {
 
     it("should handle getBiometricTypeName errors gracefully", async () => {
       mockGetBiometricTypeName.mockRejectedValue(new Error("Hardware error"));
-      mockGetItem.mockImplementation((key: string) => {
-        if (key === "show_biometric_prompt") {
-          return Promise.resolve("true");
-        }
-        if (key === "biometric_prompt_username") {
-          return Promise.resolve("testuser");
-        }
-        return Promise.resolve(null);
-      });
+      setupBiometricPrompt();
 
       // Mock console.error to verify no uncaught errors
       const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();

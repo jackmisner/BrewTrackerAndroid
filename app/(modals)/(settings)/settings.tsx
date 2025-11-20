@@ -191,46 +191,63 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleEnableBiometrics = async () => {
+    if (!user?.username) {
+      Alert.alert("Error", "Unable to retrieve username");
+      return;
+    }
+
+    try {
+      setIsTogglingBiometric(true);
+
+      // Token-based biometric authentication - uses existing JWT session
+      await enableBiometrics(user.username);
+      await checkBiometricAvailability();
+
+      Alert.alert(
+        "Success",
+        `${biometricType} authentication has been enabled. You can now use biometrics to log in.`
+      );
+    } catch (error: any) {
+      console.error("Failed to enable biometrics:", error);
+
+      // Suppress alerts for user-initiated cancellations
+      const errorCode = error.errorCode || error.code;
+      const shouldSuppressAlert =
+        errorCode === BiometricErrorCode.USER_CANCELLED ||
+        errorCode === BiometricErrorCode.SYSTEM_CANCELLED;
+
+      if (!shouldSuppressAlert) {
+        Alert.alert(
+          "Error",
+          error.message ||
+            `Failed to enable biometric authentication. Please try again.`
+        );
+      }
+    } finally {
+      setIsTogglingBiometric(false);
+    }
+  };
+
   const handleBiometricToggle = async (value: boolean) => {
     if (value) {
-      // Enable biometrics - no password needed, uses JWT token refresh
-      if (!user?.username) {
-        Alert.alert("Error", "Unable to retrieve username");
-        return;
-      }
-
-      try {
-        setIsTogglingBiometric(true);
-        await enableBiometrics(user.username);
-        await checkBiometricAvailability();
-        Alert.alert(
-          "Success",
-          `${biometricType} authentication has been enabled. You can now use ${biometricType.toLowerCase()}s to log in.`
-        );
-      } catch (error: any) {
-        console.error("Failed to enable biometrics:", error);
-
-        // Suppress alerts for user-initiated cancellations
-        const errorCode = error.errorCode || error.code;
-        const shouldSuppressAlert =
-          errorCode === BiometricErrorCode.USER_CANCELLED ||
-          errorCode === BiometricErrorCode.SYSTEM_CANCELLED;
-
-        if (!shouldSuppressAlert) {
-          Alert.alert(
-            "Error",
-            error.message ||
-              `Failed to enable ${biometricType.toLowerCase()}s authentication. Please try again.`
-          );
-        }
-      } finally {
-        setIsTogglingBiometric(false);
-      }
+      // Enable biometrics - confirm and enable
+      Alert.alert(
+        `Enable ${biometricType}?`,
+        `This will allow you to log in using biometrics instead of your password. Your device will securely store an authentication token.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Enable",
+            onPress: handleEnableBiometrics,
+          },
+        ]
+      );
     } else {
       // Disable biometrics - confirm and disable
       Alert.alert(
         `Disable ${biometricType}?`,
-        `This will disable ${biometricType.toLowerCase()}s login. You'll need to enter your password to log in.`,
+        `This will disable biometric login. You'll need to enter your password to log in.`,
         [
           { text: "Cancel", style: "cancel" },
           {
@@ -249,7 +266,7 @@ export default function SettingsScreen() {
                 console.error("Failed to disable biometrics:", error);
                 Alert.alert(
                   "Error",
-                  `Failed to disable ${biometricType.toLowerCase()}s authentication. Please try again.`
+                  `Failed to disable biometric authentication. Please try again.`
                 );
               } finally {
                 setIsTogglingBiometric(false);
@@ -438,7 +455,7 @@ export default function SettingsScreen() {
                   testID={TEST_IDS.settings.biometricStatus}
                 >
                   {isBiometricEnabled
-                    ? `Enabled - Use ${biometricType.toLowerCase()}s to log in`
+                    ? `Enabled - Use biometrics to log in`
                     : `Disabled - Log in with password`}
                 </Text>
               </View>

@@ -65,6 +65,17 @@ jest.mock("expo-device", () => ({
   getDeviceId: jest.fn().mockResolvedValue("dfyt4uf"),
 }));
 
+jest.mock("expo-crypto", () => ({
+  getRandomBytesAsync: jest.fn(async length => {
+    // Return deterministic "random" bytes for testing
+    const bytes = new Uint8Array(length);
+    for (let i = 0; i < length; i++) {
+      bytes[i] = (i * 17) % 256; // Deterministic pattern
+    }
+    return bytes;
+  }),
+}));
+
 // Mock expo-file-system
 jest.mock("expo-file-system", () => {
   // Simple in-memory FS keyed by URI

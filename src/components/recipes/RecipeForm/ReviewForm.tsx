@@ -30,6 +30,7 @@ import { RecipeFormData } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BrewingMetricsDisplay } from "@src/components/recipes/BrewingMetrics/BrewingMetricsDisplay";
 import { StyleAnalysis } from "@src/components/recipes/StyleAnalysis";
+import { AIAnalysisButton } from "@src/components/recipes/AIAnalysisButton";
 import { formatHopTime } from "@src/utils/timeUtils";
 import { generateIngredientKey, generateListItemKey } from "@utils/keyUtils";
 import { TEST_IDS } from "@src/constants/testIDs";
@@ -63,6 +64,7 @@ interface ReviewFormProps {
   metricsError?: unknown;
   onRetryMetrics?: () => void;
   isEditing?: boolean;
+  onAIAnalysis?: () => void;
 }
 
 /**
@@ -79,6 +81,7 @@ export function ReviewForm({
   metricsError,
   onRetryMetrics,
   isEditing = false,
+  onAIAnalysis,
 }: ReviewFormProps) {
   const theme = useTheme();
   const styles = createRecipeStyles(theme);
@@ -314,6 +317,11 @@ export function ReviewForm({
           mode="adherence"
           testID={TEST_IDS.recipes.styleAnalysisDetailed}
         />
+      )}
+
+      {/* AI Analysis Button */}
+      {recipeData.ingredients.length > 0 && onAIAnalysis && (
+        <AIAnalysisButton onPress={onAIAnalysis} disabled={!recipeData.style} />
       )}
 
       <View style={styles.infoSection}>

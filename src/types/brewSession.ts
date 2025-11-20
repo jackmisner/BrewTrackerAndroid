@@ -97,6 +97,7 @@ export interface BrewSession {
   temperature_unit?: "C" | "F";
   fermentation_data?: FermentationEntry[]; // Backend uses fermentation_data
   dry_hop_additions?: DryHopAddition[];
+  style_database_id?: string; // Android-specific field for style reference. Gets stripped out on API calls.
 
   // Timestamps
   created_at: string;

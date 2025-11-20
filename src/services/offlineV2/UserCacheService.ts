@@ -3582,6 +3582,7 @@ export class UserCacheService {
     delete sanitized.id;
     delete sanitized.created_at;
     delete sanitized.user_id;
+    delete sanitized.style_database_id; // Android-only field for AI analysis, not stored in backend
 
     // Sanitize numeric fields
     if (sanitized.batch_size !== undefined && sanitized.batch_size !== null) {
@@ -4599,6 +4600,7 @@ export class UserCacheService {
     delete sanitized.id;
     delete sanitized.created_at;
     delete sanitized.user_id;
+    delete sanitized.style_database_id; // Android-only field for AI analysis, not stored in backend
 
     // Sanitize numeric fields
     if (sanitized.batch_size !== undefined && sanitized.batch_size !== null) {

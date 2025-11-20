@@ -181,7 +181,9 @@ export function BasicInfoForm({
               key={`${style.style_id}-${style.name}`}
               style={styles.stylePickerItem}
               onPress={() => {
+                // Store both the style name (for display) and database ID (for backend)
                 handleFieldChange("style", style.name);
+                onUpdateField("style_database_id", style.id);
                 setShowStylePicker(false);
                 setStyleSearchQuery("");
               }}

@@ -201,4 +201,31 @@ export const settingsStyles = (theme: ThemeContextValue) =>
       fontSize: 16,
       fontWeight: "600",
     },
+    passwordInput: {
+      width: "100%",
+      padding: 16,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: 8,
+      fontSize: 16,
+      backgroundColor: theme.colors.inputBackground,
+      color: theme.colors.text,
+      marginBottom: 24,
+    },
+    modalButtons: {
+      flexDirection: "row",
+      gap: 12,
+      width: "100%",
+    },
+    modalButtonSecondary: {
+      flex: 1,
+      backgroundColor: "transparent",
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    modalButtonTextSecondary: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: theme.colors.text,
+    },
   });

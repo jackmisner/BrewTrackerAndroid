@@ -14,8 +14,12 @@
  *
  * Security:
  * - Secure password input
- * - JWT tokens handled by AuthContext and stored securely (e.g., SecureStore)
- * - Input handling with basic validation
+ * - JWT tokens handled by AuthContext and stored securely in SecureStore
+ * - Passwords temporarily stored in SecureStore (hardware-backed encryption) for biometric enrollment
+ * - No plaintext passwords in AsyncStorage (migrated to SecureStore as of Dec 2024)
+ *
+ * Platform Permissions:
+ * - Android: No additional permissions required (SecureStore uses Android Keystore)
  */
 
 import React, { useState, useEffect } from "react";
@@ -30,6 +34,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "@contexts/AuthContext";
@@ -95,6 +100,7 @@ export default function LoginScreen() {
         });
 
         // Set flag for dashboard to show biometric enrollment prompt
+        // Store password temporarily in SECURE STORAGE for biometric enrollment
         if (isAvailable && !isEnabled) {
           await UnifiedLogger.info(
             "login",
@@ -102,6 +108,8 @@ export default function LoginScreen() {
           );
           await AsyncStorage.setItem("show_biometric_prompt", "true");
           await AsyncStorage.setItem("biometric_prompt_username", username);
+          // SECURITY: Store password in SecureStore instead of AsyncStorage
+          await SecureStore.setItemAsync("biometric_prompt_password", password);
         } else {
           await UnifiedLogger.debug("login", "Skipping biometric prompt flag", {
             reason: !isAvailable
@@ -113,7 +121,7 @@ export default function LoginScreen() {
         // Silently handle biometric check failures - don't block navigation
         await UnifiedLogger.error(
           "login",
-          "Failed biometric check or AsyncStorage operation",
+          "Failed biometric check or SecureStore operation",
           {
             error: biometricError,
             message: biometricError?.message,

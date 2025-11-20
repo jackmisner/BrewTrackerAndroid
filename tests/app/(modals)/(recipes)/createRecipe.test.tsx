@@ -228,6 +228,10 @@ jest.mock("@hooks/offlineV2/useUserData", () => ({
   })),
 }));
 
+jest.mock("@src/utils/colorUtils", () => ({
+  withAlpha: jest.fn((color: string, alpha: number) => color),
+}));
+
 const mockTheme = {
   colors: {
     primary: "#007AFF",
