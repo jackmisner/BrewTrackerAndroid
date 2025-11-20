@@ -2,41 +2,44 @@
  * Biometric Authentication Service for BrewTracker Android
  *
  * Provides secure biometric authentication (fingerprint, face recognition, iris) capabilities
- * using expo-local-authentication. Handles device capability detection, credential
- * storage/retrieval, and authentication flow management.
+ * using expo-local-authentication and device token-based authentication. Handles device
+ * capability detection, device token management, and authentication flow.
  *
  * Features:
  * - Device biometric capability detection
- * - Secure credential storage using SecureStore
+ * - Secure device token storage using SecureStore
  * - Biometric authentication prompts with customizable messages
  * - Enable/disable biometric authentication management
  * - Error handling and fallback logic
  *
  * Security:
- * - Credentials stored in hardware-backed Android SecureStore
- * - Biometric verification required before credential access
- * - Encrypted password storage in Android keystore
+ * - Device tokens stored in hardware-backed Android SecureStore
+ * - Biometric verification required before token access
+ * - No passwords stored on device (token-based authentication)
+ * - Tokens can be revoked server-side
+ * - 90-day token expiration with automatic refresh
  * - User can disable anytime
  *
  * Architecture:
- * - Biometric authentication is equivalent to password authentication
- * - Successful biometric scan retrieves stored credentials
- * - Credentials are used for full login (not token refresh)
- * - Works indefinitely - no token expiration issues
+ * - Token-based authentication following OAuth2 refresh token pattern
+ * - Successful biometric scan retrieves device token from SecureStore
+ * - Device token exchanged with backend for access token
+ * - Server stores only SHA-256 hash of device token
+ * - Prevents pass-the-hash attacks
  *
  * @example
  * ```typescript
  * // Check if biometrics are available
  * const isAvailable = await BiometricService.isBiometricAvailable();
  *
- * // Enable biometric login after successful password login
- * await BiometricService.enableBiometrics('username', 'password');
+ * // Enable biometric login after successful password login (requires access token)
+ * await BiometricService.enableBiometrics('username');
  *
- * // Authenticate with biometrics
+ * // Authenticate with biometrics (returns access token)
  * const result = await BiometricService.authenticateWithBiometrics();
- * if (result.success && result.credentials) {
- *   // Login with retrieved credentials
- *   await login(result.credentials);
+ * if (result.success && result.accessToken) {
+ *   // Store access token and update auth state
+ *   await handleBiometricLogin(result.accessToken, result.user);
  * }
  * ```
  */
@@ -45,6 +48,8 @@ import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 import { STORAGE_KEYS } from "./config";
+import ApiService from "./api/apiService";
+import { getDeviceId, getDeviceName, getPlatform } from "@utils/deviceUtils";
 
 /**
  * Biometric error codes
@@ -63,21 +68,19 @@ export enum BiometricErrorCode {
 }
 
 /**
- * Stored biometric credentials
- */
-export interface BiometricCredentials {
-  username: string;
-  password: string;
-}
-
-/**
- * Biometric authentication result
+ * Biometric authentication result with access token
  */
 export interface BiometricAuthResult {
   success: boolean;
   error?: string;
   errorCode?: BiometricErrorCode;
-  credentials?: BiometricCredentials;
+  accessToken?: string;
+  user?: {
+    id: string;
+    username: string;
+    email: string;
+    [key: string]: any;
+  };
 }
 
 /**
@@ -101,7 +104,10 @@ export class BiometricService {
   // SecureStore keys for biometric authentication
   private static readonly BIOMETRIC_USERNAME_KEY =
     STORAGE_KEYS.BIOMETRIC_USERNAME;
-  private static readonly BIOMETRIC_PASSWORD_KEY = "biometric_password";
+  private static readonly BIOMETRIC_DEVICE_TOKEN_KEY =
+    STORAGE_KEYS.BIOMETRIC_DEVICE_TOKEN;
+  private static readonly BIOMETRIC_DEVICE_ID_KEY =
+    STORAGE_KEYS.BIOMETRIC_DEVICE_ID;
   private static readonly BIOMETRIC_ENABLED_KEY =
     STORAGE_KEYS.BIOMETRIC_ENABLED;
 
@@ -230,20 +236,16 @@ export class BiometricService {
   }
 
   /**
-   * Enable biometric authentication and store credentials
+   * Enable biometric authentication with device token
    *
-   * Stores username and password in SecureStore after successful biometric enrollment.
-   * Credentials are encrypted and stored in Android's hardware-backed keystore.
+   * Creates a device token on the backend and stores it in SecureStore after successful
+   * biometric enrollment. Requires user to be authenticated with valid JWT access token.
    *
-   * @param username - User's username
-   * @param password - User's password (will be encrypted)
+   * @param username - User's username for display purposes
    * @returns True if biometric authentication was enabled successfully
    * @throws Error with errorCode property for structured error handling
    */
-  static async enableBiometrics(
-    username: string,
-    password: string
-  ): Promise<boolean> {
+  static async enableBiometrics(username: string): Promise<boolean> {
     try {
       await UnifiedLogger.info(
         "biometric",
@@ -303,9 +305,37 @@ export class BiometricService {
         throw error;
       }
 
-      // Store credentials securely in Android keystore
+      // Get device information
+      const deviceId = await getDeviceId();
+      const deviceName = await getDeviceName();
+      const platform = getPlatform();
+
+      await UnifiedLogger.debug("biometric", "Creating device token", {
+        deviceId: `${deviceId.substring(0, 8)}...`,
+        deviceName,
+        platform,
+      });
+
+      // Create device token on backend (requires valid JWT access token)
+      const response = await ApiService.auth.createDeviceToken({
+        device_id: deviceId,
+        device_name: deviceName,
+        platform,
+      });
+
+      const { device_token, expires_at } = response.data;
+
+      await UnifiedLogger.debug("biometric", "Device token created", {
+        expiresAt: expires_at,
+      });
+
+      // Store device token and metadata in SecureStore
+      await SecureStore.setItemAsync(
+        this.BIOMETRIC_DEVICE_TOKEN_KEY,
+        device_token
+      );
+      await SecureStore.setItemAsync(this.BIOMETRIC_DEVICE_ID_KEY, deviceId);
       await SecureStore.setItemAsync(this.BIOMETRIC_USERNAME_KEY, username);
-      await SecureStore.setItemAsync(this.BIOMETRIC_PASSWORD_KEY, password);
       await SecureStore.setItemAsync(this.BIOMETRIC_ENABLED_KEY, "true");
 
       await UnifiedLogger.info(
@@ -313,6 +343,7 @@ export class BiometricService {
         "Biometric authentication enabled successfully",
         {
           username: `${username.substring(0, 3)}***`,
+          expiresAt: expires_at,
         }
       );
 
@@ -334,7 +365,9 @@ export class BiometricService {
   /**
    * Disable biometric authentication and clear stored data
    *
-   * Removes all biometric-related data from SecureStore including credentials.
+   * Removes all biometric-related data from SecureStore including device token.
+   * Note: This does NOT revoke the token on the backend - token remains valid until
+   * expiration or manual revocation via settings.
    *
    * @returns True if biometric authentication was disabled successfully
    */
@@ -346,7 +379,8 @@ export class BiometricService {
       );
 
       await SecureStore.deleteItemAsync(this.BIOMETRIC_USERNAME_KEY);
-      await SecureStore.deleteItemAsync(this.BIOMETRIC_PASSWORD_KEY);
+      await SecureStore.deleteItemAsync(this.BIOMETRIC_DEVICE_TOKEN_KEY);
+      await SecureStore.deleteItemAsync(this.BIOMETRIC_DEVICE_ID_KEY);
       await SecureStore.deleteItemAsync(this.BIOMETRIC_ENABLED_KEY);
 
       await UnifiedLogger.info(
@@ -364,14 +398,14 @@ export class BiometricService {
   }
 
   /**
-   * Authenticate user with biometrics and retrieve stored credentials
+   * Authenticate user with biometrics using device token
    *
-   * Prompts user for biometric authentication and returns stored credentials
-   * on success. Credentials can then be used for full login authentication.
-   * Handles various authentication scenarios and errors.
+   * Prompts user for biometric authentication, retrieves device token from SecureStore,
+   * and exchanges it with backend for an access token. Returns access token and user data
+   * on success. Handles various authentication scenarios and errors.
    *
    * @param promptMessage - Custom message to display in biometric prompt
-   * @returns BiometricAuthResult with success status and credentials
+   * @returns BiometricAuthResult with success status, access token, and user data
    */
   static async authenticateWithBiometrics(
     promptMessage?: string
@@ -490,27 +524,27 @@ export class BiometricService {
 
       await UnifiedLogger.debug(
         "biometric",
-        "Biometric authentication successful, retrieving stored credentials"
+        "Biometric authentication successful, retrieving device token"
       );
 
-      // Retrieve stored credentials from Android SecureStore
+      // Retrieve device token from SecureStore
+      const deviceToken = await SecureStore.getItemAsync(
+        this.BIOMETRIC_DEVICE_TOKEN_KEY
+      );
       const username = await SecureStore.getItemAsync(
         this.BIOMETRIC_USERNAME_KEY
       );
-      const password = await SecureStore.getItemAsync(
-        this.BIOMETRIC_PASSWORD_KEY
-      );
 
-      await UnifiedLogger.debug("biometric", "Stored credentials retrieval", {
+      await UnifiedLogger.debug("biometric", "Device token retrieval", {
+        hasDeviceToken: !!deviceToken,
         hasUsername: !!username,
-        hasPassword: !!password,
         username: username ? `${username.substring(0, 3)}***` : "null",
       });
 
-      if (!username || !password) {
+      if (!deviceToken) {
         await UnifiedLogger.warn(
           "biometric",
-          "Stored credentials incomplete, auto-disabling biometrics"
+          "Device token not found, auto-disabling biometrics"
         );
 
         // Self-heal: disable biometrics to prevent future failed attempts
@@ -518,7 +552,7 @@ export class BiometricService {
           await this.disableBiometrics();
           await UnifiedLogger.info(
             "biometric",
-            "Auto-disabled biometrics due to missing stored credentials"
+            "Auto-disabled biometrics due to missing device token"
           );
         } catch (disableError) {
           await UnifiedLogger.error(
@@ -535,25 +569,39 @@ export class BiometricService {
 
         return {
           success: false,
-          error: "Stored credentials not found",
+          error:
+            "Device token not found. Please re-enroll biometric authentication.",
           errorCode: BiometricErrorCode.CREDENTIALS_NOT_FOUND,
         };
       }
+
+      await UnifiedLogger.debug(
+        "biometric",
+        "Exchanging device token for access token"
+      );
+
+      // Exchange device token for access token via backend
+      const loginResponse = await ApiService.auth.biometricLogin({
+        device_token: deviceToken,
+      });
+
+      const { access_token, user } = loginResponse.data;
 
       await UnifiedLogger.info(
         "biometric",
         "BiometricService.authenticateWithBiometrics successful",
         {
-          username: `${username.substring(0, 3)}***`,
+          username: user?.username
+            ? `${user.username.substring(0, 3)}***`
+            : "unknown",
+          userId: user?.id,
         }
       );
 
       return {
         success: true,
-        credentials: {
-          username,
-          password,
-        },
+        accessToken: access_token,
+        user,
       };
     } catch (error) {
       await UnifiedLogger.error(
@@ -565,70 +613,150 @@ export class BiometricService {
         }
       );
 
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Biometric authentication failed";
+
+      // Check for structured error code from API
+      const isTokenError =
+        (error as any)?.response?.data?.code === "TOKEN_EXPIRED" ||
+        (error as any)?.response?.data?.code === "TOKEN_REVOKED" ||
+        (error as any)?.response?.data?.code === "TOKEN_INVALID" ||
+        (error as any)?.response?.status === 401;
+
+      if (isTokenError) {
+        await UnifiedLogger.warn(
+          "biometric",
+          "Device token expired or revoked, auto-disabling biometrics"
+        );
+
+        // Auto-disable biometrics if token is invalid
+        try {
+          await this.disableBiometrics();
+          await UnifiedLogger.info(
+            "biometric",
+            "Auto-disabled biometrics due to invalid device token"
+          );
+        } catch (disableError) {
+          await UnifiedLogger.error(
+            "biometric",
+            "Failed to auto-disable biometrics",
+            {
+              error:
+                disableError instanceof Error
+                  ? disableError.message
+                  : String(disableError),
+            }
+          );
+        }
+
+        return {
+          success: false,
+          error:
+            "Device token expired. Please re-enroll biometric authentication.",
+          errorCode: BiometricErrorCode.UNKNOWN_ERROR,
+        };
+      }
+
       return {
         success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Biometric authentication failed",
+        error: errorMessage,
         errorCode: BiometricErrorCode.UNKNOWN_ERROR,
       };
     }
   }
 
   /**
-   * Verify if stored credentials exist without triggering authentication
+   * Verify if device token exists without triggering authentication
    *
-   * Note: This method ONLY checks for the presence of stored username and password
+   * Note: This method ONLY checks for the presence of stored device token
    * in SecureStore. It does NOT verify if biometric authentication is currently
    * enabled (via the `biometric_enabled` flag). For a complete check including
    * the enabled state, use `isBiometricEnabled()` instead.
    *
-   * Useful for checking raw credential storage state, such as during credential
+   * Useful for checking device token storage state, such as during token
    * migration or cleanup operations.
    *
-   * @returns True if both username and password are stored in SecureStore
+   * @returns True if device token is stored in SecureStore
    */
-  static async hasStoredCredentials(): Promise<boolean> {
+  static async hasStoredDeviceToken(): Promise<boolean> {
     try {
-      const username = await SecureStore.getItemAsync(
-        this.BIOMETRIC_USERNAME_KEY
-      );
-      const password = await SecureStore.getItemAsync(
-        this.BIOMETRIC_PASSWORD_KEY
+      const deviceToken = await SecureStore.getItemAsync(
+        this.BIOMETRIC_DEVICE_TOKEN_KEY
       );
 
-      return !!username && !!password;
+      return !!deviceToken;
     } catch (error) {
-      console.error("Error checking stored credentials:", error);
+      console.error("Error checking stored device token:", error);
       return false;
     }
   }
 
   /**
-   * Update stored credentials (e.g., after password change)
+   * Revoke device token on the backend and disable biometrics locally
    *
-   * @param username - Updated username
-   * @param password - Updated password
-   * @returns True if credentials were updated successfully
+   * This method revokes the device token on the backend (invalidating it server-side)
+   * and then disables biometric authentication locally by removing all stored data.
+   *
+   * Use this when user wants to completely remove biometric authentication, such as
+   * during password change or account security update.
+   *
+   * @returns True if device token was revoked and biometrics disabled successfully
    */
-  static async updateStoredCredentials(
-    username: string,
-    password: string
-  ): Promise<boolean> {
+  static async revokeAndDisableBiometrics(): Promise<boolean> {
     try {
-      // Only update if biometrics are currently enabled
-      const isEnabled = await this.isBiometricEnabled();
-      if (!isEnabled) {
-        return false;
+      await UnifiedLogger.info(
+        "biometric",
+        "Revoking device token and disabling biometrics"
+      );
+
+      // Get device ID before disabling
+      const deviceId = await SecureStore.getItemAsync(
+        this.BIOMETRIC_DEVICE_ID_KEY
+      );
+
+      if (deviceId) {
+        try {
+          // Revoke device token on backend
+          await ApiService.auth.revokeDeviceToken(deviceId);
+          await UnifiedLogger.info(
+            "biometric",
+            "Device token revoked on backend",
+            {
+              deviceId: `${deviceId.substring(0, 8)}...`,
+            }
+          );
+        } catch (error) {
+          await UnifiedLogger.warn(
+            "biometric",
+            "Failed to revoke device token on backend (continuing with local disable)",
+            {
+              error: error instanceof Error ? error.message : String(error),
+            }
+          );
+        }
       }
 
-      await SecureStore.setItemAsync(this.BIOMETRIC_USERNAME_KEY, username);
-      await SecureStore.setItemAsync(this.BIOMETRIC_PASSWORD_KEY, password);
+      // Disable biometrics locally
+      const success = await this.disableBiometrics();
 
-      return true;
+      if (success) {
+        await UnifiedLogger.info(
+          "biometric",
+          "Device token revoked and biometrics disabled successfully"
+        );
+      }
+
+      return success;
     } catch (error) {
-      console.error("Error updating stored credentials:", error);
+      await UnifiedLogger.error(
+        "biometric",
+        "Failed to revoke and disable biometrics",
+        {
+          error: error instanceof Error ? error.message : String(error),
+        }
+      );
       return false;
     }
   }

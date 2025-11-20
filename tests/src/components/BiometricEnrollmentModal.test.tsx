@@ -223,7 +223,7 @@ describe("BiometricEnrollmentModal", () => {
       setupBiometricPrompt();
     });
 
-    it("should call enableBiometrics with username and password when enable button is pressed", async () => {
+    it("should call enableBiometrics with username enable button is pressed", async () => {
       mockEnableBiometrics.mockResolvedValue(undefined);
 
       const { getByText } = render(<BiometricEnrollmentModal />);
@@ -236,10 +236,7 @@ describe("BiometricEnrollmentModal", () => {
       fireEvent.press(enableButton);
 
       await waitFor(() => {
-        expect(mockEnableBiometrics).toHaveBeenCalledWith(
-          "testuser",
-          "testpass"
-        );
+        expect(mockEnableBiometrics).toHaveBeenCalledWith("testuser");
       });
     });
 

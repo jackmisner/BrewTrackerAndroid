@@ -33,9 +33,11 @@ export const STORAGE_KEYS = {
   CACHED_INGREDIENTS: "cached_ingredients",
   LAST_SYNC: "last_sync",
   NETWORK_STATE: "network_state",
-  // Biometric authentication
+  // Biometric authentication (token-based, not password-based)
   BIOMETRIC_ENABLED: "biometric_enabled",
   BIOMETRIC_USERNAME: "biometric_username",
+  BIOMETRIC_DEVICE_TOKEN: "biometric_device_token", // Long-lived refresh token
+  BIOMETRIC_DEVICE_ID: "biometric_device_id", // Unique device identifier
 } as const;
 
 /**
@@ -56,6 +58,13 @@ export const ENDPOINTS = {
     FORGOT_PASSWORD: "/auth/forgot-password",
     RESET_PASSWORD: "/auth/reset-password",
     REFRESH_TOKEN: "/auth/refresh-token",
+    // Biometric authentication (device tokens)
+    CREATE_DEVICE_TOKEN: "/auth/device-token",
+    BIOMETRIC_LOGIN: "/auth/biometric-login",
+    LIST_DEVICE_TOKENS: "/auth/device-tokens",
+    REVOKE_DEVICE_TOKEN: (deviceId: string) =>
+      `/auth/device-tokens/${deviceId}`,
+    REVOKE_ALL_DEVICE_TOKENS: "/auth/device-tokens/revoke-all",
   },
 
   // User

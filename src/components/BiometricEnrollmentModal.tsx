@@ -36,11 +36,14 @@ export const BIOMETRIC_PROMPT_STORAGE_KEYS = {
 export const BiometricEnrollmentModal: React.FC = () => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
-  const [password, setPassword] = useState<string | null>(null);
   const [biometricType, setBiometricType] = useState<string>("Biometrics");
   const { enableBiometrics } = useAuth();
   const theme = useTheme();
   const hasChecked = useRef(false);
+
+  // SECURITY: Use ref instead of state to avoid keeping password in component memory
+  // Ref is cleared immediately after use to prevent retention
+  const passwordRef = useRef<string | null>(null);
 
   // Memoize style creation to avoid re-creating StyleSheet on every render
   const styles = useMemo(
@@ -155,7 +158,8 @@ export const BiometricEnrollmentModal: React.FC = () => {
             }
 
             setUsername(storedUsername);
-            setPassword(storedPassword);
+            // SECURITY: Store password in ref, not state
+            passwordRef.current = storedPassword;
             setShowPrompt(true);
           } finally {
             // Always clear flags to avoid repeated prompts (including password for security)
@@ -204,32 +208,35 @@ export const BiometricEnrollmentModal: React.FC = () => {
   }, []);
 
   const handleEnableBiometrics = async () => {
-    if (!username || !password) {
+    if (!username) {
       setShowPrompt(false);
       setUsername(null);
-      setPassword(null);
+      // SECURITY: Clear password ref immediately
+      passwordRef.current = null;
       return;
     }
 
     try {
       await UnifiedLogger.info(
         "biometric_modal",
-        "User accepted biometrics enrollment"
+        "User accepted biometric enrollment with device token"
       );
 
-      await enableBiometrics(username, password);
+      await enableBiometrics(username);
+
       setShowPrompt(false);
       setUsername(null);
-      setPassword(null);
 
       Alert.alert(
         "Success",
         `${biometricType} authentication enabled. You can now use ${biometricType.toLowerCase()}s to log in.`
       );
     } catch (error: any) {
+      // SECURITY: Clear password ref immediately on error
+      passwordRef.current = null;
+
       setShowPrompt(false);
       setUsername(null);
-      setPassword(null);
 
       // Suppress alerts for user-initiated cancellations
       const errorCode = error.errorCode || error.code;
@@ -260,9 +267,12 @@ export const BiometricEnrollmentModal: React.FC = () => {
       "biometric_modal",
       "User skipped biometric enrollment"
     );
+
+    // SECURITY: Clear password ref immediately
+    passwordRef.current = null;
+
     setShowPrompt(false);
     setUsername(null);
-    setPassword(null);
   };
 
   // Don't call setState during render - just return early

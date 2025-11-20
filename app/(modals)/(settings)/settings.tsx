@@ -216,7 +216,8 @@ export default function SettingsScreen() {
       setShowPasswordModal(false);
       setPasswordInput("");
 
-      await enableBiometrics(user.username, password);
+      // Token-based biometric authentication - no password needed
+      await enableBiometrics(user.username);
       await checkBiometricAvailability();
 
       Alert.alert(

@@ -13,6 +13,8 @@ import {
 } from "@src/services/BiometricService";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
+import ApiService from "@services/api/apiService";
+import * as DeviceUtils from "@utils/deviceUtils";
 
 // Mock UnifiedLogger
 jest.mock("@services/logger/UnifiedLogger", () => ({
@@ -45,6 +47,25 @@ jest.mock("expo-secure-store", () => ({
   WHEN_UNLOCKED_THIS_DEVICE_ONLY: 1,
 }));
 
+// Mock ApiService
+jest.mock("@services/api/apiService", () => ({
+  __esModule: true,
+  default: {
+    auth: {
+      createDeviceToken: jest.fn(),
+      biometricLogin: jest.fn(),
+      revokeDeviceToken: jest.fn(),
+    },
+  },
+}));
+
+// Mock device utils
+jest.mock("@utils/deviceUtils", () => ({
+  getDeviceId: jest.fn(),
+  getDeviceName: jest.fn(),
+  getPlatform: jest.fn(),
+}));
+
 describe("BiometricService", () => {
   const mockHasHardware = LocalAuthentication.hasHardwareAsync as jest.Mock;
   const mockIsEnrolled = LocalAuthentication.isEnrolledAsync as jest.Mock;
@@ -54,6 +75,16 @@ describe("BiometricService", () => {
   const mockGetItem = SecureStore.getItemAsync as jest.Mock;
   const mockSetItem = SecureStore.setItemAsync as jest.Mock;
   const mockDeleteItem = SecureStore.deleteItemAsync as jest.Mock;
+
+  // API Service mocks
+  const mockCreateDeviceToken = ApiService.auth.createDeviceToken as jest.Mock;
+  const mockBiometricLogin = ApiService.auth.biometricLogin as jest.Mock;
+  const mockRevokeDeviceToken = ApiService.auth.revokeDeviceToken as jest.Mock;
+
+  // Device utils mocks
+  const mockGetDeviceId = DeviceUtils.getDeviceId as jest.Mock;
+  const mockGetDeviceName = DeviceUtils.getDeviceName as jest.Mock;
+  const mockGetPlatform = DeviceUtils.getPlatform as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -68,6 +99,36 @@ describe("BiometricService", () => {
     mockGetItem.mockResolvedValue(null);
     mockSetItem.mockResolvedValue(undefined);
     mockDeleteItem.mockResolvedValue(undefined);
+
+    // API Service mocks
+    mockCreateDeviceToken.mockResolvedValue({
+      data: {
+        device_token: "mock-device-token-123",
+        expires_at: new Date(
+          Date.now() + 90 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        device_id: "test-device-123",
+        message: "Device token created successfully",
+      },
+    });
+    mockBiometricLogin.mockResolvedValue({
+      data: {
+        access_token: "mock-access-token",
+        user: {
+          id: "user-123",
+          username: "testuser",
+          email: "test@example.com",
+        },
+      },
+    });
+    mockRevokeDeviceToken.mockResolvedValue({
+      data: { message: "Token revoked successfully" },
+    });
+
+    // Device utils mocks
+    mockGetDeviceId.mockResolvedValue("test-device-123");
+    mockGetDeviceName.mockResolvedValue("Test Device");
+    mockGetPlatform.mockReturnValue("android");
   });
 
   describe("isBiometricAvailable", () => {
@@ -336,10 +397,7 @@ describe("BiometricService", () => {
       mockAuthenticate.mockResolvedValue({ success: true });
       mockSetItem.mockResolvedValue(undefined);
 
-      const result = await BiometricService.enableBiometrics(
-        "testuser",
-        "testpass"
-      );
+      const result = await BiometricService.enableBiometrics("testuser");
 
       expect(result).toBe(true);
       expect(mockAuthenticate).toHaveBeenCalledWith({
@@ -347,13 +405,31 @@ describe("BiometricService", () => {
         cancelLabel: "Cancel",
         disableDeviceFallback: true,
       });
+
+      // Verify device info was retrieved
+      expect(mockGetDeviceId).toHaveBeenCalled();
+      expect(mockGetDeviceName).toHaveBeenCalled();
+      expect(mockGetPlatform).toHaveBeenCalled();
+
+      // Verify API was called to create device token
+      expect(mockCreateDeviceToken).toHaveBeenCalledWith({
+        device_id: "test-device-123",
+        device_name: "Test Device",
+        platform: "android",
+      });
+
+      // Verify device token and metadata were stored
+      expect(mockSetItem).toHaveBeenCalledWith(
+        "biometric_device_token",
+        "mock-device-token-123"
+      );
+      expect(mockSetItem).toHaveBeenCalledWith(
+        "biometric_device_id",
+        "test-device-123"
+      );
       expect(mockSetItem).toHaveBeenCalledWith(
         "biometric_username",
         "testuser"
-      );
-      expect(mockSetItem).toHaveBeenCalledWith(
-        "biometric_password",
-        "testpass"
       );
       expect(mockSetItem).toHaveBeenCalledWith("biometric_enabled", "true");
     });
@@ -362,11 +438,11 @@ describe("BiometricService", () => {
       mockHasHardware.mockResolvedValue(false);
 
       await expect(
-        BiometricService.enableBiometrics("testuser", "testpass")
+        BiometricService.enableBiometrics("testuser")
       ).rejects.toThrow("Biometric authentication is not available");
 
       await expect(
-        BiometricService.enableBiometrics("testuser", "testpass")
+        BiometricService.enableBiometrics("testuser")
       ).rejects.toMatchObject({
         errorCode: BiometricErrorCode.NOT_AVAILABLE,
       });
@@ -381,11 +457,11 @@ describe("BiometricService", () => {
       });
 
       await expect(
-        BiometricService.enableBiometrics("testuser", "testpass")
+        BiometricService.enableBiometrics("testuser")
       ).rejects.toThrow("Biometric verification failed");
 
       await expect(
-        BiometricService.enableBiometrics("testuser", "testpass")
+        BiometricService.enableBiometrics("testuser")
       ).rejects.toMatchObject({
         errorCode: BiometricErrorCode.USER_CANCELLED,
       });
@@ -400,7 +476,7 @@ describe("BiometricService", () => {
       });
 
       await expect(
-        BiometricService.enableBiometrics("testuser", "testpass")
+        BiometricService.enableBiometrics("testuser")
       ).rejects.toMatchObject({
         errorCode: BiometricErrorCode.SYSTEM_CANCELLED,
       });
@@ -415,7 +491,7 @@ describe("BiometricService", () => {
       });
 
       await expect(
-        BiometricService.enableBiometrics("testuser", "testpass")
+        BiometricService.enableBiometrics("testuser")
       ).rejects.toMatchObject({
         errorCode: BiometricErrorCode.VERIFICATION_FAILED,
       });
@@ -428,7 +504,7 @@ describe("BiometricService", () => {
       mockSetItem.mockRejectedValue(new Error("Storage error"));
 
       await expect(
-        BiometricService.enableBiometrics("testuser", "testpass")
+        BiometricService.enableBiometrics("testuser")
       ).rejects.toMatchObject({
         errorCode: BiometricErrorCode.UNKNOWN_ERROR,
       });
@@ -436,14 +512,15 @@ describe("BiometricService", () => {
   });
 
   describe("disableBiometrics", () => {
-    it("should disable biometrics successfully and clear all credentials", async () => {
+    it("should disable biometrics successfully and clear all data", async () => {
       mockDeleteItem.mockResolvedValue(undefined);
 
       const result = await BiometricService.disableBiometrics();
 
       expect(result).toBe(true);
       expect(mockDeleteItem).toHaveBeenCalledWith("biometric_username");
-      expect(mockDeleteItem).toHaveBeenCalledWith("biometric_password");
+      expect(mockDeleteItem).toHaveBeenCalledWith("biometric_device_token");
+      expect(mockDeleteItem).toHaveBeenCalledWith("biometric_device_id");
       expect(mockDeleteItem).toHaveBeenCalledWith("biometric_enabled");
     });
 
@@ -457,11 +534,11 @@ describe("BiometricService", () => {
   });
 
   describe("authenticateWithBiometrics", () => {
-    it("should authenticate successfully and return credentials", async () => {
+    it("should authenticate successfully and return access token", async () => {
       mockGetItem
         .mockResolvedValueOnce("true") // isBiometricEnabled
-        .mockResolvedValueOnce("testuser") // stored username
-        .mockResolvedValueOnce("testpass"); // stored password
+        .mockResolvedValueOnce("mock-device-token-123") // stored device token
+        .mockResolvedValueOnce("testuser"); // stored username
       mockHasHardware.mockResolvedValue(true);
       mockIsEnrolled.mockResolvedValue(true);
       mockSupportedTypes.mockResolvedValue([
@@ -473,9 +550,11 @@ describe("BiometricService", () => {
 
       expect(result).toEqual({
         success: true,
-        credentials: {
+        accessToken: "mock-access-token",
+        user: {
+          id: "user-123",
           username: "testuser",
-          password: "testpass",
+          email: "test@example.com",
         },
       });
       expect(mockAuthenticate).toHaveBeenCalledWith({
@@ -483,6 +562,9 @@ describe("BiometricService", () => {
         cancelLabel: "Cancel",
         fallbackLabel: "Use Password",
         disableDeviceFallback: false,
+      });
+      expect(mockBiometricLogin).toHaveBeenCalledWith({
+        device_token: "mock-device-token-123",
       });
     });
 
@@ -619,11 +701,11 @@ describe("BiometricService", () => {
       });
     });
 
-    it("should return CREDENTIALS_NOT_FOUND and auto-disable when credentials missing", async () => {
+    it("should return CREDENTIALS_NOT_FOUND and auto-disable when device token missing", async () => {
       mockGetItem
         .mockResolvedValueOnce("true") // isBiometricEnabled
-        .mockResolvedValueOnce(null) // no stored username
-        .mockResolvedValueOnce(null); // no stored password
+        .mockResolvedValueOnce(null) // no stored device token
+        .mockResolvedValueOnce("testuser"); // stored username
       mockHasHardware.mockResolvedValue(true);
       mockIsEnrolled.mockResolvedValue(true);
       mockAuthenticate.mockResolvedValue({ success: true });
@@ -633,19 +715,21 @@ describe("BiometricService", () => {
 
       expect(result).toEqual({
         success: false,
-        error: "Stored credentials not found",
+        error:
+          "Device token not found. Please re-enroll biometric authentication.",
         errorCode: BiometricErrorCode.CREDENTIALS_NOT_FOUND,
       });
       expect(mockDeleteItem).toHaveBeenCalledWith("biometric_username");
-      expect(mockDeleteItem).toHaveBeenCalledWith("biometric_password");
+      expect(mockDeleteItem).toHaveBeenCalledWith("biometric_device_token");
+      expect(mockDeleteItem).toHaveBeenCalledWith("biometric_device_id");
       expect(mockDeleteItem).toHaveBeenCalledWith("biometric_enabled");
     });
 
-    it("should handle auto-disable errors gracefully when credentials missing", async () => {
+    it("should handle auto-disable errors gracefully when device token missing", async () => {
       mockGetItem
         .mockResolvedValueOnce("true") // isBiometricEnabled
-        .mockResolvedValueOnce(null) // stored username
-        .mockResolvedValueOnce(null); // stored password
+        .mockResolvedValueOnce(null) // no device token
+        .mockResolvedValueOnce("testuser"); // stored username
       mockHasHardware.mockResolvedValue(true);
       mockIsEnrolled.mockResolvedValue(true);
       mockAuthenticate.mockResolvedValue({ success: true });
@@ -657,31 +741,20 @@ describe("BiometricService", () => {
     });
   });
 
-  describe("hasStoredCredentials", () => {
-    it("should return true when both username and password are stored", async () => {
-      mockGetItem
-        .mockResolvedValueOnce("testuser")
-        .mockResolvedValueOnce("testpass");
+  describe("hasStoredDeviceToken", () => {
+    it("should return true when device token is stored", async () => {
+      mockGetItem.mockResolvedValueOnce("mock-device-token-123");
 
-      const result = await BiometricService.hasStoredCredentials();
+      const result = await BiometricService.hasStoredDeviceToken();
 
       expect(result).toBe(true);
-      expect(mockGetItem).toHaveBeenCalledWith("biometric_username");
-      expect(mockGetItem).toHaveBeenCalledWith("biometric_password");
+      expect(mockGetItem).toHaveBeenCalledWith("biometric_device_token");
     });
 
-    it("should return false when no credentials are stored", async () => {
+    it("should return false when no device token is stored", async () => {
       mockGetItem.mockResolvedValue(null);
 
-      const result = await BiometricService.hasStoredCredentials();
-
-      expect(result).toBe(false);
-    });
-
-    it("should return false when only username is stored", async () => {
-      mockGetItem.mockResolvedValueOnce("testuser").mockResolvedValueOnce(null);
-
-      const result = await BiometricService.hasStoredCredentials();
+      const result = await BiometricService.hasStoredDeviceToken();
 
       expect(result).toBe(false);
     });
@@ -690,71 +763,11 @@ describe("BiometricService", () => {
       mockGetItem.mockRejectedValue(new Error("SecureStore error"));
 
       const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-      const result = await BiometricService.hasStoredCredentials();
+      const result = await BiometricService.hasStoredDeviceToken();
 
       expect(result).toBe(false);
       expect(consoleSpy).toHaveBeenCalledWith(
-        "Error checking stored credentials:",
-        expect.any(Error)
-      );
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe("updateStoredCredentials", () => {
-    it("should update credentials when biometrics are enabled", async () => {
-      mockGetItem.mockResolvedValue("true");
-      mockSetItem.mockResolvedValue(undefined);
-
-      const result = await BiometricService.updateStoredCredentials(
-        "newuser",
-        "newpass"
-      );
-
-      expect(result).toBe(true);
-      expect(mockGetItem).toHaveBeenCalledWith("biometric_enabled");
-      expect(mockSetItem).toHaveBeenCalledWith("biometric_username", "newuser");
-      expect(mockSetItem).toHaveBeenCalledWith("biometric_password", "newpass");
-    });
-
-    it("should not update credentials when biometrics are disabled", async () => {
-      mockGetItem.mockResolvedValue("false");
-
-      const result = await BiometricService.updateStoredCredentials(
-        "newuser",
-        "newpass"
-      );
-
-      expect(result).toBe(false);
-      expect(mockGetItem).toHaveBeenCalledWith("biometric_enabled");
-      expect(mockSetItem).not.toHaveBeenCalled();
-    });
-
-    it("should not update credentials when not previously enabled", async () => {
-      mockGetItem.mockResolvedValue(null);
-
-      const result = await BiometricService.updateStoredCredentials(
-        "newuser",
-        "newpass"
-      );
-
-      expect(result).toBe(false);
-      expect(mockSetItem).not.toHaveBeenCalled();
-    });
-
-    it("should handle SecureStore errors and return false", async () => {
-      mockGetItem.mockResolvedValue("true");
-      mockSetItem.mockRejectedValue(new Error("Storage error"));
-
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-      const result = await BiometricService.updateStoredCredentials(
-        "newuser",
-        "newpass"
-      );
-
-      expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Error updating stored credentials:",
+        "Error checking stored device token:",
         expect.any(Error)
       );
       consoleSpy.mockRestore();

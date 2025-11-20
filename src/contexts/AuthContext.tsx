@@ -75,9 +75,9 @@ interface AuthContextValue {
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
 
-  // Biometric authentication
+  // Biometric authentication (token-based)
   loginWithBiometrics: () => Promise<void>;
-  enableBiometrics: (username: string, password: string) => Promise<void>;
+  enableBiometrics: (username: string) => Promise<void>;
   disableBiometrics: () => Promise<void>;
   checkBiometricAvailability: () => Promise<void>;
 
@@ -537,26 +537,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       // Check biometric availability and enabled status
       const biometricAvailable = await BiometricService.isBiometricAvailable();
       const biometricEnabled = await BiometricService.isBiometricEnabled();
-      const hasStoredCredentials =
-        await BiometricService.hasStoredCredentials();
+      const hasDeviceToken = await BiometricService.hasStoredDeviceToken();
 
       await UnifiedLogger.debug("auth", "Biometric pre-flight check", {
         biometricAvailable,
         biometricEnabled,
-        hasStoredCredentials,
+        hasDeviceToken,
       });
 
-      if (!hasStoredCredentials) {
+      if (!hasDeviceToken) {
         await UnifiedLogger.warn(
           "auth",
-          "Biometric login failed: No stored credentials found"
+          "Biometric login failed: No device token found"
         );
         throw new Error(
-          "No biometric credentials found. Please login with your password to enable biometric authentication."
+          "No biometric authentication configured. Please login with your password to enable biometric authentication."
         );
       }
 
-      // Authenticate with biometrics and retrieve stored credentials
+      // Authenticate with biometrics and exchange device token for access token
       await UnifiedLogger.debug(
         "auth",
         "Requesting biometric authentication from BiometricService"
@@ -567,10 +566,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       await UnifiedLogger.debug("auth", "Biometric authentication result", {
         success: result.success,
         errorCode: result.errorCode,
-        hasCredentials: !!result.credentials,
+        hasAccessToken: !!result.accessToken,
+        hasUser: !!result.user,
       });
 
-      if (!result.success || !result.credentials) {
+      if (!result.success || !result.accessToken || !result.user) {
         await UnifiedLogger.warn("auth", "Biometric authentication rejected", {
           error: result.error,
           errorCode: result.errorCode,
@@ -588,17 +588,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
       await UnifiedLogger.debug(
         "auth",
-        "Biometric authentication successful, performing full login with retrieved credentials"
+        "Biometric authentication successful, device token exchanged for access token"
       );
 
-      // Perform full login using retrieved credentials (same as password login)
-      const response = await ApiService.auth.login({
-        username: result.credentials.username,
-        password: result.credentials.password,
-      });
-      const { access_token, user: userData } = response.data;
+      const { accessToken: access_token, user: userData } = result;
 
-      await UnifiedLogger.debug("auth", "Full login successful", {
+      // Validate user data structure
+      if (!userData?.id || !userData?.username) {
+        throw new Error("Invalid user data received from biometric login");
+      }
+
+      await UnifiedLogger.debug("auth", "Biometric login successful", {
         userId: userData.id,
         username: userData.username,
         tokenPreview: `${access_token.substring(0, 20)}...`,
@@ -615,7 +615,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       );
       await UnifiedLogger.debug("auth", "User data cached in AsyncStorage");
 
-      setUser(userData);
+      setUser(userData as User);
 
       await UnifiedLogger.info(
         "auth",
@@ -657,14 +657,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   };
 
   /**
-   * Enable biometric authentication
-   * Stores username and password securely for future biometric logins
-   * Credentials are encrypted in Android's hardware-backed keystore
+   * Enable biometric authentication with device token
+   * Creates a device token on backend and stores it securely for future biometric logins
+   * Device token is encrypted in Android's hardware-backed keystore
+   * Requires user to be authenticated with valid JWT access token
    */
-  const enableBiometrics = async (
-    username: string,
-    password: string
-  ): Promise<void> => {
+  const enableBiometrics = async (username: string): Promise<void> => {
     try {
       // Check if biometric authentication is available before attempting to enable
       const isAvailable = await BiometricService.isBiometricAvailable();
@@ -675,7 +673,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         );
       }
 
-      await BiometricService.enableBiometrics(username, password);
+      await BiometricService.enableBiometrics(username);
       await checkBiometricAvailability();
     } catch (error: any) {
       console.error("Failed to enable biometrics:", error);

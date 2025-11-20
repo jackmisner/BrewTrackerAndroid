@@ -665,6 +665,52 @@ const ApiService = {
     // Token refresh for biometric re-authentication
     refreshToken: (): Promise<AxiosResponse<LoginResponse>> =>
       api.post(ENDPOINTS.AUTH.REFRESH_TOKEN),
+
+    // Device token endpoints for biometric authentication
+    createDeviceToken: (data: {
+      device_id: string;
+      device_name?: string;
+      platform: string;
+    }): Promise<
+      AxiosResponse<{
+        device_token: string;
+        expires_at: string;
+        device_id: string;
+        message: string;
+      }>
+    > => api.post(ENDPOINTS.AUTH.CREATE_DEVICE_TOKEN, data),
+
+    biometricLogin: (data: {
+      device_token: string;
+    }): Promise<AxiosResponse<LoginResponse>> =>
+      api.post(ENDPOINTS.AUTH.BIOMETRIC_LOGIN, data),
+
+    listDeviceTokens: (
+      includeRevoked: boolean = false
+    ): Promise<
+      AxiosResponse<{
+        tokens: Array<{
+          device_id: string;
+          device_name?: string;
+          platform: string;
+          created_at: string;
+          last_used?: string;
+          expires_at: string;
+          revoked: boolean;
+        }>;
+      }>
+    > =>
+      api.get(
+        `${ENDPOINTS.AUTH.LIST_DEVICE_TOKENS}?include_revoked=${includeRevoked}`
+      ),
+
+    revokeDeviceToken: (
+      deviceId: string
+    ): Promise<AxiosResponse<{ message: string }>> =>
+      api.delete(ENDPOINTS.AUTH.REVOKE_DEVICE_TOKEN(deviceId)),
+
+    revokeAllDeviceTokens: (): Promise<AxiosResponse<{ message: string }>> =>
+      api.post(ENDPOINTS.AUTH.REVOKE_ALL_DEVICE_TOKENS),
   },
 
   // User settings endpoints
