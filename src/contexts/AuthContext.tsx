@@ -601,7 +601,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       await UnifiedLogger.debug("auth", "Biometric login successful", {
         userId: userData.id,
         username: userData.username,
-        tokenPreview: `${access_token.substring(0, 20)}...`,
+        hasAccessToken: true,
       });
 
       // Store token securely
@@ -687,7 +687,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
    */
   const disableBiometrics = async (): Promise<void> => {
     try {
-      await BiometricService.disableBiometrics();
+      await BiometricService.disableBiometricsLocally();
       await checkBiometricAvailability();
     } catch (error: any) {
       console.error("Failed to disable biometrics:", error);

@@ -372,7 +372,7 @@ export class BiometricService {
    *
    * @returns True if biometric authentication was disabled successfully
    */
-  static async disableBiometrics(): Promise<boolean> {
+  static async disableBiometricsLocally(): Promise<boolean> {
     try {
       await UnifiedLogger.info(
         "biometric",
@@ -396,6 +396,18 @@ export class BiometricService {
       });
       return false;
     }
+  }
+
+  private static isTokenError(error: any): boolean {
+    const errorCode = error?.response?.data?.code;
+    const status = error?.response?.status;
+
+    return (
+      errorCode === "TOKEN_EXPIRED" ||
+      errorCode === "TOKEN_REVOKED" ||
+      errorCode === "TOKEN_INVALID" ||
+      status === 401
+    );
   }
 
   /**
@@ -550,7 +562,7 @@ export class BiometricService {
 
         // Self-heal: disable biometrics to prevent future failed attempts
         try {
-          await this.disableBiometrics();
+          await this.disableBiometricsLocally();
           await UnifiedLogger.info(
             "biometric",
             "Auto-disabled biometrics due to missing device token"
@@ -619,14 +631,7 @@ export class BiometricService {
           ? error.message
           : "Biometric authentication failed";
 
-      // Check for structured error code from API
-      const isTokenError =
-        (error as any)?.response?.data?.code === "TOKEN_EXPIRED" ||
-        (error as any)?.response?.data?.code === "TOKEN_REVOKED" ||
-        (error as any)?.response?.data?.code === "TOKEN_INVALID" ||
-        (error as any)?.response?.status === 401;
-
-      if (isTokenError) {
+      if (this.isTokenError(error)) {
         await UnifiedLogger.warn(
           "biometric",
           "Device token expired or revoked, auto-disabling biometrics"
@@ -634,7 +639,7 @@ export class BiometricService {
 
         // Auto-disable biometrics if token is invalid
         try {
-          await this.disableBiometrics();
+          await this.disableBiometricsLocally();
           await UnifiedLogger.info(
             "biometric",
             "Auto-disabled biometrics due to invalid device token"
@@ -740,7 +745,7 @@ export class BiometricService {
       }
 
       // Disable biometrics locally
-      const success = await this.disableBiometrics();
+      const success = await this.disableBiometricsLocally();
 
       if (success) {
         await UnifiedLogger.info(

@@ -515,7 +515,7 @@ describe("BiometricService", () => {
     it("should disable biometrics successfully and clear all data", async () => {
       mockDeleteItem.mockResolvedValue(undefined);
 
-      const result = await BiometricService.disableBiometrics();
+      const result = await BiometricService.disableBiometricsLocally();
 
       expect(result).toBe(true);
       expect(mockDeleteItem).toHaveBeenCalledWith("biometric_username");
@@ -527,7 +527,7 @@ describe("BiometricService", () => {
     it("should return false on SecureStore errors", async () => {
       mockDeleteItem.mockRejectedValue(new Error("Delete error"));
 
-      const result = await BiometricService.disableBiometrics();
+      const result = await BiometricService.disableBiometricsLocally();
 
       expect(result).toBe(false);
     });

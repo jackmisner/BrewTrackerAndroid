@@ -221,7 +221,7 @@ export default function SettingsScreen() {
         Alert.alert(
           "Error",
           error.message ||
-            `Failed to enable ${biometricType.toLowerCase()}s authentication. Please try again.`
+            `Failed to enable biometrics authentication. Please try again.`
         );
       }
     } finally {
