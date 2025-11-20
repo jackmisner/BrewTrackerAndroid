@@ -537,8 +537,7 @@ describe("BiometricService", () => {
     it("should authenticate successfully and return access token", async () => {
       mockGetItem
         .mockResolvedValueOnce("true") // isBiometricEnabled
-        .mockResolvedValueOnce("mock-device-token-123") // stored device token
-        .mockResolvedValueOnce("testuser"); // stored username
+        .mockResolvedValueOnce("mock-device-token-123"); // stored device token (username retrieval removed)
       mockHasHardware.mockResolvedValue(true);
       mockIsEnrolled.mockResolvedValue(true);
       mockSupportedTypes.mockResolvedValue([
@@ -570,12 +569,21 @@ describe("BiometricService", () => {
 
     it("should use custom prompt message when provided", async () => {
       mockGetItem
-        .mockResolvedValueOnce("true")
-        .mockResolvedValueOnce("testuser")
-        .mockResolvedValueOnce("testpass");
+        .mockResolvedValueOnce("true") // isBiometricEnabled
+        .mockResolvedValueOnce("mock-device-token"); // device token
       mockHasHardware.mockResolvedValue(true);
       mockIsEnrolled.mockResolvedValue(true);
       mockAuthenticate.mockResolvedValue({ success: true });
+      mockBiometricLogin.mockResolvedValue({
+        data: {
+          access_token: "mock-access-token",
+          user: {
+            user_id: "user-123",
+            username: "testuser",
+            email: "test@example.com",
+          },
+        },
+      });
 
       await BiometricService.authenticateWithBiometrics("Custom message");
 
@@ -587,7 +595,7 @@ describe("BiometricService", () => {
     });
 
     it("should return NOT_ENABLED error when biometrics not enabled", async () => {
-      mockGetItem.mockResolvedValue("false");
+      mockGetItem.mockResolvedValueOnce("false"); // isBiometricEnabled returns false
 
       const result = await BiometricService.authenticateWithBiometrics();
 
@@ -599,7 +607,7 @@ describe("BiometricService", () => {
     });
 
     it("should return NOT_AVAILABLE error when biometrics unavailable", async () => {
-      mockGetItem.mockResolvedValue("true");
+      mockGetItem.mockResolvedValueOnce("true"); // isBiometricEnabled returns true
       mockHasHardware.mockResolvedValue(false);
 
       const result = await BiometricService.authenticateWithBiometrics();
@@ -704,8 +712,7 @@ describe("BiometricService", () => {
     it("should return CREDENTIALS_NOT_FOUND and auto-disable when device token missing", async () => {
       mockGetItem
         .mockResolvedValueOnce("true") // isBiometricEnabled
-        .mockResolvedValueOnce(null) // no stored device token
-        .mockResolvedValueOnce("testuser"); // stored username
+        .mockResolvedValueOnce(null); // no stored device token (username retrieval removed)
       mockHasHardware.mockResolvedValue(true);
       mockIsEnrolled.mockResolvedValue(true);
       mockAuthenticate.mockResolvedValue({ success: true });
@@ -728,8 +735,7 @@ describe("BiometricService", () => {
     it("should handle auto-disable errors gracefully when device token missing", async () => {
       mockGetItem
         .mockResolvedValueOnce("true") // isBiometricEnabled
-        .mockResolvedValueOnce(null) // no device token
-        .mockResolvedValueOnce("testuser"); // stored username
+        .mockResolvedValueOnce(null); // no device token (username retrieval removed from code)
       mockHasHardware.mockResolvedValue(true);
       mockIsEnrolled.mockResolvedValue(true);
       mockAuthenticate.mockResolvedValue({ success: true });
@@ -760,17 +766,13 @@ describe("BiometricService", () => {
     });
 
     it("should handle errors and return false", async () => {
-      mockGetItem.mockRejectedValue(new Error("SecureStore error"));
+      mockGetItem.mockRejectedValueOnce(new Error("SecureStore error"));
 
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
       const result = await BiometricService.hasStoredDeviceToken();
 
       expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Error checking stored device token:",
-        expect.any(Error)
-      );
-      consoleSpy.mockRestore();
+      // Note: UnifiedLogger.error is mocked at the top of the file
+      // The actual console.error is not called in the implementation
     });
   });
 });
