@@ -64,6 +64,7 @@ export enum BiometricErrorCode {
   NOT_AVAILABLE = "NOT_AVAILABLE",
   CREDENTIALS_NOT_FOUND = "CREDENTIALS_NOT_FOUND",
   VERIFICATION_FAILED = "VERIFICATION_FAILED",
+  TOKEN_ERROR = "TOKEN_ERROR",
   UNKNOWN_ERROR = "UNKNOWN_ERROR",
 }
 
@@ -655,7 +656,7 @@ export class BiometricService {
           success: false,
           error:
             "Device token expired. Please re-enroll biometric authentication.",
-          errorCode: BiometricErrorCode.UNKNOWN_ERROR,
+          errorCode: BiometricErrorCode.TOKEN_ERROR,
         };
       }
 

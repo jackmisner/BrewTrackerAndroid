@@ -13,7 +13,7 @@ import { STORAGE_KEYS } from "@services/config";
  * Get or create a unique device identifier
  *
  * Generates a persistent UUID for this device installation.
- * Stored in SecureStore to survive app app updates but not reinstalls.
+ * Stored in SecureStore to survive app updates but not reinstalls.
 
  *
  * @returns Unique device identifier
