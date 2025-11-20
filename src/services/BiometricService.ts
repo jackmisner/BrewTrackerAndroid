@@ -50,6 +50,7 @@ import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 import { STORAGE_KEYS } from "./config";
 import ApiService from "./api/apiService";
 import { getDeviceId, getDeviceName, getPlatform } from "@utils/deviceUtils";
+import { normalizeEntityId } from "@utils/idNormalization";
 
 /**
  * Biometric error codes
@@ -65,6 +66,9 @@ export enum BiometricErrorCode {
   CREDENTIALS_NOT_FOUND = "CREDENTIALS_NOT_FOUND",
   VERIFICATION_FAILED = "VERIFICATION_FAILED",
   TOKEN_ERROR = "TOKEN_ERROR",
+  NETWORK_ERROR = "NETWORK_ERROR",
+  TIMEOUT_ERROR = "TIMEOUT_ERROR",
+  SERVER_ERROR = "SERVER_ERROR",
   UNKNOWN_ERROR = "UNKNOWN_ERROR",
 }
 
@@ -350,16 +354,29 @@ export class BiometricService {
 
       return true;
     } catch (error) {
+      // Check if error already has an errorCode (biometric-specific errors)
+      const existingErrorCode = (error as any).errorCode;
+
+      // Only classify API errors if no errorCode exists
+      const { errorCode, message } = existingErrorCode
+        ? {
+            errorCode: existingErrorCode,
+            message: error instanceof Error ? error.message : String(error),
+          }
+        : this.classifyApiError(error);
+
       await UnifiedLogger.error("biometric", "Failed to enable biometrics", {
         error: error instanceof Error ? error.message : String(error),
-        errorCode: (error as any).errorCode,
+        errorCode,
+        friendlyMessage: message,
       });
 
-      // Preserve errorCode if it exists, otherwise add UNKNOWN_ERROR
-      if (error instanceof Error && !(error as any).errorCode) {
-        (error as any).errorCode = BiometricErrorCode.UNKNOWN_ERROR;
-      }
-      throw error;
+      // Create enhanced error with errorCode and friendly message
+      const enhancedError = error instanceof Error ? error : new Error(message);
+      (enhancedError as any).errorCode = errorCode;
+      (enhancedError as any).friendlyMessage = message;
+
+      throw enhancedError;
     }
   }
 
@@ -408,6 +425,77 @@ export class BiometricService {
       errorCode === "TOKEN_INVALID" ||
       status === 401
     );
+  }
+
+  /**
+   * Classify API error into specific BiometricErrorCode with user-friendly message
+   *
+   * Examines error properties populated by normalizeError() in ApiService to determine
+   * the error type and provide appropriate error code and message.
+   *
+   * @param error - Error object from API call
+   * @returns Object with errorCode and user-friendly message
+   */
+  private static classifyApiError(error: any): {
+    errorCode: BiometricErrorCode;
+    message: string;
+  } {
+    // Check for token errors first (401, token expired/revoked)
+    if (this.isTokenError(error)) {
+      return {
+        errorCode: BiometricErrorCode.TOKEN_ERROR,
+        message:
+          "Device token expired or revoked. Please re-enroll biometric authentication.",
+      };
+    }
+
+    // Check for network errors (populated by normalizeError)
+    if (error?.isNetworkError || error?.code === "NETWORK_ERROR") {
+      return {
+        errorCode: BiometricErrorCode.NETWORK_ERROR,
+        message: "Connection failed. Please check your internet and try again.",
+      };
+    }
+
+    // Check for timeout errors
+    if (
+      error?.isTimeout ||
+      error?.code === "ECONNABORTED" ||
+      error?.message?.includes("timeout")
+    ) {
+      return {
+        errorCode: BiometricErrorCode.TIMEOUT_ERROR,
+        message: "Request timed out. Please try again.",
+      };
+    }
+
+    // Check HTTP status codes
+    const status = error?.response?.status || error?.status;
+    if (status) {
+      if (status >= 500) {
+        return {
+          errorCode: BiometricErrorCode.SERVER_ERROR,
+          message: "Server error. Please try again later.",
+        };
+      }
+      if (status === 404) {
+        return {
+          errorCode: BiometricErrorCode.CREDENTIALS_NOT_FOUND,
+          message: "Device token not found. Please re-enroll biometrics.",
+        };
+      }
+    }
+
+    // Default to error message or generic message
+    const errorMessage =
+      error?.message ||
+      error?.response?.data?.error ||
+      "Biometric authentication failed";
+
+    return {
+      errorCode: BiometricErrorCode.UNKNOWN_ERROR,
+      message: errorMessage,
+    };
   }
 
   /**
@@ -600,21 +688,24 @@ export class BiometricService {
 
       const { access_token, user } = loginResponse.data;
 
+      // Normalize user ID field (backend returns user_id, frontend expects id)
+      const normalizedUser = normalizeEntityId(user, "user");
+
       await UnifiedLogger.info(
         "biometric",
         "BiometricService.authenticateWithBiometrics successful",
         {
-          username: user?.username
-            ? `${user.username.substring(0, 3)}***`
+          username: normalizedUser?.username
+            ? `${normalizedUser.username.substring(0, 3)}***`
             : "unknown",
-          userId: user?.id,
+          userId: normalizedUser?.id,
         }
       );
 
       return {
         success: true,
         accessToken: access_token,
-        user,
+        user: normalizedUser,
       };
     } catch (error) {
       await UnifiedLogger.error(
@@ -626,18 +717,16 @@ export class BiometricService {
         }
       );
 
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Biometric authentication failed";
+      // Classify error and get appropriate error code and message
+      const { errorCode, message } = this.classifyApiError(error);
 
-      if (this.isTokenError(error)) {
+      // Auto-disable biometrics if token is expired/revoked
+      if (errorCode === BiometricErrorCode.TOKEN_ERROR) {
         await UnifiedLogger.warn(
           "biometric",
           "Device token expired or revoked, auto-disabling biometrics"
         );
 
-        // Auto-disable biometrics if token is invalid
         try {
           await this.disableBiometricsLocally();
           await UnifiedLogger.info(
@@ -656,19 +745,12 @@ export class BiometricService {
             }
           );
         }
-
-        return {
-          success: false,
-          error:
-            "Device token expired. Please re-enroll biometric authentication.",
-          errorCode: BiometricErrorCode.TOKEN_ERROR,
-        };
       }
 
       return {
         success: false,
-        error: errorMessage,
-        errorCode: BiometricErrorCode.UNKNOWN_ERROR,
+        error: message,
+        errorCode,
       };
     }
   }
