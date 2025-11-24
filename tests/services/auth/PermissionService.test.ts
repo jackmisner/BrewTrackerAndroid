@@ -162,7 +162,7 @@ describe("PermissionService", () => {
       const result = PermissionService.canSyncData("expired");
 
       expect(result.allowed).toBe(false);
-      expect(result.reason).toBe("Authentication required to sync data");
+      expect(result.reason).toBe("Session expired. Reconnect to sync data.");
       expect(result.requiresAuth).toBe(true);
     });
 
@@ -170,7 +170,7 @@ describe("PermissionService", () => {
       const result = PermissionService.canSyncData("unauthenticated");
 
       expect(result.allowed).toBe(false);
-      expect(result.reason).toBe("Authentication required to sync data");
+      expect(result.reason).toBe("Please log in to sync data");
       expect(result.requiresAuth).toBe(true);
     });
   });
@@ -187,7 +187,7 @@ describe("PermissionService", () => {
 
       expect(result.allowed).toBe(false);
       expect(result.reason).toBe(
-        "Authentication required to browse public recipes"
+        "Session expired. Reconnect to browse public recipes."
       );
       expect(result.requiresAuth).toBe(true);
     });
@@ -196,9 +196,7 @@ describe("PermissionService", () => {
       const result = PermissionService.canViewPublicRecipes("unauthenticated");
 
       expect(result.allowed).toBe(false);
-      expect(result.reason).toBe(
-        "Authentication required to browse public recipes"
-      );
+      expect(result.reason).toBe("Please log in to browse public recipes");
       expect(result.requiresAuth).toBe(true);
     });
   });

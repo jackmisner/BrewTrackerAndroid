@@ -19,6 +19,24 @@ export interface PermissionCheck {
   requiresAuth?: boolean;
 }
 
+export interface PermissionSummary {
+  status: AuthStatus;
+  permissions: {
+    viewRecipes: boolean;
+    createRecipe: boolean;
+    saveRecipe: boolean;
+    editRecipe: boolean;
+    deleteRecipe: boolean;
+    useCalculators: boolean;
+    syncData: boolean;
+    viewPublicRecipes: boolean;
+    createBrewSession: boolean;
+    editBrewSession: boolean;
+    deleteBrewSession: boolean;
+    viewBrewSessions: boolean;
+  };
+}
+
 export class PermissionService {
   /**
    * Check if user can view their cached recipes
@@ -151,9 +169,18 @@ export class PermissionService {
       return { allowed: true };
     }
 
+    if (status === "unauthenticated") {
+      return {
+        allowed: false,
+        reason: "Please log in to sync data",
+        requiresAuth: true,
+      };
+    }
+
+    // expired
     return {
       allowed: false,
-      reason: "Authentication required to sync data",
+      reason: "Session expired. Reconnect to sync data.",
       requiresAuth: true,
     };
   }
@@ -168,9 +195,18 @@ export class PermissionService {
       return { allowed: true };
     }
 
+    if (status === "unauthenticated") {
+      return {
+        allowed: false,
+        reason: "Please log in to browse public recipes",
+        requiresAuth: true,
+      };
+    }
+
+    // expired
     return {
       allowed: false,
-      reason: "Authentication required to browse public recipes",
+      reason: "Session expired. Reconnect to browse public recipes.",
       requiresAuth: true,
     };
   }
@@ -215,23 +251,7 @@ export class PermissionService {
    * Get a summary of all permissions for the given auth status
    * Useful for debugging and displaying user capabilities
    */
-  static getPermissionSummary(status: AuthStatus): {
-    status: AuthStatus;
-    permissions: {
-      viewRecipes: boolean;
-      createRecipe: boolean;
-      saveRecipe: boolean;
-      editRecipe: boolean;
-      deleteRecipe: boolean;
-      useCalculators: boolean;
-      syncData: boolean;
-      viewPublicRecipes: boolean;
-      createBrewSession: boolean;
-      editBrewSession: boolean;
-      deleteBrewSession: boolean;
-      viewBrewSessions: boolean;
-    };
-  } {
+  static getPermissionSummary(status: AuthStatus): PermissionSummary {
     return {
       status,
       permissions: {

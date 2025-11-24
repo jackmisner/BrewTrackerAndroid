@@ -254,8 +254,12 @@ export class DeviceTokenService {
 
       if (error?.response?.status === 401) {
         error_code = "INVALID_TOKEN";
+        // Clear invalid token to prevent retry loops
+        await this.clearDeviceToken();
       } else if (error?.response?.status === 403) {
         error_code = "EXPIRED_TOKEN";
+        // Clear expired token to prevent retry loops
+        await this.clearDeviceToken();
       } else if (!error?.response) {
         error_code = "NETWORK_ERROR";
       }
@@ -402,13 +406,19 @@ export class DeviceTokenService {
     username: string | null;
     deviceId: string | null;
   }> {
+    // Read values once to avoid duplicate SecureStore calls
+    const token = await this.getDeviceToken();
+    const deviceId = await this.getDeviceId();
+    const username = await this.getStoredUsername();
+    const enabled = await SecureStore.getItemAsync(STORAGE_KEYS.ENABLED);
+
     return {
-      hasToken: (await this.getDeviceToken()) !== null,
-      hasDeviceId: (await this.getDeviceId()) !== null,
-      hasUsername: (await this.getStoredUsername()) !== null,
-      isEnabled: await this.isEnabled(),
-      username: await this.getStoredUsername(),
-      deviceId: await this.getDeviceId(),
+      hasToken: token !== null,
+      hasDeviceId: deviceId !== null,
+      hasUsername: username !== null,
+      isEnabled: token !== null && enabled === "true",
+      username,
+      deviceId,
     };
   }
 }

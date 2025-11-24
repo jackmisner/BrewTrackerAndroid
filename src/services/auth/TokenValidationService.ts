@@ -19,7 +19,7 @@ export interface TokenPayload {
   username: string;
   email: string;
   exp: number; // Unix timestamp (seconds)
-  iat: number; // Unix timestamp (seconds)
+  iat?: number; // Unix timestamp (seconds, optional in legacy tokens)
 }
 
 export interface TokenValidation {
@@ -178,35 +178,31 @@ export class TokenValidationService {
    */
   static getExpirationMessage(token: string): string {
     const validation = this.validateToken(token);
-
     switch (validation.status) {
-      case "VALID":
+      case "VALID": {
         if (!validation.daysUntilExpiry) {
           return "Session active";
         }
-
         if (validation.daysUntilExpiry < 1) {
           const hours = Math.floor((validation.secondsUntilExpiry || 0) / 3600);
           return `Session expires in ${hours} hour${hours !== 1 ? "s" : ""}`;
         }
-
         const days = Math.floor(validation.daysUntilExpiry);
         return `Session expires in ${days} day${days !== 1 ? "s" : ""}`;
-
-      case "EXPIRED_IN_GRACE":
+      }
+      case "EXPIRED_IN_GRACE": {
         if (!validation.daysSinceExpiry) {
           return "Session expired recently";
         }
-
         const expiredDays = Math.floor(validation.daysSinceExpiry);
-        return `Session expired ${expiredDays} day${expiredDays !== 1 ? "s" : ""} ago`;
-
+        return `Session expired ${expiredDays} day${
+          expiredDays !== 1 ? "s" : ""
+        } ago`;
+      }
       case "EXPIRED_BEYOND_GRACE":
         return "Session expired - reconnect required";
-
       case "INVALID":
         return "Invalid session";
-
       default:
         return "Unknown session status";
     }

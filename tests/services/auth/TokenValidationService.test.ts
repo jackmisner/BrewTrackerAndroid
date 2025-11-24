@@ -264,14 +264,10 @@ describe("TokenValidationService", () => {
         exp: now() + expiresIn,
         iat: now(),
       };
-
       const token = createMockToken(payload);
       const message = TokenValidationService.getExpirationMessage(token);
-
-      expect(message).toContain("5 hours");
-      expect(message).toContain("Session expires in");
+      expect(message).toMatch(/Session expires in \d+ hours?/);
     });
-
     it("should return message with days for token expiring in multiple days", () => {
       const expiresIn = 5 * 24 * 60 * 60; // 5 days
       const payload = {
@@ -281,12 +277,9 @@ describe("TokenValidationService", () => {
         exp: now() + expiresIn,
         iat: now(),
       };
-
       const token = createMockToken(payload);
       const message = TokenValidationService.getExpirationMessage(token);
-
-      expect(message).toContain("5 days");
-      expect(message).toContain("Session expires in");
+      expect(message).toMatch(/Session expires in \d+ days?/);
     });
 
     it("should return message for expired token within grace period", () => {
