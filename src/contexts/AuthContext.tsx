@@ -37,12 +37,19 @@ import React, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User, LoginRequest, RegisterRequest } from "@src/types";
 import ApiService from "@services/api/apiService";
-import { STORAGE_KEYS } from "@services/config";
+import { STORAGE_KEYS, AUTH_CONFIG } from "@services/config";
 import { extractUserIdFromJWT, debugJWTToken } from "@utils/jwtUtils";
 import { cacheUtils } from "@services/api/queryClient";
 import { StaticDataService } from "@services/offlineV2/StaticDataService";
 import { BiometricService } from "@services/BiometricService";
 import { UnifiedLogger } from "@services/logger/UnifiedLogger";
+import { TokenValidationService } from "@services/auth/TokenValidationService";
+import {
+  PermissionService,
+  type AuthStatus,
+  type PermissionCheck,
+} from "@services/auth/PermissionService";
+import { DeviceTokenService } from "@services/auth/DeviceTokenService";
 
 /**
  * Authentication context interface defining all available state and actions
@@ -52,12 +59,13 @@ interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  authStatus: AuthStatus;
   error: string | null;
   isBiometricAvailable: boolean;
   isBiometricEnabled: boolean;
 
   // Actions
-  login: (credentials: LoginRequest) => Promise<void>;
+  login: (credentials: LoginRequest, rememberDevice?: boolean) => Promise<void>;
   register: (userData: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -81,8 +89,19 @@ interface AuthContextValue {
   disableBiometrics: () => Promise<void>;
   checkBiometricAvailability: () => Promise<void>;
 
+  // Device token management ("Remember This Device")
+  hasDeviceToken: () => Promise<boolean>;
+  quickLoginWithDeviceToken: () => Promise<void>;
+
   // JWT utilities
   getUserId: () => Promise<string | null>;
+
+  // Permission helpers
+  canViewRecipes: () => PermissionCheck;
+  canSaveRecipe: () => PermissionCheck;
+  canEditRecipe: () => PermissionCheck;
+  canDeleteRecipe: () => PermissionCheck;
+  canSyncData: () => PermissionCheck;
 }
 
 /**
@@ -130,6 +149,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   const [error, setError] = useState<string | null>(
     initialAuthState?.error || null
   );
+  const [authStatus, setAuthStatus] = useState<AuthStatus>("unauthenticated");
   const [isBiometricAvailable, setIsBiometricAvailable] =
     useState<boolean>(false);
   const [isBiometricEnabled, setIsBiometricEnabled] = useState<boolean>(false);
@@ -143,54 +163,196 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     checkBiometricAvailability();
   }, [initialAuthState]);
 
+  /**
+   * Helper function to update auth status based on JWT token validation
+   * Determines if user is authenticated, expired (grace period), or unauthenticated
+   */
+  const updateAuthStatus = async (token: string | null): Promise<void> => {
+    if (!token) {
+      setAuthStatus("unauthenticated");
+      return;
+    }
+
+    const validation = TokenValidationService.validateToken(token);
+
+    switch (validation.status) {
+      case "VALID":
+        setAuthStatus("authenticated");
+        break;
+      case "EXPIRED_IN_GRACE":
+        setAuthStatus("expired");
+        await UnifiedLogger.warn(
+          "auth",
+          "JWT token expired but within grace period",
+          {
+            daysSinceExpiry: validation.daysSinceExpiry,
+            gracePeriodDays: TokenValidationService.GRACE_PERIOD_DAYS,
+          }
+        );
+        break;
+      case "EXPIRED_BEYOND_GRACE":
+      case "INVALID":
+        setAuthStatus("unauthenticated");
+        // Clear expired/invalid token
+        await ApiService.token.removeToken();
+        setUser(null);
+        await UnifiedLogger.info(
+          "auth",
+          "JWT token expired beyond grace period"
+        );
+        break;
+    }
+  };
+
   const initializeAuth = async (): Promise<void> => {
     let cachedUser = null;
 
     try {
       setIsLoading(true);
 
-      // Check if we have a stored token
+      // Step 1: Try device token exchange first (non-blocking, with timeout)
+      // This enables quick login without requiring user input
+      const hasDeviceToken = await DeviceTokenService.hasDeviceToken();
+      if (hasDeviceToken) {
+        await UnifiedLogger.info(
+          "auth",
+          "Device token found, attempting quick login"
+        );
+
+        try {
+          // Set a timeout for device token exchange to avoid blocking on slow networks
+          const deviceTokenPromise = DeviceTokenService.exchangeDeviceToken();
+          const timeoutPromise = new Promise<null>((_, reject) =>
+            setTimeout(
+              () => reject(new Error("Device token exchange timeout")),
+              AUTH_CONFIG.DEVICE_TOKEN_TIMEOUT
+            )
+          );
+
+          const result = await Promise.race([
+            deviceTokenPromise,
+            timeoutPromise,
+          ]);
+
+          if (result && result.success && result.access_token && result.user) {
+            // Device token exchange successful - store new JWT and update user
+            await ApiService.token.setToken(result.access_token);
+            await AsyncStorage.setItem(
+              STORAGE_KEYS.USER_DATA,
+              JSON.stringify(result.user)
+            );
+            setUser(result.user as User);
+            await updateAuthStatus(result.access_token);
+
+            await UnifiedLogger.info(
+              "auth",
+              "Quick login with device token successful"
+            );
+
+            // Cache ingredients in background
+            StaticDataService.updateIngredientsCache().catch(error =>
+              console.warn(
+                "Failed to cache ingredients after quick login:",
+                error
+              )
+            );
+
+            return; // Exit early - user is authenticated
+          }
+        } catch (deviceTokenError) {
+          // Device token exchange failed/timed out - continue with JWT validation
+          await UnifiedLogger.warn(
+            "auth",
+            "Device token exchange failed, falling back to JWT validation",
+            deviceTokenError
+          );
+        }
+      }
+
+      // Step 2: Check if we have a stored JWT token
       const token = await ApiService.token.getToken();
       if (!token) {
+        setAuthStatus("unauthenticated");
         return;
       }
 
-      // First attempt to read and safely parse cached user data
+      // Step 3: Validate JWT token offline
+      await updateAuthStatus(token);
+
+      // Step 4: Load cached user data for immediate UI hydration
       try {
         const cachedUserData = await AsyncStorage.getItem(
           STORAGE_KEYS.USER_DATA
         );
         if (cachedUserData) {
           cachedUser = JSON.parse(cachedUserData);
-          // Hydrate UI immediately with cached data for better UX
           setUser(cachedUser);
         }
       } catch (parseError) {
-        console.warn("Corrupted cached user data, removing:", parseError);
+        await UnifiedLogger.warn(
+          "auth",
+          "Corrupted cached user data, removing",
+          parseError
+        );
         await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
         cachedUser = null;
       }
 
-      // Fetch fresh profile data from API
-      const response = await ApiService.auth.getProfile();
-      const apiUser = response.data;
+      // Step 5: Try to fetch fresh profile data from API (with timeout)
+      try {
+        const profilePromise = ApiService.auth.getProfile();
+        const timeoutPromise = new Promise<null>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Profile fetch timeout")),
+            AUTH_CONFIG.PROFILE_FETCH_TIMEOUT
+          )
+        );
 
-      // Only update user state if API data differs from cached data or no cached data exists
-      if (
-        !cachedUser ||
-        JSON.stringify(cachedUser) !== JSON.stringify(apiUser)
-      ) {
-        setUser(apiUser);
+        const response = await Promise.race([profilePromise, timeoutPromise]);
+
+        if (response && response.data) {
+          const apiUser = response.data;
+
+          // Only update user state if API data differs from cached data
+          if (
+            !cachedUser ||
+            JSON.stringify(cachedUser) !== JSON.stringify(apiUser)
+          ) {
+            setUser(apiUser);
+            await AsyncStorage.setItem(
+              STORAGE_KEYS.USER_DATA,
+              JSON.stringify(apiUser)
+            );
+          }
+        }
+      } catch (profileError: any) {
+        // Profile fetch failed/timed out - use cached data if available
+        await UnifiedLogger.warn(
+          "auth",
+          "Profile fetch failed, using cached data",
+          profileError
+        );
+
+        // If it's a 401, clear everything
+        if (profileError?.response?.status === 401) {
+          await ApiService.token.removeToken();
+          await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
+          setUser(null);
+          setAuthStatus("unauthenticated");
+          return;
+        }
+
+        // For other errors, if we have cached user, continue with that
+        if (!cachedUser) {
+          setError("Failed to load user profile");
+        }
       }
 
-      // Cache ingredients since user is authenticated using V2 system (don't block initialization)
+      // Step 6: Cache ingredients in background (don't block initialization)
       StaticDataService.updateIngredientsCache()
         .then(() => {
-          // Log cache status for debugging
           StaticDataService.getCacheStats()
-            .then(stats => {
-              console.log("V2 Cache Status:", stats);
-            })
+            .then(stats => console.log("V2 Cache Status:", stats))
             .catch(error => console.warn("Failed to get cache stats:", error));
         })
         .catch(error => {
@@ -200,16 +362,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
           );
         });
     } catch (error: any) {
-      // Handle 401 by clearing token/storage (but don't log error - this is expected for fresh installs)
+      await UnifiedLogger.error("auth", "Failed to initialize auth", error);
+
+      // Handle 401 by clearing token/storage
       if (error.response?.status === 401) {
         await ApiService.token.removeToken();
         await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
-        // Ensure in-memory auth state reflects invalid session
         setUser(null);
-        // Don't set error for 401 - this is expected behavior for unauthenticated users
+        setAuthStatus("unauthenticated");
       } else {
-        // Log non-auth errors for debugging
-        console.error("Failed to initialize auth:", error);
         // For non-401 errors, only set error if no cached user was available
         if (!cachedUser) {
           setError("Failed to initialize authentication");
@@ -220,7 +381,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     }
   };
 
-  const login = async (credentials: LoginRequest): Promise<void> => {
+  const login = async (
+    credentials: LoginRequest,
+    rememberDevice: boolean = false
+  ): Promise<void> => {
     try {
       setIsLoading(true);
       setError(null);
@@ -230,6 +394,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
       // Store token securely
       await ApiService.token.setToken(access_token);
+
+      // Update auth status based on token validation
+      await updateAuthStatus(access_token);
 
       // Debug JWT token structure (development only)
       if (__DEV__) {
@@ -243,6 +410,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       );
 
       setUser(userData);
+
+      // If "Remember Device" is enabled, create a device token for quick login
+      if (rememberDevice) {
+        try {
+          const deviceTokenResult = await DeviceTokenService.createDeviceToken(
+            userData.username
+          );
+
+          if (deviceTokenResult.success) {
+            await UnifiedLogger.info(
+              "auth",
+              "Device token created for quick login",
+              { deviceId: deviceTokenResult.device_id }
+            );
+          } else {
+            await UnifiedLogger.warn(
+              "auth",
+              "Failed to create device token",
+              deviceTokenResult.error
+            );
+          }
+        } catch (deviceTokenError) {
+          // Don't block login if device token creation fails
+          await UnifiedLogger.warn(
+            "auth",
+            "Device token creation failed, continuing with login",
+            deviceTokenError
+          );
+        }
+      }
 
       // Cache ingredients now that user is authenticated using V2 system
       StaticDataService.updateIngredientsCache()
@@ -331,11 +528,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       // and avoid making API calls during cleanup
       setUser(null);
       setError(null);
+      setAuthStatus("unauthenticated");
 
       // Clear JWT token from SecureStore
-      // Note: Biometric credentials remain stored for future biometric logins
       await ApiService.token.removeToken();
       await UnifiedLogger.debug("auth", "JWT token removed from SecureStore");
+
+      // Clear device token (but keep biometric credentials for backward compatibility)
+      await DeviceTokenService.clearDeviceToken();
+      await UnifiedLogger.debug(
+        "auth",
+        "Device token cleared from SecureStore"
+      );
 
       // Clear cached data
       await AsyncStorage.multiRemove([
@@ -721,11 +925,92 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     }
   };
 
+  /**
+   * Check if device token exists for quick login
+   */
+  const hasDeviceToken = async (): Promise<boolean> => {
+    try {
+      return await DeviceTokenService.hasDeviceToken();
+    } catch (error) {
+      await UnifiedLogger.error("auth", "Failed to check device token", error);
+      return false;
+    }
+  };
+
+  /**
+   * Quick login with device token (for "Remember This Device" functionality)
+   * Similar to biometric login but specifically for device token exchange
+   */
+  const quickLoginWithDeviceToken = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const result = await DeviceTokenService.exchangeDeviceToken();
+
+      if (!result.success || !result.access_token || !result.user) {
+        throw new Error(result.error || "Device token login failed");
+      }
+
+      // Store new JWT token
+      await ApiService.token.setToken(result.access_token);
+      await updateAuthStatus(result.access_token);
+
+      // Cache user data
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.USER_DATA,
+        JSON.stringify(result.user)
+      );
+
+      setUser(result.user as User);
+
+      await UnifiedLogger.info(
+        "auth",
+        "Quick login with device token successful"
+      );
+
+      // Cache ingredients in background
+      StaticDataService.updateIngredientsCache().catch(error =>
+        console.warn("Failed to cache ingredients after quick login:", error)
+      );
+    } catch (error: any) {
+      await UnifiedLogger.error("auth", "Quick login failed", error);
+      setError(error.message || "Quick login failed");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Permission helper functions - delegates to PermissionService
+   */
+  const canViewRecipes = (): PermissionCheck => {
+    return PermissionService.canViewRecipes(authStatus);
+  };
+
+  const canSaveRecipe = (): PermissionCheck => {
+    return PermissionService.canSaveRecipe(authStatus);
+  };
+
+  const canEditRecipe = (): PermissionCheck => {
+    return PermissionService.canEditRecipe(authStatus);
+  };
+
+  const canDeleteRecipe = (): PermissionCheck => {
+    return PermissionService.canDeleteRecipe(authStatus);
+  };
+
+  const canSyncData = (): PermissionCheck => {
+    return PermissionService.canSyncData(authStatus);
+  };
+
   const contextValue: AuthContextValue = {
     // State
     user,
     isLoading,
     isAuthenticated: !!user,
+    authStatus,
     error,
     isBiometricAvailable,
     isBiometricEnabled,
@@ -755,8 +1040,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     disableBiometrics,
     checkBiometricAvailability,
 
+    // Device token management
+    hasDeviceToken,
+    quickLoginWithDeviceToken,
+
     // JWT utilities
     getUserId,
+
+    // Permission helpers
+    canViewRecipes,
+    canSaveRecipe,
+    canEditRecipe,
+    canDeleteRecipe,
+    canSyncData,
   };
 
   return (

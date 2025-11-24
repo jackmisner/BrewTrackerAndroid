@@ -8,6 +8,51 @@ jest.mock("@services/config", () => ({
     OFFLINE_RECIPES: "offlineRecipes",
     CACHED_INGREDIENTS: "cachedIngredients",
   },
+  AUTH_CONFIG: {
+    DEVICE_TOKEN_TIMEOUT: 3000,
+    PROFILE_FETCH_TIMEOUT: 5000,
+  },
+}));
+
+// Mock DeviceTokenService
+jest.mock("@services/auth/DeviceTokenService", () => ({
+  DeviceTokenService: {
+    hasDeviceToken: jest.fn().mockResolvedValue(false),
+    exchangeDeviceToken: jest.fn(),
+    createDeviceToken: jest.fn(),
+    clearDeviceToken: jest.fn(),
+  },
+}));
+
+// Mock TokenValidationService
+jest.mock("@services/auth/TokenValidationService", () => ({
+  TokenValidationService: {
+    validateToken: jest.fn().mockReturnValue({
+      status: "VALID",
+      payload: {
+        user_id: "user-123",
+        username: "testuser",
+        exp: Date.now() / 1000 + 3600,
+      },
+      expiresAt: Date.now() / 1000 + 3600,
+      issuedAt: Date.now() / 1000,
+      secondsUntilExpiry: 3600,
+      daysUntilExpiry: 0.04,
+      daysSinceExpiry: null,
+    }),
+    GRACE_PERIOD_DAYS: 7,
+  },
+}));
+
+// Mock PermissionService
+jest.mock("@services/auth/PermissionService", () => ({
+  PermissionService: {
+    canViewRecipes: jest.fn().mockReturnValue({ allowed: true }),
+    canSaveRecipe: jest.fn().mockReturnValue({ allowed: true }),
+    canEditRecipe: jest.fn().mockReturnValue({ allowed: true }),
+    canDeleteRecipe: jest.fn().mockReturnValue({ allowed: true }),
+    canSyncData: jest.fn().mockReturnValue({ allowed: true }),
+  },
 }));
 
 // Mock the entire apiService module to avoid initialization issues
@@ -924,8 +969,9 @@ describe("AuthContext", () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      // When API returns null but we have cached data, API data (null) should be used since it's different
-      expect(result.current.user).toBeNull(); // API data takes precedence when different
+      // New behavior: When API returns null/invalid but we have cached data, keep cached data
+      // This allows offline-first behavior where cached data is preserved
+      expect(result.current.user).toEqual(mockUser); // Cached data is preserved
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
     });
@@ -949,7 +995,8 @@ describe("AuthContext", () => {
       });
 
       expect(result.current.user).toBeNull();
-      expect(result.current.error).toBe("Failed to initialize authentication");
+      // New error message matches updated logic that handles profile fetch separately
+      expect(result.current.error).toBe("Failed to load user profile");
       expect(result.current.isLoading).toBe(false);
     });
 
