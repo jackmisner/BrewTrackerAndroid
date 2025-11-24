@@ -186,7 +186,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     try {
       const result = await Promise.race([
         promise.catch(err => {
-          // Swallow error from losing branch to prevent unhandled rejection
+           // Attach handler to prevent unhandled rejection warning if timeout wins
           throw err;
         }),
         timeoutPromise,
@@ -252,38 +252,80 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
    * Centralized helper to apply a new session (post-token wiring)
    * Handles token storage, auth status update, user data caching, and background tasks
    *
+   * Includes rollback logic if critical operations fail to prevent partial state
+   *
    * @param accessToken - JWT access token
    * @param userData - User data from authentication
+   * @throws Error if session setup fails (after rollback)
    */
   const applyNewSession = async (
     accessToken: string,
     userData: User
   ): Promise<void> => {
-    // Store token securely
-    await ApiService.token.setToken(accessToken);
-
-    // Keep authStatus in sync with the new token
-    await updateAuthStatus(accessToken);
-
-    // Cache user data
-    await AsyncStorage.setItem(
-      STORAGE_KEYS.USER_DATA,
-      JSON.stringify(userData)
-    );
-
-    // Update state
-    setUser(userData);
-
-    // Cache ingredients in background (don't block)
-    StaticDataService.updateIngredientsCache()
-      .then(() => {
-        StaticDataService.getCacheStats()
-          .then(stats => console.log("V2 Cache Status:", stats))
-          .catch(error => console.warn("Failed to get cache stats:", error));
-      })
-      .catch(error => {
-        console.warn("Failed to cache ingredients after login:", error);
+    // Validate user data structure (defensive programming)
+    if (!userData?.id || !userData?.username) {
+      const error = new Error("Invalid user data received from authentication");
+      await UnifiedLogger.error("auth", "Session setup validation failed", {
+        hasId: !!userData?.id,
+        hasUsername: !!userData?.username,
       });
+      throw error;
+    }
+
+    try {
+      // Store token securely
+      await ApiService.token.setToken(accessToken);
+
+      // Keep authStatus in sync with the new token
+      await updateAuthStatus(accessToken);
+
+      // Cache user data
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.USER_DATA,
+        JSON.stringify(userData)
+      );
+
+      // Update state
+      setUser(userData);
+
+      await UnifiedLogger.debug("auth", "Session applied successfully", {
+        userId: userData.id,
+        username: userData.username,
+      });
+
+      // Cache ingredients in background (don't block)
+      StaticDataService.updateIngredientsCache()
+        .then(() => {
+          StaticDataService.getCacheStats()
+            .then(stats => console.log("V2 Cache Status:", stats))
+            .catch(error => console.warn("Failed to get cache stats:", error));
+        })
+        .catch(error => {
+          console.warn("Failed to cache ingredients after login:", error);
+        });
+    } catch (error) {
+      // Rollback: Clear token and auth status if session setup fails
+      await UnifiedLogger.error(
+        "auth",
+        "Failed to apply session, performing rollback",
+        error
+      );
+
+      try {
+        await ApiService.token.removeToken();
+        setAuthStatus("unauthenticated");
+        setUser(null);
+        await UnifiedLogger.debug("auth", "Session rollback completed");
+      } catch (rollbackError) {
+        await UnifiedLogger.error(
+          "auth",
+          "Rollback failed - state may be inconsistent",
+          rollbackError
+        );
+      }
+
+      throw error;
+    }
   };
 
   const initializeAuth = async (): Promise<void> => {
@@ -835,6 +877,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       });
 
       // Apply session (token storage, auth status update, caching, etc.)
+      // Note: applyNewSession handles user data validation
       await applyNewSession(access_token, userData as User);
 
       await UnifiedLogger.info(
