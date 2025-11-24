@@ -1120,11 +1120,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   /**
    * Quick login with device token (for "Remember This Device" functionality)
    * Similar to biometric login but specifically for device token exchange
+   *
+   * Note: This is an opportunistic enhancement - failures are logged but not
+   * surfaced as top-level auth errors to avoid noisy error messages on app open.
    */
   const quickLoginWithDeviceToken = async (): Promise<void> => {
     try {
       setIsLoading(true);
-      setError(null);
+      // Don't clear error state - leave any existing errors alone since this is best-effort
 
       // Exchange device token with timeout to prevent blocking
       const result = await withTimeout(
@@ -1146,7 +1149,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       );
     } catch (error: any) {
       await UnifiedLogger.error("auth", "Quick login failed", error);
-      setError(error.message || "Quick login failed");
+      // Don't surface quick-login failures as top-level auth errors - they're logged
+      // but the user gets a seamless fallback to the normal login form
       throw error;
     } finally {
       setIsLoading(false);

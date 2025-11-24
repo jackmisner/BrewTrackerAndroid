@@ -7,6 +7,7 @@
  */
 
 import { UnifiedLogger } from "@services/logger/UnifiedLogger";
+import { decodeJWTPayload } from "@utils/jwtUtils";
 
 export type TokenStatus =
   | "VALID" // Token not expired
@@ -21,6 +22,8 @@ export interface TokenPayload {
   email?: string; // Optional in some JWT formats
   exp: number; // Unix timestamp (seconds)
   iat?: number; // Unix timestamp (seconds, optional in legacy tokens)
+  nbf?: number; // Not before time
+  jti?: string; // JWT ID
 }
 
 export interface TokenValidation {
@@ -50,32 +53,24 @@ export class TokenValidationService {
    * This is safe for offline validation since we're only reading expiration
    * and the backend will still validate tokens on all API calls
    *
+   * Uses shared jwtUtils.decodeJWTPayload for consistent decoding across the app.
+   *
    * @param token - JWT token string
    * @returns Decoded payload or null if invalid format
    */
   static decodeToken(token: string): TokenPayload | null {
     try {
-      // JWT format: header.payload.signature
-      const parts = token.split(".");
-      if (parts.length !== 3) {
+      // Use shared JWT decoder from jwtUtils (with environment-compatible atob polyfill)
+      const payload = decodeJWTPayload(token);
+
+      if (!payload) {
         return null;
       }
-
-      // Decode base64url payload (middle part)
-      const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split("")
-          .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-          .join("")
-      );
-
-      const payload = JSON.parse(jsonPayload);
 
       // Extract user ID from either 'sub' (standard JWT) or 'user_id' (legacy)
       const userId = payload.sub || payload.user_id;
 
-      // Validate required fields
+      // Validate required fields for TokenValidationService
       if (
         !userId ||
         typeof userId !== "string" ||
@@ -83,6 +78,11 @@ export class TokenValidationService {
         !payload.exp ||
         typeof payload.exp !== "number"
       ) {
+        void UnifiedLogger.debug(
+          "TokenValidationService",
+          "Token missing required fields",
+          { hasUserId: !!userId, hasExp: !!payload.exp }
+        );
         return null;
       }
 
@@ -90,6 +90,10 @@ export class TokenValidationService {
       return {
         ...payload,
         user_id: userId,
+        exp: payload.exp,
+        iat: payload.iat,
+        nbf: payload.nbf,
+        jti: payload.jti,
       } as TokenPayload;
     } catch (error) {
       // Invalid base64, JSON parsing error, or missing fields
@@ -225,6 +229,12 @@ export class TokenValidationService {
   /**
    * Get user-friendly status text for UI display
    *
+   * Note: Status text is aligned with PermissionService semantics:
+   * - VALID = full access (authenticated)
+   * - EXPIRED_IN_GRACE = limited/read-only access (expired auth status)
+   * - EXPIRED_BEYOND_GRACE = no access (unauthenticated)
+   * - INVALID = no access (unauthenticated)
+   *
    * @param status - Token status
    * @returns Display text for the given status
    */
@@ -233,9 +243,9 @@ export class TokenValidationService {
       case "VALID":
         return "Connected";
       case "EXPIRED_IN_GRACE":
-        return "Limited Access";
+        return "Limited Access"; // Matches "expired" permission status
       case "EXPIRED_BEYOND_GRACE":
-        return "Read-Only Mode";
+        return "Not Authenticated"; // Matches "unauthenticated" permission status
       case "INVALID":
         return "Not Authenticated";
       default:

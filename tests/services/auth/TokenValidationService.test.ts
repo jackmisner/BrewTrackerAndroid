@@ -369,7 +369,7 @@ describe("TokenValidationService", () => {
       ).toBe("Limited Access");
       expect(
         TokenValidationService.getStatusDisplayText("EXPIRED_BEYOND_GRACE")
-      ).toBe("Read-Only Mode");
+      ).toBe("Not Authenticated");
       expect(TokenValidationService.getStatusDisplayText("INVALID")).toBe(
         "Not Authenticated"
       );

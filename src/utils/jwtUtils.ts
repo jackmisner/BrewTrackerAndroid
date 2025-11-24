@@ -5,7 +5,7 @@
  * Used for extracting user information from stored JWT tokens without requiring server calls.
  *
  * Features:
- * - Base64 URL decoding for JWT payload parsing
+ * - Base64 URL decoding for JWT payload parsing (with environment compatibility)
  * - Type-safe token payload interface
  * - Token expiration checking
  * - Error handling for malformed tokens
@@ -20,6 +20,8 @@
  * }
  * ```
  */
+
+import { base64Decode } from "./base64";
 
 /**
  * Standard JWT payload interface for BrewTracker tokens
@@ -73,8 +75,8 @@ export function decodeJWTPayload(token: string): JWTPayload | null {
       .replace(/_/g, "/")
       .padEnd(payload.length + ((4 - (payload.length % 4)) % 4), "=");
 
-    // Decode and parse JSON
-    const decoded = atob(base64);
+    // Decode and parse JSON (uses environment-compatible base64Decode)
+    const decoded = base64Decode(base64);
     const parsed = JSON.parse(decoded) as JWTPayload;
 
     // Validate that the payload contains at least one user identification field

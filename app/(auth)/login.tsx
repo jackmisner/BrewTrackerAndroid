@@ -86,7 +86,7 @@ export default function LoginScreen() {
     loadBiometricInfo();
   }, [checkBiometricAvailability]);
 
-  // Attempt quick login with device token on mount
+  // Attempt quick login with device token on mount (runs only once)
   useEffect(() => {
     const attemptQuickLogin = async () => {
       try {
@@ -129,7 +129,9 @@ export default function LoginScreen() {
     };
 
     attemptQuickLogin();
-  }, [hasDeviceToken, quickLoginWithDeviceToken, router]);
+    // Run only once on mount - auth functions are stable enough for this use case
+    // and we don't want repeated quick login attempts on auth state changes
+  }, []);
 
   const handleLogin = async () => {
     if (!username || !password) {
