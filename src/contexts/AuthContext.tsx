@@ -496,6 +496,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       // Store token securely
       await ApiService.token.setToken(access_token);
 
+      // Keep authStatus in sync with the new token
+      await updateAuthStatus(access_token);
+
       // Cache user data
       await AsyncStorage.setItem(
         STORAGE_KEYS.USER_DATA,
@@ -621,6 +624,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       // If verification includes auto-login
       if (response.data.access_token && response.data.user) {
         await ApiService.token.setToken(response.data.access_token);
+        // Keep authStatus in sync with the new token
+        await updateAuthStatus(response.data.access_token);
         await AsyncStorage.setItem(
           STORAGE_KEYS.USER_DATA,
           JSON.stringify(response.data.user)
@@ -810,6 +815,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
       // Store token securely
       await ApiService.token.setToken(access_token);
+      // Keep authStatus in sync with the new token
+      await updateAuthStatus(access_token);
       await UnifiedLogger.debug("auth", "JWT token stored in SecureStore");
 
       // Cache user data
