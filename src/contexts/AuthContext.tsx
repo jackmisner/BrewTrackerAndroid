@@ -208,7 +208,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
   /**
    * Helper to race a promise against a timeout
-   * Cleans up timer and swallows rejection from losing branch
+   * Cleans up the timer and attaches a handler to the losing branch
+   * to avoid unhandled rejections while still propagating the error.
    *
    * @param promise - Promise to race
    * @param timeoutMs - Timeout in milliseconds
@@ -318,7 +319,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         hasId: !!userId,
         hasUserId: !!(userData as any)?.user_id,
         hasUsername: !!userData?.username,
-        userData: JSON.stringify(userData),
       });
       throw error;
     }
@@ -1123,6 +1123,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
    *
    * Note: This is an opportunistic enhancement - failures are logged but not
    * surfaced as top-level auth errors to avoid noisy error messages on app open.
+   *
+   * IMPORTANT: This method throws on failure and MUST be called within a try/catch
+   * by the caller to handle errors gracefully (typically by falling back to normal login).
    */
   const quickLoginWithDeviceToken = async (): Promise<void> => {
     try {
@@ -1149,8 +1152,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       );
     } catch (error: any) {
       await UnifiedLogger.error("auth", "Quick login failed", error);
-      // Don't surface quick-login failures as top-level auth errors - they're logged
-      // but the user gets a seamless fallback to the normal login form
+      // Rethrow for caller to handle - errors are logged but caller must implement
+      // fallback behavior (typically showing the normal login form)
       throw error;
     } finally {
       setIsLoading(false);

@@ -24,7 +24,7 @@
  * - Android: No additional permissions required (SecureStore uses Android Keystore)
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -61,6 +61,9 @@ export default function LoginScreen() {
   );
   const [biometricType, setBiometricType] = useState<string>("Biometric");
 
+  // Guard against double-invocation in React StrictMode/dev mode
+  const hasAttemptedQuickLogin = useRef(false);
+
   const {
     login,
     error,
@@ -87,8 +90,15 @@ export default function LoginScreen() {
   }, [checkBiometricAvailability]);
 
   // Attempt quick login with device token on mount (runs only once)
+  // useRef guard prevents re-execution when dependencies change or in StrictMode
   useEffect(() => {
     const attemptQuickLogin = async () => {
+      // Guard against double-invocation in React StrictMode/dev mode
+      if (hasAttemptedQuickLogin.current) {
+        return;
+      }
+      hasAttemptedQuickLogin.current = true;
+
       try {
         // Check if device token exists
         const hasToken = await hasDeviceToken();
@@ -129,9 +139,7 @@ export default function LoginScreen() {
     };
 
     attemptQuickLogin();
-    // Run only once on mount - auth functions are stable enough for this use case
-    // and we don't want repeated quick login attempts on auth state changes
-  }, []);
+  }, [hasDeviceToken, quickLoginWithDeviceToken, router]);
 
   const handleLogin = async () => {
     if (!username || !password) {

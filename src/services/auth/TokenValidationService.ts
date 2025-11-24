@@ -67,16 +67,24 @@ export class TokenValidationService {
         return null;
       }
 
-      // Extract user ID from either 'sub' (standard JWT) or 'user_id' (legacy)
-      const userId = payload.sub || payload.user_id;
+      // Extract user ID using all aliases that jwtUtils accepts
+      // Priority: sub (standard) > user_id > id > userId > uid
+      const userId =
+        payload.sub ||
+        payload.user_id ||
+        payload.id ||
+        payload.userId ||
+        payload.uid;
 
       // Validate required fields for TokenValidationService
+      // exp must be a finite number (not NaN or Infinity)
       if (
         !userId ||
         typeof userId !== "string" ||
         userId.trim() === "" ||
         !payload.exp ||
-        typeof payload.exp !== "number"
+        typeof payload.exp !== "number" ||
+        !Number.isFinite(payload.exp)
       ) {
         void UnifiedLogger.debug(
           "TokenValidationService",
@@ -198,14 +206,12 @@ export class TokenValidationService {
     const validation = this.validateToken(token);
     switch (validation.status) {
       case "VALID": {
-        if (!validation.daysUntilExpiry) {
-          return "Session active";
-        }
-        if (validation.daysUntilExpiry < 1) {
+        // daysUntilExpiry is always set for VALID tokens
+        if (validation.daysUntilExpiry! < 1) {
           const hours = Math.floor((validation.secondsUntilExpiry || 0) / 3600);
           return `Session expires in ${hours} hour${hours !== 1 ? "s" : ""}`;
         }
-        const days = Math.floor(validation.daysUntilExpiry);
+        const days = Math.floor(validation.daysUntilExpiry!);
         return `Session expires in ${days} day${days !== 1 ? "s" : ""}`;
       }
       case "EXPIRED_IN_GRACE": {

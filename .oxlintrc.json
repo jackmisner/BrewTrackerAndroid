@@ -64,12 +64,6 @@
       "rules": {
         "react-hooks/exhaustive-deps": "off"
       }
-    },
-    {
-      "files": ["app/(auth)/login.tsx"],
-      "rules": {
-        "react-hooks/exhaustive-deps": "off"
-      }
     }
   ]
 }

@@ -55,12 +55,11 @@ export function base64Encode(str: string): string {
  * @returns Decoded UTF-8 string
  */
 export function base64urlDecodeToUTF8(base64url: string): string {
-  // Convert base64url to standard base64
-  const base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
-
+  // Convert base64url to standard base64 and add padding
+  let base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
+  base64 = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
   // Decode base64 to binary string
   const binaryString = base64Decode(base64);
-
   // Convert binary string to UTF-8 using decodeURIComponent + percent encoding
   // This handles non-ASCII characters correctly
   return decodeURIComponent(
