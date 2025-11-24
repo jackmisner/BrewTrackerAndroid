@@ -18,6 +18,7 @@ jest.mock("react-native", () => ({
   ScrollView: "ScrollView",
   KeyboardAvoidingView: "KeyboardAvoidingView",
   ActivityIndicator: "ActivityIndicator",
+  Switch: "Switch",
   Platform: { OS: "android" },
   StyleSheet: {
     create: (styles: any) => styles,
@@ -80,10 +81,12 @@ let mockAuthState = {
   isBiometricEnabled: false,
 };
 
-// Create mock functions for biometric operations
+// Create mock functions for biometric and device token operations
 const mockLoginWithBiometrics = jest.fn();
 const mockEnableBiometrics = jest.fn();
 const mockCheckBiometricAvailability = jest.fn();
+const mockHasDeviceToken = jest.fn(() => Promise.resolve(false));
+const mockQuickLoginWithDeviceToken = jest.fn();
 
 // Mock the AuthContext hook to return our mock data
 jest.mock("@contexts/AuthContext", () => ({
@@ -105,6 +108,8 @@ jest.mock("@contexts/AuthContext", () => ({
     enableBiometrics: mockEnableBiometrics,
     disableBiometrics: jest.fn(),
     checkBiometricAvailability: mockCheckBiometricAvailability,
+    hasDeviceToken: mockHasDeviceToken,
+    quickLoginWithDeviceToken: mockQuickLoginWithDeviceToken,
     getUserId: jest.fn(),
   }),
 }));
@@ -154,12 +159,21 @@ jest.mock("@styles/auth/loginStyles", () => ({
     secondaryButtonText: { color: "#007AFF", textAlign: "center" },
     divider: { marginVertical: 20 },
     dividerText: { textAlign: "center", color: "#666" },
+    rememberDeviceContainer: { flexDirection: "row", alignItems: "center" },
+    rememberDeviceText: { color: "#000", fontSize: 14 },
   })),
 }));
 
 // Alert is now mocked in the react-native mock above
 
 describe("LoginScreen", () => {
+  // Helper to wait for quick login to complete
+  const waitForQuickLogin = async () => {
+    await act(async () => {
+      await jest.runAllTimersAsync();
+    });
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
@@ -169,6 +183,9 @@ describe("LoginScreen", () => {
     mockLoginWithBiometrics.mockClear();
     mockEnableBiometrics.mockClear();
     mockCheckBiometricAvailability.mockClear();
+    mockHasDeviceToken.mockClear();
+    mockHasDeviceToken.mockReturnValue(Promise.resolve(false));
+    mockQuickLoginWithDeviceToken.mockClear();
     testUtils.resetCounters();
 
     // Reset auth state to defaults
@@ -187,10 +204,12 @@ describe("LoginScreen", () => {
   });
 
   describe("rendering", () => {
-    it("should render all required elements", () => {
+    it("should render all required elements", async () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
+
+      await waitForQuickLogin();
 
       expect(getByText("BrewTracker")).toBeTruthy();
       expect(getByText("Sign in to your account")).toBeTruthy();
@@ -202,24 +221,33 @@ describe("LoginScreen", () => {
       expect(getByText("Create Account")).toBeTruthy();
     });
 
-    it("should display error message when error exists", () => {
+    it("should display error message when error exists", async () => {
       setMockAuthState({ error: "Invalid credentials" });
 
       const { getByText } = renderWithProviders(<LoginScreen />);
 
+      await waitForQuickLogin();
+
       expect(getByText("Invalid credentials")).toBeTruthy();
     });
 
-    it("should not display error message when no error", () => {
+    it("should not display error message when no error", async () => {
       const { queryByText } = renderWithProviders(<LoginScreen />);
+
+      await waitForQuickLogin();
 
       expect(queryByText("Invalid credentials")).toBeNull();
     });
   });
 
   describe("user input", () => {
-    it("should update username when typing", () => {
-      const { getByPlaceholderText } = renderWithProviders(<LoginScreen />);
+    it("should update username when typing", async () => {
+      const { getByPlaceholderText, getByText } = renderWithProviders(
+        <LoginScreen />
+      );
+
+      await waitForQuickLogin();
+
       const usernameInput = getByPlaceholderText("Username");
 
       fireEvent.changeText(usernameInput, "testuser");
@@ -227,8 +255,13 @@ describe("LoginScreen", () => {
       expect(usernameInput.props.value).toBe("testuser");
     });
 
-    it("should update password when typing", () => {
-      const { getByPlaceholderText } = renderWithProviders(<LoginScreen />);
+    it("should update password when typing", async () => {
+      const { getByPlaceholderText, getByText } = renderWithProviders(
+        <LoginScreen />
+      );
+
+      await waitForQuickLogin();
+
       const passwordInput = getByPlaceholderText("Password");
 
       fireEvent.changeText(passwordInput, "password123");
@@ -236,15 +269,25 @@ describe("LoginScreen", () => {
       expect(passwordInput.props.value).toBe("password123");
     });
 
-    it("should have secure text entry for password field", () => {
-      const { getByPlaceholderText } = renderWithProviders(<LoginScreen />);
+    it("should have secure text entry for password field", async () => {
+      const { getByPlaceholderText, getByText } = renderWithProviders(
+        <LoginScreen />
+      );
+
+      await waitForQuickLogin();
+
       const passwordInput = getByPlaceholderText("Password");
 
       expect(passwordInput.props.secureTextEntry).toBe(true);
     });
 
-    it("should have correct autocomplete and text content types", () => {
-      const { getByPlaceholderText } = renderWithProviders(<LoginScreen />);
+    it("should have correct autocomplete and text content types", async () => {
+      const { getByPlaceholderText, getByText } = renderWithProviders(
+        <LoginScreen />
+      );
+
+      await waitForQuickLogin();
+
       const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
 
@@ -262,6 +305,9 @@ describe("LoginScreen", () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
+
+      await waitForQuickLogin();
+
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
 
@@ -279,6 +325,9 @@ describe("LoginScreen", () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
+
+      await waitForQuickLogin();
+
       const usernameInput = getByPlaceholderText("Username");
       const loginButton = getByText("Sign In");
 
@@ -294,6 +343,9 @@ describe("LoginScreen", () => {
 
     it("should show alert when both fields are empty", async () => {
       const { getByText } = renderWithProviders(<LoginScreen />);
+
+      await waitForQuickLogin();
+
       const loginButton = getByText("Sign In");
 
       fireEvent.press(loginButton);
@@ -313,6 +365,9 @@ describe("LoginScreen", () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
+
+      await waitForQuickLogin();
+
       const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
@@ -325,10 +380,13 @@ describe("LoginScreen", () => {
       });
 
       expect(mockClearError).toHaveBeenCalled();
-      expect(mockLogin).toHaveBeenCalledWith({
-        username: "testuser",
-        password: "password123",
-      });
+      expect(mockLogin).toHaveBeenCalledWith(
+        {
+          username: "testuser",
+          password: "password123",
+        },
+        false
+      );
     });
 
     it("should show loading indicator during login", async () => {
@@ -340,6 +398,9 @@ describe("LoginScreen", () => {
 
       const { getByText, getByPlaceholderText, queryByText } =
         renderWithProviders(<LoginScreen />);
+
+      await waitForQuickLogin();
+
       const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
 
@@ -367,6 +428,9 @@ describe("LoginScreen", () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
+
+      await waitForQuickLogin();
+
       const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
@@ -395,6 +459,9 @@ describe("LoginScreen", () => {
 
       const { getByText, getByPlaceholderText, queryByText } =
         renderWithProviders(<LoginScreen />);
+
+      await waitForQuickLogin();
+
       const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
 
@@ -425,6 +492,9 @@ describe("LoginScreen", () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
+
+      await waitForQuickLogin();
+
       const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
@@ -448,6 +518,9 @@ describe("LoginScreen", () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
+
+      await waitForQuickLogin();
+
       const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
@@ -471,6 +544,9 @@ describe("LoginScreen", () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
+
+      await waitForQuickLogin();
+
       const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
 
@@ -488,8 +564,11 @@ describe("LoginScreen", () => {
   });
 
   describe("navigation", () => {
-    it("should navigate to register screen when create account is pressed", () => {
+    it("should navigate to register screen when create account is pressed", async () => {
       const { getByText } = renderWithProviders(<LoginScreen />);
+
+      await waitForQuickLogin();
+
       const createAccountButton = getByText("Create Account");
 
       fireEvent.press(createAccountButton);
@@ -497,8 +576,11 @@ describe("LoginScreen", () => {
       // Navigation happens via globally mocked expo-router
     });
 
-    it("should navigate to forgot password screen", () => {
+    it("should navigate to forgot password screen", async () => {
       const { getByText } = renderWithProviders(<LoginScreen />);
+
+      await waitForQuickLogin();
+
       const forgotPasswordLink = getByText("Forgot your password?");
 
       fireEvent.press(forgotPasswordLink);
@@ -509,8 +591,11 @@ describe("LoginScreen", () => {
   });
 
   describe("error handling", () => {
-    it("should clear errors when navigating to forgot password", () => {
+    it("should clear errors when navigating to forgot password", async () => {
       const { getByText } = renderWithProviders(<LoginScreen />);
+
+      await waitForQuickLogin();
+
       const forgotPasswordLink = getByText("Forgot your password?");
 
       fireEvent.press(forgotPasswordLink);
@@ -524,6 +609,9 @@ describe("LoginScreen", () => {
       const { getByText, getByPlaceholderText } = renderWithProviders(
         <LoginScreen />
       );
+
+      await waitForQuickLogin();
+
       const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
       const loginButton = getByText("Sign In");
@@ -540,8 +628,13 @@ describe("LoginScreen", () => {
   });
 
   describe("accessibility", () => {
-    it("should have appropriate input types and properties", () => {
-      const { getByPlaceholderText } = renderWithProviders(<LoginScreen />);
+    it("should have appropriate input types and properties", async () => {
+      const { getByPlaceholderText, getByText } = renderWithProviders(
+        <LoginScreen />
+      );
+
+      await waitForQuickLogin();
+
       const usernameInput = getByPlaceholderText("Username");
       const passwordInput = getByPlaceholderText("Password");
 
@@ -558,13 +651,15 @@ describe("LoginScreen", () => {
   });
 
   describe("biometric authentication", () => {
-    it("should show biometric login button when biometrics are enabled and available", () => {
+    it("should show biometric login button when biometrics are enabled and available", async () => {
       setMockAuthState({
         isBiometricAvailable: true,
         isBiometricEnabled: true,
       });
 
-      const { getByTestId } = renderWithProviders(<LoginScreen />);
+      const { getByTestId, getByText } = renderWithProviders(<LoginScreen />);
+
+      await waitForQuickLogin();
 
       expect(getByTestId(TEST_IDS.auth.biometricLoginButton)).toBeTruthy();
     });
@@ -577,7 +672,10 @@ describe("LoginScreen", () => {
 
       mockLoginWithBiometrics.mockResolvedValue(undefined);
 
-      const { getByTestId } = renderWithProviders(<LoginScreen />);
+      const { getByTestId, getByText } = renderWithProviders(<LoginScreen />);
+
+      await waitForQuickLogin();
+
       const biometricButton = getByTestId(TEST_IDS.auth.biometricLoginButton);
 
       await act(async () => {
@@ -601,7 +699,10 @@ describe("LoginScreen", () => {
       (error as any).errorCode = BiometricErrorCode.USER_CANCELLED;
       mockLoginWithBiometrics.mockRejectedValue(error);
 
-      const { getByTestId } = renderWithProviders(<LoginScreen />);
+      const { getByTestId, getByText } = renderWithProviders(<LoginScreen />);
+
+      await waitForQuickLogin();
+
       const biometricButton = getByTestId(TEST_IDS.auth.biometricLoginButton);
 
       await act(async () => {
@@ -624,7 +725,10 @@ describe("LoginScreen", () => {
       const error = new Error("Authentication failed");
       mockLoginWithBiometrics.mockRejectedValue(error);
 
-      const { getByTestId } = renderWithProviders(<LoginScreen />);
+      const { getByTestId, getByText } = renderWithProviders(<LoginScreen />);
+
+      await waitForQuickLogin();
+
       const biometricButton = getByTestId(TEST_IDS.auth.biometricLoginButton);
 
       await act(async () => {

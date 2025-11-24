@@ -15,9 +15,10 @@ export type TokenStatus =
   | "INVALID"; // Corrupted/tampered/malformed token
 
 export interface TokenPayload {
-  user_id: string;
-  username: string;
-  email: string;
+  user_id: string; // Normalized field (from 'sub' or 'user_id')
+  sub?: string; // Standard JWT subject field (user ID) - raw from backend
+  username?: string; // Optional in some JWT formats
+  email?: string; // Optional in some JWT formats
   exp: number; // Unix timestamp (seconds)
   iat?: number; // Unix timestamp (seconds, optional in legacy tokens)
 }
@@ -71,18 +72,25 @@ export class TokenValidationService {
 
       const payload = JSON.parse(jsonPayload);
 
+      // Extract user ID from either 'sub' (standard JWT) or 'user_id' (legacy)
+      const userId = payload.sub || payload.user_id;
+
       // Validate required fields
       if (
-        !payload.user_id ||
-        typeof payload.user_id !== "string" ||
-        payload.user_id.trim() === "" ||
+        !userId ||
+        typeof userId !== "string" ||
+        userId.trim() === "" ||
         !payload.exp ||
         typeof payload.exp !== "number"
       ) {
         return null;
       }
 
-      return payload as TokenPayload;
+      // Normalize to always have user_id for backward compatibility
+      return {
+        ...payload,
+        user_id: userId,
+      } as TokenPayload;
     } catch (error) {
       // Invalid base64, JSON parsing error, or missing fields
       void UnifiedLogger.debug(

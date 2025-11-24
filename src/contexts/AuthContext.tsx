@@ -50,6 +50,7 @@ import {
   type PermissionCheck,
 } from "@services/auth/PermissionService";
 import { DeviceTokenService } from "@services/auth/DeviceTokenService";
+import { extractEntityId } from "@utils/idNormalization";
 
 /**
  * Authentication context interface defining all available state and actions
@@ -309,14 +310,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     userData: User
   ): Promise<void> => {
     // Validate user data structure (defensive programming)
-    if (!userData?.id || !userData?.username) {
+    // Use extractEntityId to handle both 'id' and 'user_id' fields
+    const userId = extractEntityId(userData, "user");
+    if (!userId || !userData?.username) {
       const error = new Error("Invalid user data received from authentication");
       await UnifiedLogger.error("auth", "Session setup validation failed", {
-        hasId: !!userData?.id,
+        hasId: !!userId,
+        hasUserId: !!(userData as any)?.user_id,
         hasUsername: !!userData?.username,
+        userData: JSON.stringify(userData),
       });
       throw error;
     }
+
+    // Normalize user data to ensure 'id' field exists
+    const normalizedUser: User = {
+      ...userData,
+      id: userId,
+    };
 
     try {
       // Store token securely
@@ -333,15 +344,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       // Cache user data
       await AsyncStorage.setItem(
         STORAGE_KEYS.USER_DATA,
-        JSON.stringify(userData)
+        JSON.stringify(normalizedUser)
       );
 
       // Update state
-      setUser(userData);
+      setUser(normalizedUser);
 
       await UnifiedLogger.debug("auth", "Session applied successfully", {
-        userId: userData.id,
-        username: userData.username,
+        userId: normalizedUser.id,
+        username: normalizedUser.username,
       });
 
       // Cache ingredients in background (don't block)

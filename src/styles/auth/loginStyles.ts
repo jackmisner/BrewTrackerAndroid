@@ -73,6 +73,16 @@ export const loginStyles = (colors: ThemeColors) =>
       marginBottom: 12,
       textAlign: "center",
     },
+    rememberDeviceContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    rememberDeviceText: {
+      color: colors.text,
+      fontSize: 14,
+      marginLeft: 8,
+    },
     forgotPasswordContainer: {
       alignItems: "flex-end",
       marginBottom: 16,
