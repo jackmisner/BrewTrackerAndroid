@@ -322,8 +322,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       // Store token securely
       await ApiService.token.setToken(accessToken);
 
-      // Keep authStatus in sync with the new token
-      await updateAuthStatus(accessToken);
+      // Keep authStatus in sync with the new token and fail fast on invalid/expired tokens
+      const status = await updateAuthStatus(accessToken);
+      if (status !== "authenticated") {
+        throw new Error(
+          `Failed to apply session: token validation returned status "${status}"`
+        );
+      }
 
       // Cache user data
       await AsyncStorage.setItem(
@@ -419,13 +424,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
             return; // Exit early - user is authenticated
           }
-        } catch (deviceTokenError) {
+
+          // If device token is clearly expired/invalid, clear it to avoid repeated failures
+          if (
+            result &&
+            !result.success &&
+            result.error_code === "EXPIRED_TOKEN"
+          ) {
+            await UnifiedLogger.info(
+              "auth",
+              "Device token expired, cleared to prevent retry loops"
+            );
+            // DeviceTokenService already clears it, but log for clarity
+          }
+        } catch (deviceTokenError: any) {
           // Device token exchange failed/timed out - continue with JWT validation
           await UnifiedLogger.warn(
             "auth",
             "Device token exchange failed, falling back to JWT validation",
             deviceTokenError
           );
+
+          // Clear device token on 401 to avoid repeated failures
+          if (deviceTokenError?.response?.status === 401) {
+            await DeviceTokenService.clearDeviceToken();
+            await UnifiedLogger.info(
+              "auth",
+              "Device token invalid (401), cleared to prevent retry loops"
+            );
+          }
         }
       }
 
