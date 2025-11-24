@@ -20,6 +20,17 @@ export const API_CONFIG = {
 };
 
 /**
+ * Authentication configuration
+ * Timeout settings for auth initialization to prevent blocking on slow networks
+ */
+export const AUTH_CONFIG = {
+  // Device token exchange timeout (quick login)
+  DEVICE_TOKEN_TIMEOUT: 3000, // 3 seconds
+  // Profile fetch timeout during initialization
+  PROFILE_FETCH_TIMEOUT: 5000, // 5 seconds
+} as const;
+
+/**
  * Storage keys for secure storage
  * All user data and authentication tokens are stored using these keys
  * Uses SecureStore on mobile for enhanced security
