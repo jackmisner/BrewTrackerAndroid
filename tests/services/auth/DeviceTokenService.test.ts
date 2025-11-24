@@ -341,44 +341,49 @@ describe("DeviceTokenService", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("No device token found");
-      expect(result.error_code).toBe("INVALID_TOKEN");
+      expect(result.error_code).toBe("EXPIRED_TOKEN");
       expect(ApiService.auth.biometricLogin).not.toHaveBeenCalled();
     });
 
-    it("should handle 401 invalid token error", async () => {
+    it("should handle 401 expired/invalid token error and clear token", async () => {
       (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(
         mockDeviceToken
       );
+      (SecureStore.deleteItemAsync as jest.Mock).mockResolvedValue(undefined);
       (ApiService.auth.biometricLogin as jest.Mock).mockRejectedValue({
         response: {
           status: 401,
-          data: { error: "Invalid device token" },
+          data: { error: "Device token expired or invalid" },
         },
       });
 
       const result = await DeviceTokenService.exchangeDeviceToken();
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Invalid device token");
-      expect(result.error_code).toBe("INVALID_TOKEN");
+      expect(result.error).toBe("Device token expired or invalid");
+      expect(result.error_code).toBe("EXPIRED_TOKEN");
+      // Should clear device token to prevent retry loops
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith("device_token");
     });
 
-    it("should handle 403 expired token error", async () => {
+    it("should handle 403 authorization error without clearing token", async () => {
       (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(
         mockDeviceToken
       );
       (ApiService.auth.biometricLogin as jest.Mock).mockRejectedValue({
         response: {
           status: 403,
-          data: { error: "Device token expired" },
+          data: { error: "Device token lacks required permissions" },
         },
       });
 
       const result = await DeviceTokenService.exchangeDeviceToken();
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Device token expired");
-      expect(result.error_code).toBe("EXPIRED_TOKEN");
+      expect(result.error).toBe("Device token lacks required permissions");
+      expect(result.error_code).toBe("AUTHORIZATION_ERROR");
+      // Should NOT clear device token for authorization errors
+      expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
     });
 
     it("should handle network error", async () => {

@@ -72,7 +72,7 @@ export class TokenValidationService {
       const payload = JSON.parse(jsonPayload);
 
       // Validate required fields
-      if (!payload.user_id || !payload.exp) {
+      if (!payload.user_id || !payload.exp || typeof payload.exp !== "number") {
         return null;
       }
 

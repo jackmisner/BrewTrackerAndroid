@@ -47,7 +47,11 @@ export interface ExchangeTokenResult {
   access_token?: string;
   user?: any;
   error?: string;
-  error_code?: "NETWORK_ERROR" | "INVALID_TOKEN" | "EXPIRED_TOKEN" | "UNKNOWN";
+  error_code?:
+    | "NETWORK_ERROR"
+    | "EXPIRED_TOKEN"
+    | "AUTHORIZATION_ERROR"
+    | "UNKNOWN";
 }
 
 export class DeviceTokenService {
@@ -124,7 +128,9 @@ export class DeviceTokenService {
   private static generateDeviceId(): string {
     const deviceName = Device.deviceName || "Unknown Device";
     const timestamp = Date.now();
-    return `android-${deviceName}-${timestamp}`.replace(/\s+/g, "-");
+    return `android-${deviceName}-${timestamp}`
+      .replace(/[^a-zA-Z0-9-_]/g, "-")
+      .replace(/-+/g, "-");
   }
 
   /**
@@ -218,7 +224,7 @@ export class DeviceTokenService {
         return {
           success: false,
           error: "No device token found",
-          error_code: "INVALID_TOKEN",
+          error_code: "EXPIRED_TOKEN",
         };
       }
 
@@ -253,13 +259,14 @@ export class DeviceTokenService {
       let error_code: ExchangeTokenResult["error_code"] = "UNKNOWN";
 
       if (error?.response?.status === 401) {
-        error_code = "INVALID_TOKEN";
-        // Clear invalid token to prevent retry loops
+        // 401 = Token is expired or invalid (authentication failed)
+        error_code = "EXPIRED_TOKEN";
+        // Clear expired/invalid token to prevent retry loops
         await this.clearDeviceToken();
       } else if (error?.response?.status === 403) {
-        error_code = "EXPIRED_TOKEN";
-        // Clear expired token to prevent retry loops
-        await this.clearDeviceToken();
+        // 403 = Token is valid but lacks permission (authorization failed)
+        error_code = "AUTHORIZATION_ERROR";
+        // Don't clear token - user is authenticated but may lack permissions
       } else if (!error?.response) {
         error_code = "NETWORK_ERROR";
       }
@@ -410,7 +417,16 @@ export class DeviceTokenService {
     const token = await this.getDeviceToken();
     const deviceId = await this.getDeviceId();
     const username = await this.getStoredUsername();
-    const enabled = await SecureStore.getItemAsync(STORAGE_KEYS.ENABLED);
+    let enabled: string | null = null;
+    try {
+      enabled = await SecureStore.getItemAsync(STORAGE_KEYS.ENABLED);
+    } catch (error) {
+      await UnifiedLogger.error(
+        "DeviceTokenService",
+        "Error getting enabled flag",
+        error
+      );
+    }
 
     return {
       hasToken: token !== null,
