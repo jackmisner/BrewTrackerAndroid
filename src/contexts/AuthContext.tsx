@@ -186,7 +186,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     try {
       const result = await Promise.race([
         promise.catch(err => {
-           // Attach handler to prevent unhandled rejection warning if timeout wins
+          // Attach handler to prevent unhandled rejection warning if timeout wins
           throw err;
         }),
         timeoutPromise,
