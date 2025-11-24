@@ -72,7 +72,13 @@ export class TokenValidationService {
       const payload = JSON.parse(jsonPayload);
 
       // Validate required fields
-      if (!payload.user_id || !payload.exp || typeof payload.exp !== "number") {
+      if (
+        !payload.user_id ||
+        typeof payload.user_id !== "string" ||
+        payload.user_id.trim() === "" ||
+        !payload.exp ||
+        typeof payload.exp !== "number"
+      ) {
         return null;
       }
 
@@ -97,7 +103,7 @@ export class TokenValidationService {
   static validateToken(token: string): TokenValidation {
     const payload = this.decodeToken(token);
 
-    if (!payload || !payload.exp) {
+    if (!payload) {
       return {
         status: "INVALID",
         payload: null,

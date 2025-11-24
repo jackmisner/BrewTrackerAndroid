@@ -158,6 +158,17 @@ describe("DeviceTokenService", () => {
 
       expect(username).toBeNull();
     });
+
+    it("should return null on SecureStore error", async () => {
+      (SecureStore.getItemAsync as jest.Mock).mockRejectedValue(
+        new Error("SecureStore error")
+      );
+
+      const username = await DeviceTokenService.getStoredUsername();
+
+      expect(username).toBeNull();
+      expect(console.error).toHaveBeenCalled();
+    });
   });
 
   describe("getDeviceId", () => {
@@ -178,6 +189,17 @@ describe("DeviceTokenService", () => {
       const deviceId = await DeviceTokenService.getDeviceId();
 
       expect(deviceId).toBeNull();
+    });
+
+    it("should return null on SecureStore error", async () => {
+      (SecureStore.getItemAsync as jest.Mock).mockRejectedValue(
+        new Error("SecureStore error")
+      );
+
+      const deviceId = await DeviceTokenService.getDeviceId();
+
+      expect(deviceId).toBeNull();
+      expect(console.error).toHaveBeenCalled();
     });
   });
 
@@ -258,6 +280,34 @@ describe("DeviceTokenService", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("Network error");
+    });
+
+    it("should handle SecureStore failure and clear partial state", async () => {
+      (ApiService.auth.createDeviceToken as jest.Mock).mockResolvedValue(
+        mockResponse
+      );
+
+      // Mock first storage call succeeds, second one fails
+      (SecureStore.setItemAsync as jest.Mock)
+        .mockResolvedValueOnce(undefined) // device_token succeeds
+        .mockRejectedValueOnce(new Error("Storage quota exceeded")); // device_id fails
+
+      const result = await DeviceTokenService.createDeviceToken(mockUsername);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Failed to store device token securely");
+
+      // Verify clearDeviceToken was called to cleanup partial state
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith("device_token");
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith(
+        "device_token_device_id"
+      );
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith(
+        "device_token_username"
+      );
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith(
+        "device_token_enabled"
+      );
     });
 
     it("should generate unique device IDs", async () => {
@@ -341,7 +391,7 @@ describe("DeviceTokenService", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe("No device token found");
-      expect(result.error_code).toBe("EXPIRED_TOKEN");
+      expect(result.error_code).toBe("MISSING_TOKEN");
       expect(ApiService.auth.biometricLogin).not.toHaveBeenCalled();
     });
 

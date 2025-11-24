@@ -51,6 +51,7 @@ export interface ExchangeTokenResult {
     | "NETWORK_ERROR"
     | "EXPIRED_TOKEN"
     | "AUTHORIZATION_ERROR"
+    | "MISSING_TOKEN"
     | "UNKNOWN";
 }
 
@@ -126,7 +127,7 @@ export class DeviceTokenService {
    * Uses device name + timestamp for uniqueness
    */
   private static generateDeviceId(): string {
-    const deviceName = Device.deviceName || "Unknown Device";
+    const deviceName = Device.deviceName?.trim() || "Unknown Device";
     const timestamp = Date.now();
     return `android-${deviceName}-${timestamp}`
       .replace(/[^a-zA-Z0-9-_]/g, "-")
@@ -173,10 +174,23 @@ export class DeviceTokenService {
       const { device_token, expires_at } = response.data;
 
       // Store device token and metadata in SecureStore
-      await SecureStore.setItemAsync(STORAGE_KEYS.DEVICE_TOKEN, device_token);
-      await SecureStore.setItemAsync(STORAGE_KEYS.DEVICE_ID, device_id);
-      await SecureStore.setItemAsync(STORAGE_KEYS.USERNAME, username);
-      await SecureStore.setItemAsync(STORAGE_KEYS.ENABLED, "true");
+      // Use all-or-nothing semantics: if any storage operation fails,
+      // clear all stored data to prevent partial state
+      try {
+        await SecureStore.setItemAsync(STORAGE_KEYS.DEVICE_TOKEN, device_token);
+        await SecureStore.setItemAsync(STORAGE_KEYS.DEVICE_ID, device_id);
+        await SecureStore.setItemAsync(STORAGE_KEYS.USERNAME, username);
+        await SecureStore.setItemAsync(STORAGE_KEYS.ENABLED, "true");
+      } catch (storageError) {
+        // Cleanup partial state on storage failure
+        await UnifiedLogger.error(
+          "DeviceTokenService",
+          "Storage failed, clearing partial state",
+          storageError
+        );
+        await this.clearDeviceToken();
+        throw new Error("Failed to store device token securely");
+      }
 
       await UnifiedLogger.info(
         "DeviceTokenService",
@@ -224,7 +238,7 @@ export class DeviceTokenService {
         return {
           success: false,
           error: "No device token found",
-          error_code: "EXPIRED_TOKEN",
+          error_code: "MISSING_TOKEN",
         };
       }
 
