@@ -146,7 +146,9 @@ interface AuthContextValue {
  */
 interface AuthProviderProps {
   children: ReactNode;
-  initialAuthState?: Partial<Pick<AuthContextValue, "user" | "error">>;
+  initialAuthState?: Partial<
+    Pick<AuthContextValue, "user" | "error" | "authStatus">
+  >;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -185,7 +187,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   const [error, setError] = useState<string | null>(
     initialAuthState?.error || null
   );
-  const [authStatus, setAuthStatus] = useState<AuthStatus>("unauthenticated");
+  // Initialize authStatus from initialAuthState, or default to "authenticated" if user is provided
+  const [authStatus, setAuthStatus] = useState<AuthStatus>(
+    initialAuthState?.authStatus ||
+      (initialAuthState?.user ? "authenticated" : "unauthenticated")
+  );
   const [isBiometricAvailable, setIsBiometricAvailable] =
     useState<boolean>(false);
   const [isBiometricEnabled, setIsBiometricEnabled] = useState<boolean>(false);
@@ -695,12 +701,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         { error: error.message, userId: user?.id }
       );
 
-      // Even if logout fails, clear local state and cache
+      // Even if logout fails, clear local auth state and storage as best-effort
+      // This ensures the "user is logged out" invariant is maintained
       setUser(null);
+      setAuthStatus("unauthenticated");
+      setError(null);
+
+      // Attempt to clear tokens (swallow errors to ensure cleanup continues)
+      try {
+        await ApiService.token.removeToken();
+      } catch (tokenError) {
+        await UnifiedLogger.warn(
+          "auth",
+          "Failed to remove JWT token during fallback cleanup",
+          tokenError
+        );
+      }
+
+      try {
+        await DeviceTokenService.clearDeviceToken();
+      } catch (deviceTokenError) {
+        await UnifiedLogger.warn(
+          "auth",
+          "Failed to clear device token during fallback cleanup",
+          deviceTokenError
+        );
+      }
+
+      // Attempt to clear cached data
+      try {
+        await AsyncStorage.multiRemove([
+          STORAGE_KEYS.USER_DATA,
+          STORAGE_KEYS.USER_SETTINGS,
+          STORAGE_KEYS.CACHED_INGREDIENTS,
+        ]);
+      } catch (storageError) {
+        await UnifiedLogger.warn(
+          "auth",
+          "Failed to clear AsyncStorage during fallback cleanup",
+          storageError
+        );
+      }
+
+      // Clear React Query caches
       cacheUtils.clearAll();
-      // Clear persisted cache without user ID as fallback
       await cacheUtils.clearAllPersistedCache();
-      // Clear all offline data as fallback
+
+      // Clear user offline data
       const { UserCacheService } = await import(
         "@services/offlineV2/UserCacheService"
       );

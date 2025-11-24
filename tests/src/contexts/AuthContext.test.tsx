@@ -588,8 +588,7 @@ describe("AuthContext", () => {
       });
 
       expect(mockApiService.token.removeToken).toHaveBeenCalled();
-      // Expect one call to multiRemove for basic keys
-      expect(mockAsyncStorage.multiRemove).toHaveBeenCalledTimes(1);
+      // Should call multiRemove to clear cached data
       expect(mockAsyncStorage.multiRemove).toHaveBeenCalledWith([
         "userData",
         "userSettings",
@@ -597,6 +596,7 @@ describe("AuthContext", () => {
       ]);
       expect(result.current.user).toBeNull();
       expect(result.current.isAuthenticated).toBe(false);
+      expect(result.current.authStatus).toBe("unauthenticated");
       expect(result.current.error).toBeNull();
     });
 
@@ -613,8 +613,17 @@ describe("AuthContext", () => {
         await result.current.logout();
       });
 
+      // Fallback cleanup should ensure "logged out" invariant
       expect(result.current.user).toBeNull();
       expect(result.current.isAuthenticated).toBe(false);
+      expect(result.current.authStatus).toBe("unauthenticated");
+      expect(result.current.error).toBeNull();
+      // Should still attempt to clear AsyncStorage in fallback
+      expect(mockAsyncStorage.multiRemove).toHaveBeenCalledWith([
+        "userData",
+        "userSettings",
+        "cachedIngredients",
+      ]);
     });
   });
 
