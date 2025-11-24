@@ -164,13 +164,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   }, [initialAuthState]);
 
   /**
+   * Helper to race a promise against a timeout
+   * Cleans up timer and swallows rejection from losing branch
+   *
+   * @param promise - Promise to race
+   * @param timeoutMs - Timeout in milliseconds
+   * @param timeoutError - Error message if timeout wins
+   * @returns Result of promise or throws timeout error
+   */
+  const withTimeout = async <T,>(
+    promise: Promise<T>,
+    timeoutMs: number,
+    timeoutError: string
+  ): Promise<T> => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error(timeoutError)), timeoutMs);
+    });
+
+    try {
+      const result = await Promise.race([
+        promise.catch(err => {
+          // Swallow error from losing branch to prevent unhandled rejection
+          throw err;
+        }),
+        timeoutPromise,
+      ]);
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
+      return result;
+    } catch (error) {
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
+      throw error;
+    }
+  };
+
+  /**
    * Helper function to update auth status based on JWT token validation
    * Determines if user is authenticated, expired (grace period), or unauthenticated
+   *
+   * @returns The computed AuthStatus for flow control
    */
-  const updateAuthStatus = async (token: string | null): Promise<void> => {
+  const updateAuthStatus = async (
+    token: string | null
+  ): Promise<AuthStatus> => {
     if (!token) {
       setAuthStatus("unauthenticated");
-      return;
+      return "unauthenticated";
     }
 
     const validation = TokenValidationService.validateToken(token);
@@ -178,7 +222,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     switch (validation.status) {
       case "VALID":
         setAuthStatus("authenticated");
-        break;
+        return "authenticated";
       case "EXPIRED_IN_GRACE":
         setAuthStatus("expired");
         await UnifiedLogger.warn(
@@ -189,7 +233,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
             gracePeriodDays: TokenValidationService.GRACE_PERIOD_DAYS,
           }
         );
-        break;
+        return "expired";
       case "EXPIRED_BEYOND_GRACE":
       case "INVALID":
         setAuthStatus("unauthenticated");
@@ -200,8 +244,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
           "auth",
           "JWT token expired beyond grace period"
         );
-        break;
+        return "unauthenticated";
     }
+  };
+
+  /**
+   * Centralized helper to apply a new session (post-token wiring)
+   * Handles token storage, auth status update, user data caching, and background tasks
+   *
+   * @param accessToken - JWT access token
+   * @param userData - User data from authentication
+   */
+  const applyNewSession = async (
+    accessToken: string,
+    userData: User
+  ): Promise<void> => {
+    // Store token securely
+    await ApiService.token.setToken(accessToken);
+
+    // Keep authStatus in sync with the new token
+    await updateAuthStatus(accessToken);
+
+    // Cache user data
+    await AsyncStorage.setItem(
+      STORAGE_KEYS.USER_DATA,
+      JSON.stringify(userData)
+    );
+
+    // Update state
+    setUser(userData);
+
+    // Cache ingredients in background (don't block)
+    StaticDataService.updateIngredientsCache()
+      .then(() => {
+        StaticDataService.getCacheStats()
+          .then(stats => console.log("V2 Cache Status:", stats))
+          .catch(error => console.warn("Failed to get cache stats:", error));
+      })
+      .catch(error => {
+        console.warn("Failed to cache ingredients after login:", error);
+      });
   };
 
   const initializeAuth = async (): Promise<void> => {
@@ -220,41 +302,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         );
 
         try {
-          // Set a timeout for device token exchange to avoid blocking on slow networks
-          const deviceTokenPromise = DeviceTokenService.exchangeDeviceToken();
-          const timeoutPromise = new Promise<null>((_, reject) =>
-            setTimeout(
-              () => reject(new Error("Device token exchange timeout")),
-              AUTH_CONFIG.DEVICE_TOKEN_TIMEOUT
-            )
+          const result = await withTimeout(
+            DeviceTokenService.exchangeDeviceToken(),
+            AUTH_CONFIG.DEVICE_TOKEN_TIMEOUT,
+            "Device token exchange timeout"
           );
 
-          const result = await Promise.race([
-            deviceTokenPromise,
-            timeoutPromise,
-          ]);
-
           if (result && result.success && result.access_token && result.user) {
-            // Device token exchange successful - store new JWT and update user
-            await ApiService.token.setToken(result.access_token);
-            await AsyncStorage.setItem(
-              STORAGE_KEYS.USER_DATA,
-              JSON.stringify(result.user)
-            );
-            setUser(result.user as User);
-            await updateAuthStatus(result.access_token);
+            // Device token exchange successful - use shared helper
+            await applyNewSession(result.access_token, result.user as User);
 
             await UnifiedLogger.info(
               "auth",
               "Quick login with device token successful"
-            );
-
-            // Cache ingredients in background
-            StaticDataService.updateIngredientsCache().catch(error =>
-              console.warn(
-                "Failed to cache ingredients after quick login:",
-                error
-              )
             );
 
             return; // Exit early - user is authenticated
@@ -277,9 +337,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       }
 
       // Step 3: Validate JWT token offline
-      await updateAuthStatus(token);
+      const status = await updateAuthStatus(token);
+
+      // If validation left us unauthenticated (expired beyond grace / invalid),
+      // treat as logged out and do not hydrate cached user/profile.
+      if (status === "unauthenticated") {
+        await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
+        return;
+      }
 
       // Step 4: Load cached user data for immediate UI hydration
+      // (Only reached if token is valid or expired within grace period)
       try {
         const cachedUserData = await AsyncStorage.getItem(
           STORAGE_KEYS.USER_DATA
@@ -300,15 +368,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
       // Step 5: Try to fetch fresh profile data from API (with timeout)
       try {
-        const profilePromise = ApiService.auth.getProfile();
-        const timeoutPromise = new Promise<null>((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Profile fetch timeout")),
-            AUTH_CONFIG.PROFILE_FETCH_TIMEOUT
-          )
+        const response = await withTimeout(
+          ApiService.auth.getProfile(),
+          AUTH_CONFIG.PROFILE_FETCH_TIMEOUT,
+          "Profile fetch timeout"
         );
-
-        const response = await Promise.race([profilePromise, timeoutPromise]);
 
         if (response && response.data) {
           const apiUser = response.data;
@@ -392,24 +456,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       const response = await ApiService.auth.login(credentials);
       const { access_token, user: userData } = response.data;
 
-      // Store token securely
-      await ApiService.token.setToken(access_token);
-
-      // Update auth status based on token validation
-      await updateAuthStatus(access_token);
-
       // Debug JWT token structure (development only)
       if (__DEV__) {
         debugJWTToken(access_token);
       }
 
-      // Cache user data
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.USER_DATA,
-        JSON.stringify(userData)
-      );
-
-      setUser(userData);
+      // Apply session (token storage, auth status update, caching, etc.)
+      await applyNewSession(access_token, userData);
 
       // If "Remember Device" is enabled, create a device token for quick login
       if (rememberDevice) {
@@ -440,21 +493,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
           );
         }
       }
-
-      // Cache ingredients now that user is authenticated using V2 system
-      StaticDataService.updateIngredientsCache()
-        .then(() => {
-          // Log cache status for debugging
-          StaticDataService.getCacheStats()
-            .then(stats => {
-              console.log("V2 Cache Status:", stats);
-            })
-            .catch(error => console.warn("Failed to get cache stats:", error));
-        })
-        .catch(error => {
-          console.warn("Failed to cache ingredients after login:", error);
-          // Don't throw - this shouldn't block login success
-        });
     } catch (error: any) {
       console.error("Login failed:", error);
       setError(error.response?.data?.message || "Login failed");
@@ -493,19 +531,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       const response = await ApiService.auth.googleAuth({ token });
       const { access_token, user: userData } = response.data;
 
-      // Store token securely
-      await ApiService.token.setToken(access_token);
-
-      // Keep authStatus in sync with the new token
-      await updateAuthStatus(access_token);
-
-      // Cache user data
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.USER_DATA,
-        JSON.stringify(userData)
-      );
-
-      setUser(userData);
+      // Apply session (token storage, auth status update, caching, etc.)
+      await applyNewSession(access_token, userData);
     } catch (error: any) {
       console.error("Google sign-in failed:", error);
       setError(error.response?.data?.message || "Google sign-in failed");
@@ -623,14 +650,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
       // If verification includes auto-login
       if (response.data.access_token && response.data.user) {
-        await ApiService.token.setToken(response.data.access_token);
-        // Keep authStatus in sync with the new token
-        await updateAuthStatus(response.data.access_token);
-        await AsyncStorage.setItem(
-          STORAGE_KEYS.USER_DATA,
-          JSON.stringify(response.data.user)
-        );
-        setUser(response.data.user);
+        // Apply session (token storage, auth status update, caching, etc.)
+        await applyNewSession(response.data.access_token, response.data.user);
       } else if (user) {
         // Just refresh the current user to get updated verification status
         await refreshUser();
@@ -813,20 +834,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         hasAccessToken: true,
       });
 
-      // Store token securely
-      await ApiService.token.setToken(access_token);
-      // Keep authStatus in sync with the new token
-      await updateAuthStatus(access_token);
-      await UnifiedLogger.debug("auth", "JWT token stored in SecureStore");
-
-      // Cache user data
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.USER_DATA,
-        JSON.stringify(userData)
-      );
-      await UnifiedLogger.debug("auth", "User data cached in AsyncStorage");
-
-      setUser(userData as User);
+      // Apply session (token storage, auth status update, caching, etc.)
+      await applyNewSession(access_token, userData as User);
 
       await UnifiedLogger.info(
         "auth",
@@ -836,22 +845,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
           username: userData.username,
         }
       );
-
-      // Cache ingredients using V2 system
-      StaticDataService.updateIngredientsCache()
-        .then(() => {
-          StaticDataService.getCacheStats()
-            .then(stats => {
-              console.log("V2 Cache Status:", stats);
-            })
-            .catch(error => console.warn("Failed to get cache stats:", error));
-        })
-        .catch(error => {
-          console.warn(
-            "Failed to cache ingredients after biometric login:",
-            error
-          );
-        });
     } catch (error: any) {
       await UnifiedLogger.error("auth", "Biometric login failed", {
         errorMessage: error.message,
@@ -953,32 +946,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       setIsLoading(true);
       setError(null);
 
-      const result = await DeviceTokenService.exchangeDeviceToken();
+      // Exchange device token with timeout to prevent blocking
+      const result = await withTimeout(
+        DeviceTokenService.exchangeDeviceToken(),
+        AUTH_CONFIG.DEVICE_TOKEN_TIMEOUT,
+        "Device token exchange timeout"
+      );
 
       if (!result.success || !result.access_token || !result.user) {
         throw new Error(result.error || "Device token login failed");
       }
 
-      // Store new JWT token
-      await ApiService.token.setToken(result.access_token);
-      await updateAuthStatus(result.access_token);
-
-      // Cache user data
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.USER_DATA,
-        JSON.stringify(result.user)
-      );
-
-      setUser(result.user as User);
+      // Apply session (token storage, auth status update, caching, etc.)
+      await applyNewSession(result.access_token, result.user as User);
 
       await UnifiedLogger.info(
         "auth",
         "Quick login with device token successful"
-      );
-
-      // Cache ingredients in background
-      StaticDataService.updateIngredientsCache().catch(error =>
-        console.warn("Failed to cache ingredients after quick login:", error)
       );
     } catch (error: any) {
       await UnifiedLogger.error("auth", "Quick login failed", error);
