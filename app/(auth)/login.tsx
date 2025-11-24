@@ -7,6 +7,7 @@
  *
  * Features:
  * - Email and password authentication
+ * - Quick login with device tokens ("Remember This Device")
  * - Basic validation for required fields
  * - Loading states and error handling
  * - Navigation to forgot password and registration
@@ -15,6 +16,7 @@
  * Security:
  * - Secure password input
  * - JWT tokens handled by AuthContext and stored securely in SecureStore
+ * - Device tokens for "Remember This Device" functionality
  * - Passwords temporarily stored in SecureStore (hardware-backed encryption) for biometric enrollment
  * - No plaintext passwords in AsyncStorage (migrated to SecureStore as of Dec 2024)
  *
@@ -22,7 +24,7 @@
  * - Android: No additional permissions required (SecureStore uses Android Keystore)
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -32,6 +34,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   ActivityIndicator,
+  Switch,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
@@ -51,7 +54,15 @@ export default function LoginScreen() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberDevice, setRememberDevice] = useState(false);
+  const [isQuickLoginAttempting, setIsQuickLoginAttempting] = useState(true);
+  const [quickLoginMessage, setQuickLoginMessage] = useState(
+    "Checking for saved device..."
+  );
   const [biometricType, setBiometricType] = useState<string>("Biometric");
+
+  // Guard against double-invocation in React StrictMode/dev mode
+  const hasAttemptedQuickLogin = useRef(false);
 
   const {
     login,
@@ -61,6 +72,8 @@ export default function LoginScreen() {
     isBiometricEnabled,
     loginWithBiometrics,
     checkBiometricAvailability,
+    hasDeviceToken,
+    quickLoginWithDeviceToken,
   } = useAuth();
   const router = useRouter();
   const { colors } = useTheme();
@@ -76,6 +89,58 @@ export default function LoginScreen() {
     loadBiometricInfo();
   }, [checkBiometricAvailability]);
 
+  // Attempt quick login with device token on mount (runs only once)
+  // useRef guard prevents re-execution when dependencies change or in StrictMode
+  useEffect(() => {
+    const attemptQuickLogin = async () => {
+      // Guard against double-invocation in React StrictMode/dev mode
+      if (hasAttemptedQuickLogin.current) {
+        return;
+      }
+      hasAttemptedQuickLogin.current = true;
+
+      try {
+        // Check if device token exists
+        const hasToken = await hasDeviceToken();
+
+        if (!hasToken) {
+          setIsQuickLoginAttempting(false);
+          return;
+        }
+
+        setQuickLoginMessage("Logging in with saved device...");
+        await UnifiedLogger.info(
+          "login",
+          "Attempting quick login with device token"
+        );
+
+        // Attempt device token login
+        await quickLoginWithDeviceToken();
+
+        await UnifiedLogger.info(
+          "login",
+          "Quick login successful, navigating to app"
+        );
+
+        // Navigate on success
+        router.replace("/");
+      } catch (error: any) {
+        await UnifiedLogger.warn(
+          "login",
+          "Quick login failed, showing login form",
+          {
+            error: error.message,
+          }
+        );
+
+        // Show login form on failure
+        setIsQuickLoginAttempting(false);
+      }
+    };
+
+    attemptQuickLogin();
+  }, [hasDeviceToken, quickLoginWithDeviceToken, router]);
+
   const handleLogin = async () => {
     if (!username || !password) {
       Alert.alert("Error", "Please fill in all fields");
@@ -85,7 +150,7 @@ export default function LoginScreen() {
     try {
       clearError();
       setIsLoading(true);
-      await login({ username, password });
+      await login({ username, password }, rememberDevice);
 
       // Check biometric state directly (don't rely on context state which updates async)
       // Wrap in try/catch to prevent blocking navigation on failure
@@ -181,6 +246,23 @@ export default function LoginScreen() {
     router.push("/(auth)/forgotPassword");
   };
 
+  // Show loading screen during quick login attempt
+  if (isQuickLoginAttempting) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.subtitle, { marginTop: 16 }]}>
+          {quickLoginMessage}
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView style={styles.container} behavior="height">
       <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -236,6 +318,16 @@ export default function LoginScreen() {
               autoComplete="password"
               textContentType="password"
             />
+          </View>
+
+          <View style={styles.rememberDeviceContainer}>
+            <Switch
+              value={rememberDevice}
+              onValueChange={setRememberDevice}
+              trackColor={{ false: colors.border, true: colors.primaryLight30 }}
+              thumbColor={rememberDevice ? colors.primary : colors.textMuted}
+            />
+            <Text style={styles.rememberDeviceText}>Remember this device</Text>
           </View>
 
           <View style={styles.forgotPasswordContainer}>
