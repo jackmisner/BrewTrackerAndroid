@@ -53,13 +53,49 @@ import { DeviceTokenService } from "@services/auth/DeviceTokenService";
 
 /**
  * Authentication context interface defining all available state and actions
+ *
+ * ## Authentication State Fields
+ *
+ * The context exposes two related but distinct authentication indicators:
+ *
+ * ### authStatus (AuthStatus: "authenticated" | "expired" | "unauthenticated")
+ * **Primary source of truth for permission checks and token validity.**
+ *
+ * - "authenticated": Valid JWT token, full API access
+ * - "expired": JWT expired but within grace period (7 days), read-only access
+ * - "unauthenticated": No token or token expired beyond grace period
+ *
+ * **Use authStatus for:**
+ * - Permission gating (canSaveRecipe, canEditRecipe, etc.)
+ * - Determining if write operations are allowed
+ * - Showing re-authentication prompts for expired tokens
+ * - All feature-level access control
+ *
+ * ### isAuthenticated (boolean)
+ * **Convenience flag derived from `!!user` for simple UI rendering.**
+ *
+ * Returns true if user data is loaded, false otherwise.
+ *
+ * **Use isAuthenticated for:**
+ * - Simple "logged in vs logged out" UI rendering
+ * - Showing/hiding user profile information
+ * - Basic navigation guards (auth screens vs main app)
+ *
+ * **Important Timing Considerations:**
+ * During initialization, there can be brief moments where:
+ * - `authStatus === "authenticated"` but `user === null` (token validated, user data still loading)
+ * - `authStatus === "expired"` but `user !== null` (cached user data available, token expired)
+ *
+ * **Recommendation:** Prefer `authStatus` for all permission checks and feature gating.
+ * Only use `isAuthenticated` for simple UI rendering where the distinction between
+ * "authenticated" and "expired" doesn't matter.
  */
 interface AuthContextValue {
   // State
   user: User | null;
   isLoading: boolean;
-  isAuthenticated: boolean;
-  authStatus: AuthStatus;
+  isAuthenticated: boolean; // Derived from !!user - use for simple UI rendering
+  authStatus: AuthStatus; // Source of truth - use for permission checks
   error: string | null;
   isBiometricAvailable: boolean;
   isBiometricEnabled: boolean;
@@ -186,7 +222,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     try {
       const result = await Promise.race([
         promise.catch(err => {
-           // Attach handler to prevent unhandled rejection warning if timeout wins
+          // Attach handler to prevent unhandled rejection warning if timeout wins
           throw err;
         }),
         timeoutPromise,
@@ -240,10 +276,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         // Clear expired/invalid token
         await ApiService.token.removeToken();
         setUser(null);
-        await UnifiedLogger.info(
-          "auth",
-          "JWT token expired beyond grace period"
-        );
+        await UnifiedLogger.info("auth", "JWT token invalid or expired", {
+          validationStatus: validation.status,
+          reason:
+            validation.status === "EXPIRED_BEYOND_GRACE"
+              ? "expired beyond grace period"
+              : "invalid token format or signature",
+          daysSinceExpiry: validation.daysSinceExpiry,
+        });
         return "unauthenticated";
     }
   };
@@ -304,7 +344,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
           console.warn("Failed to cache ingredients after login:", error);
         });
     } catch (error) {
-      // Rollback: Clear token and auth status if session setup fails
+      // Rollback: Clear token, cached data, and auth status if session setup fails
       await UnifiedLogger.error(
         "auth",
         "Failed to apply session, performing rollback",
@@ -313,6 +353,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
       try {
         await ApiService.token.removeToken();
+        await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
         setAuthStatus("unauthenticated");
         setUser(null);
         await UnifiedLogger.debug("auth", "Session rollback completed");
@@ -336,7 +377,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
       // Step 1: Try device token exchange first (non-blocking, with timeout)
       // This enables quick login without requiring user input
-      const hasDeviceToken = await DeviceTokenService.hasDeviceToken();
+      // Wrapped in try-catch to ensure SecureStore/AsyncStorage errors don't abort initialization
+      let hasDeviceToken = false;
+      try {
+        hasDeviceToken = await DeviceTokenService.hasDeviceToken();
+      } catch (deviceCheckError) {
+        await UnifiedLogger.warn(
+          "auth",
+          "Device token check failed, falling back to JWT validation",
+          deviceCheckError
+        );
+      }
+
       if (hasDeviceToken) {
         await UnifiedLogger.info(
           "auth",
