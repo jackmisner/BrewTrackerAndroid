@@ -38,6 +38,9 @@ jest.mock("@tanstack/react-query", () => {
     invalidateQueries: jest.fn(),
     setQueryData: jest.fn(),
     getQueryData: jest.fn(),
+    getQueryCache: jest.fn(() => ({
+      getAll: jest.fn(() => []),
+    })),
   };
   return {
     ...actual,
@@ -152,6 +155,10 @@ jest.mock("@src/components/ui/ContextMenu/BaseContextMenu", () => ({
     showMenu: jest.fn(),
     hideMenu: jest.fn(),
   })),
+}));
+
+jest.mock("@components/modals/ReAuthModal", () => ({
+  ReAuthModal: "ReAuthModal",
 }));
 
 jest.mock("@src/components/ui/ContextMenu/contextMenuUtils", () => ({

@@ -57,7 +57,12 @@ import * as Haptics from "expo-haptics";
 import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
 import { UserCacheService } from "@services/offlineV2/UserCacheService";
-import { NetworkStatusBanner } from "@src/components/NetworkStatusBanner";
+import {
+  NetworkStatusBanner,
+  StaleDataBanner,
+  AuthStatusBanner,
+} from "@components/banners";
+import { ReAuthModal } from "@components/modals/ReAuthModal";
 import ApiService from "@services/api/apiService";
 import BeerXMLService from "@services/beerxml/BeerXMLService";
 import { Recipe, BrewSession } from "@src/types";
@@ -81,6 +86,7 @@ export default function DashboardScreen() {
   const theme = useTheme();
   const styles = dashboardStyles(theme);
   const [refreshing, setRefreshing] = useState(false);
+  const [showReAuthModal, setShowReAuthModal] = useState(false);
   const { unitSystem } = useUnits();
 
   // Pagination defaults
@@ -741,6 +747,14 @@ export default function DashboardScreen() {
   return (
     <>
       <BiometricEnrollmentModal />
+      <ReAuthModal
+        visible={showReAuthModal}
+        onClose={() => setShowReAuthModal(false)}
+        onSuccess={() => {
+          setShowReAuthModal(false);
+          Alert.alert("Success", "Re-authenticated successfully!");
+        }}
+      />
       <ScrollView
         style={styles.container}
         refreshControl={
@@ -748,6 +762,8 @@ export default function DashboardScreen() {
         }
       >
         <NetworkStatusBanner onRetry={onRefresh} />
+        <StaleDataBanner onRefresh={onRefresh} />
+        <AuthStatusBanner onReAuth={() => setShowReAuthModal(true)} />
         <View style={styles.header}>
           <Text style={styles.greeting}>Welcome back, {user?.username}!</Text>
           <Text style={styles.subtitle}>Ready to brew something amazing?</Text>

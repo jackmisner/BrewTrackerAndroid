@@ -637,7 +637,7 @@ jest.mock("../src/contexts/NetworkContext", () => ({
 }));
 
 // Mock NetworkStatusBanner components
-jest.mock("../src/components/NetworkStatusBanner", () => ({
+jest.mock("../src/components/banners/NetworkStatusBanner", () => ({
   NetworkStatusBanner: ({ onRetry }) => null, // Don't render anything in tests
   NetworkStatusIndicator: ({ showText, onPress }) => null, // Don't render anything in tests
   default: ({ onRetry }) => null,
