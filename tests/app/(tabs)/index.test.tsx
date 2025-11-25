@@ -38,6 +38,9 @@ jest.mock("@tanstack/react-query", () => {
     invalidateQueries: jest.fn(),
     setQueryData: jest.fn(),
     getQueryData: jest.fn(),
+    getQueryCache: jest.fn(() => ({
+      getAll: jest.fn(() => []),
+    })),
   };
   return {
     ...actual,
@@ -154,14 +157,61 @@ jest.mock("@src/components/ui/ContextMenu/BaseContextMenu", () => ({
   })),
 }));
 
+jest.mock("@components/modals/ReAuthModal", () => ({
+  ReAuthModal: "ReAuthModal",
+}));
+
+jest.mock("@/src/components/modals/BiometricEnrollmentModal", () => ({
+  BiometricEnrollmentModal: "BiometricEnrollmentModal",
+}));
+
 jest.mock("@src/components/ui/ContextMenu/contextMenuUtils", () => ({
   getTouchPosition: jest.fn(() => ({ x: 0, y: 0 })),
 }));
 
+jest.mock("@services/beerxml/BeerXMLService", () => ({
+  default: {
+    exportRecipe: jest.fn(),
+  },
+}));
+
+jest.mock("@components/banners", () => ({
+  NetworkStatusBanner: "NetworkStatusBanner",
+  StaleDataBanner: "StaleDataBanner",
+  AuthStatusBanner: "AuthStatusBanner",
+}));
+
+jest.mock("@services/api/queryClient", () => ({
+  QUERY_KEYS: {
+    RECIPES: ["recipes"],
+    DASHBOARD: ["dashboard"],
+  },
+}));
+
+// Mock V2 hooks
+jest.mock("@hooks/offlineV2/useUserData", () => ({
+  useRecipes: jest.fn(),
+  useBrewSessions: jest.fn(),
+}));
+
+// Mock NetworkContext
+jest.mock("@contexts/NetworkContext", () => {
+  const React = require("react");
+  return {
+    useNetwork: jest.fn(() => ({
+      isConnected: true,
+      isOffline: false,
+    })),
+    NetworkProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
 // Get the mocked functions from React Query
 const mockUseQuery = require("@tanstack/react-query").useQuery;
 const mockUseMutation = require("@tanstack/react-query").useMutation;
-const mockUseQueryClient = require("@tanstack/react-query").useQueryClient;
+const mockUseRecipes = require("@hooks/offlineV2/useUserData").useRecipes;
+const mockUseBrewSessions =
+  require("@hooks/offlineV2/useUserData").useBrewSessions;
 
 const mockAuth = {
   user: mockData.user(),
@@ -186,13 +236,87 @@ describe("DashboardScreen", () => {
     // Setup context mocks for each test
     require("@contexts/AuthContext").useAuth.mockReturnValue(mockAuth);
     require("@contexts/ThemeContext").useTheme.mockReturnValue(mockTheme);
+
+    // Mock mutations with default implementations
+    mockUseMutation.mockReturnValue({
+      mutate: jest.fn(),
+      mutateAsync: jest.fn(),
+      isPending: false,
+      isSuccess: false,
+      isError: false,
+      data: undefined,
+      error: null,
+    });
+
+    // Set up default V2 hook mocks with comprehensive properties
+    mockUseRecipes.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+      pendingCount: 0,
+      conflictCount: 0,
+      lastSync: null,
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      clone: jest.fn(),
+      getById: jest.fn(),
+      sync: jest.fn(),
+      refresh: jest.fn(),
+    });
+
+    mockUseBrewSessions.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+      pendingCount: 0,
+      conflictCount: 0,
+      lastSync: null,
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      clone: jest.fn(),
+      getById: jest.fn(),
+      sync: jest.fn(),
+      refresh: jest.fn(),
+      addFermentationEntry: jest.fn(),
+      updateFermentationEntry: jest.fn(),
+      deleteFermentationEntry: jest.fn(),
+      addDryHopFromRecipe: jest.fn(),
+      removeDryHop: jest.fn(),
+      deleteDryHopAddition: jest.fn(),
+    });
+
+    // Mock public recipes query (online-only feature)
+    mockUseQuery.mockReturnValue({
+      data: 0,
+      isLoading: false,
+      error: null,
+      refetch: jest.fn(),
+    });
   });
 
   describe("loading state", () => {
     it("should show loading indicator while fetching data", () => {
+      // Mock V2 hooks loading state
+      mockUseRecipes.mockReturnValue({
+        data: null,
+        isLoading: true,
+        error: null,
+        refresh: jest.fn(),
+      });
+
+      mockUseBrewSessions.mockReturnValue({
+        data: null,
+        isLoading: true,
+        error: null,
+        refresh: jest.fn(),
+      });
+
+      // Mock public recipes query
       mockUseQuery.mockReturnValue({
         data: undefined,
-        isLoading: true,
+        isLoading: false,
         error: null,
         refetch: jest.fn(),
       });
@@ -204,7 +328,23 @@ describe("DashboardScreen", () => {
   });
 
   describe("error state", () => {
-    it("should show fallback dashboard when backend is not available", () => {
+    it("should show dashboard with empty data when V2 hooks return empty arrays", () => {
+      // V2 hooks return empty arrays on error (offline-first)
+      mockUseRecipes.mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: null,
+        refresh: jest.fn(),
+      });
+
+      mockUseBrewSessions.mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: null,
+        refresh: jest.fn(),
+      });
+
+      // Public recipes query fails (online-only)
       mockUseQuery.mockReturnValue({
         data: undefined,
         isLoading: false,
@@ -216,17 +356,28 @@ describe("DashboardScreen", () => {
 
       expect(getByText("Welcome back, testuser!")).toBeTruthy();
       expect(getByText("Ready to brew something amazing?")).toBeTruthy();
-      expect(getByText("Backend Not Connected")).toBeTruthy();
-      expect(
-        getByText("Start the Flask backend to see real brewing data")
-      ).toBeTruthy();
     });
 
-    it("should show zero stats in fallback mode", () => {
-      mockUseQuery.mockReturnValue({
-        data: undefined,
+    it("should show zero stats when no cached data available", () => {
+      // V2 hooks return empty arrays
+      mockUseRecipes.mockReturnValue({
+        data: [],
         isLoading: false,
-        error: new Error("Network error"),
+        error: null,
+        refresh: jest.fn(),
+      });
+
+      mockUseBrewSessions.mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: null,
+        refresh: jest.fn(),
+      });
+
+      mockUseQuery.mockReturnValue({
+        data: 0,
+        isLoading: false,
+        error: null,
         refetch: jest.fn(),
       });
 
@@ -238,32 +389,54 @@ describe("DashboardScreen", () => {
   });
 
   describe("successful data load", () => {
-    const mockDashboardData = {
-      data: {
-        user_stats: {
-          total_recipes: 5,
-          public_recipes: 2,
-          total_brew_sessions: 3,
-          active_brew_sessions: 1,
-        },
-        recent_recipes: [
-          mockData.recipe({ name: "IPA Recipe", style: "IPA" }),
-          mockData.recipe({ name: "Stout Recipe", style: "Stout" }),
-        ],
-        active_brew_sessions: [
-          mockData.brewSession({
-            id: "test-brew-session-1",
-            name: "IPA Brew",
-            status: "fermenting",
-            brew_date: "2024-01-15T00:00:00Z",
-          }),
-        ],
-      },
-    };
+    const mockRecipes = [
+      mockData.recipe({ name: "IPA Recipe", style: "IPA" }),
+      mockData.recipe({ name: "Stout Recipe", style: "Stout" }),
+      mockData.recipe({ name: "Pale Ale Recipe", style: "Pale Ale" }),
+      mockData.recipe({ name: "Porter Recipe", style: "Porter" }),
+      mockData.recipe({ name: "Wheat Beer Recipe", style: "Wheat Beer" }),
+    ];
+
+    const mockBrewSessionsData = [
+      mockData.brewSession({
+        id: "test-brew-session-1",
+        name: "IPA Brew",
+        status: "fermenting",
+        brew_date: "2024-01-15T00:00:00Z",
+      }),
+      mockData.brewSession({
+        id: "test-brew-session-2",
+        name: "Stout Brew",
+        status: "completed",
+        brew_date: "2024-01-10T00:00:00Z",
+      }),
+      mockData.brewSession({
+        id: "test-brew-session-3",
+        name: "Pale Ale Brew",
+        status: "completed",
+        brew_date: "2024-01-05T00:00:00Z",
+      }),
+    ];
 
     beforeEach(() => {
+      // Mock V2 hooks with data
+      mockUseRecipes.mockReturnValue({
+        data: mockRecipes,
+        isLoading: false,
+        error: null,
+        refresh: jest.fn(),
+      });
+
+      mockUseBrewSessions.mockReturnValue({
+        data: mockBrewSessionsData,
+        isLoading: false,
+        error: null,
+        refresh: jest.fn(),
+      });
+
+      // Mock public recipes count
       mockUseQuery.mockReturnValue({
-        data: mockDashboardData,
+        data: 2,
         isLoading: false,
         error: null,
         refetch: jest.fn(),
@@ -280,9 +453,9 @@ describe("DashboardScreen", () => {
     it("should display correct stats", () => {
       const { getByText } = renderWithProviders(<DashboardScreen />);
 
-      expect(getByText("5")).toBeTruthy(); // total recipes
-      expect(getByText("1")).toBeTruthy(); // active brews
-      expect(getByText("2")).toBeTruthy(); // public recipes
+      expect(getByText("5")).toBeTruthy(); // total recipes (5 from mockRecipes)
+      expect(getByText("1")).toBeTruthy(); // active brews (1 fermenting, 2 completed)
+      expect(getByText("2")).toBeTruthy(); // public recipes (from mockUseQuery)
       expect(getByText("Recipes")).toBeTruthy();
       expect(getByText("Active Brews")).toBeTruthy();
       expect(getByText("Public")).toBeTruthy();
@@ -321,25 +494,8 @@ describe("DashboardScreen", () => {
   });
 
   describe("navigation", () => {
-    beforeEach(() => {
-      mockUseQuery.mockReturnValue({
-        data: {
-          data: {
-            user_stats: {
-              total_recipes: 0,
-              public_recipes: 0,
-              total_brew_sessions: 0,
-              active_brew_sessions: 0,
-            },
-            recent_recipes: [],
-            active_brew_sessions: [],
-          },
-        },
-        isLoading: false,
-        error: null,
-        refetch: jest.fn(),
-      });
-    });
+    // Navigation tests use default V2 hook mocks from main beforeEach
+    // No need to override since dashboard now uses V2 hooks instead of dashboard query
 
     it("should navigate to create recipe when create recipe action is pressed", () => {
       const { getByText } = renderWithProviders(<DashboardScreen />);
@@ -406,22 +562,43 @@ describe("DashboardScreen", () => {
     const mockRecipe = mockData.recipe({ name: "Test Recipe", style: "IPA" });
 
     beforeEach(() => {
-      mockUseQuery.mockReturnValue({
-        data: {
-          data: {
-            user_stats: {
-              total_recipes: 1,
-              public_recipes: 0,
-              total_brew_sessions: 0,
-              active_brew_sessions: 0,
-            },
-            recent_recipes: [mockRecipe],
-            active_brew_sessions: [],
-          },
-        },
+      // Mock V2 hooks to return recipe data
+      mockUseRecipes.mockReturnValue({
+        data: [mockRecipe],
         isLoading: false,
         error: null,
-        refetch: jest.fn(),
+        pendingCount: 0,
+        conflictCount: 0,
+        lastSync: null,
+        create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+        clone: jest.fn(),
+        getById: jest.fn(),
+        sync: jest.fn(),
+        refresh: jest.fn(),
+      });
+
+      mockUseBrewSessions.mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: null,
+        pendingCount: 0,
+        conflictCount: 0,
+        lastSync: null,
+        create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+        clone: jest.fn(),
+        getById: jest.fn(),
+        sync: jest.fn(),
+        refresh: jest.fn(),
+        addFermentationEntry: jest.fn(),
+        updateFermentationEntry: jest.fn(),
+        deleteFermentationEntry: jest.fn(),
+        addDryHopFromRecipe: jest.fn(),
+        removeDryHop: jest.fn(),
+        deleteDryHopAddition: jest.fn(),
       });
     });
 
@@ -469,22 +646,43 @@ describe("DashboardScreen", () => {
     });
 
     beforeEach(() => {
-      mockUseQuery.mockReturnValue({
-        data: {
-          data: {
-            user_stats: {
-              total_recipes: 0,
-              public_recipes: 0,
-              total_brew_sessions: 1,
-              active_brew_sessions: 1,
-            },
-            recent_recipes: [],
-            active_brew_sessions: [mockBrewSession],
-          },
-        },
+      // Mock V2 hooks to return brew session data
+      mockUseRecipes.mockReturnValue({
+        data: [],
         isLoading: false,
         error: null,
-        refetch: jest.fn(),
+        pendingCount: 0,
+        conflictCount: 0,
+        lastSync: null,
+        create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+        clone: jest.fn(),
+        getById: jest.fn(),
+        sync: jest.fn(),
+        refresh: jest.fn(),
+      });
+
+      mockUseBrewSessions.mockReturnValue({
+        data: [mockBrewSession],
+        isLoading: false,
+        error: null,
+        pendingCount: 0,
+        conflictCount: 0,
+        lastSync: null,
+        create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+        clone: jest.fn(),
+        getById: jest.fn(),
+        sync: jest.fn(),
+        refresh: jest.fn(),
+        addFermentationEntry: jest.fn(),
+        updateFermentationEntry: jest.fn(),
+        deleteFermentationEntry: jest.fn(),
+        addDryHopFromRecipe: jest.fn(),
+        removeDryHop: jest.fn(),
+        deleteDryHopAddition: jest.fn(),
       });
     });
 
@@ -534,19 +732,24 @@ describe("DashboardScreen", () => {
 
   describe("empty states", () => {
     beforeEach(() => {
+      // V2 hooks return empty arrays
+      mockUseRecipes.mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: null,
+        refresh: jest.fn(),
+      });
+
+      mockUseBrewSessions.mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: null,
+        refresh: jest.fn(),
+      });
+
+      // Public recipes query returns zero
       mockUseQuery.mockReturnValue({
-        data: {
-          data: {
-            user_stats: {
-              total_recipes: 0,
-              public_recipes: 0,
-              total_brew_sessions: 0,
-              active_brew_sessions: 0,
-            },
-            recent_recipes: [],
-            active_brew_sessions: [],
-          },
-        },
+        data: 0,
         isLoading: false,
         error: null,
         refetch: jest.fn(),
@@ -572,14 +775,27 @@ describe("DashboardScreen", () => {
   describe("pull to refresh", () => {
     it("should trigger refetch when refreshing", async () => {
       const mockRefetch = jest.fn();
+      // Mock V2 hooks refresh functions
+      const mockRecipesRefresh = jest.fn();
+      const mockBrewSessionsRefresh = jest.fn();
+
+      mockUseRecipes.mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: null,
+        refresh: mockRecipesRefresh,
+      });
+
+      mockUseBrewSessions.mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: null,
+        refresh: mockBrewSessionsRefresh,
+      });
+
+      // Mock public recipes query
       mockUseQuery.mockReturnValue({
-        data: {
-          data: {
-            user_stats: {},
-            recent_recipes: [],
-            active_brew_sessions: [],
-          },
-        },
+        data: 0,
         isLoading: false,
         error: null,
         refetch: mockRefetch,
@@ -597,18 +813,7 @@ describe("DashboardScreen", () => {
     it("should log message for start brew session (not implemented)", () => {
       const consoleSpy = jest.spyOn(console, "log").mockImplementation();
 
-      mockUseQuery.mockReturnValue({
-        data: {
-          data: {
-            user_stats: {},
-            recent_recipes: [],
-            active_brew_sessions: [],
-          },
-        },
-        isLoading: false,
-        error: null,
-        refetch: jest.fn(),
-      });
+      // Use default V2 hook mocks from main beforeEach
 
       const { getByText } = renderWithProviders(<DashboardScreen />);
       const startBrewButton = getByText("Start Brew Session");
@@ -632,22 +837,43 @@ describe("DashboardScreen", () => {
     });
 
     beforeEach(() => {
-      mockUseQuery.mockReturnValue({
-        data: {
-          data: {
-            user_stats: {
-              total_recipes: 0,
-              public_recipes: 0,
-              total_brew_sessions: 1,
-              active_brew_sessions: 1,
-            },
-            recent_recipes: [],
-            active_brew_sessions: [mockBrewSession],
-          },
-        },
+      // Mock V2 hooks to return brew session data
+      mockUseRecipes.mockReturnValue({
+        data: [],
         isLoading: false,
         error: null,
-        refetch: jest.fn(),
+        pendingCount: 0,
+        conflictCount: 0,
+        lastSync: null,
+        create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+        clone: jest.fn(),
+        getById: jest.fn(),
+        sync: jest.fn(),
+        refresh: jest.fn(),
+      });
+
+      mockUseBrewSessions.mockReturnValue({
+        data: [mockBrewSession],
+        isLoading: false,
+        error: null,
+        pendingCount: 0,
+        conflictCount: 0,
+        lastSync: null,
+        create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+        clone: jest.fn(),
+        getById: jest.fn(),
+        sync: jest.fn(),
+        refresh: jest.fn(),
+        addFermentationEntry: jest.fn(),
+        updateFermentationEntry: jest.fn(),
+        deleteFermentationEntry: jest.fn(),
+        addDryHopFromRecipe: jest.fn(),
+        removeDryHop: jest.fn(),
+        deleteDryHopAddition: jest.fn(),
       });
     });
 

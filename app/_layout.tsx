@@ -120,6 +120,15 @@ const DynamicPersistQueryClientProvider = ({
           Constants.nativeBuildVersion ||
           Constants.expoConfig?.version ||
           "dev",
+        // No maxAge - keep stale cache forever for offline access
+        // StaleDataBanner will warn users when data is old
+        // Dehydrate options - what to persist
+        dehydrateOptions: {
+          shouldDehydrateQuery: query => {
+            // Don't persist failed queries
+            return query.state.status === "success";
+          },
+        },
       }}
     >
       {children}

@@ -56,8 +56,14 @@ import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
-import { UserCacheService } from "@services/offlineV2/UserCacheService";
-import { NetworkStatusBanner } from "@src/components/NetworkStatusBanner";
+import { useNetwork } from "@contexts/NetworkContext";
+import { useRecipes, useBrewSessions } from "@hooks/offlineV2/useUserData";
+import {
+  NetworkStatusBanner,
+  StaleDataBanner,
+  AuthStatusBanner,
+} from "@components/banners";
+import { ReAuthModal } from "@components/modals/ReAuthModal";
 import ApiService from "@services/api/apiService";
 import BeerXMLService from "@services/beerxml/BeerXMLService";
 import { Recipe, BrewSession } from "@src/types";
@@ -73,153 +79,76 @@ import {
 import { useContextMenu } from "@src/components/ui/ContextMenu/BaseContextMenu";
 import { getTouchPosition } from "@src/components/ui/ContextMenu/contextMenuUtils";
 import { QUERY_KEYS } from "@services/api/queryClient";
-import { useUnits } from "@contexts/UnitContext";
-import { BiometricEnrollmentModal } from "@src/components/BiometricEnrollmentModal";
+import { BiometricEnrollmentModal } from "@/src/components/modals/BiometricEnrollmentModal";
 
 export default function DashboardScreen() {
   const { user } = useAuth();
   const theme = useTheme();
+  const { isConnected } = useNetwork();
   const styles = dashboardStyles(theme);
   const [refreshing, setRefreshing] = useState(false);
-  const { unitSystem } = useUnits();
-
-  // Pagination defaults
-  const PAGE = 1;
-  const RECENT_RECIPES_LIMIT = 5;
-  const BREW_SESSIONS_LIMIT = 20;
-  const PUBLIC_PAGE_SIZE = 1;
+  const [showReAuthModal, setShowReAuthModal] = useState(false);
 
   // Context menu state
   const recipeContextMenu = useContextMenu<Recipe>();
   const brewSessionContextMenu = useContextMenu<BrewSession>();
 
+  // Use V2 hooks for user data (recipes and brew sessions)
+  const {
+    data: recipes,
+    isLoading: recipesLoading,
+    refresh: refreshRecipes,
+  } = useRecipes();
+
+  const {
+    data: brewSessions,
+    isLoading: brewSessionsLoading,
+    refresh: refreshBrewSessions,
+  } = useBrewSessions();
+
+  // Separate query for public recipes (online-only feature)
+  const { data: publicRecipesData, refetch: refetchPublicRecipes } = useQuery({
+    queryKey: [...QUERY_KEYS.RECIPES, "public", "count"],
+    queryFn: async () => {
+      const response = await ApiService.recipes.getPublic(1, 1);
+      return response.data.pagination?.total || 0;
+    },
+    enabled: !!user && isConnected, // Only fetch when online
+    retry: 1,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+
+  // Calculate dashboard stats from V2 cached data
+  const allBrewSessions = brewSessions || [];
+  const activeBrewSessions = allBrewSessions.filter(
+    session => session.status !== "completed"
+  );
+  const recentRecipes = (recipes || []).slice(0, 3);
+  const recentActiveBrewSessions = activeBrewSessions.slice(0, 3);
+
+  const dashboardStats = {
+    total_recipes: recipes?.length || 0,
+    public_recipes: publicRecipesData || 0,
+    total_brew_sessions: allBrewSessions.length,
+    active_brew_sessions: activeBrewSessions.length,
+  };
+
+  const isLoading = recipesLoading || brewSessionsLoading;
+
   // Handle pull to refresh
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      // Legacy cleanup no longer needed - V2 system handles cache management automatically
-
-      // Refresh dashboard data
-      await refetch();
+      // Refresh all data sources in parallel
+      await Promise.all([
+        refreshRecipes(),
+        refreshBrewSessions(),
+        isConnected ? refetchPublicRecipes() : Promise.resolve(),
+      ]);
     } finally {
       setRefreshing(false);
     }
   };
-
-  // Query for dashboard data by combining multiple endpoints
-  const {
-    data: dashboardData,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: [...QUERY_KEYS.DASHBOARD, user?.id ?? "anonymous"],
-    queryFn: async () => {
-      try {
-        // Try to fetch fresh data first
-        const [recipesResponse, brewSessionsResponse, publicRecipesResponse] =
-          await Promise.all([
-            ApiService.recipes.getAll(PAGE, RECENT_RECIPES_LIMIT),
-            ApiService.brewSessions.getAll(PAGE, BREW_SESSIONS_LIMIT),
-            ApiService.recipes.getPublic(PAGE, PUBLIC_PAGE_SIZE),
-          ]);
-
-        const recipes = recipesResponse.data?.recipes || [];
-        const brewSessions = brewSessionsResponse.data?.brew_sessions || [];
-        const activeBrewSessions = brewSessions.filter(
-          session => session.status !== "completed"
-        );
-
-        const userStats = {
-          total_recipes:
-            recipesResponse.data.pagination?.total || recipes.length,
-          public_recipes: publicRecipesResponse.data.pagination?.total || 0,
-          total_brew_sessions:
-            brewSessionsResponse.data.pagination?.total || brewSessions.length,
-          active_brew_sessions: activeBrewSessions.length,
-        };
-
-        const freshDashboardData = {
-          user_stats: userStats,
-          recent_recipes: recipes.slice(0, 3),
-          active_brew_sessions: activeBrewSessions.slice(0, 3),
-        };
-
-        // Cache the fresh data for offline use using V2 system
-        const userIdForCache = user?.id;
-        if (!userIdForCache) {
-          console.warn("Cannot cache dashboard data without user ID");
-        } else {
-          // V2 system doesn't need explicit dashboard data caching
-          // User recipes are cached automatically through UserCacheService operations
-          console.log("Dashboard data refreshed - using V2 caching system");
-        }
-
-        return {
-          data: freshDashboardData,
-        };
-      } catch (error) {
-        // Only log non-simulated errors
-        if (
-          !(
-            error instanceof Error &&
-            error.message?.includes("Simulated offline")
-          )
-        ) {
-          console.error("Dashboard data fetch error:", error);
-        }
-
-        // Try to get cached data when API fails using V2 system
-        try {
-          if (!user?.id) {
-            console.warn("Cannot load cached dashboard data without user ID");
-            throw error; // Rethrow original error
-          }
-
-          // V2 system: Try to get cached recipes and brew sessions for fallback dashboard
-          const [cachedRecipes, cachedBrewSessions] = await Promise.all([
-            UserCacheService.getRecipes(user.id, unitSystem),
-            UserCacheService.getBrewSessions(user.id, unitSystem),
-          ]);
-
-          if (cachedRecipes && cachedRecipes.length > 0) {
-            console.log(
-              "Using cached data for fallback dashboard due to API error"
-            );
-
-            // Calculate brew session stats from cached data
-            const activeBrewSessions = (cachedBrewSessions || []).filter(
-              session => session.status !== "completed"
-            );
-
-            const fallbackDashboardData = {
-              user_stats: {
-                total_recipes: cachedRecipes.length,
-                public_recipes: 0, // Cannot determine from cached data
-                total_brew_sessions: cachedBrewSessions?.length || 0,
-                active_brew_sessions: activeBrewSessions.length,
-              },
-              recent_recipes: cachedRecipes.slice(0, 3),
-              active_brew_sessions: activeBrewSessions.slice(0, 3),
-            };
-            return {
-              data: fallbackDashboardData,
-            };
-          }
-        } catch (cacheError) {
-          console.warn(
-            "Failed to load cached data for dashboard fallback:",
-            cacheError
-          );
-        }
-
-        throw error;
-      }
-    },
-    enabled: !!user, // Only run query when user is authenticated
-    retry: 1, // Only retry once to avoid excessive API calls
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-  });
 
   const handleCreateRecipe = () => {
     router.push({ pathname: "/(modals)/(recipes)/createRecipe", params: {} });
@@ -287,7 +216,6 @@ export default function DashboardScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
-      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.DASHBOARD] });
     },
     onError: (error: unknown) => {
       console.error("Failed to delete recipe:", error);
@@ -597,150 +525,17 @@ export default function DashboardScreen() {
     );
   }
 
-  if (error) {
-    // Show fallback dashboard when backend is not available
-    const fallbackStats = {
-      total_recipes: 0,
-      public_recipes: 0,
-      total_brew_sessions: 0,
-      active_brew_sessions: 0,
-    };
-
-    return (
-      <ScrollView
-        style={styles.container}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        <View style={styles.header}>
-          <Text style={styles.greeting}>Welcome back, {user?.username}!</Text>
-          <Text style={styles.subtitle}>Ready to brew something amazing?</Text>
-        </View>
-
-        <View style={styles.statsContainer}>
-          <TouchableOpacity style={styles.statCard} onPress={handleViewRecipes}>
-            <MaterialIcons
-              name="menu-book"
-              size={32}
-              color={theme.colors.primary}
-            />
-            <Text style={styles.statNumber}>{fallbackStats.total_recipes}</Text>
-            <Text style={styles.statLabel}>Recipes</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={handleViewBrewSessions}
-          >
-            <MaterialIcons
-              name="science"
-              size={32}
-              color={theme.colors.primary}
-            />
-            <Text style={styles.statNumber}>
-              {fallbackStats.active_brew_sessions}
-            </Text>
-            <Text style={styles.statLabel}>Active Brews</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={handleViewPublicRecipes}
-          >
-            <MaterialIcons
-              name="public"
-              size={32}
-              color={theme.colors.primary}
-            />
-            <Text style={styles.statNumber}>
-              {fallbackStats.public_recipes}
-            </Text>
-            <Text style={styles.statLabel}>Public</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={handleCreateRecipe}
-          >
-            <MaterialIcons name="add" size={24} color={theme.colors.primary} />
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Create New Recipe</Text>
-              <Text style={styles.actionSubtitle}>
-                Start building your next brew
-              </Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={24} color="#ccc" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={handleStartBrewSession}
-          >
-            <MaterialIcons
-              name="play-arrow"
-              size={24}
-              color={theme.colors.primary}
-            />
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Start Brew Session</Text>
-              <Text style={styles.actionSubtitle}>
-                Begin tracking a new brew
-              </Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={24} color="#ccc" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={handleViewPublicRecipes}
-          >
-            <MaterialIcons
-              name="public"
-              size={24}
-              color={theme.colors.primary}
-            />
-            <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Browse Public Recipes</Text>
-              <Text style={styles.actionSubtitle}>
-                Discover community favorites
-              </Text>
-            </View>
-            <MaterialIcons name="chevron-right" size={24} color="#ccc" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Backend Status</Text>
-          <View style={styles.emptyState}>
-            <MaterialIcons name="cloud-off" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>Backend Not Connected</Text>
-            <Text style={styles.emptySubtext}>
-              Start the Flask backend to see real brewing data
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.versionFooter}>
-          <Text style={styles.versionFooterText}>
-            BrewTracker Mobile v{Constants.expoConfig?.version || "0.1.0"}
-          </Text>
-        </View>
-      </ScrollView>
-    );
-  }
-
-  const stats = dashboardData?.data.user_stats;
-  const recentRecipes = dashboardData?.data.recent_recipes || [];
-  const activeBrewSessions = dashboardData?.data.active_brew_sessions || [];
-
   return (
     <>
       <BiometricEnrollmentModal />
+      <ReAuthModal
+        visible={showReAuthModal}
+        onClose={() => setShowReAuthModal(false)}
+        onSuccess={() => {
+          setShowReAuthModal(false);
+          Alert.alert("Success", "Re-authenticated successfully!");
+        }}
+      />
       <ScrollView
         style={styles.container}
         refreshControl={
@@ -748,6 +543,8 @@ export default function DashboardScreen() {
         }
       >
         <NetworkStatusBanner onRetry={onRefresh} />
+        <StaleDataBanner onRefresh={onRefresh} />
+        <AuthStatusBanner onReAuth={() => setShowReAuthModal(true)} />
         <View style={styles.header}>
           <Text style={styles.greeting}>Welcome back, {user?.username}!</Text>
           <Text style={styles.subtitle}>Ready to brew something amazing?</Text>
@@ -760,7 +557,9 @@ export default function DashboardScreen() {
               size={32}
               color={theme.colors.primary}
             />
-            <Text style={styles.statNumber}>{stats?.total_recipes || 0}</Text>
+            <Text style={styles.statNumber}>
+              {dashboardStats.total_recipes}
+            </Text>
             <Text style={styles.statLabel}>Recipes</Text>
           </TouchableOpacity>
 
@@ -774,21 +573,33 @@ export default function DashboardScreen() {
               color={theme.colors.primary}
             />
             <Text style={styles.statNumber}>
-              {stats?.active_brew_sessions || 0}
+              {dashboardStats.active_brew_sessions}
             </Text>
             <Text style={styles.statLabel}>Active Brews</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.statCard}
-            onPress={handleViewPublicRecipes}
+            style={[styles.statCard, !isConnected && { opacity: 0.6 }]}
+            onPress={isConnected ? handleViewPublicRecipes : undefined}
+            disabled={!isConnected}
           >
             <MaterialIcons
               name="public"
               size={32}
               color={theme.colors.primary}
             />
-            <Text style={styles.statNumber}>{stats?.public_recipes || 0}</Text>
+            {isConnected ? (
+              <Text style={styles.statNumber}>
+                {dashboardStats.public_recipes}
+              </Text>
+            ) : (
+              <MaterialIcons
+                name="cloud-off"
+                size={24}
+                color={theme.colors.textSecondary}
+                style={{ marginVertical: 4 }}
+              />
+            )}
             <Text style={styles.statLabel}>Public</Text>
           </TouchableOpacity>
         </View>
@@ -829,21 +640,28 @@ export default function DashboardScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionCard}
-            onPress={handleViewPublicRecipes}
+            style={[styles.actionCard, !isConnected && { opacity: 0.6 }]}
+            onPress={isConnected ? handleViewPublicRecipes : undefined}
+            disabled={!isConnected}
           >
             <MaterialIcons
-              name="public"
+              name={isConnected ? "public" : "cloud-off"}
               size={24}
               color={theme.colors.primary}
             />
             <View style={styles.actionContent}>
               <Text style={styles.actionTitle}>Browse Public Recipes</Text>
               <Text style={styles.actionSubtitle}>
-                Discover community favorites
+                {isConnected
+                  ? "Discover community favorites"
+                  : "Requires network connection"}
               </Text>
             </View>
-            <MaterialIcons name="chevron-right" size={24} color="#ccc" />
+            <MaterialIcons
+              name="chevron-right"
+              size={24}
+              color={isConnected ? "#ccc" : theme.colors.textSecondary}
+            />
           </TouchableOpacity>
         </View>
 
@@ -863,9 +681,9 @@ export default function DashboardScreen() {
         {/* Recent Brew Sessions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Brew Sessions</Text>
-          {activeBrewSessions.length > 0 ? (
+          {recentActiveBrewSessions.length > 0 ? (
             <View style={styles.verticalList}>
-              {activeBrewSessions
+              {recentActiveBrewSessions
                 .filter(session => session && session.id)
                 .map(renderActiveBrewSession)}
             </View>

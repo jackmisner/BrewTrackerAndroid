@@ -540,6 +540,7 @@ export default function BrewSessionsScreen() {
         <TouchableOpacity
           style={styles.floatingButton}
           onPress={handleStartBrewing}
+          testID="brewSessions-fab"
         >
           <MaterialIcons name="add" size={24} color="#fff" />
         </TouchableOpacity>
@@ -566,8 +567,6 @@ export default function BrewSessionsScreen() {
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      ) : currentBrewSessions.length === 0 ? (
-        renderEmptyState()
       ) : (
         <FlatList
           data={currentBrewSessions}
@@ -580,6 +579,7 @@ export default function BrewSessionsScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={renderEmptyState}
         />
       )}
 

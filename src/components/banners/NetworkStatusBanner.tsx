@@ -20,10 +20,20 @@
  */
 
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleProp,
+  ViewStyle,
+} from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useNetwork } from "@contexts/NetworkContext";
 import { useTheme } from "@contexts/ThemeContext";
+import {
+  bannerStyles,
+  indicatorStyles,
+} from "@styles/components/banners/bannerStyles";
 
 interface NetworkStatusBannerProps {
   /**
@@ -37,7 +47,7 @@ interface NetworkStatusBannerProps {
   /**
    * Custom styling for the banner
    */
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 }
 
 /**
@@ -96,8 +106,8 @@ export const NetworkStatusBanner: React.FC<NetworkStatusBannerProps> = ({
     return "Limited connectivity";
   };
 
-  const bannerStyles = [
-    styles.banner,
+  const combinedBannerStyles = [
+    bannerStyles.banner,
     {
       backgroundColor: colors.error || "#f44336",
     },
@@ -105,24 +115,26 @@ export const NetworkStatusBanner: React.FC<NetworkStatusBannerProps> = ({
   ];
 
   return (
-    <View style={bannerStyles} testID="network-status-banner">
-      <View style={styles.content}>
+    <View style={combinedBannerStyles} testID="network-status-banner">
+      <View style={bannerStyles.content}>
         <MaterialIcons
           name={getConnectionIcon()}
           size={20}
           color="#fff"
-          style={styles.icon}
+          style={bannerStyles.icon}
         />
 
-        <View style={styles.textContainer}>
-          <Text style={styles.statusText}>{getStatusText()}</Text>
-          <Text style={styles.subText}>Some features may be unavailable</Text>
+        <View style={bannerStyles.textContainer}>
+          <Text style={bannerStyles.statusText}>{getStatusText()}</Text>
+          <Text style={bannerStyles.subText}>
+            Some features may be unavailable
+          </Text>
         </View>
 
         {onRetry && (
           <TouchableOpacity
             onPress={handleRetry}
-            style={styles.retryButton}
+            style={bannerStyles.actionButton}
             testID="retry-connection-button"
             accessible={true}
             accessibilityLabel="Retry connection"
@@ -163,14 +175,19 @@ export const NetworkStatusIndicator: React.FC<{
   };
 
   const content = (
-    <View style={styles.indicator} testID="network-status-indicator">
+    <View style={indicatorStyles.indicator} testID="network-status-indicator">
       <MaterialIcons
         name={getIndicatorIcon()}
         size={16}
         color={getIndicatorColor()}
       />
       {showText && (
-        <Text style={[styles.indicatorText, { color: getIndicatorColor() }]}>
+        <Text
+          style={[
+            indicatorStyles.indicatorText,
+            { color: getIndicatorColor() },
+          ]}
+        >
           {isConnected ? "Online" : "Offline"}
         </Text>
       )}
@@ -192,57 +209,5 @@ export const NetworkStatusIndicator: React.FC<{
 
   return content;
 };
-
-const styles = StyleSheet.create({
-  banner: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    margin: 8,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  content: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  icon: {
-    marginRight: 12,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  statusText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  subText: {
-    color: "#fff",
-    fontSize: 12,
-    opacity: 0.9,
-  },
-  retryButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-  },
-  indicator: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  indicatorText: {
-    fontSize: 12,
-    marginLeft: 4,
-    fontWeight: "500",
-  },
-});
 
 export default NetworkStatusBanner;

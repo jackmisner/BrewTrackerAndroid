@@ -15,7 +15,7 @@ import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import {
   NetworkStatusBanner,
   NetworkStatusIndicator,
-} from "../../../src/components/NetworkStatusBanner";
+} from "@components/banners";
 
 // Mock React Native components
 jest.mock("react-native", () => {
@@ -56,7 +56,7 @@ jest.mock("@contexts/NetworkContext", () => ({
 }));
 
 // Clear the global mock from setupTests.js so we can test the real component
-jest.unmock("../../../src/components/NetworkStatusBanner");
+jest.unmock("../../../../src/components/banners/NetworkStatusBanner");
 
 describe("NetworkStatusBanner", () => {
   const mockOnRetry = jest.fn();

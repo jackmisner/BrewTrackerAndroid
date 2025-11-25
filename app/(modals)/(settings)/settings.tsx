@@ -67,8 +67,14 @@ export default function SettingsScreen() {
   const themeContext = useTheme();
   const { theme, setTheme } = themeContext;
   const { unitSystem, updateUnitSystem, loading: unitsLoading } = useUnits();
-  const { isDeveloperMode, networkSimulationMode, setNetworkSimulationMode } =
-    useDeveloper();
+  const {
+    isDeveloperMode,
+    networkSimulationMode,
+    setNetworkSimulationMode,
+    makeQueryCacheStale,
+    clearQueryCache,
+    invalidateAuthToken,
+  } = useDeveloper();
   const {
     isBiometricAvailable,
     isBiometricEnabled,
@@ -76,6 +82,7 @@ export default function SettingsScreen() {
     disableBiometrics,
     checkBiometricAvailability,
     user,
+    revalidateAuthStatus,
   } = useAuth();
   const styles = settingsStyles(themeContext);
 
@@ -347,6 +354,21 @@ export default function SettingsScreen() {
       </View>
     </TouchableOpacity>
   );
+
+  const handleMakeCacheStale = async (hours: number) => {
+    try {
+      await makeQueryCacheStale(hours);
+      Alert.alert(
+        "Success",
+        `Cache is now ${hours} hours old. Pull to refresh to see the StaleDataBanner!`
+      );
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Failed to make cache stale"
+      );
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -747,6 +769,210 @@ export default function SettingsScreen() {
                   </View>
                 </TouchableOpacity>
               </View>
+            </View>
+
+            {/* Cache Testing Tools */}
+            <View style={styles.settingGroup}>
+              <Text style={styles.groupTitle}>Cache Testing</Text>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={async () => {
+                  Alert.alert(
+                    "Make Cache Stale",
+                    "How old should the cache appear?",
+                    [
+                      {
+                        text: "Cancel",
+                        style: "cancel",
+                      },
+                      {
+                        text: "25 hours",
+                        onPress: () => handleMakeCacheStale(25),
+                      },
+                      {
+                        text: "50 hours",
+                        onPress: () => handleMakeCacheStale(50),
+                      },
+                    ]
+                  );
+                }}
+              >
+                <MaterialIcons
+                  name="schedule"
+                  size={24}
+                  color={themeContext.colors.textSecondary}
+                />
+                <View style={styles.menuContent}>
+                  <Text style={styles.menuText}>Make Cache Stale</Text>
+                  <Text style={styles.menuSubtext}>Test stale data banner</Text>
+                </View>
+                <MaterialIcons
+                  name="chevron-right"
+                  size={24}
+                  color={themeContext.colors.textMuted}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  Alert.alert(
+                    "Clear Query Cache",
+                    "This will clear all React Query cache. Continue?",
+                    [
+                      {
+                        text: "Cancel",
+                        style: "cancel",
+                      },
+                      {
+                        text: "Clear",
+                        style: "destructive",
+                        onPress: async () => {
+                          try {
+                            await makeQueryCacheStale(50);
+                            Alert.alert(
+                              "Success",
+                              "Cache is now 50 hours old. Pull to refresh to see the StaleDataBanner!"
+                            );
+                          } catch (error) {
+                            Alert.alert(
+                              "Error",
+                              error instanceof Error
+                                ? error.message
+                                : "Failed to make cache stale"
+                            );
+                          }
+                        },
+                      },
+                    ]
+                  );
+                }}
+              >
+                <MaterialIcons
+                  name="schedule"
+                  size={24}
+                  color={themeContext.colors.textSecondary}
+                />
+                <View style={styles.menuContent}>
+                  <Text style={styles.menuText}>Make Cache Stale</Text>
+                  <Text style={styles.menuSubtext}>Test stale data banner</Text>
+                </View>
+                <MaterialIcons
+                  name="chevron-right"
+                  size={24}
+                  color={themeContext.colors.textMuted}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  Alert.alert(
+                    "Clear Query Cache",
+                    "This will clear all React Query cache. Continue?",
+                    [
+                      {
+                        text: "Cancel",
+                        style: "cancel",
+                      },
+                      {
+                        text: "Clear",
+                        style: "destructive",
+                        onPress: async () => {
+                          try {
+                            await clearQueryCache();
+                            Alert.alert(
+                              "Success",
+                              "Query cache cleared. Pull to refresh to reload data."
+                            );
+                          } catch (error) {
+                            Alert.alert(
+                              "Error",
+                              error instanceof Error
+                                ? error.message
+                                : "Failed to clear cache"
+                            );
+                          }
+                        },
+                      },
+                    ]
+                  );
+                }}
+              >
+                <MaterialIcons
+                  name="clear-all"
+                  size={24}
+                  color={themeContext.colors.textSecondary}
+                />
+                <View style={styles.menuContent}>
+                  <Text style={styles.menuText}>Clear Query Cache</Text>
+                  <Text style={styles.menuSubtext}>Reset all cached data</Text>
+                </View>
+                <MaterialIcons
+                  name="chevron-right"
+                  size={24}
+                  color={themeContext.colors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Auth Testing Tools */}
+            <View style={styles.settingGroup}>
+              <Text style={styles.groupTitle}>Auth Testing</Text>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  Alert.alert(
+                    "Invalidate Auth Token",
+                    "This will expire your token to test AuthStatusBanner. Continue?",
+                    [
+                      {
+                        text: "Cancel",
+                        style: "cancel",
+                      },
+                      {
+                        text: "Invalidate",
+                        style: "destructive",
+                        onPress: async () => {
+                          try {
+                            await invalidateAuthToken(revalidateAuthStatus);
+                            Alert.alert(
+                              "Success",
+                              "Token invalidated. AuthStatusBanner should now appear!"
+                            );
+                          } catch (error) {
+                            Alert.alert(
+                              "Error",
+                              error instanceof Error
+                                ? error.message
+                                : "Failed to invalidate token"
+                            );
+                          }
+                        },
+                      },
+                    ]
+                  );
+                }}
+              >
+                <MaterialIcons
+                  name="lock-clock"
+                  size={24}
+                  color={themeContext.colors.textSecondary}
+                />
+                <View style={styles.menuContent}>
+                  <Text style={styles.menuText}>Invalidate Auth Token</Text>
+                  <Text style={styles.menuSubtext}>
+                    Test expired session banner
+                  </Text>
+                </View>
+                <MaterialIcons
+                  name="chevron-right"
+                  size={24}
+                  color={themeContext.colors.textMuted}
+                />
+              </TouchableOpacity>
             </View>
           </View>
         )}

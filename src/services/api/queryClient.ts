@@ -5,8 +5,8 @@
  * Provides centralized query keys and cache utilities for consistent data management.
  *
  * Features:
- * - Mobile-optimized cache settings (5min stale, 10min garbage collection)
- * - Offline support preparation with AsyncStorage persister
+ * - Mobile-optimized cache settings (15min stale, indefinite cache)
+ * - Offline support with AsyncStorage persister
  * - Standardized query keys for all entities
  * - Cache management utilities for invalidation and cleanup
  *
@@ -26,6 +26,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import { QUERY_CLIENT_CONFIG, QUERY_CLIENT_MUTATIONS_CONFIG } from "../config";
 
 /**
  * AsyncStorage persister for offline support
@@ -58,22 +59,31 @@ export const asyncStoragePersister = createUserScopedPersister();
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Cache data for 5 minutes by default
-      staleTime: 5 * 60 * 1000,
-      // Keep data in cache for 10 minutes
-      gcTime: 10 * 60 * 1000,
-      // Retry failed requests 2 times
-      retry: 2,
+      // CACHE-FIRST STRATEGY: Cache data for 15 minutes by default
+      // This means cached data stays "fresh" longer, reducing network requests
+      staleTime: QUERY_CLIENT_CONFIG.DEFAULT_STALE_TIME,
+      // Keep data in cache indefinitely for offline access
+      // StaleDataBanner will warn users when data is very old
+      gcTime: QUERY_CLIENT_CONFIG.DEFAULT_GC_TIME,
+      // Retry failed requests 2 times with exponential backoff
+      retry: QUERY_CLIENT_CONFIG.MAX_RETRIES,
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
       // Don't refetch on window focus (not applicable to mobile)
       refetchOnWindowFocus: false,
-      // Refetch on reconnect
+      // Refetch in background when reconnecting (non-blocking)
       refetchOnReconnect: true,
-      // Don't refetch on mount if data is fresh
-      refetchOnMount: "always",
+      // CRITICAL: Use cached data first, don't wait for network
+      // false = show cache immediately, refetch in background
+      // "always" = wait for network fetch (causes loading spinners)
+      refetchOnMount: false,
+      // Network timeout for faster fallback to cache
+      networkMode: "offlineFirst",
     },
     mutations: {
       // Retry failed mutations once
-      retry: 1,
+      retry: QUERY_CLIENT_MUTATIONS_CONFIG.MAX_RETRIES,
+      // Queue mutations when offline
+      networkMode: "offlineFirst",
     },
   },
 });

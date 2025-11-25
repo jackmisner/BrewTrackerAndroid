@@ -37,18 +37,21 @@ describe("queryClient", () => {
     it("should have correct default query options", () => {
       const options = queryClient.getDefaultOptions();
 
-      expect(options.queries?.staleTime).toBe(5 * 60 * 1000); // 5 minutes
-      expect(options.queries?.gcTime).toBe(10 * 60 * 1000); // 10 minutes
+      expect(options.queries?.staleTime).toBe(15 * 60 * 1000); // 15 minutes
+      expect(options.queries?.gcTime).toBe(Infinity); // Keep cache forever for offline access
       expect(options.queries?.retry).toBe(2);
       expect(options.queries?.refetchOnWindowFocus).toBe(false);
       expect(options.queries?.refetchOnReconnect).toBe(true);
-      expect(options.queries?.refetchOnMount).toBe("always");
+      expect(options.queries?.refetchOnMount).toBe(false); // Cache-first strategy
+      expect(options.queries?.networkMode).toBe("offlineFirst");
+      expect(options.queries?.retryDelay).toBeInstanceOf(Function);
     });
 
     it("should have correct default mutation options", () => {
       const options = queryClient.getDefaultOptions();
 
       expect(options.mutations?.retry).toBe(1);
+      expect(options.mutations?.networkMode).toBe("offlineFirst");
     });
 
     it("should have a query cache", () => {
