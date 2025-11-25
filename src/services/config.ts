@@ -30,17 +30,23 @@ export const AUTH_CONFIG = {
   PROFILE_FETCH_TIMEOUT: 5000, // 5 seconds
 } as const;
 
+/** React Query client configuration
+ * Default settings for query caching, garbage collection, and network timeouts
+ */
 export const QUERY_CLIENT_CONFIG = {
   DEFAULT_STALE_TIME: 15 * 60 * 1000, // 15 minutes
   DEFAULT_GC_TIME: Infinity, // Keep data indefinitely for offline access
   NETWORK_TIMEOUT: 5000, // 5 seconds
   MAX_RETRIES: 2, // Retry failed requests twice
-};
+} as const;
 
+/** React Query client mutation configuration
+ * Settings specific to mutation CRUD operations
+ */
 export const QUERY_CLIENT_MUTATIONS_CONFIG = {
   NETWORK_TIMEOUT: 5000, // 5 seconds
   MAX_RETRIES: 1, // Retry failed mutations once
-};
+} as const;
 
 /**
  * Storage keys for secure storage

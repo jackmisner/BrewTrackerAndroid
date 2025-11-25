@@ -43,7 +43,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
 import { DeviceTokenService } from "@services/auth/DeviceTokenService";
-import UnifiedLogger from "@services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 import { reAuthModalStyles } from "@styles/components/modals/reAuthModalStyles";
 
 interface ReAuthModalProps {
@@ -163,7 +163,9 @@ export const ReAuthModal: React.FC<ReAuthModalProps> = ({
       onSuccess();
     } catch (err) {
       // Quick login failed, show password form
-      UnifiedLogger.warn("ReAuthModal", "Quick login failed", { error: err });
+      await UnifiedLogger.warn("ReAuthModal", "Quick login failed", {
+        error: err,
+      });
       setError("Quick login failed. Please enter your password.");
       setHasDeviceToken(false);
     } finally {
@@ -243,6 +245,9 @@ export const ReAuthModal: React.FC<ReAuthModalProps> = ({
                     onPress={handleQuickLogin}
                     disabled={isLoading}
                     testID="reauth-quick-login-button"
+                    accessible={true}
+                    accessibilityLabel="Use Trusted Device for Quick Login"
+                    accessibilityRole="button"
                   >
                     <MaterialIcons name="fingerprint" size={24} color="#fff" />
                     <Text style={reAuthModalStyles.quickLoginText}>
@@ -341,6 +346,11 @@ export const ReAuthModal: React.FC<ReAuthModalProps> = ({
                       style={reAuthModalStyles.eyeIcon}
                       onPress={() => setShowPassword(!showPassword)}
                       testID="reauth-toggle-password-visibility"
+                      accessible={true}
+                      accessibilityLabel={
+                        showPassword ? "Hide Password" : "Show Password"
+                      }
+                      accessibilityRole="button"
                     >
                       <MaterialIcons
                         name={showPassword ? "visibility" : "visibility-off"}

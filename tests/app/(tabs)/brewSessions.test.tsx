@@ -503,57 +503,10 @@ describe("BrewSessionsScreen", () => {
   });
 
   describe("brew session list", () => {
-    // Use the default mock data that provides 2 active + 1 completed = 3 total sessions
     beforeEach(() => {
-      // Restore the default mock data from the top-level mock
-      // This ensures tests get the expected counts: Active (2), Completed (1)
-      const defaultMockBrewSessions = [
-        {
-          id: "test-session-1",
-          name: "Active Brew 1",
-          recipe_id: "test-recipe-id-1",
-          brew_date: "2024-01-01",
-          status: "fermenting",
-          user_id: "test-user-id",
-          notes: "Test notes 1",
-          created_at: "1640995200000",
-          updated_at: "1640995200000",
-          temperature_unit: "F",
-          batch_size: 5,
-          batch_size_unit: "gal",
-        },
-        {
-          id: "test-session-2",
-          name: "Active Brew 2",
-          recipe_id: "test-recipe-id-2",
-          brew_date: "2024-01-02",
-          status: "in-progress",
-          user_id: "test-user-id",
-          notes: "Test notes 2",
-          created_at: "1640995300000",
-          updated_at: "1640995300000",
-          temperature_unit: "F",
-          batch_size: 5,
-          batch_size_unit: "gal",
-        },
-        {
-          id: "test-session-3",
-          name: "Completed Brew",
-          recipe_id: "test-recipe-id-3",
-          brew_date: "2024-01-03",
-          status: "completed",
-          user_id: "test-user-id",
-          notes: "Test notes 3",
-          created_at: "1640995400000",
-          updated_at: "1640995400000",
-          temperature_unit: "F",
-          batch_size: 5,
-          batch_size_unit: "gal",
-        },
-      ];
-
-      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockResolvedValue(
-        defaultMockBrewSessions
+      // Use the default mock data that provides 2 active + 1 completed = 3 total sessions
+      mockUseBrewSessions.mockReturnValue(
+        createMockUseBrewSessionsValue({ data: mockBrewSessions })
       );
     });
 

@@ -355,6 +355,21 @@ export default function SettingsScreen() {
     </TouchableOpacity>
   );
 
+  const handleMakeCacheStale = async (hours: number) => {
+    try {
+      await makeQueryCacheStale(hours);
+      Alert.alert(
+        "Success",
+        `Cache is now ${hours} hours old. Pull to refresh to see the StaleDataBanner!`
+      );
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Failed to make cache stale"
+      );
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -773,25 +788,46 @@ export default function SettingsScreen() {
                       },
                       {
                         text: "25 hours",
-                        onPress: async () => {
-                          try {
-                            await makeQueryCacheStale(25);
-                            Alert.alert(
-                              "Success",
-                              "Cache is now 25 hours old. Pull to refresh to see the StaleDataBanner!"
-                            );
-                          } catch (error) {
-                            Alert.alert(
-                              "Error",
-                              error instanceof Error
-                                ? error.message
-                                : "Failed to make cache stale"
-                            );
-                          }
-                        },
+                        onPress: () => handleMakeCacheStale(25),
                       },
                       {
                         text: "50 hours",
+                        onPress: () => handleMakeCacheStale(50),
+                      },
+                    ]
+                  );
+                }}
+              >
+                <MaterialIcons
+                  name="schedule"
+                  size={24}
+                  color={themeContext.colors.textSecondary}
+                />
+                <View style={styles.menuContent}>
+                  <Text style={styles.menuText}>Make Cache Stale</Text>
+                  <Text style={styles.menuSubtext}>Test stale data banner</Text>
+                </View>
+                <MaterialIcons
+                  name="chevron-right"
+                  size={24}
+                  color={themeContext.colors.textMuted}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  Alert.alert(
+                    "Clear Query Cache",
+                    "This will clear all React Query cache. Continue?",
+                    [
+                      {
+                        text: "Cancel",
+                        style: "cancel",
+                      },
+                      {
+                        text: "Clear",
+                        style: "destructive",
                         onPress: async () => {
                           try {
                             await makeQueryCacheStale(50);
