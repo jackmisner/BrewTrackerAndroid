@@ -373,7 +373,8 @@ export const ReAuthModal: React.FC<ReAuthModalProps> = ({
                       reAuthModalStyles.button,
                       reAuthModalStyles.loginButton,
                       { backgroundColor: colors.primary },
-                      (isLoading || !password.trim()) && reAuthModalStyles.disabledButton,
+                      (isLoading || !password.trim()) &&
+                        reAuthModalStyles.disabledButton,
                     ]}
                     onPress={handlePasswordLogin}
                     disabled={isLoading || !password.trim()}
