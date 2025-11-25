@@ -1,11 +1,6 @@
 import React from "react";
 import { fireEvent, waitFor, act } from "@testing-library/react-native";
-import {
-  renderWithProviders,
-  mockData,
-  scenarios,
-  testUtils,
-} from "../../testUtils";
+import { renderWithProviders, mockData, testUtils } from "../../testUtils";
 import BrewSessionsScreen from "../../../app/(tabs)/brewSessions";
 
 // Mock React Native with Appearance
@@ -377,12 +372,11 @@ describe("BrewSessionsScreen", () => {
     ];
 
     beforeEach(() => {
-      mockUseQuery.mockImplementation(() => ({
-        data: { brew_sessions: tabTestBrewSessions },
-        isLoading: false,
-        error: null,
-        refetch: jest.fn(),
-      }));
+      mockUseBrewSessions.mockReturnValue(
+        createMockUseBrewSessionsValue({
+          data: tabTestBrewSessions,
+        })
+      );
     });
 
     it("should render active tab as selected by default", async () => {
@@ -670,8 +664,6 @@ describe("BrewSessionsScreen", () => {
       // Verify component handles completed tab state correctly
       expect(queryByText("Active (0)")).toBeTruthy();
       expect(queryByText("Completed (0)")).toBeTruthy();
-      // Component should render without errors even when FAB logic is conditional
-      expect(queryByText("Active (0)")).toBeTruthy();
     });
   });
 
@@ -846,12 +838,10 @@ describe("BrewSessionsScreen", () => {
 
   describe("data safety", () => {
     it("should handle brew sessions with missing data gracefully", () => {
-      const incompleteBrewSession = {
-        id: "test-id",
+      const incompleteBrewSession = mockData.brewSession({
         name: "",
-        status: null,
-        brew_date: "2024-01-01T00:00:00Z",
-      };
+        status: null as any, // Explicitly set to null to simulate missing status
+      });
 
       mockUseBrewSessions.mockReturnValue(
         createMockUseBrewSessionsValue({ data: [incompleteBrewSession] })
