@@ -540,6 +540,7 @@ export default function BrewSessionsScreen() {
         <TouchableOpacity
           style={styles.floatingButton}
           onPress={handleStartBrewing}
+          testID="brewSessions-fab"
         >
           <MaterialIcons name="add" size={24} color="#fff" />
         </TouchableOpacity>

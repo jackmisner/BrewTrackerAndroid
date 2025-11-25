@@ -8,7 +8,7 @@ jest.mock("react-native", () => ({
   View: "View",
   Text: "Text",
   TouchableOpacity: "TouchableOpacity",
-  FlatList: ({ data, ListEmptyComponent }: any) => {
+  FlatList: ({ data, ListEmptyComponent, refreshControl, renderItem }: any) => {
     // Render empty component when data is empty
     if (!data || data.length === 0) {
       if (ListEmptyComponent) {
@@ -19,9 +19,31 @@ jest.mock("react-native", () => ({
       }
       return null;
     }
+
+    // Render the refresh control if provided
+    if (refreshControl) {
+      return (
+        <>
+          {refreshControl}
+          {renderItem && data && data.length > 0
+            ? renderItem({ item: data[0], index: 0 })
+            : "FlatList"}
+        </>
+      );
+    }
+
     return "FlatList";
   },
-  RefreshControl: "RefreshControl",
+  RefreshControl: ({ refreshing, onRefresh, testID }: any) => {
+    // Create a touchable element that can trigger refresh
+    const Touchable =
+      require("react-native").TouchableOpacity || "TouchableOpacity";
+    return (
+      <Touchable onPress={onRefresh} testID={testID || "refresh-control"}>
+        {refreshing ? "RefreshControl (refreshing)" : "RefreshControl"}
+      </Touchable>
+    );
+  },
   ActivityIndicator: "ActivityIndicator",
   Alert: {
     alert: jest.fn(),
@@ -140,17 +162,6 @@ jest.mock("@hooks/offlineV2/useUserData", () => ({
   })),
 }));
 
-// Mock UserCacheService
-jest.mock("@services/offlineV2/UserCacheService", () => {
-  return {
-    UserCacheService: {
-      getBrewSessions: jest.fn().mockResolvedValue(mockBrewSessions),
-      getPendingOperationsCount: jest.fn().mockResolvedValue(0),
-      refreshBrewSessionsFromServer: jest.fn().mockResolvedValue(undefined),
-    },
-  };
-});
-
 // Mock React Query
 jest.mock("@tanstack/react-query", () => {
   const actual = jest.requireActual("@tanstack/react-query");
@@ -187,6 +198,33 @@ jest.mock("@services/api/apiService", () => ({
       getAll: jest.fn(),
     },
   },
+}));
+
+// Mock offline sync hooks
+jest.mock("@hooks/offlineV2", () => ({
+  useOfflineSync: jest.fn(() => ({
+    isSyncing: false,
+    pendingOperations: 0,
+    sync: jest.fn(),
+  })),
+}));
+
+// Mock network context
+jest.mock("@contexts/NetworkContext", () => {
+  const React = require("react");
+  return {
+    useNetwork: jest.fn(() => ({
+      isConnected: true,
+      isOffline: false,
+    })),
+    NetworkProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+// Mock sync utils
+jest.mock("@utils/syncUtils", () => ({
+  getSyncStatusMessage: jest.fn(),
+  handlePullToRefreshSync: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock ThemeContext hook
@@ -352,15 +390,6 @@ describe("BrewSessionsScreen", () => {
         data: mockBrewSessions,
         isLoading: false,
       })
-    );
-
-    // Reset UserCacheService mock implementations to prevent test leakage
-    const UserCacheServiceMock =
-      require("@services/offlineV2/UserCacheService").UserCacheService;
-    UserCacheServiceMock.getBrewSessions.mockResolvedValue(mockBrewSessions);
-    UserCacheServiceMock.getPendingOperationsCount.mockResolvedValue(0);
-    UserCacheServiceMock.refreshBrewSessionsFromServer.mockResolvedValue(
-      undefined
     );
   });
 
@@ -648,44 +677,52 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should show floating action button only for active tab", () => {
-      const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
+      const { queryByTestId } = renderWithProviders(<BrewSessionsScreen />);
 
-      // Verify component renders active tab (which should show FAB)
-      expect(queryByText("Active (0)")).toBeTruthy();
-      // Verify component renders without errors when showing FAB
-      expect(queryByText("Completed (0)")).toBeTruthy();
+      // FAB should be visible on active tab
+      expect(queryByTestId("brewSessions-fab")).toBeTruthy();
     });
 
     it("should not show floating action button for completed tab", () => {
       mockUseLocalSearchParams.mockReturnValue({ activeTab: "completed" });
 
-      const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
+      const { queryByTestId } = renderWithProviders(<BrewSessionsScreen />);
 
-      // Verify component handles completed tab state correctly
-      expect(queryByText("Active (0)")).toBeTruthy();
-      expect(queryByText("Completed (0)")).toBeTruthy();
+      // FAB should not be visible on completed tab
+      expect(queryByTestId("brewSessions-fab")).toBeNull();
     });
   });
 
   describe("pull to refresh", () => {
-    it("should trigger refetch when refreshing", async () => {
-      const mockRefetch = jest.fn();
+    it("should trigger refresh and sync when pull-to-refresh is activated", async () => {
+      const mockRefresh = jest.fn().mockResolvedValue(undefined);
+      const mockHandlePullToRefreshSync =
+        require("@utils/syncUtils").handlePullToRefreshSync;
+
       // Override useBrewSessions mock to include refresh function
       mockUseBrewSessions.mockReturnValue(
         createMockUseBrewSessionsValue({
           data: mockBrewSessions,
-          refresh: mockRefetch,
+          refresh: mockRefresh,
         })
       );
 
-      renderWithProviders(<BrewSessionsScreen />);
+      const { getByTestId } = renderWithProviders(<BrewSessionsScreen />);
+
+      // Find and trigger the RefreshControl
+      const refreshControl = getByTestId("refresh-control");
 
       await act(async () => {
-        // Simulate pull-to-refresh by calling the refresh function directly
-        await mockRefetch();
+        fireEvent.press(refreshControl);
       });
 
-      expect(mockRefetch).toHaveBeenCalled();
+      // Verify that handlePullToRefreshSync was called
+      expect(mockHandlePullToRefreshSync).toHaveBeenCalled();
+
+      // Verify that the refresh function was called
+      await waitFor(() => {
+        expect(mockRefresh).toHaveBeenCalled();
+      });
     });
   });
 
@@ -847,10 +884,20 @@ describe("BrewSessionsScreen", () => {
         createMockUseBrewSessionsValue({ data: [incompleteBrewSession] })
       );
 
-      const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
+      const { queryByText, getByText } = renderWithProviders(
+        <BrewSessionsScreen />
+      );
 
-      // Brew session with empty name should not be rendered
+      // Should not crash - session with null status is treated as "active"
+      // (since null !== "completed" in the filter logic)
+      expect(getByText("Active (1)")).toBeTruthy();
+      expect(getByText("Completed (0)")).toBeTruthy();
+
+      // Should not show "Unknown" text for missing data
       expect(queryByText("Unknown")).toBeNull();
+
+      // Should not show NaN or other invalid displays
+      expect(queryByText("NaN")).toBeNull();
     });
 
     it("should handle missing brew_sessions array gracefully", () => {
@@ -863,8 +910,45 @@ describe("BrewSessionsScreen", () => {
 
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
+      // Should treat null data as empty array and show proper counts
       expect(getByText("Active (0)")).toBeTruthy();
       expect(getByText("Completed (0)")).toBeTruthy();
+
+      // Should show empty state for active tab with correct message
+      expect(getByText("No Active Brews")).toBeTruthy();
+      expect(
+        getByText("Start a brew session to track your fermentation progress")
+      ).toBeTruthy();
+    });
+
+    it("should handle sessions with missing required fields", () => {
+      const sessionWithMissingFields = {
+        ...mockData.brewSession(),
+        id: "test-incomplete",
+        name: "Valid Name",
+        status: "fermenting", // Valid status
+        brew_date: undefined as any, // Missing brew date
+        original_gravity: undefined as any, // Missing OG
+      };
+
+      mockUseBrewSessions.mockReturnValue(
+        createMockUseBrewSessionsValue({ data: [sessionWithMissingFields] })
+      );
+
+      const { getByText, queryByText } = renderWithProviders(
+        <BrewSessionsScreen />
+      );
+
+      // Session should still be counted in active tab
+      expect(getByText("Active (1)")).toBeTruthy();
+      expect(getByText("Completed (0)")).toBeTruthy();
+
+      // Session name should be displayed
+      expect(getByText("Valid Name")).toBeTruthy();
+
+      // Missing metrics should not cause crashes - component should handle gracefully
+      // OG display should show "--" or similar fallback (not crash)
+      expect(queryByText("NaN")).toBeNull();
     });
   });
 
