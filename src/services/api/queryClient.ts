@@ -58,22 +58,31 @@ export const asyncStoragePersister = createUserScopedPersister();
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Cache data for 5 minutes by default
-      staleTime: 5 * 60 * 1000,
-      // Keep data in cache for 10 minutes
-      gcTime: 10 * 60 * 1000,
-      // Retry failed requests 2 times
+      // CACHE-FIRST STRATEGY: Cache data for 15 minutes by default
+      // This means cached data stays "fresh" longer, reducing network requests
+      staleTime: 15 * 60 * 1000,
+      // Keep data in cache indefinitely for offline access
+      // StaleDataBanner will warn users when data is very old
+      gcTime: Infinity,
+      // Retry failed requests 2 times with exponential backoff
       retry: 2,
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
       // Don't refetch on window focus (not applicable to mobile)
       refetchOnWindowFocus: false,
-      // Refetch on reconnect
+      // Refetch in background when reconnecting (non-blocking)
       refetchOnReconnect: true,
-      // Don't refetch on mount if data is fresh
-      refetchOnMount: "always",
+      // CRITICAL: Use cached data first, don't wait for network
+      // false = show cache immediately, refetch in background
+      // "always" = wait for network fetch (causes loading spinners)
+      refetchOnMount: false,
+      // Network timeout for faster fallback to cache
+      networkMode: "offlineFirst",
     },
     mutations: {
       // Retry failed mutations once
       retry: 1,
+      // Queue mutations when offline
+      networkMode: "offlineFirst",
     },
   },
 });
