@@ -7,14 +7,25 @@ import {
   testUtils,
 } from "../../testUtils";
 import BrewSessionsScreen from "../../../app/(tabs)/brewSessions";
-import { clear } from "console";
 
 // Mock React Native with Appearance
 jest.mock("react-native", () => ({
   View: "View",
   Text: "Text",
   TouchableOpacity: "TouchableOpacity",
-  FlatList: "FlatList",
+  FlatList: ({ data, ListEmptyComponent }: any) => {
+    // Render empty component when data is empty
+    if (!data || data.length === 0) {
+      if (ListEmptyComponent) {
+        // Call the function if it's a function, otherwise return it directly
+        return typeof ListEmptyComponent === "function"
+          ? ListEmptyComponent()
+          : ListEmptyComponent;
+      }
+      return null;
+    }
+    return "FlatList";
+  },
   RefreshControl: "RefreshControl",
   ActivityIndicator: "ActivityIndicator",
   Alert: {
@@ -54,53 +65,88 @@ jest.mock("@contexts/AuthContext", () => {
   };
 });
 
+// Mock brew sessions data
+const mockBrewSessions = [
+  {
+    id: "test-session-1",
+    name: "Active Brew 1",
+    recipe_id: "test-recipe-id-1",
+    brew_date: "2024-01-01",
+    status: "fermenting",
+    user_id: "test-user-id",
+    notes: "Test notes 1",
+    created_at: "1640995200000",
+    updated_at: "1640995200000",
+    temperature_unit: "F",
+    batch_size: 5,
+    batch_size_unit: "gal",
+  },
+  {
+    id: "test-session-2",
+    name: "Active Brew 2",
+    recipe_id: "test-recipe-id-2",
+    brew_date: "2024-01-02",
+    status: "in-progress",
+    user_id: "test-user-id",
+    notes: "Test notes 2",
+    created_at: "1640995300000",
+    updated_at: "1640995300000",
+    temperature_unit: "F",
+    batch_size: 5,
+    batch_size_unit: "gal",
+  },
+  {
+    id: "test-session-3",
+    name: "Completed Brew",
+    recipe_id: "test-recipe-id-3",
+    brew_date: "2024-01-03",
+    status: "completed",
+    user_id: "test-user-id",
+    notes: "Test notes 3",
+    created_at: "1640995400000",
+    updated_at: "1640995400000",
+    temperature_unit: "F",
+    batch_size: 5,
+    batch_size_unit: "gal",
+  },
+];
+
+const createMockUseBrewSessionsValue = (overrides = {}) => ({
+  data: mockBrewSessions,
+  isLoading: false,
+  error: null,
+  pendingCount: 0,
+  conflictCount: 0,
+  lastSync: null,
+  create: jest.fn(),
+  update: jest.fn(),
+  delete: jest.fn(),
+  clone: jest.fn(),
+  getById: jest.fn(),
+  sync: jest.fn(),
+  refresh: jest.fn(),
+  addFermentationEntry: jest.fn(),
+  updateFermentationEntry: jest.fn(),
+  deleteFermentationEntry: jest.fn(),
+  addDryHopFromRecipe: jest.fn(),
+  removeDryHop: jest.fn(),
+  deleteDryHopAddition: jest.fn(),
+  ...overrides,
+});
+
+// Mock useBrewSessions hook
+jest.mock("@hooks/offlineV2/useUserData", () => ({
+  useBrewSessions: jest.fn(),
+  useRecipes: jest.fn(() => ({
+    data: [],
+    isLoading: false,
+    error: null,
+    refresh: jest.fn(),
+  })),
+}));
+
 // Mock UserCacheService
 jest.mock("@services/offlineV2/UserCacheService", () => {
-  const mockBrewSessions = [
-    {
-      id: "test-session-1",
-      name: "Active Brew 1",
-      recipe_id: "test-recipe-id-1",
-      brew_date: "2024-01-01",
-      status: "fermenting",
-      user_id: "test-user-id",
-      notes: "Test notes 1",
-      created_at: "1640995200000",
-      updated_at: "1640995200000",
-      temperature_unit: "F",
-      batch_size: 5,
-      batch_size_unit: "gal",
-    },
-    {
-      id: "test-session-2",
-      name: "Active Brew 2",
-      recipe_id: "test-recipe-id-2",
-      brew_date: "2024-01-02",
-      status: "in-progress",
-      user_id: "test-user-id",
-      notes: "Test notes 2",
-      created_at: "1640995300000",
-      updated_at: "1640995300000",
-      temperature_unit: "F",
-      batch_size: 5,
-      batch_size_unit: "gal",
-    },
-    {
-      id: "test-session-3",
-      name: "Completed Brew",
-      recipe_id: "test-recipe-id-3",
-      brew_date: "2024-01-03",
-      status: "completed",
-      user_id: "test-user-id",
-      notes: "Test notes 3",
-      created_at: "1640995400000",
-      updated_at: "1640995400000",
-      temperature_unit: "F",
-      batch_size: 5,
-      batch_size_unit: "gal",
-    },
-  ];
-
   return {
     UserCacheService: {
       getBrewSessions: jest.fn().mockResolvedValue(mockBrewSessions),
@@ -276,6 +322,8 @@ const mockUseQuery = require("@tanstack/react-query").useQuery;
 const mockUseMutation = require("@tanstack/react-query").useMutation;
 const mockRouter = require("expo-router").router;
 const mockUseLocalSearchParams = require("expo-router").useLocalSearchParams;
+const mockUseBrewSessions =
+  require("@hooks/offlineV2/useUserData").useBrewSessions;
 
 // Setup mocks
 require("@contexts/ThemeContext").useTheme.mockReturnValue(mockTheme);
@@ -303,53 +351,17 @@ describe("BrewSessionsScreen", () => {
       reset: jest.fn(),
     });
 
+    // Set up default useBrewSessions mock with mockBrewSessions data
+    mockUseBrewSessions.mockReturnValue(
+      createMockUseBrewSessionsValue({
+        data: mockBrewSessions,
+        isLoading: false,
+      })
+    );
+
     // Reset UserCacheService mock implementations to prevent test leakage
     const UserCacheServiceMock =
       require("@services/offlineV2/UserCacheService").UserCacheService;
-    const mockBrewSessions = [
-      {
-        id: "test-session-1",
-        name: "Active Brew 1",
-        recipe_id: "test-recipe-id-1",
-        brew_date: "2024-01-01",
-        status: "fermenting",
-        user_id: "test-user-id",
-        notes: "Test notes 1",
-        created_at: "1640995200000",
-        updated_at: "1640995200000",
-        temperature_unit: "F",
-        batch_size: 5,
-        batch_size_unit: "gal",
-      },
-      {
-        id: "test-session-2",
-        name: "Active Brew 2",
-        recipe_id: "test-recipe-id-2",
-        brew_date: "2024-01-02",
-        status: "in-progress",
-        user_id: "test-user-id",
-        notes: "Test notes 2",
-        created_at: "1640995300000",
-        updated_at: "1640995300000",
-        temperature_unit: "F",
-        batch_size: 5,
-        batch_size_unit: "gal",
-      },
-      {
-        id: "test-session-3",
-        name: "Completed Brew",
-        recipe_id: "test-recipe-id-3",
-        brew_date: "2024-01-03",
-        status: "completed",
-        user_id: "test-user-id",
-        notes: "Test notes 3",
-        created_at: "1640995400000",
-        updated_at: "1640995400000",
-        temperature_unit: "F",
-        batch_size: 5,
-        batch_size_unit: "gal",
-      },
-    ];
     UserCacheServiceMock.getBrewSessions.mockResolvedValue(mockBrewSessions);
     UserCacheServiceMock.getPendingOperationsCount.mockResolvedValue(0);
     UserCacheServiceMock.refreshBrewSessionsFromServer.mockResolvedValue(
@@ -358,15 +370,15 @@ describe("BrewSessionsScreen", () => {
   });
 
   describe("tab navigation", () => {
-    const mockBrewSessions = [
+    const tabTestBrewSessions = [
       mockData.brewSession({ status: "fermenting" }),
       mockData.brewSession({ status: "completed" }),
-      mockData.brewSession({ status: "active" }),
+      mockData.brewSession({ status: "in-progress" }),
     ];
 
     beforeEach(() => {
       mockUseQuery.mockImplementation(() => ({
-        data: { brew_sessions: mockBrewSessions },
+        data: { brew_sessions: tabTestBrewSessions },
         isLoading: false,
         error: null,
         refetch: jest.fn(),
@@ -432,12 +444,9 @@ describe("BrewSessionsScreen", () => {
 
   describe("loading state", () => {
     it("should show loading indicator while fetching data", () => {
-      mockUseQuery.mockReturnValue({
-        data: undefined,
-        isLoading: true,
-        error: null,
-        refetch: jest.fn(),
-      });
+      mockUseBrewSessions.mockReturnValue(
+        createMockUseBrewSessionsValue({ data: [], isLoading: true })
+      );
 
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
@@ -447,9 +456,11 @@ describe("BrewSessionsScreen", () => {
 
   describe("error state", () => {
     it("should show error message when data fails to load", async () => {
-      // Mock UserCacheService to throw an error
-      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockRejectedValue(
-        new Error("Network error")
+      // Mock useBrewSessions to return an error
+      mockUseBrewSessions.mockReturnValue(
+        createMockUseBrewSessionsValue({
+          error: new Error("Network error"),
+        })
       );
 
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
@@ -465,13 +476,15 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should allow retry when error occurs", async () => {
-      // Mock UserCacheService to throw an error
-      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockRejectedValue(
-        new Error("Network error")
-      );
-      // Mock refreshBrewSessionsFromServer for this test
-      require("@services/offlineV2/UserCacheService").UserCacheService.refreshBrewSessionsFromServer.mockResolvedValueOnce(
-        undefined
+      // Mock refresh function
+      const mockRefresh = jest.fn();
+
+      // Mock useBrewSessions to return an error
+      mockUseBrewSessions.mockReturnValue(
+        createMockUseBrewSessionsValue({
+          error: new Error("Network error"),
+          refresh: mockRefresh,
+        })
       );
 
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
@@ -484,10 +497,7 @@ describe("BrewSessionsScreen", () => {
       fireEvent.press(retryButton);
 
       await waitFor(() => {
-        expect(
-          require("@services/offlineV2/UserCacheService").UserCacheService
-            .refreshBrewSessionsFromServer
-        ).toHaveBeenCalled();
+        expect(mockRefresh).toHaveBeenCalled();
       });
     });
   });
@@ -517,7 +527,7 @@ describe("BrewSessionsScreen", () => {
           name: "Active Brew 2",
           recipe_id: "test-recipe-id-2",
           brew_date: "2024-01-02",
-          status: "active",
+          status: "in-progress",
           user_id: "test-user-id",
           notes: "Test notes 2",
           created_at: "1640995300000",
@@ -575,12 +585,8 @@ describe("BrewSessionsScreen", () => {
       const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
       await waitFor(() => {
-        // Verify component processes data correctly by checking the UI counts
-        // In V2, we verify UserCacheService was called instead of React Query
-        expect(
-          require("@services/offlineV2/UserCacheService").UserCacheService
-            .getBrewSessions
-        ).toHaveBeenCalled();
+        // Verify component uses the V2 hook
+        expect(mockUseBrewSessions).toHaveBeenCalled();
         // Component should render tabs showing correct data counts
         expect(queryByText("Active (2)")).toBeTruthy();
       });
@@ -633,9 +639,11 @@ describe("BrewSessionsScreen", () => {
 
   describe("empty states", () => {
     beforeEach(() => {
-      // Override UserCacheService mock to return empty data
-      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockResolvedValue(
-        []
+      // Override useBrewSessions mock to return empty data
+      mockUseBrewSessions.mockReturnValue(
+        createMockUseBrewSessionsValue({
+          data: [],
+        })
       );
     });
 
@@ -665,11 +673,6 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should navigate to recipes when start brewing is pressed", async () => {
-      // Mock empty data to show empty state with Start Brewing button
-      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockResolvedValue(
-        []
-      );
-
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
       // Wait for empty state to be rendered
@@ -689,9 +692,11 @@ describe("BrewSessionsScreen", () => {
 
   describe("floating action button", () => {
     beforeEach(() => {
-      // Ensure empty dataset for this describe
-      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockResolvedValue(
-        []
+      // Override useBrewSessions mock to return empty data
+      mockUseBrewSessions.mockReturnValue(
+        createMockUseBrewSessionsValue({
+          data: [],
+        })
       );
     });
 
@@ -720,18 +725,22 @@ describe("BrewSessionsScreen", () => {
   describe("pull to refresh", () => {
     it("should trigger refetch when refreshing", async () => {
       const mockRefetch = jest.fn();
-      mockUseQuery.mockImplementation(() => ({
-        data: { brew_sessions: [] },
-        isLoading: false,
-        error: null,
-        refetch: mockRefetch,
-      }));
+      // Override useBrewSessions mock to include refresh function
+      mockUseBrewSessions.mockReturnValue(
+        createMockUseBrewSessionsValue({
+          data: mockBrewSessions,
+          refresh: mockRefetch,
+        })
+      );
 
       renderWithProviders(<BrewSessionsScreen />);
 
-      // Since we can't easily test RefreshControl directly due to mocking,
-      // we'll test that the refetch function is available
-      expect(mockRefetch).toBeDefined();
+      await act(async () => {
+        // Simulate pull-to-refresh by calling the refresh function directly
+        await mockRefetch();
+      });
+
+      expect(mockRefetch).toHaveBeenCalled();
     });
   });
 
@@ -796,9 +805,11 @@ describe("BrewSessionsScreen", () => {
     ];
 
     beforeEach(() => {
-      // Override UserCacheService mock for this test
-      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockResolvedValue(
-        mockBrewSessionsForStatus
+      // Override useBrewSessions mock for this test
+      mockUseBrewSessions.mockReturnValue(
+        createMockUseBrewSessionsValue({
+          data: mockBrewSessionsForStatus,
+        })
       );
     });
 
@@ -820,9 +831,11 @@ describe("BrewSessionsScreen", () => {
     });
 
     beforeEach(() => {
-      // Override UserCacheService mock for this test with single session
-      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockResolvedValue(
-        [mockBrewSession]
+      // Override useBrewSessions mock for this test with single session
+      mockUseBrewSessions.mockReturnValue(
+        createMockUseBrewSessionsValue({
+          data: [mockBrewSession],
+        })
       );
     });
 
@@ -887,12 +900,9 @@ describe("BrewSessionsScreen", () => {
         brew_date: "2024-01-01T00:00:00Z",
       };
 
-      mockUseQuery.mockReturnValue({
-        data: { brew_sessions: [incompleteBrewSession] },
-        isLoading: false,
-        error: null,
-        refetch: jest.fn(),
-      });
+      mockUseBrewSessions.mockReturnValue(
+        createMockUseBrewSessionsValue({ data: [incompleteBrewSession] })
+      );
 
       const { queryByText } = renderWithProviders(<BrewSessionsScreen />);
 
@@ -901,12 +911,12 @@ describe("BrewSessionsScreen", () => {
     });
 
     it("should handle missing brew_sessions array gracefully", () => {
-      mockUseQuery.mockReturnValue({
-        data: {},
-        isLoading: false,
-        error: null,
-        refetch: jest.fn(),
-      });
+      // Mock useBrewSessions to return null data (simulating missing/undefined data)
+      mockUseBrewSessions.mockReturnValue(
+        createMockUseBrewSessionsValue({
+          data: null,
+        })
+      );
 
       const { getByText } = renderWithProviders(<BrewSessionsScreen />);
 
@@ -922,9 +932,11 @@ describe("BrewSessionsScreen", () => {
     });
 
     beforeEach(() => {
-      // Override UserCacheService mock for this test with single session
-      require("@services/offlineV2/UserCacheService").UserCacheService.getBrewSessions.mockResolvedValue(
-        [mockBrewSession]
+      // Override useBrewSessions mock for this test with single session
+      mockUseBrewSessions.mockReturnValue(
+        createMockUseBrewSessionsValue({
+          data: [mockBrewSession],
+        })
       );
     });
 

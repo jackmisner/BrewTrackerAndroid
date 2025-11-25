@@ -10,7 +10,7 @@ import { Alert } from "react-native";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
-import { BiometricEnrollmentModal } from "@src/components/BiometricEnrollmentModal";
+import { BiometricEnrollmentModal } from "@/src/components/modals/BiometricEnrollmentModal";
 import {
   BiometricService,
   BiometricErrorCode,

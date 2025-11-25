@@ -26,7 +26,13 @@
  */
 
 import React, { useCallback } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleProp,
+  ViewStyle,
+} from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuth } from "@contexts/AuthContext";
@@ -42,7 +48,7 @@ interface AuthStatusBannerProps {
   /**
    * Custom styling for the banner
    */
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 }
 
 /**

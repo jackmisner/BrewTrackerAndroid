@@ -43,7 +43,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
 import { DeviceTokenService } from "@services/auth/DeviceTokenService";
-import { UnifiedLogger } from "@services/logger/UnifiedLogger";
+import UnifiedLogger from "@services/logger/UnifiedLogger";
 import { reAuthModalStyles } from "@styles/components/modals/reAuthModalStyles";
 
 interface ReAuthModalProps {
@@ -83,8 +83,8 @@ export const ReAuthModal: React.FC<ReAuthModalProps> = ({
   // Check for device token on mount
   useEffect(() => {
     const checkDeviceToken = async () => {
-      const token = await DeviceTokenService.getDeviceToken();
-      setHasDeviceToken(!!token);
+      const hasToken = await DeviceTokenService.hasDeviceToken();
+      setHasDeviceToken(!!hasToken);
     };
     if (visible) {
       checkDeviceToken();
@@ -101,8 +101,8 @@ export const ReAuthModal: React.FC<ReAuthModalProps> = ({
   }, [visible]);
 
   const handlePasswordLogin = useCallback(async () => {
-    if (!user?.email) {
-      setError("No user email found");
+    if (!user?.username) {
+      setError("No username found");
       return;
     }
 
@@ -115,10 +115,40 @@ export const ReAuthModal: React.FC<ReAuthModalProps> = ({
     setError(null);
 
     try {
-      await login({ username: user.email, password });
+      const loginCredentials = {
+        username: user.username,
+        password,
+      };
+
+      await UnifiedLogger.info(
+        "ReAuthModal",
+        "Attempting password re-authentication",
+        {
+          username: loginCredentials.username,
+        }
+      );
+
+      await login(loginCredentials);
+      setPassword(""); // Clear password for security
+
+      await UnifiedLogger.info(
+        "ReAuthModal",
+        "Password re-authentication successful"
+      );
       onSuccess();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
+    } catch (err: any) {
+      const errorMessage =
+        err?.response?.data?.message || err?.message || "Authentication failed";
+      await UnifiedLogger.error(
+        "ReAuthModal",
+        "Password re-authentication failed",
+        {
+          error: errorMessage,
+          statusCode: err?.response?.status,
+          username: user.username,
+        }
+      );
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -247,7 +277,7 @@ export const ReAuthModal: React.FC<ReAuthModalProps> = ({
                   </View>
                 )}
 
-                {/* Email (read-only) */}
+                {/* Username (read-only) */}
                 <View style={reAuthModalStyles.inputGroup}>
                   <Text
                     style={[
@@ -255,7 +285,7 @@ export const ReAuthModal: React.FC<ReAuthModalProps> = ({
                       { color: colors.textSecondary },
                     ]}
                   >
-                    Email
+                    Username
                   </Text>
                   <View
                     style={[
@@ -273,7 +303,7 @@ export const ReAuthModal: React.FC<ReAuthModalProps> = ({
                         { color: colors.text },
                       ]}
                     >
-                      {user?.email || "No email"}
+                      {user?.username || "No username"}
                     </Text>
                   </View>
                 </View>
@@ -373,7 +403,8 @@ export const ReAuthModal: React.FC<ReAuthModalProps> = ({
                       reAuthModalStyles.button,
                       reAuthModalStyles.loginButton,
                       { backgroundColor: colors.primary },
-                      (isLoading || !password.trim()) && reAuthModalStyles.disabledButton,
+                      (isLoading || !password.trim()) &&
+                        reAuthModalStyles.disabledButton,
                     ]}
                     onPress={handlePasswordLogin}
                     disabled={isLoading || !password.trim()}

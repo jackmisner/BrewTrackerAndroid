@@ -19,14 +19,21 @@
  * ```
  */
 
-import React, { useState, useEffect, useCallback } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ViewStyle,
+  StyleProp,
+} from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNetwork } from "@contexts/NetworkContext";
 import { useTheme } from "@contexts/ThemeContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { bannerStyles } from "@styles/components/banners/bannerStyles";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 interface StaleDataBannerProps {
   /**
@@ -40,7 +47,7 @@ interface StaleDataBannerProps {
   /**
    * Custom styling for the banner
    */
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 }
 
 const DISMISS_STORAGE_KEY = "stale_data_banner_dismissed_at";
@@ -63,7 +70,23 @@ export const StaleDataBanner: React.FC<StaleDataBannerProps> = ({
   const [isDismissed, setIsDismissed] = useState(false);
   const [hasStaleData, setHasStaleData] = useState(false);
   const [oldestDataAge, setOldestDataAge] = useState<string | null>(null);
-  const [oldestDataAgeHours, setOldestDataAgeHours] = useState<number>(0);
+
+  // Refs for cleanup
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMountedRef = useRef(true);
+
+  // Set mounted state on mount/unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // Clear any pending refresh timeout on unmount
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const checkDismissalStatus = useCallback(async () => {
     try {
@@ -83,19 +106,67 @@ export const StaleDataBanner: React.FC<StaleDataBannerProps> = ({
     }
   }, []);
 
-  const checkStaleData = useCallback(() => {
+  const checkStaleData = useCallback(async () => {
     const queries = queryClient.getQueryCache().getAll();
     const staleThresholdMs = staleThresholdHours * 60 * 60 * 1000;
     const now = Date.now();
 
+    await UnifiedLogger.debug(
+      "StaleDataBanner.checkStaleData",
+      "Checking for stale data",
+      {
+        totalQueries: queries.length,
+        staleThresholdHours,
+        staleThresholdMs,
+      }
+    );
+
     let oldestDataTimestamp = now;
     let hasAnyStaleData = false;
+    const staleQueries: any[] = [];
+
+    // Only check "list/dashboard" queries, not individual item queries
+    // This prevents false positives from cached individual recipe/session views
+    const relevantQueryPrefixes = [
+      "dashboard",
+      "recipes", // Only check if it's a list query (not ['recipes', 'specific-id'])
+      "brew-sessions",
+      "ingredients",
+      "beer-styles",
+    ];
 
     queries.forEach(query => {
       if (query.state.status === "success" && query.state.dataUpdatedAt) {
+        const queryKey = query.queryKey;
+        const firstKey = queryKey[0] as string;
+
+        // Skip individual item queries (e.g., ['recipes', '123abc'])
+        // These are meant to be cached for navigation and shouldn't trigger stale warnings
+        // Individual item queries typically have exactly 2 keys where second is an ID
+        // Check for common ID patterns (UUID, ObjectId, alphanumeric)
+        const isIndividualItemQuery =
+          queryKey.length === 2 &&
+          typeof queryKey[1] === "string" &&
+          /^[a-f0-9-]{8,}$/i.test(queryKey[1]); // Matches UUIDs, ObjectIds, etc.
+
+        const isRelevantQuery =
+          relevantQueryPrefixes.includes(firstKey) && !isIndividualItemQuery;
+
+        if (!isRelevantQuery) {
+          return; // Skip this query
+        }
+
         const age = now - query.state.dataUpdatedAt;
+        const ageHours = Math.floor(age / (60 * 60 * 1000));
+
         if (age > staleThresholdMs) {
           hasAnyStaleData = true;
+          staleQueries.push({
+            queryKey: query.queryKey,
+            ageHours,
+            dataUpdatedAt: query.state.dataUpdatedAt,
+          });
+
           if (query.state.dataUpdatedAt < oldestDataTimestamp) {
             oldestDataTimestamp = query.state.dataUpdatedAt;
           }
@@ -109,13 +180,33 @@ export const StaleDataBanner: React.FC<StaleDataBannerProps> = ({
       const ageHours = Math.floor(
         (now - oldestDataTimestamp) / (60 * 60 * 1000)
       );
-      setOldestDataAgeHours(ageHours);
+
+      await UnifiedLogger.info(
+        "StaleDataBanner.checkStaleData",
+        "Stale data detected",
+        {
+          staleQueryCount: staleQueries.length,
+          oldestDataAgeHours: ageHours,
+          staleQueries: staleQueries.slice(0, 5), // Log first 5 stale queries
+        }
+      );
+
       if (ageHours < 48) {
         setOldestDataAge(`${ageHours}h ago`);
       } else {
         const ageDays = Math.floor(ageHours / 24);
         setOldestDataAge(`${ageDays}d ago`);
       }
+    } else {
+      await UnifiedLogger.debug(
+        "StaleDataBanner.checkStaleData",
+        "No stale data found",
+        {
+          totalQueries: queries.length,
+          successfulQueries: queries.filter(q => q.state.status === "success")
+            .length,
+        }
+      );
     }
   }, [queryClient, staleThresholdHours]);
 
@@ -124,7 +215,13 @@ export const StaleDataBanner: React.FC<StaleDataBannerProps> = ({
     checkDismissalStatus();
 
     // Check every 5 minutes
-    const interval = setInterval(checkStaleData, 5 * 60 * 1000);
+    const interval = setInterval(
+      () => {
+        checkStaleData();
+        checkDismissalStatus();
+      },
+      5 * 60 * 1000
+    );
     return () => clearInterval(interval);
   }, [checkStaleData, checkDismissalStatus]);
 
@@ -139,29 +236,98 @@ export const StaleDataBanner: React.FC<StaleDataBannerProps> = ({
 
   const handleRefresh = async () => {
     try {
-      // Invalidate all queries to trigger refetch
-      await queryClient.invalidateQueries();
-      onRefresh?.();
+      // Clear any existing timeout
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = null;
+      }
 
-      // Check stale data again after refresh attempt
-      setTimeout(checkStaleData, 1000);
+      await UnifiedLogger.info(
+        "StaleDataBanner.handleRefresh",
+        "Starting refresh of stale data"
+      );
+
+      // Trigger parent refresh (V2 hooks will fetch fresh data)
+      if (onRefresh) {
+        await Promise.resolve(onRefresh());
+      }
+
+      // Remove stale queries from cache entirely (clean slate approach)
+      // This is necessary because V2 system uses AsyncStorage, not React Query for data storage
+      const queries = queryClient.getQueryCache().getAll();
+      const staleThresholdMs = staleThresholdHours * 60 * 60 * 1000;
+      const now = Date.now();
+
+      let removedCount = 0;
+      queries.forEach(query => {
+        if (query.state.status === "success" && query.state.dataUpdatedAt) {
+          const age = now - query.state.dataUpdatedAt;
+          if (age > staleThresholdMs) {
+            queryClient.removeQueries({ queryKey: query.queryKey });
+            removedCount++;
+          }
+        }
+      });
+
+      await UnifiedLogger.info(
+        "StaleDataBanner.handleRefresh",
+        "Cleared stale queries from cache",
+        {
+          removedCount,
+        }
+      );
+
+      // Check stale data again after cleanup, only if still mounted
+      refreshTimeoutRef.current = setTimeout(() => {
+        if (isMountedRef.current) {
+          checkStaleData();
+        }
+        refreshTimeoutRef.current = null;
+      }, 500);
     } catch (error) {
-      console.warn("Failed to refresh data:", error);
+      await UnifiedLogger.error(
+        "StaleDataBanner.handleRefresh",
+        "Failed to refresh data",
+        { error }
+      );
     }
   };
 
   // Only show if:
-  // 1. Has stale data
-  // 2. User is offline OR data is VERY old (>48h)
-  // 3. Not dismissed recently
+  // 1. Has stale data (older than threshold, default 24h)
+  // 2. Not dismissed recently
   if (!hasStaleData || isDismissed) {
+    if (hasStaleData && isDismissed) {
+      void UnifiedLogger.debug(
+        "StaleDataBanner.render",
+        "Banner hidden - dismissed by user",
+        {
+          hasStaleData,
+          isDismissed,
+        }
+      );
+    } else if (!hasStaleData) {
+      void UnifiedLogger.debug(
+        "StaleDataBanner.render",
+        "Banner hidden - no stale data",
+        {
+          hasStaleData,
+          isDismissed,
+        }
+      );
+    }
     return null;
   }
 
-  // If online and data isn't that old (<48h), don't show (background refresh will handle it)
-  if (!isOffline && oldestDataAgeHours < 48) {
-    return null;
-  }
+  void UnifiedLogger.info("StaleDataBanner.render", "Banner shown", {
+    hasStaleData,
+    isDismissed,
+    oldestDataAge,
+    isOffline,
+  });
+
+  // Note: We show the banner whenever data exceeds the threshold (default 24h)
+  // regardless of online status. Users can dismiss it if they don't want to refresh.
 
   const combinedBannerStyles = [
     bannerStyles.banner,

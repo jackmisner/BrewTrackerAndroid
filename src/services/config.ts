@@ -30,6 +30,18 @@ export const AUTH_CONFIG = {
   PROFILE_FETCH_TIMEOUT: 5000, // 5 seconds
 } as const;
 
+export const QUERY_CLIENT_CONFIG = {
+  DEFAULT_STALE_TIME: 15 * 60 * 1000, // 15 minutes
+  DEFAULT_GC_TIME: Infinity, // Keep data indefinitely for offline access
+  NETWORK_TIMEOUT: 5000, // 5 seconds
+  MAX_RETRIES: 2, // Retry failed requests twice
+};
+
+export const QUERY_CLIENT_MUTATIONS_CONFIG = {
+  NETWORK_TIMEOUT: 5000, // 5 seconds
+  MAX_RETRIES: 1, // Retry failed mutations once
+};
+
 /**
  * Storage keys for secure storage
  * All user data and authentication tokens are stored using these keys

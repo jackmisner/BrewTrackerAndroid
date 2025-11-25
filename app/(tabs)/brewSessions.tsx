@@ -566,8 +566,6 @@ export default function BrewSessionsScreen() {
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      ) : currentBrewSessions.length === 0 ? (
-        renderEmptyState()
       ) : (
         <FlatList
           data={currentBrewSessions}
@@ -580,6 +578,7 @@ export default function BrewSessionsScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={renderEmptyState}
         />
       )}
 

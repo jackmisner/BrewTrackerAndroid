@@ -132,6 +132,7 @@ interface AuthContextValue {
 
   // JWT utilities
   getUserId: () => Promise<string | null>;
+  revalidateAuthStatus: () => Promise<void>;
 
   // Permission helpers
   canViewRecipes: () => PermissionCheck;
@@ -591,8 +592,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       setIsLoading(true);
       setError(null);
 
+      await UnifiedLogger.info("auth", "Attempting password login", {
+        hasUsername: !!credentials.username,
+        rememberDevice,
+      });
+
       const response = await ApiService.auth.login(credentials);
       const { access_token, user: userData } = response.data;
+
+      await UnifiedLogger.info("auth", "Password login successful", {
+        userId: userData.id,
+      });
 
       // Debug JWT token structure (development only)
       if (__DEV__) {
@@ -632,8 +642,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         }
       }
     } catch (error: any) {
-      console.error("Login failed:", error);
-      setError(error.response?.data?.message || "Login failed");
+      const errorMessage = error.response?.data?.message || "Login failed";
+      await UnifiedLogger.error("auth", "Password login failed", {
+        error: errorMessage,
+        statusCode: error.response?.status,
+      });
+      setError(errorMessage);
       throw error;
     } finally {
       setIsLoading(false);
@@ -1106,6 +1120,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   };
 
   /**
+   * Force re-validation of the current auth token
+   * Useful for testing or when token may have been modified externally
+   */
+  const revalidateAuthStatus = async (): Promise<void> => {
+    try {
+      const token = await ApiService.token.getToken();
+      const newStatus = await updateAuthStatus(token);
+      await UnifiedLogger.info("auth", "Auth status revalidated", {
+        newStatus,
+      });
+    } catch (error) {
+      await UnifiedLogger.error(
+        "auth",
+        "Failed to revalidate auth status",
+        error
+      );
+      throw error;
+    }
+  };
+
+  /**
    * Check if device token exists for quick login
    */
   const hasDeviceToken = async (): Promise<boolean> => {
@@ -1224,6 +1259,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
     // JWT utilities
     getUserId,
+    revalidateAuthStatus,
 
     // Permission helpers
     canViewRecipes,

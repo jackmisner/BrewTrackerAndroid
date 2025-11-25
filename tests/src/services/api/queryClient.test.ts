@@ -44,6 +44,7 @@ describe("queryClient", () => {
       expect(options.queries?.refetchOnReconnect).toBe(true);
       expect(options.queries?.refetchOnMount).toBe(false); // Cache-first strategy
       expect(options.queries?.networkMode).toBe("offlineFirst");
+      expect(options.queries?.retryDelay).toBeInstanceOf(Function);
     });
 
     it("should have correct default mutation options", () => {

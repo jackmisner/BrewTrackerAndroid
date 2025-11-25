@@ -64,6 +64,11 @@ interface DeveloperContextValue {
     removedTombstones: number;
     tombstoneNames: string[];
   }>;
+
+  // Cache manipulation actions (for testing)
+  makeQueryCacheStale: (ageHours: number) => Promise<void>;
+  clearQueryCache: () => Promise<void>;
+  invalidateAuthToken: (revalidateAuth?: () => Promise<void>) => Promise<void>;
 }
 
 /**
@@ -136,7 +141,7 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
             mode = JSON.parse(storedMode) as NetworkSimulationMode;
           } catch {
             // If JSON parsing fails, treat as raw string (legacy case)
-            if (typeof storedMode === "string" && storedMode !== "undefined") {
+            if (storedMode !== "undefined") {
               mode = storedMode as NetworkSimulationMode;
             }
           }
@@ -332,6 +337,147 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
     }
   };
 
+  /**
+   * Make React Query cache appear stale by modifying dataUpdatedAt timestamps
+   * Useful for testing stale data banners and cache invalidation
+   */
+  const makeQueryCacheStale = async (ageHours: number): Promise<void> => {
+    if (!isDeveloperMode) {
+      throw new Error(
+        "makeQueryCacheStale is only available in development mode"
+      );
+    }
+
+    try {
+      const { queryClient } = await import("@services/api/queryClient");
+      const queryCache = queryClient.getQueryCache();
+      const queries = queryCache.getAll();
+
+      const targetTimestamp = Date.now() - ageHours * 60 * 60 * 1000;
+
+      queries.forEach(query => {
+        // Update the dataUpdatedAt timestamp to make queries appear old
+        query.state.dataUpdatedAt = targetTimestamp;
+      });
+
+      await UnifiedLogger.info(
+        "DeveloperContext.makeQueryCacheStale",
+        `Made ${queries.length} queries appear ${ageHours} hours old`,
+        { ageHours, queryCount: queries.length }
+      );
+
+      console.log(
+        `Developer: Made ${queries.length} queries appear ${ageHours} hours old`
+      );
+    } catch (error) {
+      await UnifiedLogger.error(
+        "DeveloperContext.makeQueryCacheStale",
+        "Failed to make cache stale",
+        { error }
+      );
+      console.error("Failed to make cache stale:", error);
+      throw error;
+    }
+  };
+
+  /**
+   * Clear all React Query cache
+   * Useful for testing initial load states and cache behavior
+   */
+  const clearQueryCache = async (): Promise<void> => {
+    if (!isDeveloperMode) {
+      throw new Error("clearQueryCache is only available in development mode");
+    }
+
+    try {
+      const { queryClient } = await import("@services/api/queryClient");
+      await queryClient.clear();
+
+      await UnifiedLogger.info(
+        "DeveloperContext.clearQueryCache",
+        "Cleared all React Query cache"
+      );
+
+      console.log("Developer: Cleared all React Query cache");
+    } catch (error) {
+      await UnifiedLogger.error(
+        "DeveloperContext.clearQueryCache",
+        "Failed to clear cache",
+        { error }
+      );
+      console.error("Failed to clear cache:", error);
+      throw error;
+    }
+  };
+
+  /**
+   * Invalidate the current auth token to test expired/unauthenticated states
+   * Sets expiration to 1 hour ago and optionally triggers auth re-validation
+   *
+   * @param revalidateAuth - Optional callback to re-validate auth status after invalidation
+   */
+  const invalidateAuthToken = async (
+    revalidateAuth?: () => Promise<void>
+  ): Promise<void> => {
+    if (!isDeveloperMode) {
+      throw new Error(
+        "invalidateAuthToken is only available in development mode"
+      );
+    }
+
+    try {
+      const SecureStore = await import("expo-secure-store");
+      const { STORAGE_KEYS } = await import("@services/config");
+
+      // Get current token
+      const token = await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+      if (!token) {
+        console.log("Developer: No token to invalidate");
+        return;
+      }
+
+      // Decode and modify token (set exp to 1 hour ago)
+      const { base64Decode, base64Encode } = await import("@utils/base64");
+      const parts = token.split(".");
+      if (parts.length !== 3) {
+        throw new Error("Invalid JWT format");
+      }
+
+      const payload = JSON.parse(base64Decode(parts[1]));
+      payload.exp = Math.floor(Date.now() / 1000) - 3600; // 1 hour ago
+
+      // Encode modified payload
+      const modifiedPayload = base64Encode(JSON.stringify(payload));
+      const modifiedToken = `${parts[0]}.${modifiedPayload}.${parts[2]}`;
+
+      // Save modified token
+      await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, modifiedToken);
+
+      await UnifiedLogger.info(
+        "DeveloperContext.invalidateAuthToken",
+        "Invalidated auth token (set exp to 1 hour ago)"
+      );
+
+      console.log("Developer: Invalidated auth token");
+
+      // Trigger auth re-validation if callback provided
+      if (revalidateAuth) {
+        await revalidateAuth();
+        console.log(
+          "Developer: Auth status revalidated after token invalidation"
+        );
+      }
+    } catch (error) {
+      await UnifiedLogger.error(
+        "DeveloperContext.invalidateAuthToken",
+        "Failed to invalidate token",
+        { error }
+      );
+      console.error("Failed to invalidate token:", error);
+      throw error;
+    }
+  };
+
   const contextValue: DeveloperContextValue = {
     isDeveloperMode,
     networkSimulationMode,
@@ -343,6 +489,9 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
     toggleSimulatedOffline,
     resetDeveloperSettings,
     cleanupTombstones,
+    makeQueryCacheStale,
+    clearQueryCache,
+    invalidateAuthToken,
   };
 
   return (

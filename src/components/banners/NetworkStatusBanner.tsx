@@ -20,7 +20,13 @@
  */
 
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleProp,
+  ViewStyle,
+} from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useNetwork } from "@contexts/NetworkContext";
 import { useTheme } from "@contexts/ThemeContext";
@@ -41,7 +47,7 @@ interface NetworkStatusBannerProps {
   /**
    * Custom styling for the banner
    */
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 }
 
 /**

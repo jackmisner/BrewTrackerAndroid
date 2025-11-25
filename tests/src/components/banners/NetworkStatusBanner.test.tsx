@@ -56,7 +56,7 @@ jest.mock("@contexts/NetworkContext", () => ({
 }));
 
 // Clear the global mock from setupTests.js so we can test the real component
-jest.unmock("@components/banners/NetworkStatusBanner");
+jest.unmock("../../../../src/components/banners/NetworkStatusBanner");
 
 describe("NetworkStatusBanner", () => {
   const mockOnRetry = jest.fn();

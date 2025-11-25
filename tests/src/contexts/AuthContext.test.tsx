@@ -12,6 +12,16 @@ jest.mock("@services/config", () => ({
     DEVICE_TOKEN_TIMEOUT: 3000,
     PROFILE_FETCH_TIMEOUT: 5000,
   },
+  QUERY_CLIENT_CONFIG: {
+    DEFAULT_STALE_TIME: 15 * 60 * 1000, // 15 minutes
+    DEFAULT_GC_TIME: Infinity, // Keep data indefinitely for offline access
+    NETWORK_TIMEOUT: 5000, // 5 seconds
+    MAX_RETRIES: 2, // Retry failed requests twice
+  },
+  QUERY_CLIENT_MUTATIONS_CONFIG: {
+    NETWORK_TIMEOUT: 5000, // 5 seconds
+    MAX_RETRIES: 1, // Retry failed mutations once
+  },
 }));
 
 // Mock DeviceTokenService
