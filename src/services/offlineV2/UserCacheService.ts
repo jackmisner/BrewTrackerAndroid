@@ -2106,6 +2106,8 @@ export class UserCacheService {
           const isOfflineError =
             errorMessage.includes("Simulated offline mode") ||
             errorMessage.includes("Network request failed") ||
+            errorMessage.includes("Network Error") || // Axios network error
+            errorMessage.includes("ERR_NETWORK") || // Axios error code
             errorMessage.includes("offline") ||
             errorMessage.includes("ECONNREFUSED") ||
             errorMessage.includes("DEPENDENCY_ERROR") ||
