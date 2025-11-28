@@ -290,9 +290,13 @@ export default function DebugLogsScreen() {
             try {
               // Only clear user-specific data, preserve static cache
               const keysToDelete = [
-                "offline_v2_pending_operations",
-                "offline_v2_recipes",
-                "offline_v2_brew_sessions",
+                STORAGE_KEYS_V2.PENDING_OPERATIONS,
+                STORAGE_KEYS_V2.USER_RECIPES,
+                STORAGE_KEYS_V2.USER_BREW_SESSIONS,
+                STORAGE_KEYS_V2.USER_FERMENTATION_ENTRIES,
+                STORAGE_KEYS_V2.TEMP_ID_MAPPINGS,
+                STORAGE_KEYS_V2.SYNC_METADATA,
+                STORAGE_KEYS_V2.CONFLICT_QUEUE,
               ];
 
               await Promise.all(
@@ -316,11 +320,21 @@ export default function DebugLogsScreen() {
             try {
               // Clear ALL offline data including cache
               const keysToDelete = [
-                "offline_v2_pending_operations",
-                "offline_v2_recipes",
-                "offline_v2_brew_sessions",
-                "offline_v2_ingredients_cache",
-                "offline_v2_beer_styles_cache",
+                // User data
+                STORAGE_KEYS_V2.PENDING_OPERATIONS,
+                STORAGE_KEYS_V2.USER_RECIPES,
+                STORAGE_KEYS_V2.USER_BREW_SESSIONS,
+                STORAGE_KEYS_V2.USER_FERMENTATION_ENTRIES,
+                STORAGE_KEYS_V2.TEMP_ID_MAPPINGS,
+                STORAGE_KEYS_V2.SYNC_METADATA,
+                STORAGE_KEYS_V2.CONFLICT_QUEUE,
+                // Static data caches
+                STORAGE_KEYS_V2.INGREDIENTS_DATA,
+                STORAGE_KEYS_V2.INGREDIENTS_VERSION,
+                STORAGE_KEYS_V2.BEER_STYLES_DATA,
+                STORAGE_KEYS_V2.BEER_STYLES_VERSION,
+                STORAGE_KEYS_V2.OFFLINE_CONFIG,
+                STORAGE_KEYS_V2.CACHE_STATS,
               ];
 
               await Promise.all(

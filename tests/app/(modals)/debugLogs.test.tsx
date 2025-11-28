@@ -393,16 +393,16 @@ describe("DebugLogsScreen", () => {
 
       // Verify only user data keys were removed (not cache)
       expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith(
-        "offline_v2_pending_operations"
+        STORAGE_KEYS_V2.PENDING_OPERATIONS
       );
       expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith(
-        "offline_v2_recipes"
+        STORAGE_KEYS_V2.USER_RECIPES
       );
       expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith(
-        "offline_v2_brew_sessions"
+        STORAGE_KEYS_V2.USER_BREW_SESSIONS
       );
       expect(mockAsyncStorage.removeItem).not.toHaveBeenCalledWith(
-        "offline_v2_ingredients_cache"
+        STORAGE_KEYS_V2.INGREDIENTS_DATA
       );
 
       await waitFor(() => {
@@ -446,13 +446,13 @@ describe("DebugLogsScreen", () => {
 
       // Verify all keys including cache were removed
       expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith(
-        "offline_v2_pending_operations"
+        STORAGE_KEYS_V2.PENDING_OPERATIONS
       );
       expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith(
-        "offline_v2_ingredients_cache"
+        STORAGE_KEYS_V2.INGREDIENTS_DATA
       );
       expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith(
-        "offline_v2_beer_styles_cache"
+        STORAGE_KEYS_V2.BEER_STYLES_DATA
       );
 
       await waitFor(() => {
