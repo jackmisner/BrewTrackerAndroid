@@ -2103,15 +2103,20 @@ export class UserCacheService {
           );
 
           // Check if this is an offline/network error - these shouldn't count as retries
+          // Check both error message and axios error code property
+          const axiosErrorCode = (error as any)?.code;
           const isOfflineError =
             errorMessage.includes("Simulated offline mode") ||
             errorMessage.includes("Network request failed") ||
-            errorMessage.includes("Network Error") || // Axios network error
-            errorMessage.includes("ERR_NETWORK") || // Axios error code
+            errorMessage.includes("Network Error") || // Axios network error message
             errorMessage.includes("offline") ||
             errorMessage.includes("ECONNREFUSED") ||
             errorMessage.includes("DEPENDENCY_ERROR") ||
-            errorMessage.includes("Parent brew session not synced yet");
+            errorMessage.includes("Parent brew session not synced yet") ||
+            axiosErrorCode === "ERR_NETWORK" || // Axios error code property
+            axiosErrorCode === "ECONNREFUSED" ||
+            axiosErrorCode === "ETIMEDOUT" ||
+            axiosErrorCode === "ENOTFOUND";
 
           if (isOfflineError) {
             // Offline error - don't increment retry count, just stop syncing
