@@ -80,6 +80,10 @@ export default function ProfileScreen() {
     router.push("/(modals)/(settings)/settings");
   };
 
+  const handleDebugLogsPress = () => {
+    router.push("/(modals)/debugLogs");
+  };
+
   const handleHelpAndSupportPress = () => {
     router.push("/(modals)/(profile)/helpAndSupport");
   };
@@ -166,6 +170,23 @@ export default function ProfileScreen() {
             color={theme.colors.textSecondary}
           />
           <Text style={styles.menuText}>About</Text>
+          <MaterialIcons
+            name="chevron-right"
+            size={24}
+            color={theme.colors.textMuted}
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={handleDebugLogsPress}
+        >
+          <MaterialIcons
+            name="bug-report"
+            size={24}
+            color={theme.colors.textSecondary}
+          />
+          <Text style={styles.menuText}>Debug Logs</Text>
           <MaterialIcons
             name="chevron-right"
             size={24}

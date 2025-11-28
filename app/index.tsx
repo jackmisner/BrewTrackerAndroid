@@ -34,13 +34,17 @@
  * - Error handling for authentication and data loading failures
  */
 import React, { useEffect, useState } from "react";
-import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Text, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@contexts/AuthContext";
+import { useTheme } from "@contexts/ThemeContext";
 import { SplashScreen } from "@src/components/splash/SplashScreen";
+import { indexStyles } from "@styles/app/indexStyles";
 
 export default function Index() {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const { colors } = useTheme();
+  const styles = indexStyles(colors);
   const router = useRouter();
   const [showSplash, setShowSplash] = useState(false);
 
@@ -79,22 +83,8 @@ export default function Index() {
   // Show loading screen while determining auth state
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color="#f4511e" />
+      <ActivityIndicator size="large" color={colors.primary} />
       <Text style={styles.loadingText}>Loading BrewTracker...</Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: "#666",
-  },
-});

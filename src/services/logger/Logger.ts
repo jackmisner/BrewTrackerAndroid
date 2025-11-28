@@ -713,6 +713,51 @@ export class Logger {
       };
     }
   }
+
+  /**
+   * Get recent log entries from all log files
+   * @param maxLines Maximum number of log lines to return (default: 100)
+   * @returns Array of recent log lines
+   */
+  static async getRecentLogs(maxLines: number = 100): Promise<string[]> {
+    try {
+      if (!this.initialized) {
+        await this.initialize();
+      }
+
+      const files = await this.getLogFiles();
+      if (files.length === 0) {
+        return ["No log files found"];
+      }
+
+      const allLogs: string[] = [];
+
+      // Read files in reverse order (newest first)
+      for (const filename of files) {
+        const content = await this.readLogFile(filename);
+        if (content) {
+          const lines = content
+            .split("\n")
+            .filter(line => line.trim())
+            .reverse();
+          allLogs.push(...lines);
+
+          // Stop if we have enough logs
+          if (allLogs.length >= maxLines) {
+            break;
+          }
+        }
+      }
+
+      // Return most recent entries
+      return allLogs.slice(0, maxLines);
+    } catch (error) {
+      console.warn("Failed to get recent logs:", error);
+      return [
+        `Error loading logs: ${error instanceof Error ? error.message : "Unknown error"}`,
+      ];
+    }
+  }
 }
 
 // Initialize logger on app start
