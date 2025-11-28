@@ -267,6 +267,14 @@ export const TEST_IDS = {
     hopScheduleSubtitle: "hop-schedule-subtitle",
   },
 
+  // Debug Logs
+  debugLogs: {
+    backButton: "debug-logs-back-button",
+    refreshButton: "debug-logs-refresh-button",
+    shareButton: "debug-logs-share-button",
+    deleteButton: "debug-logs-delete-button",
+  },
+
   // Dynamic Pattern Generators
   patterns: PATTERN_GENERATORS,
 } as const;
