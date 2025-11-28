@@ -16,12 +16,18 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { Logger } from "@services/logger/Logger";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { TEST_IDS } from "@constants/testIDs";
+import {
+  redactSensitiveData,
+  redactLogs,
+  getDebugDataWarning,
+} from "@utils/redactPII";
 
 type ViewMode = "logs" | "storage";
 
@@ -35,9 +41,10 @@ export default function DebugLogsScreen() {
   const loadLogs = useCallback(async () => {
     try {
       setLoading(true);
-      // Get last 100 log entries
+      // Get last 100 log entries and redact PII
       const recentLogs = await Logger.getRecentLogs(100);
-      setLogs(recentLogs.join("\n"));
+      const redactedLogs = redactLogs(recentLogs);
+      setLogs(redactedLogs.join("\n"));
     } catch (error) {
       setLogs(
         `Error loading logs: ${error instanceof Error ? error.message : "Unknown error"}`
@@ -72,16 +79,18 @@ export default function DebugLogsScreen() {
             // Parse and format JSON for readability
             try {
               const parsed = JSON.parse(value);
+              // Redact sensitive data from parsed object
+              const redacted = redactSensitiveData(parsed, key);
 
               // Special handling for different data types
               if (key === "offline_v2_pending_operations") {
                 storageInfo.push(`\n📋 ${key}:`);
                 storageInfo.push(
-                  `  Count: ${Array.isArray(parsed) ? parsed.length : "N/A"}`
+                  `  Count: ${Array.isArray(redacted) ? redacted.length : "N/A"}`
                 );
-                if (Array.isArray(parsed) && parsed.length > 0) {
+                if (Array.isArray(redacted) && redacted.length > 0) {
                   storageInfo.push(`  Operations:`);
-                  parsed.forEach((op: any, index: number) => {
+                  redacted.forEach((op: any, index: number) => {
                     storageInfo.push(
                       `    ${index + 1}. ${op.type} ${op.entityType} (${op.id || op.tempId})`
                     );
@@ -96,21 +105,21 @@ export default function DebugLogsScreen() {
                 }
               } else if (key.includes("_cache")) {
                 storageInfo.push(`\n💾 ${key}:`);
-                storageInfo.push(`  Version: ${parsed.version || "N/A"}`);
+                storageInfo.push(`  Version: ${redacted.version || "N/A"}`);
                 storageInfo.push(
-                  `  Cached at: ${parsed.cached_at ? new Date(parsed.cached_at).toLocaleString() : "N/A"}`
+                  `  Cached at: ${redacted.cached_at ? new Date(redacted.cached_at).toLocaleString() : "N/A"}`
                 );
                 storageInfo.push(
-                  `  Item count: ${Array.isArray(parsed.data) ? parsed.data.length : "N/A"}`
+                  `  Item count: ${Array.isArray(redacted.data) ? redacted.data.length : "N/A"}`
                 );
               } else if (
                 key.includes("recipes") ||
                 key.includes("brew_sessions")
               ) {
                 storageInfo.push(`\n📦 ${key}:`);
-                const items = Array.isArray(parsed)
-                  ? parsed
-                  : parsed.data || [];
+                const items = Array.isArray(redacted)
+                  ? redacted
+                  : redacted.data || [];
                 storageInfo.push(`  Item count: ${items.length}`);
                 if (items.length > 0) {
                   storageInfo.push(`  Items:`);
@@ -134,12 +143,13 @@ export default function DebugLogsScreen() {
                 }
               } else {
                 storageInfo.push(`\n🔧 ${key}:`);
-                storageInfo.push(JSON.stringify(parsed, null, 2));
+                storageInfo.push(JSON.stringify(redacted, null, 2));
               }
             } catch {
-              // Not JSON, show raw value (truncated)
+              // Not JSON, show raw value (truncated and redacted)
               storageInfo.push(`\n🔧 ${key}:`);
-              storageInfo.push(value.substring(0, 500));
+              const truncated = value.substring(0, 500);
+              storageInfo.push(truncated);
               if (value.length > 500) {
                 storageInfo.push("... (truncated)");
               }
@@ -181,20 +191,34 @@ export default function DebugLogsScreen() {
   }, [loadCurrentView]);
 
   const handleShare = async () => {
-    try {
-      const content = viewMode === "logs" ? logs : storageData;
-      const title =
-        viewMode === "logs"
-          ? "BrewTracker Debug Logs"
-          : "BrewTracker Storage Data";
+    Alert.alert(
+      "Share Debug Data",
+      `This will share ${viewMode === "logs" ? "app logs" : "storage data"} for debugging.\n\n✅ Sensitive data has been redacted:\n• Auth tokens & session IDs\n• Email addresses & credentials\n• User profile information\n• API keys & secrets\n\n⚠️ Recipe author names preserved for context.\n\n⚠️ DO NOT SHARE PUBLICLY\nOnly share with developers or support staff.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Share",
+          onPress: async () => {
+            try {
+              const content = viewMode === "logs" ? logs : storageData;
+              const warning = getDebugDataWarning();
+              const title =
+                viewMode === "logs"
+                  ? "BrewTracker Debug Logs"
+                  : "BrewTracker Storage Data";
 
-      await Share.share({
-        message: content,
-        title,
-      });
-    } catch (error) {
-      console.error("Failed to share:", error);
-    }
+              await Share.share({
+                message: warning + content,
+                title,
+              });
+            } catch (error) {
+              console.error("Failed to share:", error);
+              Alert.alert("Error", "Failed to share debug data");
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleClearLogs = async () => {
@@ -210,8 +234,8 @@ export default function DebugLogsScreen() {
 
   const handleClearStorage = async () => {
     Alert.alert(
-      "Clear User Data?",
-      "This will delete offline recipes, brew sessions, and pending operations. Cache data (ingredients/beer styles) will be preserved.",
+      "Clear Storage Data",
+      "Choose what to delete from local storage:\n\n🔹 User Data Only:\n• Offline recipes & brew sessions\n• Pending sync operations\n• Preserves cached ingredients/beer styles\n\n🔸 Everything:\n• All user data (above)\n• Cached ingredients & beer styles\n• You will need to re-download static data\n\n⚠️ This does NOT delete synced server data.\nAuthentication tokens are NOT affected.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -230,7 +254,10 @@ export default function DebugLogsScreen() {
                 keysToDelete.map(key => AsyncStorage.removeItem(key))
               );
               await loadStorageData();
-              Alert.alert("Success", "User data cleared. Cache preserved.");
+              Alert.alert(
+                "User Data Cleared",
+                "Offline recipes, brew sessions, and pending operations have been removed.\n\nCached ingredients and beer styles preserved."
+              );
             } catch (error) {
               console.error("Failed to clear storage:", error);
               Alert.alert("Error", "Failed to clear user data");
@@ -255,7 +282,10 @@ export default function DebugLogsScreen() {
                 keysToDelete.map(key => AsyncStorage.removeItem(key))
               );
               await loadStorageData();
-              Alert.alert("Success", "All offline data cleared");
+              Alert.alert(
+                "All Data Cleared",
+                "All offline storage has been cleared.\n\nYou will need to re-download cached ingredients and beer styles on next use.\n\nServer data and authentication are unaffected."
+              );
             } catch (error) {
               console.error("Failed to clear all storage:", error);
               Alert.alert("Error", "Failed to clear all data");
@@ -300,6 +330,26 @@ export default function DebugLogsScreen() {
     content: {
       flex: 1,
       padding: 16,
+    },
+    warningBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      marginBottom: 12,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.success,
+    },
+    warningIcon: {
+      marginRight: 8,
+    },
+    warningText: {
+      flex: 1,
+      fontSize: 12,
+      color: colors.success,
+      fontWeight: "600",
     },
     logsContainer: {
       flex: 1,
@@ -352,7 +402,7 @@ export default function DebugLogsScreen() {
   });
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -442,6 +492,21 @@ export default function DebugLogsScreen() {
 
       {/* Content */}
       <View style={styles.content}>
+        {/* PII Redaction Warning Banner */}
+        {!loading && (
+          <View style={styles.warningBanner}>
+            <MaterialIcons
+              name="security"
+              size={16}
+              color={colors.success}
+              style={styles.warningIcon}
+            />
+            <Text style={styles.warningText}>
+              Sensitive data redacted • Safe for sharing with developers
+            </Text>
+          </View>
+        )}
+
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -459,6 +524,6 @@ export default function DebugLogsScreen() {
           </ScrollView>
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

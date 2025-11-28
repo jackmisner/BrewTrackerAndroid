@@ -20,6 +20,9 @@ jest.mock("react-native", () => {
     Alert: {
       alert: jest.fn(),
     },
+    Share: {
+      share: jest.fn(),
+    },
     StyleSheet: {
       create: jest.fn(styles => styles),
       flatten: jest.fn(styles => styles),

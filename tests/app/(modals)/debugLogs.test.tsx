@@ -21,6 +21,15 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   getAllKeys: jest.fn(),
 }));
 
+jest.mock("react-native-safe-area-context", () => {
+  return {
+    SafeAreaView: jest.fn().mockImplementation(({ children }) => children),
+    useSafeAreaInsets: jest
+      .fn()
+      .mockReturnValue({ top: 0, bottom: 0, left: 0, right: 0 }),
+  };
+});
+
 jest.mock("expo-router", () => ({
   router: {
     back: jest.fn(),
@@ -337,8 +346,8 @@ describe("DebugLogsScreen", () => {
 
       // Verify alert was called with proper options
       expect(Alert.alert).toHaveBeenCalledWith(
-        "Clear User Data?",
-        expect.stringContaining("offline recipes"),
+        "Clear Storage Data",
+        expect.stringContaining("Offline recipes"),
         expect.arrayContaining([
           expect.objectContaining({ text: "Cancel" }),
           expect.objectContaining({ text: "Clear User Data" }),
@@ -392,8 +401,10 @@ describe("DebugLogsScreen", () => {
 
       await waitFor(() => {
         expect(Alert.alert).toHaveBeenCalledWith(
-          "Success",
-          "User data cleared. Cache preserved."
+          "User Data Cleared",
+          expect.stringContaining(
+            "Offline recipes, brew sessions, and pending operations"
+          )
         );
       });
     });
@@ -440,8 +451,8 @@ describe("DebugLogsScreen", () => {
 
       await waitFor(() => {
         expect(Alert.alert).toHaveBeenCalledWith(
-          "Success",
-          "All offline data cleared"
+          "All Data Cleared",
+          expect.stringContaining("All offline storage has been cleared")
         );
       });
     });
