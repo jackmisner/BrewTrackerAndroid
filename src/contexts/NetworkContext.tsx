@@ -318,13 +318,25 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
       if (shouldRefresh) {
         void UnifiedLogger.info(
           "NetworkContext.handleStateChange",
-          "Coming back online - triggering pending operations sync"
+          "Coming back online - resetting retry counts and triggering pending operations sync"
         );
 
         // Import and trigger UserCacheService sync for pending operations
         import("@services/offlineV2/UserCacheService")
           .then(({ UserCacheService }) => {
-            return UserCacheService.syncPendingOperations()
+            // CRITICAL: Reset retry counts first to give operations fresh attempts
+            return UserCacheService.resetRetryCountsForPendingOperations()
+              .then(resetCount => {
+                if (resetCount > 0) {
+                  void UnifiedLogger.info(
+                    "NetworkContext.handleStateChange",
+                    `Reset retry counts for ${resetCount} pending operations`,
+                    { resetCount }
+                  );
+                }
+                // Now sync with fresh retry counts
+                return UserCacheService.syncPendingOperations();
+              })
               .then(result => {
                 void UnifiedLogger.info(
                   "NetworkContext.handleStateChange",

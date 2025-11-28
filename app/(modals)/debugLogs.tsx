@@ -29,6 +29,7 @@ import {
   getDebugDataWarning,
 } from "@utils/redactPII";
 import { debugLogsStyles } from "@styles/modals/debugLogsStyles";
+import { STORAGE_KEYS_V2 } from "@src/types/offlineV2";
 
 type ViewMode = "logs" | "storage";
 
@@ -60,15 +61,26 @@ export default function DebugLogsScreen() {
     try {
       setLoading(true);
 
-      // Keys to inspect for offline debugging
+      // User-friendly name mapping for storage keys
+      const keyDisplayNames: Record<string, string> = {
+        [STORAGE_KEYS_V2.PENDING_OPERATIONS]: "Pending Sync Operations",
+        [STORAGE_KEYS_V2.USER_RECIPES]: "Cached Recipes",
+        [STORAGE_KEYS_V2.USER_BREW_SESSIONS]: "Cached Brew Sessions",
+        [STORAGE_KEYS_V2.INGREDIENTS_DATA]: "Ingredients Database",
+        [STORAGE_KEYS_V2.BEER_STYLES_DATA]: "Beer Styles Database",
+        network_state: "Network State",
+        userData: "User Profile Data",
+      };
+
+      // Keys to inspect for offline debugging (using centralized STORAGE_KEYS_V2)
       const keysToInspect = [
-        "offline_v2_pending_operations",
-        "offline_v2_recipes",
-        "offline_v2_brew_sessions",
-        "offline_v2_ingredients_cache",
-        "offline_v2_beer_styles_cache",
-        "network_state",
-        "userData",
+        STORAGE_KEYS_V2.PENDING_OPERATIONS,
+        STORAGE_KEYS_V2.USER_RECIPES,
+        STORAGE_KEYS_V2.USER_BREW_SESSIONS,
+        STORAGE_KEYS_V2.INGREDIENTS_DATA,
+        STORAGE_KEYS_V2.BEER_STYLES_DATA,
+        "network_state", // Legacy key not in STORAGE_KEYS_V2
+        "userData", // Legacy key not in STORAGE_KEYS_V2
       ];
 
       const storageInfo: string[] = [];
@@ -77,16 +89,37 @@ export default function DebugLogsScreen() {
       for (const key of keysToInspect) {
         try {
           const value = await AsyncStorage.getItem(key);
+          const displayName = keyDisplayNames[key] || key;
+
           if (value) {
             // Parse and format JSON for readability
             try {
               const parsed = JSON.parse(value);
+
+              // Get counts BEFORE redaction (redaction truncates arrays)
+              let originalItemCount: number | null = null;
+              if (
+                key === STORAGE_KEYS_V2.INGREDIENTS_DATA ||
+                key === STORAGE_KEYS_V2.BEER_STYLES_DATA
+              ) {
+                // Static data structure: { data: T[], version, cached_at, expires_never }
+                originalItemCount = Array.isArray(parsed.data)
+                  ? parsed.data.length
+                  : 0;
+              } else if (
+                key === STORAGE_KEYS_V2.USER_RECIPES ||
+                key === STORAGE_KEYS_V2.USER_BREW_SESSIONS
+              ) {
+                // User data structure: SyncableItem<T>[]
+                originalItemCount = Array.isArray(parsed) ? parsed.length : 0;
+              }
+
               // Redact sensitive data from parsed object
               const redacted = redactSensitiveData(parsed, key);
 
               // Special handling for different data types
-              if (key === "offline_v2_pending_operations") {
-                storageInfo.push(`\n📋 ${key}:`);
+              if (key === STORAGE_KEYS_V2.PENDING_OPERATIONS) {
+                storageInfo.push(`\n📋 ${displayName}:`);
                 storageInfo.push(
                   `  Count: ${Array.isArray(redacted) ? redacted.length : "N/A"}`
                 );
@@ -105,38 +138,45 @@ export default function DebugLogsScreen() {
                     }
                   });
                 }
-              } else if (key.includes("_cache")) {
-                storageInfo.push(`\n💾 ${key}:`);
+              } else if (
+                key.includes("_cache") ||
+                key === STORAGE_KEYS_V2.INGREDIENTS_DATA ||
+                key === STORAGE_KEYS_V2.BEER_STYLES_DATA
+              ) {
+                storageInfo.push(`\n💾 ${displayName}:`);
                 storageInfo.push(`  Version: ${redacted.version || "N/A"}`);
                 storageInfo.push(
                   `  Cached at: ${redacted.cached_at ? new Date(redacted.cached_at).toLocaleString() : "N/A"}`
                 );
-                storageInfo.push(
-                  `  Item count: ${Array.isArray(redacted.data) ? redacted.data.length : "N/A"}`
-                );
+                // Use originalItemCount from before redaction (redaction truncates arrays)
+                storageInfo.push(`  Item count: ${originalItemCount ?? "N/A"}`);
               } else if (
-                key.includes("recipes") ||
-                key.includes("brew_sessions")
+                key === STORAGE_KEYS_V2.USER_RECIPES ||
+                key === STORAGE_KEYS_V2.USER_BREW_SESSIONS
               ) {
-                storageInfo.push(`\n📦 ${key}:`);
+                storageInfo.push(`\n📦 ${displayName}:`);
+                // Use originalItemCount from before redaction
+                storageInfo.push(`  Item count: ${originalItemCount ?? "N/A"}`);
+                // Get items from redacted data for display
                 const items = Array.isArray(redacted)
                   ? redacted
                   : redacted.data || [];
-                storageInfo.push(`  Item count: ${items.length}`);
                 if (items.length > 0) {
                   storageInfo.push(`  Items:`);
                   items.slice(0, 5).forEach((item: any, index: number) => {
-                    storageInfo.push(
-                      `    ${index + 1}. ${item.name || item.id || "Unknown"}`
-                    );
-                    storageInfo.push(
-                      `       ID: ${item.id || item.tempId || "N/A"}`
-                    );
-                    storageInfo.push(
-                      `       Temp: ${item.tempId ? "YES" : "NO"}`
-                    );
+                    // SyncableItem structure: { id, data: Recipe/BrewSession, ... }
+                    const name = item.data?.name || item.name || "Unknown";
+                    const itemId = item.id || item.data?.id || "N/A";
+                    const isTempId = itemId.startsWith("temp_");
+
+                    storageInfo.push(`    ${index + 1}. ${name}`);
+                    storageInfo.push(`       ID: ${itemId}`);
+                    storageInfo.push(`       Temp: ${isTempId ? "YES" : "NO"}`);
                     storageInfo.push(
                       `       Modified: ${item.lastModified ? new Date(item.lastModified).toLocaleString() : "N/A"}`
+                    );
+                    storageInfo.push(
+                      `       Sync Status: ${item.syncStatus || "unknown"}`
                     );
                   });
                   if (items.length > 5) {
@@ -144,12 +184,12 @@ export default function DebugLogsScreen() {
                   }
                 }
               } else {
-                storageInfo.push(`\n🔧 ${key}:`);
+                storageInfo.push(`\n🔧 ${displayName}:`);
                 storageInfo.push(JSON.stringify(redacted, null, 2));
               }
             } catch {
               // Not JSON, redact and show raw value (truncated)
-              storageInfo.push(`\n🔧 ${key}:`);
+              storageInfo.push(`\n🔧 ${displayName}:`);
               // Redact PII from raw string value
               const redactedValue = value ? redactLogEntry(value) : "";
               const truncated = redactedValue.substring(0, 500);
@@ -159,11 +199,12 @@ export default function DebugLogsScreen() {
               }
             }
           } else {
-            storageInfo.push(`\n❌ ${key}: (empty)`);
+            storageInfo.push(`\n❌ ${displayName}: (empty)`);
           }
         } catch (error) {
+          const displayName = keyDisplayNames[key] || key;
           storageInfo.push(
-            `\n⚠️ ${key}: Error reading - ${error instanceof Error ? error.message : "Unknown error"}`
+            `\n⚠️ ${displayName}: Error reading - ${error instanceof Error ? error.message : "Unknown error"}`
           );
         }
       }

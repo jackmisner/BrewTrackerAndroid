@@ -6,6 +6,7 @@ import { Logger } from "@services/logger/Logger";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert, Share } from "react-native";
 import { TEST_IDS } from "@constants/testIDs";
+import { STORAGE_KEYS_V2 } from "@src/types/offlineV2";
 
 // Mock dependencies
 jest.mock("@services/logger/Logger", () => ({
@@ -199,7 +200,7 @@ describe("DebugLogsScreen", () => {
       // Mock AsyncStorage data
       mockAsyncStorage.getItem.mockImplementation((key: string) => {
         const mockData: Record<string, string> = {
-          offline_v2_pending_operations: JSON.stringify([
+          [STORAGE_KEYS_V2.PENDING_OPERATIONS]: JSON.stringify([
             {
               id: "op1",
               type: "create",
@@ -209,15 +210,20 @@ describe("DebugLogsScreen", () => {
               retryCount: 0,
             },
           ]),
-          offline_v2_recipes: JSON.stringify([
+          [STORAGE_KEYS_V2.USER_RECIPES]: JSON.stringify([
             {
-              id: "recipe1",
-              name: "Test Recipe",
+              id: "temp_123",
+              data: {
+                name: "Test Recipe",
+                id: "temp_123",
+              },
               tempId: "temp_123",
               lastModified: Date.now(),
+              syncStatus: "pending",
+              needsSync: true,
             },
           ]),
-          offline_v2_ingredients_cache: JSON.stringify({
+          [STORAGE_KEYS_V2.INGREDIENTS_DATA]: JSON.stringify({
             version: "1.0",
             cached_at: Date.now(),
             data: [{ id: "ing1", name: "Malt" }],
@@ -227,9 +233,9 @@ describe("DebugLogsScreen", () => {
       });
 
       mockAsyncStorage.getAllKeys.mockResolvedValue([
-        "offline_v2_pending_operations",
-        "offline_v2_recipes",
-        "offline_v2_ingredients_cache",
+        STORAGE_KEYS_V2.PENDING_OPERATIONS,
+        STORAGE_KEYS_V2.USER_RECIPES,
+        STORAGE_KEYS_V2.INGREDIENTS_DATA,
         "other_key",
       ]);
     });
