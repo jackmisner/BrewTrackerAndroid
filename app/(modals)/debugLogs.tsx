@@ -30,6 +30,7 @@ import {
 } from "@utils/redactPII";
 import { debugLogsStyles } from "@styles/modals/debugLogsStyles";
 import { STORAGE_KEYS_V2 } from "@src/types/offlineV2";
+import { isTempId } from "@/src/utils/recipeUtils";
 
 type ViewMode = "logs" | "storage";
 
@@ -167,11 +168,11 @@ export default function DebugLogsScreen() {
                     // SyncableItem structure: { id, data: Recipe/BrewSession, ... }
                     const name = item.data?.name || item.name || "Unknown";
                     const itemId = item.id || item.data?.id || "N/A";
-                    const isTempId = itemId.startsWith("temp_");
+                    const isTemp = isTempId(itemId);
 
                     storageInfo.push(`    ${index + 1}. ${name}`);
                     storageInfo.push(`       ID: ${itemId}`);
-                    storageInfo.push(`       Temp: ${isTempId ? "YES" : "NO"}`);
+                    storageInfo.push(`       Temp: ${isTemp ? "YES" : "NO"}`);
                     storageInfo.push(
                       `       Modified: ${item.lastModified ? new Date(item.lastModified).toLocaleString() : "N/A"}`
                     );
