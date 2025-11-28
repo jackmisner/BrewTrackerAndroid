@@ -2226,6 +2226,60 @@ export class UserCacheService {
   }
 
   /**
+   * Reset retry counts for all pending operations
+   * Call this when network connectivity is restored to give operations fresh retry attempts
+   */
+  static async resetRetryCountsForPendingOperations(): Promise<number> {
+    return await withKeyQueue(STORAGE_KEYS_V2.PENDING_OPERATIONS, async () => {
+      try {
+        const cached = await AsyncStorage.getItem(
+          STORAGE_KEYS_V2.PENDING_OPERATIONS
+        );
+        if (!cached) {
+          return 0;
+        }
+
+        const operations: PendingOperation[] = JSON.parse(cached);
+        let resetCount = 0;
+
+        // Reset retry count to 0 for all operations
+        const updatedOperations = operations.map(op => {
+          if (op.retryCount > 0) {
+            resetCount++;
+            return { ...op, retryCount: 0 };
+          }
+          return op;
+        });
+
+        if (resetCount > 0) {
+          await AsyncStorage.setItem(
+            STORAGE_KEYS_V2.PENDING_OPERATIONS,
+            JSON.stringify(updatedOperations)
+          );
+
+          await UnifiedLogger.info(
+            "UserCacheService.resetRetryCountsForPendingOperations",
+            `Reset retry counts for ${resetCount} pending operations`,
+            { resetCount, totalOperations: operations.length }
+          );
+        }
+
+        return resetCount;
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        await UnifiedLogger.error(
+          "UserCacheService.resetRetryCountsForPendingOperations",
+          `Failed to reset retry counts: ${errorMessage}`,
+          { error: errorMessage }
+        );
+        console.error("Error resetting retry counts:", error);
+        return 0;
+      }
+    });
+  }
+
+  /**
    * Debug helper: Find recipes with temp IDs that are stuck (no pending operations)
    */
   static async findStuckRecipes(userId: string): Promise<{
