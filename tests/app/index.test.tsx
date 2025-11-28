@@ -21,6 +21,16 @@ jest.mock("@contexts/AuthContext", () => ({
   }),
 }));
 
+jest.mock("@contexts/ThemeContext", () => ({
+  useTheme: () => ({
+    colors: {
+      primary: "#0000ff",
+      background: "#ffffff",
+      text: "#000000",
+    },
+  }),
+}));
+
 describe("Index", () => {
   it("should render without crashing", () => {
     expect(() => {

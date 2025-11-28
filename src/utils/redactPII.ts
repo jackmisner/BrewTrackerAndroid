@@ -187,7 +187,7 @@ export function redactLogEntry(logEntry: string): string {
     },
     // Email addresses anywhere in logs
     {
-      pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
+      pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g,
       replacement: REDACTED + "@example.com",
     },
   ];

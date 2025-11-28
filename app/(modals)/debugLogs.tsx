@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Share,
-  StyleSheet,
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -26,13 +25,16 @@ import { TEST_IDS } from "@constants/testIDs";
 import {
   redactSensitiveData,
   redactLogs,
+  redactLogEntry,
   getDebugDataWarning,
 } from "@utils/redactPII";
+import { debugLogsStyles } from "@styles/modals/debugLogsStyles";
 
 type ViewMode = "logs" | "storage";
 
 export default function DebugLogsScreen() {
   const { colors } = useTheme();
+  const styles = debugLogsStyles(colors);
   const [logs, setLogs] = useState<string>("");
   const [storageData, setStorageData] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -146,11 +148,13 @@ export default function DebugLogsScreen() {
                 storageInfo.push(JSON.stringify(redacted, null, 2));
               }
             } catch {
-              // Not JSON, show raw value (truncated and redacted)
+              // Not JSON, redact and show raw value (truncated)
               storageInfo.push(`\n🔧 ${key}:`);
-              const truncated = value.substring(0, 500);
+              // Redact PII from raw string value
+              const redactedValue = value ? redactLogEntry(value) : "";
+              const truncated = redactedValue.substring(0, 500);
               storageInfo.push(truncated);
-              if (value.length > 500) {
+              if (redactedValue.length > 500) {
                 storageInfo.push("... (truncated)");
               }
             }
@@ -295,111 +299,6 @@ export default function DebugLogsScreen() {
       ]
     );
   };
-
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    headerLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-    },
-    headerTitle: {
-      fontSize: 20,
-      fontWeight: "bold",
-      color: colors.text,
-    },
-    headerActions: {
-      flexDirection: "row",
-      gap: 12,
-    },
-    iconButton: {
-      padding: 8,
-    },
-    content: {
-      flex: 1,
-      padding: 16,
-    },
-    warningBanner: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: colors.backgroundSecondary,
-      borderRadius: 8,
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      marginBottom: 12,
-      borderLeftWidth: 3,
-      borderLeftColor: colors.success,
-    },
-    warningIcon: {
-      marginRight: 8,
-    },
-    warningText: {
-      flex: 1,
-      fontSize: 12,
-      color: colors.success,
-      fontWeight: "600",
-    },
-    logsContainer: {
-      flex: 1,
-      backgroundColor: "#1e1e1e",
-      borderRadius: 8,
-      padding: 12,
-    },
-    logText: {
-      fontFamily: "monospace",
-      fontSize: 10,
-      color: "#d4d4d4",
-      lineHeight: 14,
-    },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    loadingText: {
-      marginTop: 12,
-      color: colors.textSecondary,
-    },
-    tabContainer: {
-      flexDirection: "row",
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      backgroundColor: colors.background,
-    },
-    tab: {
-      flex: 1,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      paddingVertical: 12,
-      borderBottomWidth: 2,
-      borderBottomColor: "transparent",
-    },
-    tabActive: {
-      borderBottomColor: colors.primary,
-    },
-    tabText: {
-      fontSize: 14,
-      color: colors.textSecondary,
-    },
-    tabTextActive: {
-      color: colors.primary,
-      fontWeight: "600",
-    },
-  });
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
