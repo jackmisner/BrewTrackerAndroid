@@ -21,13 +21,13 @@
  * ```
  */
 
-import React from "react";
 import { TouchableOpacity, Text, ActivityIndicator, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { createAIStyles } from "@styles/ai/aiStyles";
 import { TEST_IDS } from "@src/constants/testIDs";
+import { useNetwork } from "@/src/contexts/NetworkContext";
 
 interface AIAnalysisButtonProps {
   /**
@@ -75,9 +75,13 @@ export function AIAnalysisButton({
 }: AIAnalysisButtonProps) {
   const theme = useTheme();
   const styles = createAIStyles(theme);
-
-  const isDisabled = disabled || loading;
-  const displayLabel = loading ? loadingLabel : label;
+  const { isOffline } = useNetwork();
+  const isDisabled = disabled || isOffline || loading;
+  const displayLabel = loading
+    ? loadingLabel
+    : isOffline
+      ? "Go Online to Analyse with AI"
+      : label;
 
   return (
     <TouchableOpacity
@@ -125,7 +129,8 @@ export function AIAnalysisIconButton({
 }: Pick<AIAnalysisButtonProps, "loading" | "disabled" | "onPress" | "testID">) {
   const theme = useTheme();
   const styles = createAIStyles(theme);
-  const isDisabled = disabled || loading;
+  const { isOffline } = useNetwork();
+  const isDisabled = disabled || isOffline || loading;
 
   return (
     <TouchableOpacity
