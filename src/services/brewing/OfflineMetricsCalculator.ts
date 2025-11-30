@@ -104,9 +104,10 @@ export class OfflineMetricsCalculator {
       }
     }
 
-    // Default attenuation if none specified
+    // Use 0% attenuation if no yeast is present (matches backend behavior)
+    // This results in FG = OG when there's no yeast
     const averageAttenuation =
-      attenuationCount > 0 ? totalAttenuation / attenuationCount : 75; // Default 75% attenuation
+      attenuationCount > 0 ? totalAttenuation / attenuationCount : 0;
 
     // Calculate FG: FG = OG - ((OG - 1) * attenuation/100)
     const gravityPoints = (og - 1) * 1000;
