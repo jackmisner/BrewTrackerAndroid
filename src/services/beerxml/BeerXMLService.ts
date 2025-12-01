@@ -1,6 +1,6 @@
 import ApiService from "@services/api/apiService";
 import { BeerXMLService as StorageBeerXMLService } from "@services/storageService";
-import { Recipe, RecipeIngredient } from "@src/types";
+import { Recipe, RecipeIngredient, UnitSystem } from "@src/types";
 
 // Service-specific interfaces for BeerXML operations
 
@@ -9,7 +9,7 @@ interface FileValidationResult {
   errors: string[];
 }
 
-interface BeerXMLRecipe extends Partial<Recipe> {
+export interface BeerXMLRecipe extends Partial<Recipe> {
   ingredients: RecipeIngredient[];
   metadata?: BeerXMLMetadata;
 }
@@ -395,6 +395,108 @@ class BeerXMLService {
       newRequired,
       highConfidence,
     };
+  }
+
+  /**
+   * Detect if recipe uses different unit system than user preference
+   * Returns the detected recipe unit system
+   */
+  detectRecipeUnitSystem(recipe: BeerXMLRecipe): UnitSystem | "mixed" {
+    let metricCount = 0;
+    let imperialCount = 0;
+
+    // Check batch size unit (trim to handle whitespace)
+    const batchUnit = recipe.batch_size_unit?.toLowerCase().trim() || "";
+    if (["l", "liter", "liters", "litre", "litres", "ml"].includes(batchUnit)) {
+      metricCount++;
+    } else if (["gal", "gallon", "gallons"].includes(batchUnit)) {
+      imperialCount++;
+    }
+
+    // Check ingredient units (trim to handle whitespace)
+    recipe.ingredients?.forEach(ingredient => {
+      const unit = ingredient.unit?.toLowerCase().trim() || "";
+      if (
+        ["g", "kg", "gram", "grams", "kilogram", "kilograms"].includes(unit)
+      ) {
+        metricCount++;
+      } else if (
+        ["oz", "lb", "lbs", "ounce", "ounces", "pound", "pounds"].includes(unit)
+      ) {
+        imperialCount++;
+      }
+    });
+
+    // Determine predominant system
+    if (metricCount > 0 && imperialCount === 0) {
+      return "metric";
+    }
+    if (imperialCount > 0 && metricCount === 0) {
+      return "imperial";
+    }
+    if (metricCount > imperialCount) {
+      return "metric";
+    }
+    if (imperialCount > metricCount) {
+      return "imperial";
+    }
+    return "mixed"; // Equal or unknown
+  }
+
+  /**
+   * Convert recipe units to user's preferred unit system
+   * Uses the unit conversion workflow for intelligent conversion + normalization
+   */
+  async convertRecipeUnits(
+    recipe: BeerXMLRecipe,
+    targetUnitSystem: UnitSystem
+  ): Promise<BeerXMLRecipe> {
+    try {
+      // Prepare recipe for conversion - add target_unit_system field
+      // Note: AI endpoint accepts partial recipes for unit conversion workflow
+      const recipeForConversion: Partial<Recipe> & {
+        target_unit_system: UnitSystem;
+      } = {
+        ...recipe,
+        target_unit_system: targetUnitSystem,
+      };
+
+      // Call AI analyze endpoint with unit_conversion workflow
+      const response = await ApiService.ai.analyzeRecipe({
+        complete_recipe: recipeForConversion,
+        unit_system: targetUnitSystem,
+        workflow_name: "unit_conversion",
+      });
+
+      // Extract the optimized (converted) recipe
+      const convertedRecipe = (
+        response.data as { optimized_recipe?: Partial<BeerXMLRecipe> }
+      ).optimized_recipe;
+
+      if (!convertedRecipe) {
+        console.warn("No converted recipe returned, using original");
+        return recipe;
+      }
+
+      // Merge converted data back into original recipe structure
+      // Use nullish coalescing to preserve falsy values like 0 or empty string
+      return {
+        ...recipe,
+        ...convertedRecipe,
+        ingredients: convertedRecipe.ingredients ?? recipe.ingredients,
+        batch_size: convertedRecipe.batch_size ?? recipe.batch_size,
+        batch_size_unit:
+          convertedRecipe.batch_size_unit ?? recipe.batch_size_unit,
+        mash_temperature:
+          convertedRecipe.mash_temperature ?? recipe.mash_temperature,
+        mash_temp_unit: convertedRecipe.mash_temp_unit ?? recipe.mash_temp_unit,
+      };
+    } catch (error) {
+      console.error("Error converting recipe units:", error);
+      // Return original recipe if conversion fails - don't block import
+      console.warn("Unit conversion failed, continuing with original units");
+      return recipe;
+    }
   }
 }
 

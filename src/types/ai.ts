@@ -21,8 +21,9 @@ import { Recipe, RecipeMetrics } from "./recipe";
  * Sends complete recipe data to backend for analysis and optimization
  */
 export interface AIAnalysisRequest {
-  /** Complete recipe object with all fields (ingredients, parameters, etc.) */
-  complete_recipe: Recipe;
+  /** Complete recipe object with all fields (ingredients, parameters, etc.)
+   * Note: For unit_conversion workflow, can be a partial recipe */
+  complete_recipe: Recipe | Partial<Recipe>;
 
   /** Optional beer style guide ID for style-specific analysis */
   style_id?: string;
