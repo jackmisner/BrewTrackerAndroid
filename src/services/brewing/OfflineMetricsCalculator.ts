@@ -5,13 +5,20 @@
  * Implements standard brewing formulas for OG, FG, ABV, IBU, and SRM.
  */
 
-import { RecipeMetrics, RecipeFormData, RecipeIngredient } from "@src/types";
+import {
+  RecipeMetrics,
+  RecipeFormData,
+  RecipeMetricsInput,
+  RecipeIngredient,
+} from "@src/types";
 
 export class OfflineMetricsCalculator {
   /**
    * Calculate recipe metrics offline using standard brewing formulas
    */
-  static calculateMetrics(recipeData: RecipeFormData): RecipeMetrics {
+  static calculateMetrics(
+    recipeData: RecipeFormData | RecipeMetricsInput
+  ): RecipeMetrics {
     // Validate first
     const { isValid } = this.validateRecipeData(recipeData);
     if (!isValid) {
@@ -213,7 +220,7 @@ export class OfflineMetricsCalculator {
   /**
    * Validate recipe data for calculations
    */
-  static validateRecipeData(recipeData: RecipeFormData): {
+  static validateRecipeData(recipeData: RecipeFormData | RecipeMetricsInput): {
     isValid: boolean;
     errors: string[];
   } {

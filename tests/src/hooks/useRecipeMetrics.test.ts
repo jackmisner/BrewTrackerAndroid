@@ -1,14 +1,12 @@
 /* eslint-disable import/first */
-import { renderHook, waitFor, act } from "@testing-library/react-native";
+import { renderHook, waitFor } from "@testing-library/react-native";
 import React from "react";
 
-// Mock the API service before importing anything that uses it
-jest.mock("@services/api/apiService", () => ({
-  __esModule: true,
-  default: {
-    recipes: {
-      calculateMetricsPreview: jest.fn(),
-    },
+// Mock the OfflineMetricsCalculator
+jest.mock("@services/brewing/OfflineMetricsCalculator", () => ({
+  OfflineMetricsCalculator: {
+    validateRecipeData: jest.fn(),
+    calculateMetrics: jest.fn(),
   },
 }));
 
@@ -18,18 +16,9 @@ jest.unmock("@tanstack/react-query");
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useRecipeMetrics } from "@src/hooks/useRecipeMetrics";
 import { RecipeFormData, RecipeMetrics, RecipeIngredient } from "@src/types";
-import ApiService from "@services/api/apiService";
+import { OfflineMetricsCalculator } from "@services/brewing/OfflineMetricsCalculator";
 
-const mockedApiService = jest.mocked(ApiService);
-
-// Helper to create mock AxiosResponse
-const createMockAxiosResponse = <T>(data: T) => ({
-  data,
-  status: 200,
-  statusText: "OK",
-  headers: {},
-  config: {} as any,
-});
+const mockedCalculator = jest.mocked(OfflineMetricsCalculator);
 
 const createTestQueryClient = () =>
   new QueryClient({
@@ -109,9 +98,7 @@ describe("useRecipeMetrics - Essential Tests", () => {
     // Should remain disabled
     expect(result.current.isLoading).toBe(false);
     expect(result.current.data).toBeUndefined();
-    expect(
-      mockedApiService.recipes.calculateMetricsPreview
-    ).not.toHaveBeenCalled();
+    expect(mockedCalculator.calculateMetrics).not.toHaveBeenCalled();
   });
 
   it("should not enable query when batch_size is zero", () => {
@@ -125,9 +112,7 @@ describe("useRecipeMetrics - Essential Tests", () => {
 
     expect(result.current.isLoading).toBe(false);
     expect(result.current.data).toBeUndefined();
-    expect(
-      mockedApiService.recipes.calculateMetricsPreview
-    ).not.toHaveBeenCalled();
+    expect(mockedCalculator.calculateMetrics).not.toHaveBeenCalled();
   });
 
   it("should respect explicit enabled parameter", () => {
@@ -141,9 +126,7 @@ describe("useRecipeMetrics - Essential Tests", () => {
 
     expect(result.current.isLoading).toBe(false);
     expect(result.current.data).toBeUndefined();
-    expect(
-      mockedApiService.recipes.calculateMetricsPreview
-    ).not.toHaveBeenCalled();
+    expect(mockedCalculator.calculateMetrics).not.toHaveBeenCalled();
   });
 
   it("should filter out NaN and invalid numeric values", async () => {
@@ -158,9 +141,11 @@ describe("useRecipeMetrics - Essential Tests", () => {
       } as any,
     };
 
-    mockedApiService.recipes.calculateMetricsPreview.mockResolvedValue(
-      createMockAxiosResponse(mockMetricsResponse.data)
-    );
+    mockedCalculator.validateRecipeData.mockReturnValue({
+      isValid: true,
+      errors: [],
+    });
+    mockedCalculator.calculateMetrics.mockReturnValue(mockMetricsResponse.data);
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useRecipeMetrics(mockRecipeData), {
@@ -182,13 +167,13 @@ describe("useRecipeMetrics - Essential Tests", () => {
 
   it("should handle empty metrics response gracefully", async () => {
     const mockRecipeData = createMockRecipeData();
-    const mockMetricsResponse = {
-      data: {} as RecipeMetrics,
-    };
+    const mockMetricsResponse = {} as RecipeMetrics;
 
-    mockedApiService.recipes.calculateMetricsPreview.mockResolvedValue(
-      createMockAxiosResponse(mockMetricsResponse.data)
-    );
+    mockedCalculator.validateRecipeData.mockReturnValue({
+      isValid: true,
+      errors: [],
+    });
+    mockedCalculator.calculateMetrics.mockReturnValue(mockMetricsResponse);
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useRecipeMetrics(mockRecipeData), {
@@ -240,23 +225,20 @@ describe("useRecipeMetrics - Essential Tests", () => {
       ],
     };
 
-    // Mock successful API response
-    const mockResponse = {
-      data: {
-        og: 1.05,
-        fg: 1.012,
-        abv: 5.0,
-        ibu: 30,
-        srm: 6,
-      },
-      status: 200,
-      statusText: "OK",
-      headers: {},
-      config: {} as any,
+    // Mock successful metrics calculation
+    const mockMetrics: RecipeMetrics = {
+      og: 1.05,
+      fg: 1.012,
+      abv: 5.0,
+      ibu: 30,
+      srm: 6,
     };
-    mockedApiService.recipes.calculateMetricsPreview.mockResolvedValue(
-      mockResponse
-    );
+
+    mockedCalculator.validateRecipeData.mockReturnValue({
+      isValid: true,
+      errors: [],
+    });
+    mockedCalculator.calculateMetrics.mockReturnValue(mockMetrics);
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useRecipeMetrics(mockRecipeData), {
@@ -265,62 +247,6 @@ describe("useRecipeMetrics - Essential Tests", () => {
 
     // Test should complete without errors despite null/undefined id/name fields
     expect(() => result.current).not.toThrow();
-  });
-
-  it("should handle API validation errors by falling back to offline calculation", async () => {
-    const mockRecipeData = createMockRecipeData();
-    const validationError = {
-      response: { status: 400 },
-      message: "Invalid recipe data",
-    };
-    mockedApiService.recipes.calculateMetricsPreview.mockRejectedValue(
-      validationError
-    );
-
-    const wrapper = createWrapper(queryClient);
-    const { result } = renderHook(() => useRecipeMetrics(mockRecipeData), {
-      wrapper,
-    });
-
-    await waitFor(() => {
-      expect(result.current.isSuccess).toBe(true);
-    });
-
-    // Should have data from offline calculation fallback
-    expect(result.current.data).toBeDefined();
-    expect(result.current.error).toBeNull();
-    // Should only be called once (no retries for 400 errors)
-    expect(
-      mockedApiService.recipes.calculateMetricsPreview
-    ).toHaveBeenCalledTimes(1);
-  });
-
-  it("should handle network errors by falling back to offline calculation", async () => {
-    const mockRecipeData = createMockRecipeData();
-    const networkError = {
-      response: { status: 500 },
-      message: "Network error",
-    };
-    mockedApiService.recipes.calculateMetricsPreview.mockRejectedValue(
-      networkError
-    );
-
-    const wrapper = createWrapper(queryClient);
-    const { result } = renderHook(() => useRecipeMetrics(mockRecipeData), {
-      wrapper,
-    });
-
-    await waitFor(() => {
-      expect(result.current.isSuccess).toBe(true);
-    });
-
-    // Should have data from offline calculation fallback
-    expect(result.current.data).toBeDefined();
-    expect(result.current.error).toBeNull();
-    // Should only be called once since query function catches the error and falls back
-    expect(
-      mockedApiService.recipes.calculateMetricsPreview
-    ).toHaveBeenCalledTimes(1);
   });
 
   it("should handle complex recipe data with all ingredient types", async () => {
@@ -377,9 +303,11 @@ describe("useRecipeMetrics - Essential Tests", () => {
       } as RecipeMetrics,
     };
 
-    mockedApiService.recipes.calculateMetricsPreview.mockResolvedValue(
-      createMockAxiosResponse(mockMetricsResponse.data)
-    );
+    mockedCalculator.validateRecipeData.mockReturnValue({
+      isValid: true,
+      errors: [],
+    });
+    mockedCalculator.calculateMetrics.mockReturnValue(mockMetricsResponse.data);
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useRecipeMetrics(complexRecipeData), {
@@ -398,18 +326,10 @@ describe("useRecipeMetrics - Essential Tests", () => {
       srm: 12,
     });
 
-    // Verify API was called with correct data structure
-    expect(
-      mockedApiService.recipes.calculateMetricsPreview
-    ).toHaveBeenCalledWith({
-      batch_size: complexRecipeData.batch_size,
-      batch_size_unit: complexRecipeData.batch_size_unit,
-      efficiency: complexRecipeData.efficiency,
-      boil_time: complexRecipeData.boil_time,
-      ingredients: complexRecipeData.ingredients,
-      mash_temperature: complexRecipeData.mash_temperature,
-      mash_temp_unit: complexRecipeData.mash_temp_unit,
-    });
+    // Verify calculator was called with correct data
+    expect(mockedCalculator.calculateMetrics).toHaveBeenCalledWith(
+      complexRecipeData
+    );
   });
 
   it("should create correct query key with recipe parameters", async () => {
@@ -432,19 +352,19 @@ describe("useRecipeMetrics - Essential Tests", () => {
       ],
     });
 
-    const mockMetricsResponse = {
-      data: {
-        og: 1.055,
-        fg: 1.012,
-        abv: 5.6,
-        ibu: 45,
-        srm: 8,
-      } as RecipeMetrics,
+    const mockMetricsResponse: RecipeMetrics = {
+      og: 1.055,
+      fg: 1.012,
+      abv: 5.6,
+      ibu: 45,
+      srm: 8,
     };
 
-    mockedApiService.recipes.calculateMetricsPreview.mockResolvedValue(
-      createMockAxiosResponse(mockMetricsResponse.data)
-    );
+    mockedCalculator.validateRecipeData.mockReturnValue({
+      isValid: true,
+      errors: [],
+    });
+    mockedCalculator.calculateMetrics.mockReturnValue(mockMetricsResponse);
 
     const wrapper = createWrapper(queryClient);
     const { result } = renderHook(() => useRecipeMetrics(mockRecipeData), {
@@ -463,8 +383,9 @@ describe("useRecipeMetrics - Essential Tests", () => {
     );
 
     expect(recipeMetricsQueries).toHaveLength(1);
-    expect(recipeMetricsQueries[0].queryKey[3]).toBe(5.5); // batch_size
-    expect(recipeMetricsQueries[0].queryKey[4]).toBe("gal"); // batch_size_unit
-    expect(recipeMetricsQueries[0].queryKey[5]).toBe(72); // efficiency
+    expect(recipeMetricsQueries[0].queryKey[1]).toBe("offline-first");
+    expect(recipeMetricsQueries[0].queryKey[2]).toBe(5.5); // batch_size
+    expect(recipeMetricsQueries[0].queryKey[3]).toBe("gal"); // batch_size_unit
+    expect(recipeMetricsQueries[0].queryKey[4]).toBe(72); // efficiency
   });
 });

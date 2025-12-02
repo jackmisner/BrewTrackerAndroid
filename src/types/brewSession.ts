@@ -1,4 +1,4 @@
-import { ID } from "./common";
+import { ID, TemperatureUnit } from "./common";
 import { Recipe, HopFormat } from "./recipe";
 
 // Brew session status types
@@ -19,9 +19,6 @@ export type FermentationStage =
   | "tertiary"
   | "bottled"
   | "kegged";
-
-// Temperature unit
-export type TemperatureUnit = "F" | "C";
 
 // Gravity reading interface
 export interface GravityReading {

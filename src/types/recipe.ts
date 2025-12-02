@@ -17,7 +17,7 @@
  * - Optional fields: Many type-specific fields are optional (e.g., alpha_acid for hops)
  */
 
-import { ID } from "./common";
+import { ID, TemperatureUnit } from "./common";
 
 // Recipe types
 export type IngredientType = "grain" | "hop" | "yeast" | "other";
@@ -144,10 +144,21 @@ export interface RecipeFormData {
   boil_time: number;
   efficiency: number;
   mash_temperature: number;
-  mash_temp_unit: "F" | "C";
+  mash_temp_unit: TemperatureUnit;
   mash_time?: number;
   is_public: boolean;
   notes: string;
+  ingredients: RecipeIngredient[];
+}
+
+// Minimal data required for metrics calculation
+export interface RecipeMetricsInput {
+  batch_size: number;
+  batch_size_unit: BatchSizeUnit;
+  efficiency: number;
+  boil_time: number;
+  mash_temperature?: number;
+  mash_temp_unit?: TemperatureUnit;
   ingredients: RecipeIngredient[];
 }
 

@@ -26,6 +26,8 @@ export interface PaginatedResponse<T = any> {
 // Unit system types
 export type UnitSystem = "metric" | "imperial";
 
+export type TemperatureUnit = "C" | "F";
+
 export type MeasurementType =
   | "weight"
   | "hop_weight"

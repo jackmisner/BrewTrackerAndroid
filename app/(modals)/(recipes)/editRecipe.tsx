@@ -416,27 +416,28 @@ export default function EditRecipeScreen() {
         is_public: Boolean(formData.is_public),
         notes: formData.notes || "",
         ingredients: sanitizedIngredients,
-        // Include estimated metrics only when finite
-        ...(metricsData &&
-          Number.isFinite(metricsData.og) && {
-            estimated_og: metricsData.og,
-          }),
-        ...(metricsData &&
-          Number.isFinite(metricsData.fg) && {
-            estimated_fg: metricsData.fg,
-          }),
-        ...(metricsData &&
-          Number.isFinite(metricsData.abv) && {
-            estimated_abv: metricsData.abv,
-          }),
-        ...(metricsData &&
-          Number.isFinite(metricsData.ibu) && {
-            estimated_ibu: metricsData.ibu,
-          }),
-        ...(metricsData &&
-          Number.isFinite(metricsData.srm) && {
-            estimated_srm: metricsData.srm,
-          }),
+        // Include estimated metrics - use newly calculated metrics if available and finite,
+        // otherwise preserve existing recipe metrics to avoid resetting them
+        estimated_og:
+          metricsData && Number.isFinite(metricsData.og)
+            ? metricsData.og
+            : existingRecipe?.estimated_og,
+        estimated_fg:
+          metricsData && Number.isFinite(metricsData.fg)
+            ? metricsData.fg
+            : existingRecipe?.estimated_fg,
+        estimated_abv:
+          metricsData && Number.isFinite(metricsData.abv)
+            ? metricsData.abv
+            : existingRecipe?.estimated_abv,
+        estimated_ibu:
+          metricsData && Number.isFinite(metricsData.ibu)
+            ? metricsData.ibu
+            : existingRecipe?.estimated_ibu,
+        estimated_srm:
+          metricsData && Number.isFinite(metricsData.srm)
+            ? metricsData.srm
+            : existingRecipe?.estimated_srm,
       };
 
       const updatedRecipe = await updateRecipeV2(recipe_id, updateData);
