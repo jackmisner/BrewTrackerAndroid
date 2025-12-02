@@ -36,7 +36,7 @@ import { UnitConversionChoiceModal } from "@src/components/beerxml/UnitConversio
 import { UnitSystem } from "@src/types";
 
 interface ImportState {
-  step: "file_selection" | "parsing" | "recipe_selection" | "unit_conversion";
+  step: "file_selection" | "parsing" | "recipe_selection";
   isLoading: boolean;
   error: string | null;
   selectedFile: {
@@ -151,7 +151,8 @@ export default function ImportBeerXMLScreen() {
    * Handle unit conversion - convert recipe to user's preferred unit system
    */
   const handleConvertAndImport = async () => {
-    if (!importState.selectedRecipe) {
+    const recipe = importState.selectedRecipe;
+    if (!recipe) {
       return;
     }
 
@@ -159,7 +160,7 @@ export default function ImportBeerXMLScreen() {
 
     try {
       const convertedRecipe = await BeerXMLService.convertRecipeUnits(
-        importState.selectedRecipe,
+        recipe,
         unitSystem
       );
 
@@ -195,7 +196,7 @@ export default function ImportBeerXMLScreen() {
                 ...prev,
                 showUnitConversionChoice: false,
               }));
-              proceedToIngredientMatching(importState.selectedRecipe!);
+              proceedToIngredientMatching(recipe);
             },
           },
         ]

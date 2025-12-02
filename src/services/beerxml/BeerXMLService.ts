@@ -483,6 +483,7 @@ class BeerXMLService {
       return {
         ...recipe,
         ...convertedRecipe,
+        unit_system: convertedRecipe.unit_system ?? targetUnitSystem,
         ingredients: convertedRecipe.ingredients ?? recipe.ingredients,
         batch_size: convertedRecipe.batch_size ?? recipe.batch_size,
         batch_size_unit:

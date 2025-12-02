@@ -607,10 +607,9 @@ describe("ImportBeerXMLScreen - Unit Conversion Workflow", () => {
     expect(getByText("Import Recipe")).toBeTruthy();
   });
 
-  it("should handle unit conversion success", async () => {
+  it("should detect metric unit system and prepare conversion state", async () => {
     const mockBeerXMLService =
       require("@services/beerxml/BeerXMLService").default;
-    const mockRouter = require("expo-router").router;
 
     mockBeerXMLService.importBeerXMLFile = jest.fn().mockResolvedValue({
       success: true,
@@ -661,15 +660,14 @@ describe("ImportBeerXMLScreen - Unit Conversion Workflow", () => {
       expect(mockBeerXMLService.detectRecipeUnitSystem).toHaveBeenCalled();
     });
 
-    // In a real scenario, the modal would be shown and user would click "Convert"
-    // Since the modal is mocked to return null, we can't test the full interaction
-    // But we can verify the service methods are properly integrated
+    // Verify unit system detection was called with the correct recipe
+    // Note: The modal is mocked, so we can't test the full conversion flow
     expect(mockBeerXMLService.detectRecipeUnitSystem).toHaveBeenCalledWith(
       metricRecipe
     );
   });
 
-  it("should handle unit conversion failure gracefully", async () => {
+  it("should detect metric unit system when convertRecipeUnits would fail", async () => {
     const mockBeerXMLService =
       require("@services/beerxml/BeerXMLService").default;
 
@@ -712,7 +710,8 @@ describe("ImportBeerXMLScreen - Unit Conversion Workflow", () => {
       expect(mockBeerXMLService.detectRecipeUnitSystem).toHaveBeenCalled();
     });
 
-    // Verify the component handles the failure case
+    // Verify unit system detection was called with the correct recipe
+    // Note: Conversion failure handling occurs only when the modal's "Convert" button is clicked
     expect(mockBeerXMLService.detectRecipeUnitSystem).toHaveBeenCalledWith(
       metricRecipe
     );
