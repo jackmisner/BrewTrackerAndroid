@@ -42,10 +42,9 @@ import { OfflineMetricsCalculator } from "@services/brewing/OfflineMetricsCalcul
 import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
 
 function deriveMashTempUnit(recipeData: RecipeFormData): TemperatureUnit {
-  return (
-    recipeData.mash_temp_unit ??
-    (String(recipeData.batch_size_unit).toLowerCase() === "l" ? "C" : "F")
-  );
+  return (recipeData.mash_temp_unit ?? recipeData.unit_system === "metric")
+    ? "C"
+    : "F";
 }
 
 function coerceIngredientTime(input: unknown): number | undefined {
@@ -117,7 +116,7 @@ export default function ImportReviewScreen() {
         mash_temp_unit: deriveMashTempUnit(recipeData),
         mash_temperature:
           recipeData.mash_temperature ??
-          (String(recipeData.batch_size_unit).toLowerCase() === "l" ? 67 : 152),
+          ((recipeData.unit_system as UnitSystem) === "metric" ? 67 : 152),
         ingredients: recipeData.ingredients,
       };
 
@@ -166,20 +165,18 @@ export default function ImportReviewScreen() {
         description: recipeData.description || "",
         notes: recipeData.notes || "",
         batch_size: recipeData.batch_size || 19.0,
-        batch_size_unit: recipeData.batch_size_unit || "l",
+        batch_size_unit:
+          recipeData.batch_size_unit ||
+          (recipeData.unit_system === "metric" ? "l" : "gal"),
         boil_time: recipeData.boil_time || 60,
         efficiency: recipeData.efficiency || 75,
-        unit_system: (String(recipeData.batch_size_unit).toLowerCase() === "l"
-          ? "metric"
-          : "imperial") as UnitSystem,
+        unit_system: recipeData.unit_system,
         // Respect provided unit when present; default sensibly per system.
-        mash_temp_unit: deriveMashTempUnit(recipeData),
+        mash_temp_unit:
+          recipeData.mash_temp_unit || deriveMashTempUnit(recipeData),
         mash_temperature:
-          typeof recipeData.mash_temperature === "number"
-            ? recipeData.mash_temperature
-            : String(recipeData.batch_size_unit).toLowerCase() === "l"
-              ? 67
-              : 152,
+          recipeData.mash_temperature ??
+          (recipeData.unit_system === "metric" ? 67 : 152),
         is_public: false, // Import as private by default
         // Include calculated metrics if available
         ...(calculatedMetrics && {
