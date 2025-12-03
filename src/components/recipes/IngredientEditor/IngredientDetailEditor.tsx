@@ -36,7 +36,12 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import { useAuth } from "@contexts/AuthContext";
-import { RecipeIngredient, IngredientType, IngredientUnit } from "@src/types";
+import {
+  RecipeIngredient,
+  IngredientType,
+  IngredientUnit,
+  UnitSystem,
+} from "@src/types";
 import { ingredientDetailEditorStyles } from "@styles/recipes/ingredientDetailEditorStyles";
 import { HOP_USAGE_OPTIONS, HOP_TIME_PRESETS } from "@constants/hopConstants";
 import { getHopTimePlaceholder } from "@utils/formatUtils";
@@ -63,7 +68,7 @@ type LayoutMode = "classic" | "compact";
 const getContextualIncrements = (
   ingredientType: IngredientType,
   unit: string,
-  _unitSystem: "imperial" | "metric"
+  _unitSystem: UnitSystem
 ): number[] => {
   if (ingredientType === "grain") {
     switch (unit) {

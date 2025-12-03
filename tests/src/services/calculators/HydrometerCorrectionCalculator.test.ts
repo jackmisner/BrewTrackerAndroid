@@ -10,10 +10,10 @@ import { HydrometerCorrectionCalculator } from "@services/calculators/Hydrometer
 jest.mock("@services/calculators/UnitConverter", () => ({
   UnitConverter: {
     convertTemperature: jest.fn((value, from, to) => {
-      if (from === "c" && to === "f") {
+      if (from === "C" && to === "F") {
         return (value * 9) / 5 + 32;
       }
-      if (from === "f" && to === "c") {
+      if (from === "F" && to === "C") {
         return ((value - 32) * 5) / 9;
       }
       return value;
@@ -28,7 +28,7 @@ describe("HydrometerCorrectionCalculator", () => {
         1.05, // measured gravity
         60, // wort temp (at calibration)
         60, // calibration temp
-        "f"
+        "F"
       );
 
       expect(result.correctedGravity).toBeCloseTo(1.05, 3);
@@ -42,7 +42,7 @@ describe("HydrometerCorrectionCalculator", () => {
         1.05, // measured gravity
         80, // wort temp (higher than calibration)
         60, // calibration temp
-        "f"
+        "F"
       );
 
       expect(result.correctedGravity).toBeGreaterThan(1.05); // Should increase at higher temp
@@ -54,7 +54,7 @@ describe("HydrometerCorrectionCalculator", () => {
         1.05, // measured gravity
         40, // wort temp (lower than calibration)
         60, // calibration temp
-        "f"
+        "F"
       );
 
       expect(result.correctedGravity).toBeLessThan(1.05); // Should decrease at lower temp
@@ -66,7 +66,7 @@ describe("HydrometerCorrectionCalculator", () => {
         1.05,
         20, // 20°C
         15.5, // 15.5°C (standard calibration)
-        "c"
+        "C"
       );
 
       expect(result.correctedGravity).toBeGreaterThan(1.05);
@@ -79,7 +79,7 @@ describe("HydrometerCorrectionCalculator", () => {
         1.05678,
         75,
         60,
-        "f"
+        "F"
       );
 
       // Check that results are properly rounded
@@ -93,31 +93,31 @@ describe("HydrometerCorrectionCalculator", () => {
 
     it("should throw error for invalid gravity", () => {
       expect(() => {
-        HydrometerCorrectionCalculator.calculateCorrection(0.98, 60, 60, "f");
+        HydrometerCorrectionCalculator.calculateCorrection(0.98, 60, 60, "F");
       }).toThrow("Measured gravity must be between 0.990 and 1.200");
 
       expect(() => {
-        HydrometerCorrectionCalculator.calculateCorrection(1.25, 60, 60, "f");
+        HydrometerCorrectionCalculator.calculateCorrection(1.25, 60, 60, "F");
       }).toThrow("Measured gravity must be between 0.990 and 1.200");
     });
 
     it("should throw error for invalid Fahrenheit temperatures", () => {
       expect(() => {
-        HydrometerCorrectionCalculator.calculateCorrection(1.05, 30, 60, "f"); // Below freezing
+        HydrometerCorrectionCalculator.calculateCorrection(1.05, 30, 60, "F"); // Below freezing
       }).toThrow("Wort temperature must be between 32°F and 212°F");
 
       expect(() => {
-        HydrometerCorrectionCalculator.calculateCorrection(1.05, 60, 250, "f"); // Above boiling
+        HydrometerCorrectionCalculator.calculateCorrection(1.05, 60, 250, "F"); // Above boiling
       }).toThrow("Calibration temperature must be between 32°F and 212°F");
     });
 
     it("should throw error for invalid Celsius temperatures", () => {
       expect(() => {
-        HydrometerCorrectionCalculator.calculateCorrection(1.05, -5, 20, "c"); // Below freezing
+        HydrometerCorrectionCalculator.calculateCorrection(1.05, -5, 20, "C"); // Below freezing
       }).toThrow("Wort temperature must be between 0°C and 100°C");
 
       expect(() => {
-        HydrometerCorrectionCalculator.calculateCorrection(1.05, 20, 110, "c"); // Above boiling
+        HydrometerCorrectionCalculator.calculateCorrection(1.05, 20, 110, "C"); // Above boiling
       }).toThrow("Calibration temperature must be between 0°C and 100°C");
     });
   });
@@ -127,7 +127,7 @@ describe("HydrometerCorrectionCalculator", () => {
       const result = HydrometerCorrectionCalculator.calculateCorrectionDefault(
         1.05,
         70,
-        "f"
+        "F"
       );
 
       expect(result.calibrationTemp).toBe(60); // Default F calibration
@@ -138,7 +138,7 @@ describe("HydrometerCorrectionCalculator", () => {
       const result = HydrometerCorrectionCalculator.calculateCorrectionDefault(
         1.05,
         20,
-        "c"
+        "C"
       );
 
       expect(result.calibrationTemp).toBe(15.5); // Default C calibration
@@ -152,7 +152,7 @@ describe("HydrometerCorrectionCalculator", () => {
         1.05, // measured
         1.052, // target (higher)
         60, // calibration
-        "f"
+        "F"
       );
 
       expect(targetTemp).toBeGreaterThan(60); // Should be higher temp
@@ -163,7 +163,7 @@ describe("HydrometerCorrectionCalculator", () => {
         1.05,
         targetTemp,
         60,
-        "f"
+        "F"
       );
       expect(verification.correctedGravity).toBeCloseTo(1.052, 2);
     });
@@ -173,7 +173,7 @@ describe("HydrometerCorrectionCalculator", () => {
         1.05,
         1.048, // target (lower)
         15.5,
-        "c"
+        "C"
       );
 
       expect(targetTemp).toBeLessThan(15.5); // Should be lower temp
@@ -186,7 +186,7 @@ describe("HydrometerCorrectionCalculator", () => {
           1.05,
           2.0, // Impossible target
           60,
-          "f"
+          "F"
         );
       }).toThrow("Could not converge on solution - check input values");
     });
@@ -197,7 +197,7 @@ describe("HydrometerCorrectionCalculator", () => {
       const table = HydrometerCorrectionCalculator.getCorrectionTable(
         1.05,
         60,
-        "f"
+        "F"
       );
 
       expect(table.length).toBeGreaterThan(10);
@@ -221,7 +221,7 @@ describe("HydrometerCorrectionCalculator", () => {
       const table = HydrometerCorrectionCalculator.getCorrectionTable(
         1.05,
         15.5,
-        "c"
+        "C"
       );
 
       expect(table.length).toBeGreaterThan(10);
@@ -252,7 +252,7 @@ describe("HydrometerCorrectionCalculator", () => {
         HydrometerCorrectionCalculator.isCorrectionSignificant(
           60, // wort temp
           60, // calibration temp
-          "f"
+          "F"
         );
 
       expect(isSignificant).toBe(false);
@@ -263,7 +263,7 @@ describe("HydrometerCorrectionCalculator", () => {
         HydrometerCorrectionCalculator.isCorrectionSignificant(
           80, // wort temp (20F higher)
           60, // calibration temp
-          "f"
+          "F"
         );
 
       expect(isSignificant).toBe(true);
@@ -274,7 +274,7 @@ describe("HydrometerCorrectionCalculator", () => {
         HydrometerCorrectionCalculator.isCorrectionSignificant(
           62, // wort temp (small difference)
           60, // calibration temp
-          "f"
+          "F"
         );
 
       expect(isSignificant).toBe(false);
@@ -285,7 +285,7 @@ describe("HydrometerCorrectionCalculator", () => {
         HydrometerCorrectionCalculator.isCorrectionSignificant(
           25, // 10C higher
           15.5,
-          "c"
+          "C"
         );
 
       expect(isSignificant).toBe(true);
@@ -304,17 +304,17 @@ describe("HydrometerCorrectionCalculator", () => {
 
       // Check Standard hydrometer calibration
       const standard = calibrationTemps["Standard"];
-      expect(standard.f).toBe(60);
-      expect(standard.c).toBe(15.5);
+      expect(standard.F).toBe(60);
+      expect(standard.C).toBe(15.5);
 
       // Check that all entries have both F and C values
       Object.values(calibrationTemps).forEach(temp => {
-        expect(temp).toHaveProperty("f");
-        expect(temp).toHaveProperty("c");
-        expect(temp.f).toBeGreaterThan(30);
-        expect(temp.f).toBeLessThan(80);
-        expect(temp.c).toBeGreaterThan(10);
-        expect(temp.c).toBeLessThan(30);
+        expect(temp).toHaveProperty("F");
+        expect(temp).toHaveProperty("C");
+        expect(temp.F).toBeGreaterThan(30);
+        expect(temp.F).toBeLessThan(80);
+        expect(temp.C).toBeGreaterThan(10);
+        expect(temp.C).toBeLessThan(30);
       });
     });
   });
@@ -325,7 +325,7 @@ describe("HydrometerCorrectionCalculator", () => {
         0.995,
         70,
         60,
-        "f"
+        "F"
       );
       expect(lowGravity.correctedGravity).toBeGreaterThan(0.995);
 
@@ -333,7 +333,7 @@ describe("HydrometerCorrectionCalculator", () => {
         1.15,
         70,
         60,
-        "f"
+        "F"
       );
       expect(highGravity.correctedGravity).toBeGreaterThan(1.15);
     });
@@ -343,7 +343,7 @@ describe("HydrometerCorrectionCalculator", () => {
         1.05,
         200, // Very hot
         60,
-        "f"
+        "F"
       );
       expect(extremeHot.correctedGravity).toBeGreaterThan(1.05);
 
@@ -351,7 +351,7 @@ describe("HydrometerCorrectionCalculator", () => {
         1.05,
         35, // Very cold
         60,
-        "f"
+        "F"
       );
       expect(extremeCold.correctedGravity).toBeLessThan(1.05);
     });

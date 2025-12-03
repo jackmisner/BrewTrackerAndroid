@@ -46,13 +46,14 @@ import {
 import { useTheme } from "@contexts/ThemeContext";
 import { UnitConverter } from "@/src/services/calculators/UnitConverter";
 import { calculatorScreenStyles } from "@styles/modals/calculators/calculatorScreenStyles";
+import { TemperatureUnit } from "@/src/types/common";
 
 /**
  * Temperature unit options for the calculator
  */
 const TEMP_UNIT_OPTIONS = [
-  { label: "°F", value: "f" as const, description: "Fahrenheit" },
-  { label: "°C", value: "c" as const, description: "Celsius" },
+  { label: "°F", value: "F" as const, description: "Fahrenheit" },
+  { label: "°C", value: "C" as const, description: "Celsius" },
 ];
 
 /**
@@ -213,8 +214,8 @@ export default function StrikeWaterCalculatorScreen() {
   };
 
   const handleTempUnitChange = (tempUnit: string) => {
-    const fromUnit = strikeWater.tempUnit as "f" | "c";
-    const toUnit = tempUnit as "f" | "c";
+    const fromUnit = strikeWater.tempUnit as TemperatureUnit;
+    const toUnit = tempUnit as TemperatureUnit;
 
     const convert = (v?: string) => {
       const n = parseFloat(v ?? "");
@@ -255,7 +256,7 @@ export default function StrikeWaterCalculatorScreen() {
   };
 
   const getTempPlaceholder = (isTarget: boolean = false) => {
-    if (strikeWater.tempUnit === "f") {
+    if (strikeWater.tempUnit === "F") {
       return isTarget ? "152" : "70";
     } else {
       return isTarget ? "67" : "21";
@@ -263,7 +264,7 @@ export default function StrikeWaterCalculatorScreen() {
   };
 
   const getTempRange = () => {
-    if (strikeWater.tempUnit === "f") {
+    if (strikeWater.tempUnit === "F") {
       return { grain: "32-120°F", mash: "140-170°F" };
     } else {
       return { grain: "0-50°C", mash: "60-77°C" };

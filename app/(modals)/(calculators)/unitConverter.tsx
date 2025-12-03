@@ -76,8 +76,8 @@ const VOLUME_UNITS = [
  * Temperature unit options for conversion
  */
 const TEMPERATURE_UNITS = [
-  { label: "°F", value: "f", description: "Fahrenheit" },
-  { label: "°C", value: "c", description: "Celsius" },
+  { label: "°F", value: "F", description: "Fahrenheit" },
+  { label: "°C", value: "C", description: "Celsius" },
   { label: "K", value: "k", description: "Kelvin" },
 ];
 

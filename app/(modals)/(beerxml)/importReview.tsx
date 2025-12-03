@@ -26,12 +26,27 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useTheme } from "@contexts/ThemeContext";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
-import ApiService from "@services/api/apiService";
-import { IngredientInput } from "@src/types";
+import {
+  IngredientInput,
+  RecipeFormData,
+  RecipeMetricsInput,
+  TemperatureUnit,
+  UnitSystem,
+} from "@src/types";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { generateUniqueId } from "@utils/keyUtils";
 import { QUERY_KEYS } from "@services/api/queryClient";
 import { ModalHeader } from "@src/components/ui/ModalHeader";
+import { useRecipes } from "@src/hooks/offlineV2";
+import { OfflineMetricsCalculator } from "@services/brewing/OfflineMetricsCalculator";
+import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
+
+function deriveMashTempUnit(recipeData: RecipeFormData): TemperatureUnit {
+  return (
+    recipeData.mash_temp_unit ??
+    (String(recipeData.batch_size_unit).toLowerCase() === "l" ? "C" : "F")
+  );
+}
 
 function coerceIngredientTime(input: unknown): number | undefined {
   if (input == null) {
@@ -57,66 +72,86 @@ export default function ImportReviewScreen() {
   }>();
 
   const queryClient = useQueryClient();
+  const { create: createRecipe } = useRecipes();
   const [recipeData] = useState(() => {
     try {
       return JSON.parse(params.recipeData);
     } catch (error) {
-      console.error("Failed to parse recipe data:", error);
+      UnifiedLogger.error(
+        "import-review",
+        "Failed to parse recipe data:",
+        error
+      );
       return null;
     }
   });
 
   /**
-   * Calculate recipe metrics before creation
+   * Calculate recipe metrics before creation using offline-first approach
    */
   const {
     data: calculatedMetrics,
     isLoading: metricsLoading,
     error: metricsError,
   } = useQuery({
-    queryKey: ["recipeMetrics", "beerxml-import", recipeData],
+    queryKey: [
+      "recipeMetrics",
+      "beerxml-import-offline",
+      recipeData?.batch_size,
+      recipeData?.batch_size_unit,
+      recipeData?.efficiency,
+      recipeData?.boil_time,
+      JSON.stringify(recipeData?.ingredients?.map((i: any) => i.ingredient_id)),
+    ],
     queryFn: async () => {
       if (!recipeData || !recipeData.ingredients) {
         return null;
       }
 
-      const metricsPayload = {
-        batch_size: recipeData.batch_size || 5,
-        batch_size_unit: recipeData.batch_size_unit || "gal",
+      // Prepare recipe data for offline calculation
+      const recipeFormData: RecipeMetricsInput = {
+        batch_size: recipeData.batch_size || 19.0,
+        batch_size_unit: recipeData.batch_size_unit || "l",
         efficiency: recipeData.efficiency || 75,
         boil_time: recipeData.boil_time || 60,
-        // Respect provided unit when present; default sensibly per system.
-        mash_temp_unit: ((recipeData.mash_temp_unit as "C" | "F") ??
-          ((String(recipeData.batch_size_unit).toLowerCase() === "l"
-            ? "C"
-            : "F") as "C" | "F")) as "C" | "F",
+        mash_temp_unit: deriveMashTempUnit(recipeData),
         mash_temperature:
-          typeof recipeData.mash_temperature === "number"
-            ? recipeData.mash_temperature
-            : String(recipeData.batch_size_unit).toLowerCase() === "l"
-              ? 67
-              : 152,
-        ingredients: recipeData.ingredients.filter(
-          (ing: any) => ing.ingredient_id
-        ),
+          recipeData.mash_temperature ??
+          (String(recipeData.batch_size_unit).toLowerCase() === "l" ? 67 : 152),
+        ingredients: recipeData.ingredients,
       };
 
-      const response =
-        await ApiService.recipes.calculateMetricsPreview(metricsPayload);
+      // Calculate metrics offline (always, no network dependency)
+      try {
+        const validation =
+          OfflineMetricsCalculator.validateRecipeData(recipeFormData);
+        if (!validation.isValid) {
+          await UnifiedLogger.warn(
+            "import-review",
+            "Invalid recipe data",
+            validation.errors
+          );
+          return null;
+        }
 
-      return response.data;
+        const metrics =
+          OfflineMetricsCalculator.calculateMetrics(recipeFormData);
+        return metrics;
+      } catch (error) {
+        await UnifiedLogger.error(
+          "import-review",
+          "Metrics calculation failed",
+          error
+        );
+        return null;
+      }
     },
     enabled:
       !!recipeData &&
       !!recipeData.ingredients &&
       recipeData.ingredients.length > 0,
-    staleTime: 30000,
-    retry: (failureCount, error: any) => {
-      if (error?.response?.status === 400) {
-        return false;
-      }
-      return failureCount < 2;
-    },
+    staleTime: Infinity, // Deterministic calculation, never stale
+    retry: false, // Local calculation doesn't need retries
   });
 
   /**
@@ -130,18 +165,15 @@ export default function ImportReviewScreen() {
         style: recipeData.style || "",
         description: recipeData.description || "",
         notes: recipeData.notes || "",
-        batch_size: recipeData.batch_size,
-        batch_size_unit: recipeData.batch_size_unit || "gal",
+        batch_size: recipeData.batch_size || 19.0,
+        batch_size_unit: recipeData.batch_size_unit || "l",
         boil_time: recipeData.boil_time || 60,
         efficiency: recipeData.efficiency || 75,
-        unit_system: (recipeData.batch_size_unit === "l"
+        unit_system: (String(recipeData.batch_size_unit).toLowerCase() === "l"
           ? "metric"
-          : "imperial") as "metric" | "imperial",
+          : "imperial") as UnitSystem,
         // Respect provided unit when present; default sensibly per system.
-        mash_temp_unit: ((recipeData.mash_temp_unit as "C" | "F") ??
-          ((String(recipeData.batch_size_unit).toLowerCase() === "l"
-            ? "C"
-            : "F") as "C" | "F")) as "C" | "F",
+        mash_temp_unit: deriveMashTempUnit(recipeData),
         mash_temperature:
           typeof recipeData.mash_temperature === "number"
             ? recipeData.mash_temperature
@@ -161,15 +193,27 @@ export default function ImportReviewScreen() {
           .filter((ing: any) => {
             // Validate required fields before mapping
             if (!ing.ingredient_id) {
-              console.error("Ingredient missing ingredient_id:", ing);
+              void UnifiedLogger.error(
+                "import-review",
+                "Ingredient missing ingredient_id",
+                ing
+              );
               return false;
             }
             if (!ing.name || !ing.type || !ing.unit) {
-              console.error("Ingredient missing required fields:", ing);
+              void UnifiedLogger.error(
+                "import-review",
+                "Ingredient missing required fields",
+                ing
+              );
               return false;
             }
             if (isNaN(Number(ing.amount))) {
-              console.error("Ingredient has invalid amount:", ing);
+              void UnifiedLogger.error(
+                "import-review",
+                "Ingredient has invalid amount",
+                ing
+              );
               return false;
             }
             return true;
@@ -188,13 +232,24 @@ export default function ImportReviewScreen() {
           ),
       };
 
-      const response = await ApiService.recipes.create(recipePayload);
-      return response.data;
+      // Use offline V2 createRecipe which creates temp recipe first, then syncs to server
+      // This ensures immediate display with temp ID, then updates with server ID after sync
+      return await createRecipe(recipePayload);
     },
     onSuccess: createdRecipe => {
       // Invalidate queries to refresh recipe lists
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.RECIPES });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.USER_RECIPES });
+      queryClient.invalidateQueries({
+        queryKey: [...QUERY_KEYS.RECIPES, "offline"],
+      });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD });
+
+      // Prime the detail cache for immediate access
+      queryClient.setQueryData(
+        QUERY_KEYS.RECIPE(createdRecipe.id),
+        createdRecipe
+      );
 
       // Show success message and navigate to recipe
       Alert.alert(
@@ -204,9 +259,9 @@ export default function ImportReviewScreen() {
           {
             text: "View Recipe",
             onPress: () => {
-              // Navigate to the newly created recipe
+              // Replace current modal with ViewRecipe modal (like createRecipe does)
               router.dismissAll();
-              router.push({
+              router.replace({
                 pathname: "/(modals)/(recipes)/viewRecipe",
                 params: { recipe_id: createdRecipe.id },
               });
@@ -224,7 +279,7 @@ export default function ImportReviewScreen() {
       );
     },
     onError: (error: any) => {
-      console.error("🍺 Import Review - Recipe creation error:", error);
+      void UnifiedLogger.error("import-review", "Recipe creation error", error);
       Alert.alert(
         "Import Failed",
         `Failed to create recipe "${recipeData.name}". Please try again.`,
@@ -553,15 +608,21 @@ export default function ImportReviewScreen() {
                   </Text>
                   {ingredients.map((ingredient: any, index: number) => (
                     <View key={index} style={styles.ingredientItem}>
-                      <Text style={styles.ingredientName}>
-                        {ingredient.name}
-                      </Text>
-                      <Text style={styles.ingredientDetails}>
-                        {ingredient.amount || 0} {ingredient.unit || ""}
-                        {ingredient.use && ` • ${ingredient.use}`}
-                        {ingredient.time > 0 &&
-                          ` • ${coerceIngredientTime(ingredient.time)} min`}
-                      </Text>
+                      <View style={styles.ingredientInfo}>
+                        <Text style={styles.ingredientName}>
+                          {ingredient.name}
+                        </Text>
+                        <Text style={styles.ingredientDetails}>
+                          {ingredient.amount || 0} {ingredient.unit || ""}
+                          {ingredient.use && ` • ${ingredient.use}`}
+                          {(() => {
+                            const time = coerceIngredientTime(ingredient.time);
+                            return time !== undefined && time > 0
+                              ? ` • ${time} min`
+                              : "";
+                          })()}
+                        </Text>
+                      </View>
                     </View>
                   ))}
                 </View>

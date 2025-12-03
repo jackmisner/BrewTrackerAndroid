@@ -32,7 +32,7 @@ const defaultMockState = {
       case "volume":
         return "gal";
       case "temperature":
-        return "f";
+        return "F";
       default:
         return "lb";
     }
@@ -59,7 +59,7 @@ const defaultMockState = {
           ? "lb"
           : measurementType === "volume"
             ? "gal"
-            : "f",
+            : "F",
     })
   ),
   formatValue: jest.fn(

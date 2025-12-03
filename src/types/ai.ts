@@ -13,6 +13,7 @@
  * @module types/ai
  */
 
+import { UnitSystem } from "./common";
 import { Recipe, RecipeMetrics } from "./recipe";
 
 /**
@@ -21,14 +22,15 @@ import { Recipe, RecipeMetrics } from "./recipe";
  * Sends complete recipe data to backend for analysis and optimization
  */
 export interface AIAnalysisRequest {
-  /** Complete recipe object with all fields (ingredients, parameters, etc.) */
-  complete_recipe: Recipe;
+  /** Complete recipe object with all fields (ingredients, parameters, etc.)
+   * Note: For unit_conversion workflow, can be a partial recipe */
+  complete_recipe: Recipe | Partial<Recipe>;
 
   /** Optional beer style guide ID for style-specific analysis */
   style_id?: string;
 
   /** Unit system preference for analysis results */
-  unit_system?: "metric" | "imperial";
+  unit_system?: UnitSystem;
 
   /** Optional workflow name for specific optimization strategies */
   workflow_name?: string;
@@ -53,7 +55,7 @@ export interface AIAnalysisResponse {
   analysis_timestamp: string;
 
   /** Unit system used for the analysis */
-  unit_system: "metric" | "imperial";
+  unit_system: UnitSystem;
 
   /** User preferences used during analysis */
   user_preferences: AIUserPreferences;

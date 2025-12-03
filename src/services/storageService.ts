@@ -18,6 +18,7 @@ import { File, Directory, Paths } from "expo-file-system";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STORAGE_KEYS } from "@services/config";
+import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
 
 /**
  * Android API levels for permission handling
@@ -92,7 +93,11 @@ export class StorageService {
         return status === "granted";
       }
     } catch (error) {
-      console.error("Error requesting media permissions:", error);
+      UnifiedLogger.error(
+        "storage",
+        "Error requesting media permissions:",
+        error
+      );
       return false;
     }
   }
@@ -343,7 +348,8 @@ export class BeerXMLService {
     // If user cancelled directory selection, fall back to sharing
     if (safResult.userCancelled) {
     } else {
-      console.warn(
+      UnifiedLogger.warn(
+        "storage",
         "🍺 BeerXML Export - SAF failed, falling back to sharing:",
         safResult.error
       );
@@ -423,7 +429,11 @@ export class BeerXMLService {
         uri: file.uri,
       };
     } catch (error) {
-      console.error("🍺 BeerXML Export - Directory choice error:", error);
+      UnifiedLogger.error(
+        "storage",
+        "🍺 BeerXML Export - Directory choice error:",
+        error
+      );
       return {
         success: false,
         error: error instanceof Error ? error.message : "File save failed",
@@ -446,7 +456,7 @@ export class OfflineStorageService {
     try {
       // Validate input
       if (!Array.isArray(recipes)) {
-        console.error("Invalid recipes data: expected array");
+        UnifiedLogger.error("storage", "Invalid recipes data: expected array");
         return false;
       }
 
@@ -454,7 +464,8 @@ export class OfflineStorageService {
       const dataSize = JSON.stringify(recipes).length;
       const MAX_SIZE = 10 * 1024 * 1024; // 10MB
       if (dataSize > MAX_SIZE) {
-        console.error(
+        UnifiedLogger.error(
+          "storage",
           `Recipe data too large: ${dataSize} bytes exceeds ${MAX_SIZE} bytes limit`
         );
         return false;
@@ -474,7 +485,7 @@ export class OfflineStorageService {
 
       return true;
     } catch (error) {
-      console.error("Failed to store offline recipes:", error);
+      UnifiedLogger.error("storage", "Failed to store offline recipes:", error);
       return false;
     }
   }
@@ -523,7 +534,10 @@ export class OfflineStorageService {
     try {
       // Validate input
       if (!Array.isArray(ingredients)) {
-        console.error("Invalid ingredients data: expected array");
+        UnifiedLogger.error(
+          "storage",
+          "Invalid ingredients data: expected array"
+        );
         return false;
       }
 
@@ -531,7 +545,8 @@ export class OfflineStorageService {
       const dataSize = JSON.stringify(ingredients).length;
       const MAX_SIZE = 5 * 1024 * 1024; // 5MB for ingredients
       if (dataSize > MAX_SIZE) {
-        console.error(
+        UnifiedLogger.error(
+          "storage",
           `Ingredients data too large: ${dataSize} bytes exceeds ${MAX_SIZE} bytes limit`
         );
         return false;
@@ -551,7 +566,7 @@ export class OfflineStorageService {
 
       return true;
     } catch (error) {
-      console.error("Failed to cache ingredients:", error);
+      UnifiedLogger.error("storage", "Failed to cache ingredients:", error);
       return false;
     }
   }
@@ -610,7 +625,11 @@ export class OfflineStorageService {
       await AsyncStorage.setItem(STORAGE_KEYS.LAST_SYNC, timestamp.toString());
       return true;
     } catch (error) {
-      console.error("Failed to update last sync timestamp:", error);
+      UnifiedLogger.error(
+        "storage",
+        "Failed to update last sync timestamp:",
+        error
+      );
       return false;
     }
   }
@@ -627,7 +646,11 @@ export class OfflineStorageService {
       const value = Number(raw);
       return Number.isFinite(value) ? value : null;
     } catch (error) {
-      console.error("Failed to get last sync timestamp:", error);
+      UnifiedLogger.error(
+        "storage",
+        "Failed to get last sync timestamp:",
+        error
+      );
       return null;
     }
   }
@@ -645,7 +668,7 @@ export class OfflineStorageService {
 
       return true;
     } catch (error) {
-      console.error("Failed to clear offline data:", error);
+      UnifiedLogger.error("storage", "Failed to clear offline data:", error);
       return false;
     }
   }
@@ -684,7 +707,7 @@ export class OfflineStorageService {
         totalStorageSize: recipesSize + ingredientsSize,
       };
     } catch (error) {
-      console.error("Failed to get offline stats:", error);
+      UnifiedLogger.error("storage", "Failed to get offline stats:", error);
       return {
         recipesCount: 0,
         ingredientsCount: 0,

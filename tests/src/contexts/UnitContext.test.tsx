@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { UnitProvider, useUnits } from "@contexts/UnitContext";
 import { AuthProvider } from "@contexts/AuthContext";
 import { UnitSystem } from "@src/types";
+import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
 
 // Mock AsyncStorage
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -19,6 +20,16 @@ jest.mock("@services/api/apiService", () => ({
       getSettings: jest.fn(),
       updateSettings: jest.fn(),
     },
+  },
+}));
+
+// Mock UnifiedLogger
+jest.mock("@/src/services/logger/UnifiedLogger", () => ({
+  UnifiedLogger: {
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn(),
   },
 }));
 
@@ -63,8 +74,6 @@ describe("UnitContext", () => {
       expect(() => {
         renderHook(() => useUnits());
       }).toThrow("useUnits must be used within a UnitProvider");
-
-      consoleSpy.mockRestore();
     });
 
     it("should provide unit context when used within provider", () => {
@@ -220,7 +229,7 @@ describe("UnitContext", () => {
 
       expect(result.current.getPreferredUnit("weight")).toBe("lb");
       expect(result.current.getPreferredUnit("volume")).toBe("gal");
-      expect(result.current.getPreferredUnit("temperature")).toBe("f");
+      expect(result.current.getPreferredUnit("temperature")).toBe("F");
     });
 
     it("should return correct preferred units for metric system", () => {
@@ -229,7 +238,7 @@ describe("UnitContext", () => {
 
       expect(result.current.getPreferredUnit("weight")).toBe("kg");
       expect(result.current.getPreferredUnit("volume")).toBe("l");
-      expect(result.current.getPreferredUnit("temperature")).toBe("c");
+      expect(result.current.getPreferredUnit("temperature")).toBe("C");
     });
   });
 
@@ -296,8 +305,8 @@ describe("UnitContext", () => {
       expect(result.current.formatValue(0.5, "lb", "weight")).toBe("0.5 lb");
 
       // Temperature should always use 1 decimal place
-      expect(result.current.formatValue(20.555, "c", "temperature")).toBe(
-        "20.6 c"
+      expect(result.current.formatValue(20.555, "C", "temperature")).toBe(
+        "20.6 C"
       );
 
       // Small volume should use 2 decimal places when < 1
@@ -430,11 +439,10 @@ describe("UnitContext", () => {
       const result_conv = result.current.convertUnit(100, "unknown", "kg");
       expect(result_conv.value).toBe(100);
       expect(result_conv.unit).toBe("unknown");
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.warn).toHaveBeenCalledWith(
+        "units",
         "No conversion available from unknown to kg"
       );
-
-      consoleSpy.mockRestore();
     });
 
     it("should handle invalid string inputs in convertUnit", () => {
@@ -517,11 +525,10 @@ describe("UnitContext", () => {
 
       expect(invalidResult.value).toBe(100);
       expect(invalidResult.unit).toBe("unknown_unit");
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.warn).toHaveBeenCalledWith(
+        "units",
         "No conversion available from unknown_unit to another_unit"
       );
-
-      consoleSpy.mockRestore();
     });
   });
 
@@ -738,7 +745,7 @@ describe("UnitContext", () => {
 
       const tempUnits = imperialResult.current.getCommonUnits("temperature");
       expect(tempUnits.length).toBe(1);
-      expect(tempUnits[0].value).toBe("f");
+      expect(tempUnits[0].value).toBe("F");
       expect(tempUnits[0].label).toBe("°F");
 
       const metricWrapper = createWrapper("metric");
@@ -749,7 +756,7 @@ describe("UnitContext", () => {
       const metricTempUnits =
         metricResult.current.getCommonUnits("temperature");
       expect(metricTempUnits.length).toBe(1);
-      expect(metricTempUnits[0].value).toBe("c");
+      expect(metricTempUnits[0].value).toBe("C");
       expect(metricTempUnits[0].label).toBe("°C");
     });
 
@@ -794,8 +801,8 @@ describe("UnitContext", () => {
       const wrapper = createWrapper("metric");
       const { result } = renderHook(() => useUnits(), { wrapper });
 
-      expect(result.current.formatValue(20.555, "c", "temperature")).toBe(
-        "20.6 c"
+      expect(result.current.formatValue(20.555, "C", "temperature")).toBe(
+        "20.6 C"
       );
     });
 
@@ -977,12 +984,11 @@ describe("UnitContext", () => {
 
       // Should still use cached settings despite background error
       expect(result.current.unitSystem).toBe("imperial");
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.warn).toHaveBeenCalledWith(
+        "units",
         "Background settings fetch failed:",
         expect.any(Error)
       );
-
-      consoleSpy.mockRestore();
     });
   });
 
@@ -1047,12 +1053,11 @@ describe("UnitContext", () => {
       // Should revert to original system on error
       expect(result.current.unitSystem).toBe("imperial");
       expect(result.current.error).toBe("Failed to save unit preference");
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.error).toHaveBeenCalledWith(
+        expect.any(String),
         "Failed to update unit system:",
         expect.any(Error)
       );
-
-      consoleSpy.mockRestore();
     });
   });
 
@@ -1088,18 +1093,18 @@ describe("UnitContext", () => {
       const wrapper = createWrapper("metric");
       const { result } = renderHook(() => useUnits(), { wrapper });
 
-      const conversion = result.current.convertUnit(32, "f", "c");
+      const conversion = result.current.convertUnit(32, "F", "C");
       expect(conversion.value).toBeCloseTo(0, 1);
-      expect(conversion.unit).toBe("c");
+      expect(conversion.unit).toBe("C");
     });
 
     it("should handle c to f temperature conversion", () => {
       const wrapper = createWrapper("imperial");
       const { result } = renderHook(() => useUnits(), { wrapper });
 
-      const conversion = result.current.convertUnit(0, "c", "f");
+      const conversion = result.current.convertUnit(0, "C", "F");
       expect(conversion.value).toBeCloseTo(32, 1);
-      expect(conversion.unit).toBe("f");
+      expect(conversion.unit).toBe("F");
     });
   });
 });

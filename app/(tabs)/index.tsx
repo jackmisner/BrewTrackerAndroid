@@ -104,6 +104,7 @@ export default function DashboardScreen() {
     data: brewSessions,
     isLoading: brewSessionsLoading,
     refresh: refreshBrewSessions,
+    delete: deleteBrewSession,
   } = useBrewSessions();
 
   // Separate query for public recipes (online-only feature)
@@ -215,7 +216,10 @@ export default function DashboardScreen() {
       await ApiService.recipes.delete(recipeId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
+      // Invalidate both recipes and dashboard queries to immediately update UI
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.RECIPES });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.USER_RECIPES });
     },
     onError: (error: unknown) => {
       console.error("Failed to delete recipe:", error);
@@ -241,8 +245,8 @@ export default function DashboardScreen() {
       }
     },
     onSuccess: (response, recipe) => {
-      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
-      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.DASHBOARD] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.RECIPES });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD });
       // Ensure offline lists reflect the new clone
       queryClient.invalidateQueries({
         queryKey: [...QUERY_KEYS.RECIPES, "offline"],
@@ -410,9 +414,34 @@ export default function DashboardScreen() {
       );
     },
     onDelete: (brewSession: BrewSession) => {
+      // Close the context menu before prompting
+      brewSessionContextMenu.hideMenu();
       Alert.alert(
         "Delete Session",
-        `Deleting "${brewSession.name}" - Feature coming soon!`
+        `Are you sure you want to delete "${brewSession.name}"? This action cannot be undone.`,
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await deleteBrewSession(brewSession.id);
+                Alert.alert("Success", "Brew session deleted successfully");
+              } catch (error) {
+                console.error("Failed to delete brew session:", error);
+                Alert.alert(
+                  "Delete Failed",
+                  "Failed to delete brew session. Please try again.",
+                  [{ text: "OK" }]
+                );
+              }
+            },
+          },
+        ]
       );
     },
   });

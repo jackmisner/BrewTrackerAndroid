@@ -25,22 +25,16 @@ import {
 import { MaterialIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTheme } from "@contexts/ThemeContext";
+import { useUnits } from "@contexts/UnitContext";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
-import BeerXMLService from "@services/beerxml/BeerXMLService";
+import BeerXMLService, {
+  type BeerXMLRecipe,
+} from "@services/beerxml/BeerXMLService";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { ModalHeader } from "@src/components/ui/ModalHeader";
-
-interface Recipe {
-  name?: string;
-  style?: string;
-  batch_size?: number;
-  batch_size_unit?: "l" | "gal";
-  ingredients?: {
-    type: "grain" | "hop" | "yeast" | "other";
-    [key: string]: any;
-  }[];
-  [key: string]: any;
-}
+import { UnitConversionChoiceModal } from "@src/components/beerxml/UnitConversionChoiceModal";
+import { UnitSystem } from "@src/types";
+import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
 
 interface ImportState {
   step: "file_selection" | "parsing" | "recipe_selection";
@@ -50,13 +44,17 @@ interface ImportState {
     content: string;
     filename: string;
   } | null;
-  parsedRecipes: Recipe[];
-  selectedRecipe: Recipe | null;
+  parsedRecipes: BeerXMLRecipe[];
+  selectedRecipe: BeerXMLRecipe | null;
+  showUnitConversionChoice: boolean;
+  recipeUnitSystem: UnitSystem | null;
+  isConverting: boolean;
 }
 
 export default function ImportBeerXMLScreen() {
   const theme = useTheme();
   const styles = createRecipeStyles(theme);
+  const { unitSystem } = useUnits();
 
   const [importState, setImportState] = useState<ImportState>({
     step: "file_selection",
@@ -65,6 +63,9 @@ export default function ImportBeerXMLScreen() {
     selectedFile: null,
     parsedRecipes: [],
     selectedRecipe: null,
+    showUnitConversionChoice: false,
+    recipeUnitSystem: null,
+    isConverting: false,
   });
 
   /**
@@ -99,7 +100,10 @@ export default function ImportBeerXMLScreen() {
       // Automatically proceed to parsing
       await parseBeerXML(result.content, result.filename);
     } catch (error) {
-      console.error("🍺 BeerXML Import - File selection error:", error);
+      UnifiedLogger.error(
+        "🍺 BeerXML Import - File selection error:",
+        error as string
+      );
       setImportState(prev => ({
         ...prev,
         isLoading: false,
@@ -119,15 +123,29 @@ export default function ImportBeerXMLScreen() {
       if (recipes.length === 0) {
         throw new Error("No recipes found in the BeerXML file");
       }
+
+      // Check first recipe for unit system mismatch
+      const firstRecipe = recipes[0];
+      const recipeUnitSystem =
+        BeerXMLService.detectRecipeUnitSystem(firstRecipe);
+
       setImportState(prev => ({
         ...prev,
         isLoading: false,
         parsedRecipes: recipes,
-        selectedRecipe: recipes[0],
+        selectedRecipe: firstRecipe,
         step: "recipe_selection",
+        recipeUnitSystem:
+          recipeUnitSystem === "mixed" ? null : recipeUnitSystem,
+        showUnitConversionChoice:
+          recipeUnitSystem !== unitSystem && recipeUnitSystem !== "mixed",
       }));
     } catch (error) {
-      console.error("🍺 BeerXML Import - Parsing error:", error);
+      UnifiedLogger.error(
+        "beerxml",
+        "🍺 BeerXML Import - Parsing error:",
+        error
+      );
       setImportState(prev => ({
         ...prev,
         isLoading: false,
@@ -138,10 +156,83 @@ export default function ImportBeerXMLScreen() {
   };
 
   /**
+   * Handle unit conversion - convert recipe to user's preferred unit system
+   */
+  const handleConvertAndImport = async () => {
+    const recipe = importState.selectedRecipe;
+    if (!recipe) {
+      return;
+    }
+
+    setImportState(prev => ({ ...prev, isConverting: true }));
+
+    try {
+      const convertedRecipe = await BeerXMLService.convertRecipeUnits(
+        recipe,
+        unitSystem
+      );
+
+      setImportState(prev => ({
+        ...prev,
+        selectedRecipe: convertedRecipe,
+        showUnitConversionChoice: false,
+        isConverting: false,
+      }));
+
+      // Proceed to ingredient matching
+      proceedToIngredientMatching(convertedRecipe);
+    } catch (error) {
+      UnifiedLogger.error(
+        "beerxml",
+        "🍺 BeerXML Import - Conversion error:",
+        error
+      );
+      setImportState(prev => ({ ...prev, isConverting: false }));
+      Alert.alert(
+        "Conversion Error",
+        "Failed to convert recipe units. Would you like to import as-is?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+            onPress: () =>
+              setImportState(prev => ({
+                ...prev,
+                showUnitConversionChoice: false,
+              })),
+          },
+          {
+            text: "Import As-Is",
+            onPress: () => {
+              setImportState(prev => ({
+                ...prev,
+                showUnitConversionChoice: false,
+              }));
+              proceedToIngredientMatching(recipe);
+            },
+          },
+        ]
+      );
+    }
+  };
+
+  /**
+   * Handle import as-is without unit conversion
+   */
+  const handleImportAsIs = () => {
+    setImportState(prev => ({ ...prev, showUnitConversionChoice: false }));
+    if (importState.selectedRecipe) {
+      proceedToIngredientMatching(importState.selectedRecipe);
+    }
+  };
+
+  /**
    * Proceed to ingredient matching workflow
    */
-  const proceedToIngredientMatching = () => {
-    if (!importState.selectedRecipe) {
+  const proceedToIngredientMatching = (recipe?: BeerXMLRecipe) => {
+    const recipeToImport = recipe || importState.selectedRecipe;
+
+    if (!recipeToImport) {
       Alert.alert("Error", "Please select a recipe to import");
       return;
     }
@@ -150,7 +241,7 @@ export default function ImportBeerXMLScreen() {
     router.push({
       pathname: "/(modals)/(beerxml)/ingredientMatching" as any,
       params: {
-        recipeData: JSON.stringify(importState.selectedRecipe),
+        recipeData: JSON.stringify(recipeToImport),
         filename: importState.selectedFile?.filename || "imported_recipe",
       },
     });
@@ -167,6 +258,9 @@ export default function ImportBeerXMLScreen() {
       selectedFile: null,
       parsedRecipes: [],
       selectedRecipe: null,
+      showUnitConversionChoice: false,
+      recipeUnitSystem: null,
+      isConverting: false,
     });
   };
 
@@ -319,7 +413,7 @@ export default function ImportBeerXMLScreen() {
 
           <TouchableOpacity
             style={[styles.button, styles.primaryButton]}
-            onPress={proceedToIngredientMatching}
+            onPress={() => proceedToIngredientMatching()}
             testID={TEST_IDS.patterns.touchableOpacityAction(
               "proceed-to-matching"
             )}
@@ -403,6 +497,24 @@ export default function ImportBeerXMLScreen() {
           importState.step === "recipe_selection" &&
           renderRecipeSelection()}
       </ScrollView>
+
+      {/* Unit Conversion Choice Modal */}
+      {importState.recipeUnitSystem && (
+        <UnitConversionChoiceModal
+          visible={importState.showUnitConversionChoice}
+          recipeUnitSystem={importState.recipeUnitSystem}
+          userUnitSystem={unitSystem}
+          isConverting={importState.isConverting}
+          onConvert={handleConvertAndImport}
+          onImportAsIs={handleImportAsIs}
+          onCancel={() =>
+            setImportState(prev => ({
+              ...prev,
+              showUnitConversionChoice: false,
+            }))
+          }
+        />
+      )}
     </View>
   );
 }

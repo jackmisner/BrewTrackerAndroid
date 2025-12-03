@@ -45,7 +45,7 @@ const mockState = {
     measuredGravity: "",
     wortTemp: "",
     calibrationTemp: "68",
-    tempUnit: "f",
+    tempUnit: "F",
     result: null as any,
   },
 };
@@ -131,7 +131,7 @@ jest.mock("@components/calculators/UnitToggle", () => {
       return (
         <TouchableOpacity
           testID="unit-toggle"
-          onPress={() => onChange && onChange(value === "f" ? "c" : "f")}
+          onPress={() => onChange && onChange(value === "F" ? "C" : "F")}
         >
           <Text>{label}</Text>
         </TouchableOpacity>
@@ -275,7 +275,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
       expect(mockDispatch).toHaveBeenCalledWith({
         type: "SET_HYDROMETER_CORRECTION",
         payload: {
-          tempUnit: "c",
+          tempUnit: "C",
           wortTemp: "23.9", // 75°F to °C
           calibrationTemp: "20.0", // 68°F to °C
         },
@@ -289,7 +289,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "1.050",
         wortTemp: "68",
         calibrationTemp: "68",
-        tempUnit: "f" as const,
+        tempUnit: "F" as const,
         result: null,
       };
 
@@ -303,7 +303,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
       expect(mockDispatch).toHaveBeenCalledWith({
         type: "SET_HYDROMETER_CORRECTION",
         payload: {
-          tempUnit: "c",
+          tempUnit: "C",
           wortTemp: "20.0",
           calibrationTemp: "20.0",
         },
@@ -315,7 +315,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "1.050",
         wortTemp: "20",
         calibrationTemp: "20",
-        tempUnit: "c" as const,
+        tempUnit: "C" as const,
         result: null,
       };
 
@@ -329,7 +329,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
       expect(mockDispatch).toHaveBeenCalledWith({
         type: "SET_HYDROMETER_CORRECTION",
         payload: {
-          tempUnit: "f",
+          tempUnit: "F",
           wortTemp: "68.0",
           calibrationTemp: "68.0",
         },
@@ -341,7 +341,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "",
         wortTemp: "",
         calibrationTemp: "",
-        tempUnit: "f" as const,
+        tempUnit: "F" as const,
         result: null,
       };
 
@@ -355,7 +355,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
       expect(mockDispatch).toHaveBeenCalledWith({
         type: "SET_HYDROMETER_CORRECTION",
         payload: {
-          tempUnit: "c",
+          tempUnit: "C",
           wortTemp: "",
           calibrationTemp: "",
         },
@@ -367,7 +367,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "1.050",
         wortTemp: "invalid",
         calibrationTemp: "68",
-        tempUnit: "f" as const,
+        tempUnit: "F" as const,
         result: null,
       };
 
@@ -381,7 +381,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
       expect(mockDispatch).toHaveBeenCalledWith({
         type: "SET_HYDROMETER_CORRECTION",
         payload: {
-          tempUnit: "c",
+          tempUnit: "C",
           wortTemp: "invalid", // Should remain unchanged
           calibrationTemp: "20.0",
         },
@@ -395,7 +395,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "",
         wortTemp: "",
         calibrationTemp: "",
-        tempUnit: "f" as const,
+        tempUnit: "F" as const,
         result: null,
       };
 
@@ -415,7 +415,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "1.050",
         wortTemp: "",
         calibrationTemp: "68",
-        tempUnit: "f" as const,
+        tempUnit: "F" as const,
         result: null,
       };
 
@@ -436,7 +436,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "1.050",
         wortTemp: "75",
         calibrationTemp: "68",
-        tempUnit: "f" as const,
+        tempUnit: "F" as const,
         result: null,
       };
 
@@ -448,7 +448,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         1.05,
         75,
         68,
-        "f"
+        "F"
       );
 
       expect(mockDispatch).toHaveBeenCalledWith({
@@ -467,7 +467,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "1.050",
         wortTemp: "75",
         calibrationTemp: "68",
-        tempUnit: "f" as const,
+        tempUnit: "F" as const,
         result: null,
       };
 
@@ -483,7 +483,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
             measuredGravity: 1.05,
             wortTemp: 75,
             calibrationTemp: 68,
-            tempUnit: "f",
+            tempUnit: "F",
           },
           result: {
             correctedGravity: 1.048,
@@ -498,7 +498,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "invalid",
         wortTemp: "75",
         calibrationTemp: "68",
-        tempUnit: "f" as const,
+        tempUnit: "F" as const,
         result: null,
       };
 
@@ -518,7 +518,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "1.050",
         wortTemp: "75",
         calibrationTemp: "68",
-        tempUnit: "f" as const,
+        tempUnit: "F" as const,
         result: null,
       };
 
@@ -550,7 +550,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "1.050",
         wortTemp: "75",
         calibrationTemp: "68",
-        tempUnit: "f" as const,
+        tempUnit: "F" as const,
         result: 1.048,
       };
 
@@ -566,7 +566,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "1.050",
         wortTemp: "75",
         calibrationTemp: "68",
-        tempUnit: "f" as const,
+        tempUnit: "F" as const,
         result: 1.048,
       };
 
@@ -590,7 +590,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
     });
 
     it("should show Celsius placeholders and units when in Celsius mode", () => {
-      mockState.hydrometerCorrection.tempUnit = "c";
+      mockState.hydrometerCorrection.tempUnit = "C";
 
       renderWithProviders(<HydrometerCorrectionCalculatorScreen />);
       // This is indirectly tested through the NumberInput props
@@ -603,7 +603,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "0",
         wortTemp: "0",
         calibrationTemp: "0",
-        tempUnit: "c" as const,
+        tempUnit: "C" as const,
         result: null,
       };
 
@@ -613,7 +613,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         0,
         0,
         0,
-        "c"
+        "C"
       );
     });
 
@@ -622,7 +622,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "1.100",
         wortTemp: "212",
         calibrationTemp: "32",
-        tempUnit: "f" as const,
+        tempUnit: "F" as const,
         result: null,
       };
 
@@ -632,7 +632,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         1.1,
         212,
         32,
-        "f"
+        "F"
       );
     });
 
@@ -641,7 +641,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "1.150",
         wortTemp: "68",
         calibrationTemp: "68",
-        tempUnit: "f" as const,
+        tempUnit: "F" as const,
         result: null,
       };
 
@@ -651,7 +651,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         1.15,
         68,
         68,
-        "f"
+        "F"
       );
     });
 
@@ -660,7 +660,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "1.050",
         wortTemp: "68.5",
         calibrationTemp: "67.8",
-        tempUnit: "f" as const,
+        tempUnit: "F" as const,
         result: null,
       };
 
@@ -670,7 +670,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         1.05,
         68.5,
         67.8,
-        "f"
+        "F"
       );
     });
   });
@@ -725,7 +725,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
         measuredGravity: "1.050",
         wortTemp: "68",
         calibrationTemp: "68",
-        tempUnit: "f" as const,
+        tempUnit: "F" as const,
         result: null,
       };
 
@@ -740,7 +740,7 @@ describe("HydrometerCorrectionCalculatorScreen", () => {
       expect(mockDispatch).toHaveBeenCalledWith({
         type: "SET_HYDROMETER_CORRECTION",
         payload: {
-          tempUnit: "c",
+          tempUnit: "C",
           wortTemp: "20.0", // 68°F -> 20.0°C
           calibrationTemp: "20.0", // 68°F -> 20.0°C
         },

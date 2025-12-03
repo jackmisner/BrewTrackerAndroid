@@ -28,6 +28,7 @@ import axios, {
 } from "axios";
 import * as SecureStore from "expo-secure-store";
 import NetInfo from "@react-native-community/netinfo";
+import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STORAGE_KEYS, ENDPOINTS } from "@services/config";
 import { setupIDInterceptors } from "./idInterceptor";
@@ -369,7 +370,7 @@ async function logApiError(normalizedError: NormalizedApiError, err: unknown) {
       base.request?.url?.includes("/recipes/")
     )
   ) {
-    console.error("API Error:", base);
+    UnifiedLogger.error("api", "API Error:", base);
   }
 }
 
@@ -446,7 +447,7 @@ class TokenManager {
     try {
       return await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
     } catch (error) {
-      console.error("Error getting token:", error);
+      UnifiedLogger.error("api", "Error getting token:", error);
       return null;
     }
   }
@@ -459,7 +460,7 @@ class TokenManager {
     try {
       await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, token);
     } catch (error) {
-      console.error("Error setting token:", error);
+      UnifiedLogger.error("api", "Error setting token:", error);
       throw error;
     }
   }
@@ -471,7 +472,7 @@ class TokenManager {
     try {
       await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
     } catch (error) {
-      console.error("Error removing token:", error);
+      UnifiedLogger.error("api", "Error removing token:", error);
     }
   }
 }
@@ -504,7 +505,11 @@ class DeveloperModeManager {
       }
       return false;
     } catch (error) {
-      console.warn("Failed to check simulated offline mode:", error);
+      UnifiedLogger.warn(
+        "api",
+        "Failed to check simulated offline mode:",
+        error
+      );
       return false;
     }
   }

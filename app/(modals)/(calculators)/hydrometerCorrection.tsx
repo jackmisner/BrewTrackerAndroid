@@ -44,8 +44,8 @@ import { calculatorScreenStyles } from "@styles/modals/calculators/calculatorScr
  * Temperature unit options for the calculator
  */
 const TEMP_UNIT_OPTIONS = [
-  { label: "°F", value: "f" as const, description: "Fahrenheit" },
-  { label: "°C", value: "c" as const, description: "Celsius" },
+  { label: "°F", value: "F" as const, description: "Fahrenheit" },
+  { label: "°C", value: "C" as const, description: "Celsius" },
 ];
 
 export default function HydrometerCorrectionCalculatorScreen() {
@@ -165,10 +165,10 @@ export default function HydrometerCorrectionCalculatorScreen() {
     }
 
     let converted: number;
-    if (fromUnit === "f" && toUnit === "c") {
+    if (fromUnit === "F" && toUnit === "C") {
       // °F to °C: (°F - 32) * 5/9
       converted = (numValue - 32) * (5 / 9);
-    } else if (fromUnit === "c" && toUnit === "f") {
+    } else if (fromUnit === "C" && toUnit === "F") {
       // °C to °F: °C * 9/5 + 32
       converted = numValue * (9 / 5) + 32;
     } else {
@@ -206,7 +206,7 @@ export default function HydrometerCorrectionCalculatorScreen() {
   };
 
   const getTempPlaceholder = (isCalibration: boolean = false) => {
-    if (hydrometerCorrection.tempUnit === "f") {
+    if (hydrometerCorrection.tempUnit === "F") {
       return isCalibration ? "68" : "75";
     } else {
       return isCalibration ? "20" : "24";
@@ -258,8 +258,8 @@ export default function HydrometerCorrectionCalculatorScreen() {
             value={hydrometerCorrection.wortTemp}
             onChangeText={handleMeasuredTempChange}
             placeholder={getTempPlaceholder()}
-            min={hydrometerCorrection.tempUnit === "c" ? 0 : 32}
-            max={hydrometerCorrection.tempUnit === "c" ? 100 : 212}
+            min={hydrometerCorrection.tempUnit === "C" ? 0 : 32}
+            max={hydrometerCorrection.tempUnit === "C" ? 100 : 212}
             unit={`°${tempUnit}`}
             testID="hydrometer-sample-temp"
           />
@@ -271,8 +271,8 @@ export default function HydrometerCorrectionCalculatorScreen() {
             value={hydrometerCorrection.calibrationTemp}
             onChangeText={handleCalibrationTempChange}
             placeholder={getTempPlaceholder(true)}
-            min={hydrometerCorrection.tempUnit === "c" ? 0 : 32}
-            max={hydrometerCorrection.tempUnit === "c" ? 100 : 212}
+            min={hydrometerCorrection.tempUnit === "C" ? 0 : 32}
+            max={hydrometerCorrection.tempUnit === "C" ? 100 : 212}
             unit={`°${tempUnit}`}
             helperText="Temperature your hydrometer was calibrated at"
             testID="hydrometer-calibration-temp"

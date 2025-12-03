@@ -1,7 +1,6 @@
 import {
   BrewSessionStatus,
   FermentationStage,
-  TemperatureUnit,
   GravityReading,
   FermentationEntry,
   BrewSession,
@@ -11,7 +10,7 @@ import {
   FermentationStats,
   BrewSessionSummary,
 } from "@src/types/brewSession";
-import { ID } from "@src/types/common";
+import { ID, TemperatureUnit } from "@src/types/common";
 import { Recipe } from "@src/types/recipe";
 
 describe("Brew Session Types", () => {

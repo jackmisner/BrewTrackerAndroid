@@ -883,9 +883,6 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     },
     ingredientSummary: {
       marginTop: 8,
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 8,
     },
     ingredientTypeCount: {
       fontSize: 12,
@@ -1023,6 +1020,7 @@ export const createRecipeStyles = (theme: ThemeContextValue) =>
     // Basic BeerXML styles
     section: {
       marginBottom: 24,
+      padding: 16,
     },
     button: {
       flexDirection: "row" as const,

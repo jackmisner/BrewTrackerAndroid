@@ -21,6 +21,7 @@
 
 import * as Notifications from "expo-notifications";
 import * as Haptics from "expo-haptics";
+import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
 
 export interface HopAlert {
   time: number;
@@ -102,7 +103,10 @@ export class NotificationService {
       }
 
       if (finalStatus !== "granted") {
-        console.warn("Notification permissions not granted");
+        UnifiedLogger.warn(
+          "notifications",
+          "Notification permissions not granted"
+        );
         return false;
       }
 
@@ -119,7 +123,11 @@ export class NotificationService {
       this.isInitialized = true;
       return true;
     } catch (error) {
-      console.error("Failed to initialize notifications:", error);
+      UnifiedLogger.error(
+        "notifications",
+        "Failed to initialize notifications:",
+        error
+      );
       return false;
     }
   }
@@ -158,7 +166,11 @@ export class NotificationService {
       this.notificationIdentifiers.push(identifier);
       return identifier;
     } catch (error) {
-      console.error("Failed to schedule hop alert:", error);
+      UnifiedLogger.error(
+        "notifications",
+        "Failed to schedule hop alert:",
+        error
+      );
       return null;
     }
   }
@@ -187,7 +199,7 @@ export class NotificationService {
       // Validate notification time - must be at least 1 second in the future
       if (timeInSeconds < 1) {
         // if (__DEV__) {
-        //   console.warn(
+        //   UnifiedLogger.warn("notifications",
         //     `⚠️ Invalid notification time: ${timeInSeconds}s - must be >= 1s`
         //   );
         // }
@@ -219,7 +231,11 @@ export class NotificationService {
 
       return identifier;
     } catch (error) {
-      console.error("Failed to schedule timer alert:", error);
+      UnifiedLogger.error(
+        "notifications",
+        "Failed to schedule timer alert:",
+        error
+      );
       return null;
     }
   }
@@ -263,7 +279,7 @@ export class NotificationService {
             { milestone: milestone.time }
           );
         } else if (__DEV__) {
-          // console.warn(
+          // UnifiedLogger.warn("notifications",
           //   `⚠️ Skipping milestone ${milestone.time / 60}min - notifyTime too small (${notifyTime}s)`
           // );
         }
@@ -304,7 +320,11 @@ export class NotificationService {
       await Notifications.cancelAllScheduledNotificationsAsync();
       this.notificationIdentifiers = [];
     } catch (error) {
-      console.error("Failed to cancel notifications:", error);
+      UnifiedLogger.error(
+        "notifications",
+        "Failed to cancel notifications:",
+        error
+      );
     }
   }
 
@@ -318,7 +338,11 @@ export class NotificationService {
         (id: string) => id !== identifier
       );
     } catch (error) {
-      console.error("Failed to cancel notification:", error);
+      UnifiedLogger.error(
+        "notifications",
+        "Failed to cancel notification:",
+        error
+      );
     }
   }
 
@@ -341,7 +365,11 @@ export class NotificationService {
           break;
       }
     } catch (error) {
-      console.error("Failed to trigger haptic feedback:", error);
+      UnifiedLogger.error(
+        "notifications",
+        "Failed to trigger haptic feedback:",
+        error
+      );
     }
   }
 
@@ -374,7 +402,11 @@ export class NotificationService {
       // Also trigger haptic feedback
       await this.triggerHapticFeedback("medium");
     } catch (error) {
-      console.error("Failed to send immediate notification:", error);
+      UnifiedLogger.error(
+        "notifications",
+        "Failed to send immediate notification:",
+        error
+      );
     }
   }
 
@@ -386,7 +418,11 @@ export class NotificationService {
       const { status } = await Notifications.getPermissionsAsync();
       return status === "granted";
     } catch (error) {
-      console.error("Failed to check notification permissions:", error);
+      UnifiedLogger.error(
+        "notifications",
+        "Failed to check notification permissions:",
+        error
+      );
       return false;
     }
   }
@@ -400,7 +436,11 @@ export class NotificationService {
     try {
       return await Notifications.getAllScheduledNotificationsAsync();
     } catch (error) {
-      console.error("Failed to get scheduled notifications:", error);
+      UnifiedLogger.error(
+        "notifications",
+        "Failed to get scheduled notifications:",
+        error
+      );
       return [];
     }
   }
@@ -482,7 +522,8 @@ export class NotificationService {
         }
       } else if (__DEV__) {
         // Debug logging for skipped hop alerts
-        console.warn(
+        UnifiedLogger.warn(
+          "notifications",
           `⚠️ Skipping hop alert for "${hop.name}" at ${hop.time}min - alertTime too small (${alertTime}s)`
         );
       }

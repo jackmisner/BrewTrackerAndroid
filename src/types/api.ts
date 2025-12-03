@@ -25,7 +25,7 @@ import {
   BrewSessionSummary,
 } from "./brewSession";
 import { User, UserSettings } from "./user";
-import { ApiResponse, PaginatedResponse } from "./common";
+import { ApiResponse, PaginatedResponse, TemperatureUnit } from "./common";
 
 // Authentication API types
 export interface LoginRequest {
@@ -186,7 +186,7 @@ export interface CalculateMetricsPreviewRequest {
   boil_time: number;
   ingredients: Recipe["ingredients"];
   mash_temperature?: number;
-  mash_temp_unit?: "F" | "C";
+  mash_temp_unit?: TemperatureUnit;
 }
 
 export type CalculateMetricsPreviewResponse = RecipeMetrics;

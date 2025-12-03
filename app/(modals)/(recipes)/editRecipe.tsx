@@ -16,7 +16,13 @@ import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import { useRecipes } from "@src/hooks/offlineV2";
 import { useAuth } from "@contexts/AuthContext";
-import { RecipeFormData, RecipeIngredient, Recipe } from "@src/types";
+import {
+  RecipeFormData,
+  RecipeIngredient,
+  Recipe,
+  RecipeMetrics,
+  UnitSystem,
+} from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
 import { ParametersForm } from "@src/components/recipes/RecipeForm/ParametersForm";
@@ -141,7 +147,7 @@ const toOptionalNumber = (v: any): number | undefined => {
 // Create unit-aware initial recipe state from existing recipe
 const createRecipeStateFromExisting = (
   existingRecipe: Recipe,
-  unitSystem: "imperial" | "metric"
+  unitSystem: UnitSystem
 ): RecipeFormData => ({
   name: existingRecipe.name ?? "",
   style: existingRecipe.style ?? "",
@@ -380,6 +386,24 @@ export default function EditRecipeScreen() {
         return sanitized;
       });
 
+      const getMetricOrFallback = (
+        metricKey: keyof RecipeMetrics,
+        estimatedKey: keyof Pick<
+          Recipe,
+          | "estimated_og"
+          | "estimated_fg"
+          | "estimated_abv"
+          | "estimated_ibu"
+          | "estimated_srm"
+        >
+      ): number | undefined => {
+        const metricValue = metricsData?.[metricKey];
+        if (metricValue !== undefined && Number.isFinite(metricValue)) {
+          return metricValue as number;
+        }
+        return existingRecipe?.[estimatedKey] as number | undefined;
+      };
+
       const updateData = {
         name: formData.name || "",
         style: formData.style || "",
@@ -416,27 +440,13 @@ export default function EditRecipeScreen() {
         is_public: Boolean(formData.is_public),
         notes: formData.notes || "",
         ingredients: sanitizedIngredients,
-        // Include estimated metrics only when finite
-        ...(metricsData &&
-          Number.isFinite(metricsData.og) && {
-            estimated_og: metricsData.og,
-          }),
-        ...(metricsData &&
-          Number.isFinite(metricsData.fg) && {
-            estimated_fg: metricsData.fg,
-          }),
-        ...(metricsData &&
-          Number.isFinite(metricsData.abv) && {
-            estimated_abv: metricsData.abv,
-          }),
-        ...(metricsData &&
-          Number.isFinite(metricsData.ibu) && {
-            estimated_ibu: metricsData.ibu,
-          }),
-        ...(metricsData &&
-          Number.isFinite(metricsData.srm) && {
-            estimated_srm: metricsData.srm,
-          }),
+        // Include estimated metrics - use newly calculated metrics if available and finite,
+        // otherwise preserve existing recipe metrics to avoid resetting them
+        estimated_og: getMetricOrFallback("og", "estimated_og"),
+        estimated_fg: getMetricOrFallback("fg", "estimated_fg"),
+        estimated_abv: getMetricOrFallback("abv", "estimated_abv"),
+        estimated_ibu: getMetricOrFallback("ibu", "estimated_ibu"),
+        estimated_srm: getMetricOrFallback("srm", "estimated_srm"),
       };
 
       const updatedRecipe = await updateRecipeV2(recipe_id, updateData);
