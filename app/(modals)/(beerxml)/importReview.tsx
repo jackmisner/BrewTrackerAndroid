@@ -28,8 +28,10 @@ import { useTheme } from "@contexts/ThemeContext";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import {
   IngredientInput,
+  RecipeFormData,
   RecipeMetricsInput,
   TemperatureUnit,
+  UnitSystem,
 } from "@src/types";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { generateUniqueId } from "@utils/keyUtils";
@@ -39,9 +41,9 @@ import { useRecipes } from "@src/hooks/offlineV2";
 import { OfflineMetricsCalculator } from "@services/brewing/OfflineMetricsCalculator";
 import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
 
-function deriveMashTempUnit(recipeData: any): TemperatureUnit {
+function deriveMashTempUnit(recipeData: RecipeFormData): TemperatureUnit {
   return (
-    (recipeData.mash_temp_unit as TemperatureUnit) ??
+    recipeData.mash_temp_unit ??
     (String(recipeData.batch_size_unit).toLowerCase() === "l" ? "C" : "F")
   );
 }
@@ -75,7 +77,11 @@ export default function ImportReviewScreen() {
     try {
       return JSON.parse(params.recipeData);
     } catch (error) {
-      UnifiedLogger.error("Failed to parse recipe data:", error as string);
+      UnifiedLogger.error(
+        "import-review",
+        "Failed to parse recipe data:",
+        error
+      );
       return null;
     }
   });
@@ -104,17 +110,14 @@ export default function ImportReviewScreen() {
 
       // Prepare recipe data for offline calculation
       const recipeFormData: RecipeMetricsInput = {
-        batch_size: recipeData.batch_size || 5,
-        batch_size_unit: recipeData.batch_size_unit || "gal",
+        batch_size: recipeData.batch_size || 19.0,
+        batch_size_unit: recipeData.batch_size_unit || "l",
         efficiency: recipeData.efficiency || 75,
         boil_time: recipeData.boil_time || 60,
         mash_temp_unit: deriveMashTempUnit(recipeData),
         mash_temperature:
-          typeof recipeData.mash_temperature === "number"
-            ? recipeData.mash_temperature
-            : String(recipeData.batch_size_unit).toLowerCase() === "l"
-              ? 67
-              : 152,
+          recipeData.mash_temperature ??
+          (String(recipeData.batch_size_unit).toLowerCase() === "l" ? 67 : 152),
         ingredients: recipeData.ingredients,
       };
 
@@ -162,13 +165,13 @@ export default function ImportReviewScreen() {
         style: recipeData.style || "",
         description: recipeData.description || "",
         notes: recipeData.notes || "",
-        batch_size: recipeData.batch_size,
-        batch_size_unit: recipeData.batch_size_unit || "gal",
+        batch_size: recipeData.batch_size || 19.0,
+        batch_size_unit: recipeData.batch_size_unit || "l",
         boil_time: recipeData.boil_time || 60,
         efficiency: recipeData.efficiency || 75,
         unit_system: (String(recipeData.batch_size_unit).toLowerCase() === "l"
           ? "metric"
-          : "imperial") as "metric" | "imperial",
+          : "imperial") as UnitSystem,
         // Respect provided unit when present; default sensibly per system.
         mash_temp_unit: deriveMashTempUnit(recipeData),
         mash_temperature:

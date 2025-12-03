@@ -432,10 +432,12 @@ export class StaticDataService {
 
       if (Array.isArray(beerStylesData)) {
         // If it's already an array, process normally
-        UnifiedLogger.debug(
-          "offline-static",
-          `[StaticDataService.fetchAndCacheBeerStyles] Processing array format with ${beerStylesData.length} items`
-        );
+        if (__DEV__) {
+          UnifiedLogger.debug(
+            "offline-static",
+            `[StaticDataService.fetchAndCacheBeerStyles] Processing array format with ${beerStylesData.length} items`
+          );
+        }
         beerStylesData.forEach((item: any) => {
           if (Array.isArray(item?.styles)) {
             // Item is a category with styles array
@@ -471,7 +473,7 @@ export class StaticDataService {
           }
         });
       } else {
-        UnifiedLogger.error(
+        await UnifiedLogger.error(
           "offline-static",
           `[StaticDataService.fetchAndCacheBeerStyles] Unexpected data format:`,
           { type: typeof beerStylesData, data: beerStylesData }

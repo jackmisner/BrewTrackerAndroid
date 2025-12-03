@@ -5,6 +5,7 @@
  * Implements standard brewing formulas for OG, FG, ABV, IBU, and SRM.
  */
 
+import { isDryHopIngredient } from "@/src/utils/recipeUtils";
 import {
   RecipeMetrics,
   RecipeFormData,
@@ -153,12 +154,7 @@ export class OfflineMetricsCalculator {
           : (hop.time ?? boilTime); // default to boil time for boil additions
 
       // Skip non-bittering additions
-      if (
-        use === "dry-hop" ||
-        use === "dry hop" ||
-        use === "dryhop" ||
-        hopTime <= 0
-      ) {
+      if (isDryHopIngredient(hop) || hopTime <= 0) {
         continue;
       }
       const alphaAcid = hop.alpha_acid ?? 5; // Default 5% AA (allow 0)

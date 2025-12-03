@@ -10,7 +10,7 @@ import { UserCacheService } from "@services/offlineV2/UserCacheService";
 import { UseUserDataReturn, SyncResult, Recipe, BrewSession } from "@src/types";
 import { useAuth } from "@contexts/AuthContext";
 import { useUnits } from "@contexts/UnitContext";
-import UnifiedLogger from "@services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 /**
  * Hook for managing recipes with offline capabilities
