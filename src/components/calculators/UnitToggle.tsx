@@ -22,8 +22,8 @@
  *   value={tempUnit}
  *   onChange={setTempUnit}
  *   options={[
- *     { label: "°F", value: "f", description: "Fahrenheit" },
- *     { label: "°C", value: "c", description: "Celsius" }
+ *     { label: "°F", value: "F", description: "Fahrenheit" },
+ *     { label: "°C", value: "C", description: "Celsius" }
  *   ]}
  * />
  * ```

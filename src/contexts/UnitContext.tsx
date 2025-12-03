@@ -347,7 +347,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
       case "volume":
         return unitSystem === "metric" ? "l" : "gal";
       case "temperature":
-        return unitSystem === "metric" ? "c" : "f";
+        return unitSystem === "metric" ? "C" : "F";
       default:
         return unitSystem === "metric" ? "kg" : "lb";
     }
@@ -416,9 +416,9 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
     }
 
     // Temperature conversions
-    else if (fromUnit === "f" && toUnit === "c") {
+    else if (fromUnit === "F" && toUnit === "C") {
       convertedValue = ((numValue - 32) * 5) / 9;
-    } else if (fromUnit === "c" && toUnit === "f") {
+    } else if (fromUnit === "C" && toUnit === "F") {
       convertedValue = (numValue * 9) / 5 + 32;
     }
 
@@ -628,8 +628,8 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
 
       case "temperature":
         return unitSystem === "metric"
-          ? [{ value: "c", label: "°C", description: "Celsius" }]
-          : [{ value: "f", label: "°F", description: "Fahrenheit" }];
+          ? [{ value: "C", label: "°C", description: "Celsius" }]
+          : [{ value: "F", label: "°F", description: "Fahrenheit" }];
 
       default:
         return [];

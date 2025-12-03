@@ -7,7 +7,7 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { UserCacheService } from "./UserCacheService";
-import { Recipe } from "@src/types";
+import { Recipe, UnitSystem } from "@src/types";
 import { OfflineRecipe } from "@src/types/offline";
 import { STORAGE_KEYS } from "@services/config";
 import { generateUniqueId } from "@utils/keyUtils";
@@ -25,7 +25,7 @@ export class LegacyMigrationService {
    */
   static async migrateLegacyRecipesToV2(
     userId: string,
-    userUnitSystem: "imperial" | "metric" = "imperial"
+    userUnitSystem: UnitSystem = "imperial"
   ): Promise<MigrationResult> {
     const result: MigrationResult = {
       migrated: 0,
@@ -166,7 +166,7 @@ export class LegacyMigrationService {
   private static convertLegacyToV2Recipe(
     legacyRecipe: OfflineRecipe,
     userId: string,
-    userUnitSystem: "imperial" | "metric"
+    userUnitSystem: UnitSystem
   ): Recipe {
     // Create base recipe from legacy data
     const v2Recipe: Recipe = {

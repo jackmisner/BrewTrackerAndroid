@@ -60,17 +60,17 @@ describe("UnitConverter", () => {
 
   describe("temperature conversions", () => {
     it("should convert Fahrenheit to Celsius", () => {
-      const result = UnitConverter.convertTemperature(212, "f", "c");
+      const result = UnitConverter.convertTemperature(212, "F", "C");
       expect(result).toBe(100);
     });
 
     it("should convert Celsius to Fahrenheit", () => {
-      const result = UnitConverter.convertTemperature(0, "c", "f");
+      const result = UnitConverter.convertTemperature(0, "C", "F");
       expect(result).toBe(32);
     });
 
     it("should convert Celsius to Kelvin", () => {
-      const result = UnitConverter.convertTemperature(25, "c", "k");
+      const result = UnitConverter.convertTemperature(25, "C", "k");
       expect(result).toBeCloseTo(298.15, 2);
     });
 
@@ -87,7 +87,7 @@ describe("UnitConverter", () => {
 
     it("should throw error for unknown temperature units", () => {
       expect(() => {
-        UnitConverter.convertTemperature(100, "x", "c");
+        UnitConverter.convertTemperature(100, "x", "C");
       }).toThrow("Unknown temperature unit");
     });
   });
@@ -128,7 +128,7 @@ describe("UnitConverter", () => {
     });
 
     it("should validate temperature units", () => {
-      expect(UnitConverter.isValidTemperatureUnit("f")).toBe(true);
+      expect(UnitConverter.isValidTemperatureUnit("F")).toBe(true);
       expect(UnitConverter.isValidTemperatureUnit("celsius")).toBe(true);
       expect(UnitConverter.isValidTemperatureUnit("invalid")).toBe(false);
     });
@@ -146,8 +146,8 @@ describe("UnitConverter", () => {
     });
 
     it("should format temperature correctly", () => {
-      expect(UnitConverter.formatTemperature(152.4, "f")).toBe("152.4°F");
-      expect(UnitConverter.formatTemperature(67.2, "c")).toBe("67.2°C");
+      expect(UnitConverter.formatTemperature(152.4, "F")).toBe("152.4°F");
+      expect(UnitConverter.formatTemperature(67.2, "C")).toBe("67.2°C");
     });
   });
 
@@ -172,28 +172,28 @@ describe("UnitConverter", () => {
     describe("temperature errors", () => {
       it("should throw error for unknown from temperature unit", () => {
         expect(() => {
-          UnitConverter.convertTemperature(100, "invalid", "c");
+          UnitConverter.convertTemperature(100, "invalid", "C");
         }).toThrow("Unknown temperature unit: invalid");
       });
 
       it("should throw error for unknown to temperature unit", () => {
         expect(() => {
-          UnitConverter.convertTemperature(100, "c", "invalid");
+          UnitConverter.convertTemperature(100, "C", "invalid");
         }).toThrow("Unknown temperature unit: invalid");
       });
 
       it("should handle Kelvin conversion", () => {
-        const result = UnitConverter.convertTemperature(273.15, "k", "c");
+        const result = UnitConverter.convertTemperature(273.15, "k", "C");
         expect(result).toBeCloseTo(0, 2);
       });
 
       it("should handle Fahrenheit to Kelvin conversion", () => {
-        const result = UnitConverter.convertTemperature(32, "f", "k");
+        const result = UnitConverter.convertTemperature(32, "F", "k");
         expect(result).toBeCloseTo(273.15, 2);
       });
 
       it("should handle same unit temperature conversion", () => {
-        const result = UnitConverter.convertTemperature(100, "c", "c");
+        const result = UnitConverter.convertTemperature(100, "C", "C");
         expect(result).toBe(100);
       });
     });
@@ -258,8 +258,8 @@ describe("UnitConverter", () => {
 
     it("should return all temperature units", () => {
       const units = UnitConverter.getTemperatureUnits();
-      expect(units).toContain("f");
-      expect(units).toContain("c");
+      expect(units).toContain("F");
+      expect(units).toContain("C");
       expect(units).toContain("k");
       expect(units).toContain("fahrenheit");
       expect(units).toContain("celsius");

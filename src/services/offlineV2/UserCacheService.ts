@@ -26,6 +26,7 @@ import {
   STORAGE_KEYS_V2,
   Recipe,
   BrewSession,
+  UnitSystem,
 } from "@src/types";
 
 // Simple per-key queue (no external deps) with race condition protection
@@ -192,7 +193,7 @@ export class UserCacheService {
    */
   static async getRecipes(
     userId: string,
-    userUnitSystem: "imperial" | "metric" = "imperial"
+    userUnitSystem: UnitSystem = "imperial"
   ): Promise<Recipe[]> {
     try {
       await UnifiedLogger.debug(
@@ -872,7 +873,7 @@ export class UserCacheService {
    */
   static async getBrewSessions(
     userId: string,
-    userUnitSystem: "imperial" | "metric" = "imperial"
+    userUnitSystem: UnitSystem = "imperial"
   ): Promise<BrewSession[]> {
     try {
       await UnifiedLogger.debug(
@@ -2648,7 +2649,7 @@ export class UserCacheService {
    */
   static async refreshRecipesFromServer(
     userId: string,
-    userUnitSystem: "imperial" | "metric" = "imperial"
+    userUnitSystem: UnitSystem = "imperial"
   ): Promise<Recipe[]> {
     try {
       UnifiedLogger.debug(
@@ -2704,7 +2705,7 @@ export class UserCacheService {
   private static async hydrateRecipesFromServer(
     userId: string,
     forceRefresh: boolean = false,
-    userUnitSystem: "imperial" | "metric" = "imperial"
+    userUnitSystem: UnitSystem = "imperial"
   ): Promise<void> {
     try {
       UnifiedLogger.debug(
@@ -3509,7 +3510,7 @@ export class UserCacheService {
   private static async hydrateBrewSessionsFromServer(
     userId: string,
     forceRefresh: boolean = false,
-    _userUnitSystem: "imperial" | "metric" = "imperial"
+    _userUnitSystem: UnitSystem = "imperial"
   ): Promise<void> {
     try {
       await UnifiedLogger.debug(
@@ -3727,7 +3728,7 @@ export class UserCacheService {
    */
   static async refreshBrewSessionsFromServer(
     userId: string,
-    userUnitSystem: "imperial" | "metric" = "imperial"
+    userUnitSystem: UnitSystem = "imperial"
   ): Promise<BrewSession[]> {
     try {
       await UnifiedLogger.info(

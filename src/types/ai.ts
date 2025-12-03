@@ -13,6 +13,7 @@
  * @module types/ai
  */
 
+import { UnitSystem } from "./common";
 import { Recipe, RecipeMetrics } from "./recipe";
 
 /**
@@ -29,7 +30,7 @@ export interface AIAnalysisRequest {
   style_id?: string;
 
   /** Unit system preference for analysis results */
-  unit_system?: "metric" | "imperial";
+  unit_system?: UnitSystem;
 
   /** Optional workflow name for specific optimization strategies */
   workflow_name?: string;
@@ -54,7 +55,7 @@ export interface AIAnalysisResponse {
   analysis_timestamp: string;
 
   /** Unit system used for the analysis */
-  unit_system: "metric" | "imperial";
+  unit_system: UnitSystem;
 
   /** User preferences used during analysis */
   user_preferences: AIUserPreferences;

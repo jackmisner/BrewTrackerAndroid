@@ -59,7 +59,7 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
         const pending = await UserCacheService.getPendingOperationsCount();
         setPendingCount(pending);
       } catch (err) {
-        console.error("Error loading recipes:", err);
+        await UnifiedLogger.error("useRecipes.loadData", "Error loading recipes:", err);
         setError(err instanceof Error ? err.message : "Failed to load recipes");
       } finally {
         setIsLoading(false);
@@ -215,7 +215,7 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
         const pending = await UserCacheService.getPendingOperationsCount();
         setPendingCount(pending);
       } catch (cacheError) {
-        console.error("Failed to load offline recipe cache:", cacheError);
+        await UnifiedLogger.error("useRecipes.refresh", "Failed to load offline recipe cache:", cacheError);
         // Only set error if we can't even load offline cache
         setError(
           error instanceof Error ? error.message : "Failed to refresh recipes"
@@ -332,7 +332,7 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
         const pending = await UserCacheService.getPendingOperationsCount();
         setPendingCount(pending);
       } catch (err) {
-        console.error("Error loading brew sessions:", err);
+        await UnifiedLogger.error("useBrewSessions.loadData", "Error loading brew sessions:", err);
         setError(
           err instanceof Error ? err.message : "Failed to load brew sessions"
         );
@@ -479,7 +479,7 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
       setPendingCount(pending);
       setLastSync(Date.now());
     } catch (error) {
-      console.error("Brew sessions refresh failed:", error);
+      await UnifiedLogger.error("useBrewSessions.refresh", "Brew sessions refresh failed:", error);
 
       // Don't set error state for refresh failures - preserve offline cache
       // Try to load existing offline data to ensure offline-created sessions are available
@@ -501,7 +501,7 @@ export function useBrewSessions(): UseUserDataReturn<BrewSession> {
         const pending = await UserCacheService.getPendingOperationsCount();
         setPendingCount(pending);
       } catch (cacheError) {
-        console.error("Failed to load offline brew session cache:", cacheError);
+        await UnifiedLogger.error("useBrewSessions.refresh", "Failed to load offline brew session cache:", cacheError);
         // Only set error if we can't even load offline cache
         setError(
           error instanceof Error ? error.message : "Failed to refresh sessions"

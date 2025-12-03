@@ -34,7 +34,7 @@ const mockCalculatorsState = {
     grainWeightUnit: "lb",
     grainTemp: "",
     targetMashTemp: "",
-    tempUnit: "f",
+    tempUnit: "F",
     waterToGrainRatio: "1.25",
     result: null as any,
   },
@@ -123,9 +123,9 @@ jest.mock("@services/calculators/StrikeWaterCalculator", () => ({
 // Mock unit converter
 const mockUnitConverter = {
   convertTemperature: jest.fn((value, from, to) => {
-    if (from === "f" && to === "c") {
+    if (from === "F" && to === "C") {
       return (value - 32) * (5 / 9);
-    } else if (from === "c" && to === "f") {
+    } else if (from === "C" && to === "F") {
       return (value * 9) / 5 + 32;
     }
     return value;
@@ -251,7 +251,7 @@ describe("StrikeWaterCalculatorScreen", () => {
       grainWeightUnit: "lb",
       grainTemp: "",
       targetMashTemp: "",
-      tempUnit: "f",
+      tempUnit: "F",
       waterToGrainRatio: "1.25",
       result: null,
     };
@@ -272,7 +272,7 @@ describe("StrikeWaterCalculatorScreen", () => {
       grainWeightUnit: "lb",
       grainTemp: "70",
       targetMashTemp: "152",
-      tempUnit: "f",
+      tempUnit: "F",
       waterToGrainRatio: "1.25",
       result: null,
     };
@@ -293,7 +293,7 @@ describe("StrikeWaterCalculatorScreen", () => {
       grainWeightUnit: "lb",
       grainTemp: "70",
       targetMashTemp: "152",
-      tempUnit: "f",
+      tempUnit: "F",
       waterToGrainRatio: "1.25",
       result: null,
     };
@@ -318,7 +318,7 @@ describe("StrikeWaterCalculatorScreen", () => {
       grainWeightUnit: "lb",
       grainTemp: "70",
       targetMashTemp: "152",
-      tempUnit: "f",
+      tempUnit: "F",
       waterToGrainRatio: "1.25",
       result: null,
     };
@@ -347,7 +347,7 @@ describe("StrikeWaterCalculatorScreen", () => {
       grainWeightUnit: "lb",
       grainTemp: "70",
       targetMashTemp: "152",
-      tempUnit: "f",
+      tempUnit: "F",
       waterToGrainRatio: "", // Missing ratio
       result: null,
     };
@@ -378,7 +378,7 @@ describe("StrikeWaterCalculatorScreen", () => {
       grainWeightUnit: "lb",
       grainTemp: "70",
       targetMashTemp: "152",
-      tempUnit: "f",
+      tempUnit: "F",
       waterToGrainRatio: "1.25",
       result: null,
     };
@@ -398,7 +398,7 @@ describe("StrikeWaterCalculatorScreen", () => {
       grainWeightUnit: "lb",
       grainTemp: "70",
       targetMashTemp: "152",
-      tempUnit: "f",
+      tempUnit: "F",
       waterToGrainRatio: "0",
       result: null,
     };

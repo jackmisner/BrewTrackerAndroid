@@ -156,7 +156,7 @@ export class StaticDataService {
           String(cachedBeerStyles) !== String(beerStylesVersion.version),
       };
     } catch (error) {
-      UnifiedLogger.warn(
+      await UnifiedLogger.warn(
         "offline-static",
         "Failed to check for updates:",
         error
@@ -213,7 +213,7 @@ export class StaticDataService {
     try {
       await this.fetchAndCacheIngredients();
     } catch (error) {
-      UnifiedLogger.warn(
+      await UnifiedLogger.warn(
         "offline-static",
         "Failed to refresh ingredients after authentication:",
         error
@@ -334,7 +334,7 @@ export class StaticDataService {
         // In this case, we can't fetch ingredients, so return empty array
         // but still cache the version info for when user logs in
         if (authError?.status === 401 || authError?.status === 403) {
-          UnifiedLogger.warn(
+          void UnifiedLogger.warn(
             "offline-static",
             "Cannot fetch ingredients: user not authenticated. Ingredients will be available after login."
           );
@@ -406,7 +406,7 @@ export class StaticDataService {
   private static async fetchAndCacheBeerStyles(): Promise<BeerStyle[]> {
     try {
       if (__DEV__) {
-        UnifiedLogger.debug(
+        void UnifiedLogger.debug(
           "offline-static",
           `[StaticDataService.fetchAndCacheBeerStyles] Starting fetch...`
         );
@@ -419,7 +419,7 @@ export class StaticDataService {
       ]);
 
       if (__DEV__) {
-        UnifiedLogger.debug(
+        void UnifiedLogger.debug(
           "offline-static",
           `[StaticDataService.fetchAndCacheBeerStyles] API responses received - version: ${versionResponse?.data?.version}`
         );
@@ -433,7 +433,7 @@ export class StaticDataService {
       if (Array.isArray(beerStylesData)) {
         // If it's already an array, process normally
         if (__DEV__) {
-          UnifiedLogger.debug(
+          void UnifiedLogger.debug(
             "offline-static",
             `[StaticDataService.fetchAndCacheBeerStyles] Processing array format with ${beerStylesData.length} items`
           );
@@ -456,7 +456,7 @@ export class StaticDataService {
       ) {
         // If it's an object with numeric keys (like "1", "2", etc.), convert to array
         if (__DEV__) {
-          UnifiedLogger.debug(
+          void UnifiedLogger.debug(
             "offline-static",
             `[StaticDataService.fetchAndCacheBeerStyles] Processing object format with keys: ${Object.keys(beerStylesData).length}`
           );
@@ -616,7 +616,7 @@ export class StaticDataService {
             dataType === "ingredients" &&
             (error?.status === 401 || error?.status === 403)
           ) {
-            UnifiedLogger.warn(
+            void UnifiedLogger.warn(
               "offline-static",
               "Background ingredients update failed: authentication required"
             );
@@ -627,7 +627,7 @@ export class StaticDataService {
       }
     } catch (error) {
       // Silent fail for background checks
-      UnifiedLogger.warn(
+      void UnifiedLogger.warn(
         "offline-static",
         `Background version check failed for ${dataType}:`,
         error

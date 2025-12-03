@@ -59,6 +59,7 @@ import {
 } from "@utils/formatUtils";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { TEST_IDS } from "@src/constants/testIDs";
+import { TemperatureUnit } from "@/src/types";
 
 function toLocalISODateString(d: Date) {
   const year = d.getFullYear();
@@ -102,9 +103,8 @@ export default function CreateBrewSessionScreen() {
   const { create: createBrewSession } = useBrewSessions();
   const { getById: getRecipeById } = useRecipes();
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedTemperatureUnit, setSelectedTemperatureUnit] = useState<
-    "F" | "C" | null
-  >(null);
+  const [selectedTemperatureUnit, setSelectedTemperatureUnit] =
+    useState<TemperatureUnit | null>(null);
   const [showUnitPrompt, setShowUnitPrompt] = useState(false);
   const [recipe, setRecipe] = useState<any>(null);
   const [isLoadingRecipe, setIsLoadingRecipe] = useState(true);

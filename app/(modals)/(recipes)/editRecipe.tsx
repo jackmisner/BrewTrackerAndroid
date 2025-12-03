@@ -21,6 +21,7 @@ import {
   RecipeIngredient,
   Recipe,
   RecipeMetrics,
+  UnitSystem,
 } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
@@ -146,7 +147,7 @@ const toOptionalNumber = (v: any): number | undefined => {
 // Create unit-aware initial recipe state from existing recipe
 const createRecipeStateFromExisting = (
   existingRecipe: Recipe,
-  unitSystem: "imperial" | "metric"
+  unitSystem: UnitSystem
 ): RecipeFormData => ({
   name: existingRecipe.name ?? "",
   style: existingRecipe.style ?? "",

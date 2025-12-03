@@ -8,6 +8,7 @@
 import { UserCacheService } from "./UserCacheService";
 import { StaticDataService } from "./StaticDataService";
 import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
+import { UnitSystem } from "@/src/types";
 
 export class StartupHydrationService {
   private static isHydrating = false;
@@ -18,7 +19,7 @@ export class StartupHydrationService {
    */
   static async hydrateOnStartup(
     userId: string,
-    userUnitSystem: "imperial" | "metric" = "imperial"
+    userUnitSystem: UnitSystem = "imperial"
   ): Promise<void> {
     // Prevent multiple concurrent hydrations
     if (this.isHydrating || this.hasHydrated) {
@@ -60,7 +61,7 @@ export class StartupHydrationService {
    */
   private static async hydrateUserData(
     userId: string,
-    userUnitSystem: "imperial" | "metric" = "imperial"
+    userUnitSystem: UnitSystem = "imperial"
   ): Promise<void> {
     try {
       UnifiedLogger.debug(

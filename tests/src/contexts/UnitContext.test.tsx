@@ -229,7 +229,7 @@ describe("UnitContext", () => {
 
       expect(result.current.getPreferredUnit("weight")).toBe("lb");
       expect(result.current.getPreferredUnit("volume")).toBe("gal");
-      expect(result.current.getPreferredUnit("temperature")).toBe("f");
+      expect(result.current.getPreferredUnit("temperature")).toBe("F");
     });
 
     it("should return correct preferred units for metric system", () => {
@@ -238,7 +238,7 @@ describe("UnitContext", () => {
 
       expect(result.current.getPreferredUnit("weight")).toBe("kg");
       expect(result.current.getPreferredUnit("volume")).toBe("l");
-      expect(result.current.getPreferredUnit("temperature")).toBe("c");
+      expect(result.current.getPreferredUnit("temperature")).toBe("C");
     });
   });
 
@@ -305,8 +305,8 @@ describe("UnitContext", () => {
       expect(result.current.formatValue(0.5, "lb", "weight")).toBe("0.5 lb");
 
       // Temperature should always use 1 decimal place
-      expect(result.current.formatValue(20.555, "c", "temperature")).toBe(
-        "20.6 c"
+      expect(result.current.formatValue(20.555, "C", "temperature")).toBe(
+        "20.6 C"
       );
 
       // Small volume should use 2 decimal places when < 1
@@ -745,7 +745,7 @@ describe("UnitContext", () => {
 
       const tempUnits = imperialResult.current.getCommonUnits("temperature");
       expect(tempUnits.length).toBe(1);
-      expect(tempUnits[0].value).toBe("f");
+      expect(tempUnits[0].value).toBe("F");
       expect(tempUnits[0].label).toBe("°F");
 
       const metricWrapper = createWrapper("metric");
@@ -756,7 +756,7 @@ describe("UnitContext", () => {
       const metricTempUnits =
         metricResult.current.getCommonUnits("temperature");
       expect(metricTempUnits.length).toBe(1);
-      expect(metricTempUnits[0].value).toBe("c");
+      expect(metricTempUnits[0].value).toBe("C");
       expect(metricTempUnits[0].label).toBe("°C");
     });
 
@@ -801,8 +801,8 @@ describe("UnitContext", () => {
       const wrapper = createWrapper("metric");
       const { result } = renderHook(() => useUnits(), { wrapper });
 
-      expect(result.current.formatValue(20.555, "c", "temperature")).toBe(
-        "20.6 c"
+      expect(result.current.formatValue(20.555, "C", "temperature")).toBe(
+        "20.6 C"
       );
     });
 
@@ -1093,18 +1093,18 @@ describe("UnitContext", () => {
       const wrapper = createWrapper("metric");
       const { result } = renderHook(() => useUnits(), { wrapper });
 
-      const conversion = result.current.convertUnit(32, "f", "c");
+      const conversion = result.current.convertUnit(32, "F", "C");
       expect(conversion.value).toBeCloseTo(0, 1);
-      expect(conversion.unit).toBe("c");
+      expect(conversion.unit).toBe("C");
     });
 
     it("should handle c to f temperature conversion", () => {
       const wrapper = createWrapper("imperial");
       const { result } = renderHook(() => useUnits(), { wrapper });
 
-      const conversion = result.current.convertUnit(0, "c", "f");
+      const conversion = result.current.convertUnit(0, "C", "F");
       expect(conversion.value).toBeCloseTo(32, 1);
-      expect(conversion.unit).toBe("f");
+      expect(conversion.unit).toBe("F");
     });
   });
 });

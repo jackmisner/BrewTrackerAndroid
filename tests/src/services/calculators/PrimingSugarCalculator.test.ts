@@ -27,7 +27,7 @@ jest.mock("@services/calculators/UnitConverter", () => ({
       return value;
     }),
     convertTemperature: jest.fn((value, from, to) => {
-      if (from === "c" && to === "f") {
+      if (from === "C" && to === "F") {
         return (value * 9) / 5 + 32;
       }
       return value;
@@ -146,8 +146,8 @@ describe("PrimingSugarCalculator", () => {
 
   describe("estimateResidualCO2", () => {
     it("should estimate residual CO2 for common temperatures", () => {
-      const co2At65F = PrimingSugarCalculator.estimateResidualCO2(65, "f");
-      const co2At70F = PrimingSugarCalculator.estimateResidualCO2(70, "f");
+      const co2At65F = PrimingSugarCalculator.estimateResidualCO2(65, "F");
+      const co2At70F = PrimingSugarCalculator.estimateResidualCO2(70, "F");
 
       expect(co2At65F).toBe(0.9);
       expect(co2At70F).toBe(0.8);
@@ -155,21 +155,21 @@ describe("PrimingSugarCalculator", () => {
     });
 
     it("should handle Celsius temperatures", () => {
-      const co2 = PrimingSugarCalculator.estimateResidualCO2(18, "c"); // ~65F
+      const co2 = PrimingSugarCalculator.estimateResidualCO2(18, "C"); // ~65F
       expect(co2).toBeGreaterThan(0);
       expect(co2).toBeLessThan(2);
     });
 
     it("should find closest temperature in lookup table", () => {
-      const co2At67F = PrimingSugarCalculator.estimateResidualCO2(67, "f"); // Between 65 and 70
+      const co2At67F = PrimingSugarCalculator.estimateResidualCO2(67, "F"); // Between 65 and 70
 
       // Should pick the closest value (65F = 0.9, 70F = 0.8, so 67 should be 0.9)
       expect(co2At67F).toBe(0.9);
     });
 
     it("should handle extreme temperatures", () => {
-      const co2Cold = PrimingSugarCalculator.estimateResidualCO2(20, "f"); // Very cold
-      const co2Hot = PrimingSugarCalculator.estimateResidualCO2(90, "f"); // Very hot
+      const co2Cold = PrimingSugarCalculator.estimateResidualCO2(20, "F"); // Very cold
+      const co2Hot = PrimingSugarCalculator.estimateResidualCO2(90, "F"); // Very hot
 
       expect(co2Cold).toBeGreaterThan(0);
       expect(co2Hot).toBeGreaterThan(0);

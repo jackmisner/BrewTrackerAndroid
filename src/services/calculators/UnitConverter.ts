@@ -53,8 +53,8 @@ export class UnitConverter {
     fromUnit: string,
     toUnit: string
   ): number {
-    const from = fromUnit.toLowerCase();
-    const to = toUnit.toLowerCase();
+    const from = fromUnit;
+    const to = toUnit;
 
     if (from === to) {
       return value;
@@ -63,11 +63,11 @@ export class UnitConverter {
     // Convert to Celsius first
     let celsius: number;
     switch (from) {
-      case "f":
+      case "F":
       case "fahrenheit":
         celsius = (value - 32) * (5 / 9);
         break;
-      case "c":
+      case "C":
       case "celsius":
         celsius = value;
         break;
@@ -81,10 +81,10 @@ export class UnitConverter {
 
     // Convert from Celsius to target unit
     switch (to) {
-      case "f":
+      case "F":
       case "fahrenheit":
         return celsius * (9 / 5) + 32;
-      case "c":
+      case "C":
       case "celsius":
         return celsius;
       case "k":
@@ -190,7 +190,7 @@ export class UnitConverter {
   }
 
   public static getTemperatureUnits(): string[] {
-    return ["f", "c", "k", "fahrenheit", "celsius", "kelvin"];
+    return ["F", "C", "k", "fahrenheit", "celsius", "kelvin"];
   }
 
   // Validation methods

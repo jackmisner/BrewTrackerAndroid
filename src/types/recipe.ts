@@ -140,7 +140,7 @@ export interface RecipeFormData {
   description: string;
   batch_size: number;
   batch_size_unit: BatchSizeUnit;
-  unit_system: "imperial" | "metric";
+  unit_system: UnitSystem;
   boil_time: number;
   efficiency: number;
   mash_temperature: number;

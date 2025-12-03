@@ -142,7 +142,7 @@ describe("Common Types", () => {
 
     it("should handle first page pagination", () => {
       const firstPageResponse: PaginatedResponse<string> = {
-        data: ["a", "b", "c"],
+        data: ["a", "b", "C"],
         pagination: {
           page: 1,
           pages: 5,
