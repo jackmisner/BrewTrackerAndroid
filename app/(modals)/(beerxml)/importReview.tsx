@@ -123,8 +123,9 @@ export default function ImportReviewScreen() {
         const validation =
           OfflineMetricsCalculator.validateRecipeData(recipeFormData);
         if (!validation.isValid) {
-          console.warn(
-            "[IMPORT_REVIEW] Invalid recipe data:",
+          await UnifiedLogger.warn(
+            "import-review",
+            "Invalid recipe data",
             validation.errors
           );
           return null;
@@ -134,7 +135,11 @@ export default function ImportReviewScreen() {
           OfflineMetricsCalculator.calculateMetrics(recipeFormData);
         return metrics;
       } catch (error) {
-        console.error("[IMPORT_REVIEW] Metrics calculation failed:", error);
+        await UnifiedLogger.error(
+          "import-review",
+          "Metrics calculation failed",
+          error
+        );
         return null;
       }
     },
@@ -161,7 +166,7 @@ export default function ImportReviewScreen() {
         batch_size_unit: recipeData.batch_size_unit || "gal",
         boil_time: recipeData.boil_time || 60,
         efficiency: recipeData.efficiency || 75,
-        unit_system: (recipeData.batch_size_unit === "l"
+        unit_system: (String(recipeData.batch_size_unit).toLowerCase() === "l"
           ? "metric"
           : "imperial") as "metric" | "imperial",
         // Respect provided unit when present; default sensibly per system.
@@ -185,15 +190,27 @@ export default function ImportReviewScreen() {
           .filter((ing: any) => {
             // Validate required fields before mapping
             if (!ing.ingredient_id) {
-              console.error("Ingredient missing ingredient_id:", ing);
+              void UnifiedLogger.error(
+                "import-review",
+                "Ingredient missing ingredient_id",
+                ing
+              );
               return false;
             }
             if (!ing.name || !ing.type || !ing.unit) {
-              console.error("Ingredient missing required fields:", ing);
+              void UnifiedLogger.error(
+                "import-review",
+                "Ingredient missing required fields",
+                ing
+              );
               return false;
             }
             if (isNaN(Number(ing.amount))) {
-              console.error("Ingredient has invalid amount:", ing);
+              void UnifiedLogger.error(
+                "import-review",
+                "Ingredient has invalid amount",
+                ing
+              );
               return false;
             }
             return true;
@@ -259,7 +276,7 @@ export default function ImportReviewScreen() {
       );
     },
     onError: (error: any) => {
-      console.error("🍺 Import Review - Recipe creation error:", error);
+      void UnifiedLogger.error("import-review", "Recipe creation error", error);
       Alert.alert(
         "Import Failed",
         `Failed to create recipe "${recipeData.name}". Please try again.`,

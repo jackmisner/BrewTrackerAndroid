@@ -305,24 +305,12 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
               : "Background cache refresh completed",
             { results }
           );
-          if (failures.length > 0) {
-            UnifiedLogger.warn(
-              "network",
-              "Background cache refresh had failures:",
-              failures
-            );
-          }
         })
         .catch(error => {
           void UnifiedLogger.error(
             "NetworkContext.backgroundRefresh",
             "Background cache refresh failed",
             { error: error instanceof Error ? error.message : String(error) }
-          );
-          UnifiedLogger.warn(
-            "network",
-            "Background cache refresh failed:",
-            error
           );
         });
 
@@ -364,11 +352,6 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
                     error:
                       error instanceof Error ? error.message : "Unknown error",
                   }
-                );
-                UnifiedLogger.warn(
-                  "network",
-                  "Background sync of pending operations failed:",
-                  error
                 );
               });
           })
