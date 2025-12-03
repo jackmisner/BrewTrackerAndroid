@@ -49,7 +49,11 @@ export class StartupHydrationService {
         `[StartupHydrationService] Hydration completed successfully`
       );
     } catch (error) {
-      console.error(`[StartupHydrationService] Hydration failed:`, error);
+      await UnifiedLogger.error(
+        "offline-hydration",
+        "[StartupHydrationService] Hydration failed:",
+        error
+      );
       // Don't throw - app should still work even if hydration fails
     } finally {
       this.isHydrating = false;
@@ -97,7 +101,8 @@ export class StartupHydrationService {
         `[StartupHydrationService] User data hydration completed`
       );
     } catch (error) {
-      console.warn(
+      void UnifiedLogger.warn(
+        "offline-hydration",
         `[StartupHydrationService] User data hydration failed:`,
         error
       );
@@ -130,7 +135,8 @@ export class StartupHydrationService {
         );
         // Check for updates in background
         StaticDataService.updateIngredientsCache().catch(error => {
-          console.warn(
+          void UnifiedLogger.warn(
+            "offline-hydration",
             `[StartupHydrationService] Background ingredients update failed:`,
             error
           );
@@ -151,7 +157,8 @@ export class StartupHydrationService {
         );
         // Check for updates in background
         StaticDataService.updateBeerStylesCache().catch(error => {
-          console.warn(
+          void UnifiedLogger.warn(
+            "offline-hydration",
             `[StartupHydrationService] Background beer styles update failed:`,
             error
           );
@@ -163,7 +170,8 @@ export class StartupHydrationService {
         `[StartupHydrationService] Static data hydration completed`
       );
     } catch (error) {
-      console.warn(
+      void UnifiedLogger.warn(
+        "offline-hydration",
         `[StartupHydrationService] Static data hydration failed:`,
         error
       );

@@ -260,11 +260,8 @@ describe("UnitConverter", () => {
       const units = UnitConverter.getTemperatureUnits();
       expect(units).toContain("F");
       expect(units).toContain("C");
-      expect(units).toContain("k");
-      expect(units).toContain("fahrenheit");
-      expect(units).toContain("celsius");
-      expect(units).toContain("kelvin");
-      expect(units.length).toBe(6);
+      expect(units).toContain("K");
+      expect(units.length).toBe(3);
     });
   });
 });

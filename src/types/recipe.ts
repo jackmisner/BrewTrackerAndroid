@@ -151,7 +151,17 @@ export interface RecipeFormData {
   ingredients: RecipeIngredient[];
 }
 
-// Minimal data required for metrics calculation
+/**
+ * Minimal data required for metrics calculation
+ *
+ * Note: This interface intentionally does NOT include unit_system.
+ * The metrics calculator uses specific unit fields (batch_size_unit, mash_temp_unit)
+ * rather than relying on a general unit_system preference, ensuring calculations
+ * work correctly regardless of user's unit system settings.
+ *
+ * Ingredients can be either RecipeIngredient (from existing recipes) or IngredientInput
+ * (from imports/new recipes). The id field is not used by the calculator.
+ */
 export interface RecipeMetricsInput {
   batch_size: number;
   batch_size_unit: BatchSizeUnit;
@@ -159,7 +169,7 @@ export interface RecipeMetricsInput {
   boil_time: number;
   mash_temperature?: number;
   mash_temp_unit?: TemperatureUnit;
-  ingredients: RecipeIngredient[];
+  ingredients: (RecipeIngredient | IngredientInput)[];
 }
 
 // Recipe search filters

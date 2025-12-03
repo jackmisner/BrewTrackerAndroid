@@ -47,14 +47,36 @@ export class UnitConverter {
     tbsp: 0.0147868,
   };
 
+  /**
+   * Normalize temperature unit to canonical form ("C", "F", or "K")
+   * @private
+   */
+  private static normalizeTemperatureUnit(unit: string): string {
+    const normalized = unit.toLowerCase();
+    switch (normalized) {
+      case "f":
+      case "fahrenheit":
+        return "F";
+      case "c":
+      case "celsius":
+        return "C";
+      case "k":
+      case "kelvin":
+        return "K";
+      default:
+        throw new Error(`Unknown temperature unit: ${unit}`);
+    }
+  }
+
   // Temperature conversion functions
   public static convertTemperature(
     value: number,
     fromUnit: string,
     toUnit: string
   ): number {
-    const from = fromUnit;
-    const to = toUnit;
+    // Normalize units to canonical form
+    const from = this.normalizeTemperatureUnit(fromUnit);
+    const to = this.normalizeTemperatureUnit(toUnit);
 
     if (from === to) {
       return value;
@@ -64,15 +86,12 @@ export class UnitConverter {
     let celsius: number;
     switch (from) {
       case "F":
-      case "fahrenheit":
         celsius = (value - 32) * (5 / 9);
         break;
       case "C":
-      case "celsius":
         celsius = value;
         break;
-      case "k":
-      case "kelvin":
+      case "K":
         celsius = value - 273.15;
         break;
       default:
@@ -82,13 +101,10 @@ export class UnitConverter {
     // Convert from Celsius to target unit
     switch (to) {
       case "F":
-      case "fahrenheit":
         return celsius * (9 / 5) + 32;
       case "C":
-      case "celsius":
         return celsius;
-      case "k":
-      case "kelvin":
+      case "K":
         return celsius + 273.15;
       default:
         throw new Error(`Unknown temperature unit: ${toUnit}`);
@@ -190,7 +206,7 @@ export class UnitConverter {
   }
 
   public static getTemperatureUnits(): string[] {
-    return ["F", "C", "k", "fahrenheit", "celsius", "kelvin"];
+    return ["F", "C", "K"];
   }
 
   // Validation methods
@@ -203,8 +219,12 @@ export class UnitConverter {
   }
 
   public static isValidTemperatureUnit(unit: string): boolean {
-    const validUnits = ["f", "c", "k", "fahrenheit", "celsius", "kelvin"];
-    return validUnits.includes(unit.toLowerCase());
+    try {
+      this.normalizeTemperatureUnit(unit);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // Formatting methods for display
@@ -219,6 +239,7 @@ export class UnitConverter {
   }
 
   public static formatTemperature(temp: number, unit: string): string {
-    return `${temp.toFixed(1)}°${unit.toUpperCase()}`;
+    const normalizedUnit = this.normalizeTemperatureUnit(unit);
+    return `${temp.toFixed(1)}°${normalizedUnit}`;
   }
 }

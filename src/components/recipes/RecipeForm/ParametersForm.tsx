@@ -224,7 +224,8 @@ export function ParametersForm({
             ]}
             value={recipeData.mash_temperature.toString()}
             onChangeText={text => {
-              const numValue = parseFloat(text) || 0;
+              const numValue =
+                text.trim() === "" ? Number.NaN : parseFloat(text);
               handleFieldChange("mash_temperature", numValue);
             }}
             placeholder={unitSystem === "imperial" ? "152" : "67"}

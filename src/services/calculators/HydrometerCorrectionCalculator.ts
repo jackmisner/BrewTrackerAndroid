@@ -154,6 +154,13 @@ export class HydrometerCorrectionCalculator {
 
   /**
    * Get correction table for common temperatures
+   *
+   * @param measuredGravity - The specific gravity reading from the hydrometer
+   * @param calibrationTemp - The calibration temperature of the hydrometer (default: 60°F)
+   *                          Note: Default of 60 is meaningful only when tempUnit="F".
+   *                          If using tempUnit="C", explicitly pass 15.5 for standard calibration.
+   * @param tempUnit - Temperature unit ("F" or "C", default: "F")
+   * @returns Array of temperature-correction pairs for display
    */
   public static getCorrectionTable(
     measuredGravity: number,

@@ -28,7 +28,7 @@ import { useTheme } from "@contexts/ThemeContext";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import {
   IngredientInput,
-  RecipeFormData,
+  Recipe,
   RecipeMetricsInput,
   TemperatureUnit,
   UnitSystem,
@@ -41,12 +41,48 @@ import { useRecipes } from "@src/hooks/offlineV2";
 import { OfflineMetricsCalculator } from "@services/brewing/OfflineMetricsCalculator";
 import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
 
-function deriveMashTempUnit(recipeData: RecipeFormData): TemperatureUnit {
-  return (recipeData.mash_temp_unit ?? recipeData.unit_system === "metric")
-    ? "C"
-    : "F";
+/**
+ * Derive unit system from batch_size_unit with fallback to metric
+ * Centralizes the "l" => metric logic used throughout import
+ */
+function deriveUnitSystem(
+  batchSizeUnit: string | undefined,
+  explicitUnitSystem?: string
+): UnitSystem {
+  if (explicitUnitSystem === "metric" || explicitUnitSystem === "imperial") {
+    return explicitUnitSystem;
+  }
+  // Default based on batch size unit
+  return batchSizeUnit?.toLowerCase() === "l" ? "metric" : "imperial";
 }
 
+/**
+ * Derive mash temperature unit with normalization and validation
+ * Only accepts valid "C" or "F" values, falls back to unit system default
+ */
+function deriveMashTempUnit(
+  mashTempUnit: string | undefined,
+  unitSystem: UnitSystem
+): TemperatureUnit {
+  // Normalize and validate provided unit
+  if (mashTempUnit) {
+    const normalized = mashTempUnit.toUpperCase();
+    if (normalized === "C" || normalized === "F") {
+      return normalized as TemperatureUnit;
+    }
+    // Invalid unit provided, log warning and fall through to default
+    void UnifiedLogger.warn(
+      "import-review",
+      `Invalid mash_temp_unit "${mashTempUnit}", using default for ${unitSystem}`
+    );
+  }
+  // Fall back to unit system default
+  return unitSystem === "metric" ? "C" : "F";
+}
+
+/**
+ * Coerce ingredient time values to valid numbers or undefined
+ */
 function coerceIngredientTime(input: unknown): number | undefined {
   if (input == null) {
     return undefined;
@@ -59,6 +95,61 @@ function coerceIngredientTime(input: unknown): number | undefined {
   } // preserve explicit zero
   const n = typeof input === "number" ? input : Number(input);
   return Number.isFinite(n) && n >= 0 ? n : undefined; // reject NaN/±Inf/negatives
+}
+
+/**
+ * Normalize and validate imported ingredients
+ * Filters out invalid ingredients and logs errors
+ * Returns array ready for both metrics calculation and recipe creation
+ */
+function normalizeImportedIngredients(
+  ingredients: any[] | undefined
+): IngredientInput[] {
+  if (!ingredients || !Array.isArray(ingredients)) {
+    return [];
+  }
+
+  return ingredients
+    .filter((ing: any) => {
+      // Validate required fields before mapping
+      if (!ing.ingredient_id) {
+        void UnifiedLogger.error(
+          "import-review",
+          "Ingredient missing ingredient_id",
+          ing
+        );
+        return false;
+      }
+      if (!ing.name || !ing.type || !ing.unit) {
+        void UnifiedLogger.error(
+          "import-review",
+          "Ingredient missing required fields",
+          ing
+        );
+        return false;
+      }
+      if (isNaN(Number(ing.amount))) {
+        void UnifiedLogger.error(
+          "import-review",
+          "Ingredient has invalid amount",
+          ing
+        );
+        return false;
+      }
+      return true;
+    })
+    .map(
+      (ing: any): IngredientInput => ({
+        ingredient_id: ing.ingredient_id,
+        name: ing.name,
+        type: ing.type,
+        amount: Number(ing.amount) || 0,
+        unit: ing.unit,
+        use: ing.use,
+        time: coerceIngredientTime(ing.time),
+        instance_id: generateUniqueId("ing"),
+      })
+    );
 }
 
 export default function ImportReviewScreen() {
@@ -100,12 +191,32 @@ export default function ImportReviewScreen() {
       recipeData?.batch_size_unit,
       recipeData?.efficiency,
       recipeData?.boil_time,
-      JSON.stringify(recipeData?.ingredients?.map((i: any) => i.ingredient_id)),
+      recipeData?.mash_temperature,
+      recipeData?.mash_temp_unit,
+      // Include full ingredient fingerprint (ID + amount + unit) for proper cache invalidation
+      JSON.stringify(
+        recipeData?.ingredients?.map((i: any) => ({
+          id: i.ingredient_id,
+          amount: i.amount,
+          unit: i.unit,
+        }))
+      ),
     ],
     queryFn: async () => {
       if (!recipeData || !recipeData.ingredients) {
         return null;
       }
+
+      // Normalize ingredients first (applies validation and generates instance_ids)
+      const normalizedIngredients = normalizeImportedIngredients(
+        recipeData.ingredients
+      );
+
+      // Derive unit system using centralized logic
+      const unitSystem = deriveUnitSystem(
+        recipeData.batch_size_unit,
+        recipeData.unit_system
+      );
 
       // Prepare recipe data for offline calculation
       const recipeFormData: RecipeMetricsInput = {
@@ -113,36 +224,40 @@ export default function ImportReviewScreen() {
         batch_size_unit: recipeData.batch_size_unit || "l",
         efficiency: recipeData.efficiency || 75,
         boil_time: recipeData.boil_time || 60,
-        mash_temp_unit: deriveMashTempUnit(recipeData),
+        mash_temp_unit: deriveMashTempUnit(
+          recipeData.mash_temp_unit,
+          unitSystem
+        ),
         mash_temperature:
-          recipeData.mash_temperature ??
-          ((recipeData.unit_system as UnitSystem) === "metric" ? 67 : 152),
-        ingredients: recipeData.ingredients,
+          recipeData.mash_temperature ?? (unitSystem === "metric" ? 67 : 152),
+        ingredients: normalizedIngredients,
       };
 
       // Calculate metrics offline (always, no network dependency)
-      try {
-        const validation =
-          OfflineMetricsCalculator.validateRecipeData(recipeFormData);
-        if (!validation.isValid) {
-          await UnifiedLogger.warn(
-            "import-review",
-            "Invalid recipe data",
-            validation.errors
-          );
-          return null;
-        }
+      // Validation failures return null, but internal errors throw to set metricsError
+      const validation =
+        OfflineMetricsCalculator.validateRecipeData(recipeFormData);
+      if (!validation.isValid) {
+        await UnifiedLogger.warn(
+          "import-review",
+          "Invalid recipe data for metrics calculation",
+          validation.errors
+        );
+        return null; // Validation failure - no error state, just no metrics
+      }
 
+      try {
         const metrics =
           OfflineMetricsCalculator.calculateMetrics(recipeFormData);
         return metrics;
       } catch (error) {
+        // Internal calculator error - throw to set metricsError state
         await UnifiedLogger.error(
           "import-review",
-          "Metrics calculation failed",
+          "Unexpected metrics calculation failure",
           error
         );
-        return null;
+        throw error; // Re-throw to trigger error state
       }
     },
     enabled:
@@ -158,6 +273,17 @@ export default function ImportReviewScreen() {
    */
   const createRecipeMutation = useMutation({
     mutationFn: async () => {
+      // Normalize ingredients using centralized helper (same as metrics calculation)
+      const normalizedIngredients = normalizeImportedIngredients(
+        recipeData.ingredients
+      );
+
+      // Derive unit system using centralized logic
+      const unitSystem = deriveUnitSystem(
+        recipeData.batch_size_unit,
+        recipeData.unit_system
+      );
+
       // Prepare recipe data for creation
       const recipePayload = {
         name: recipeData.name,
@@ -166,17 +292,16 @@ export default function ImportReviewScreen() {
         notes: recipeData.notes || "",
         batch_size: recipeData.batch_size || 19.0,
         batch_size_unit:
-          recipeData.batch_size_unit ||
-          (recipeData.unit_system === "metric" ? "l" : "gal"),
+          recipeData.batch_size_unit || (unitSystem === "metric" ? "l" : "gal"),
         boil_time: recipeData.boil_time || 60,
         efficiency: recipeData.efficiency || 75,
-        unit_system: recipeData.unit_system,
-        // Respect provided unit when present; default sensibly per system.
-        mash_temp_unit:
-          recipeData.mash_temp_unit || deriveMashTempUnit(recipeData),
+        unit_system: unitSystem,
+        mash_temp_unit: deriveMashTempUnit(
+          recipeData.mash_temp_unit,
+          unitSystem
+        ),
         mash_temperature:
-          recipeData.mash_temperature ??
-          (recipeData.unit_system === "metric" ? 67 : 152),
+          recipeData.mash_temperature ?? (unitSystem === "metric" ? 67 : 152),
         is_public: false, // Import as private by default
         // Include calculated metrics if available
         ...(calculatedMetrics && {
@@ -186,52 +311,14 @@ export default function ImportReviewScreen() {
           estimated_ibu: calculatedMetrics.ibu,
           estimated_srm: calculatedMetrics.srm,
         }),
-        ingredients: (recipeData.ingredients || [])
-          .filter((ing: any) => {
-            // Validate required fields before mapping
-            if (!ing.ingredient_id) {
-              void UnifiedLogger.error(
-                "import-review",
-                "Ingredient missing ingredient_id",
-                ing
-              );
-              return false;
-            }
-            if (!ing.name || !ing.type || !ing.unit) {
-              void UnifiedLogger.error(
-                "import-review",
-                "Ingredient missing required fields",
-                ing
-              );
-              return false;
-            }
-            if (isNaN(Number(ing.amount))) {
-              void UnifiedLogger.error(
-                "import-review",
-                "Ingredient has invalid amount",
-                ing
-              );
-              return false;
-            }
-            return true;
-          })
-          .map(
-            (ing: any): IngredientInput => ({
-              ingredient_id: ing.ingredient_id,
-              name: ing.name,
-              type: ing.type,
-              amount: Number(ing.amount) || 0,
-              unit: ing.unit,
-              use: ing.use,
-              time: coerceIngredientTime(ing.time),
-              instance_id: generateUniqueId("ing"), // Generate unique instance ID for each imported ingredient
-            })
-          ),
+        ingredients: normalizedIngredients,
       };
 
       // Use offline V2 createRecipe which creates temp recipe first, then syncs to server
       // This ensures immediate display with temp ID, then updates with server ID after sync
-      return await createRecipe(recipePayload);
+      // TypeScript note: IngredientInput[] is compatible with RecipeIngredient[] for creation
+      // since the backend generates IDs. We cast through unknown to satisfy the type checker.
+      return await createRecipe(recipePayload as unknown as Partial<Recipe>);
     },
     onSuccess: createdRecipe => {
       // Invalidate queries to refresh recipe lists
@@ -612,12 +699,10 @@ export default function ImportReviewScreen() {
                         <Text style={styles.ingredientDetails}>
                           {ingredient.amount || 0} {ingredient.unit || ""}
                           {ingredient.use && ` • ${ingredient.use}`}
-                          {(() => {
-                            const time = coerceIngredientTime(ingredient.time);
-                            return time !== undefined && time > 0
+                          {(time =>
+                            time !== undefined && time > 0
                               ? ` • ${time} min`
-                              : "";
-                          })()}
+                              : "")(coerceIngredientTime(ingredient.time))}
                         </Text>
                       </View>
                     </View>

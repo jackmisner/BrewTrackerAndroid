@@ -42,35 +42,36 @@ describe("UnitContext", () => {
     mockAsyncStorage.setItem.mockResolvedValue();
   });
 
-  const createWrapper =
-    (initialUnitSystem?: UnitSystem, isAuthenticated = false) =>
-    ({ children }: { children: React.ReactNode }) =>
-      React.createElement(AuthProvider, {
-        initialAuthState: {
-          user: isAuthenticated
-            ? {
-                id: "test",
-                username: "test",
-                email: "test@example.com",
-                email_verified: true,
-                created_at: "2023-01-01T00:00:00Z",
-                updated_at: "2023-01-01T00:00:00Z",
-                is_active: true,
-              }
-            : null,
-        },
-        children: React.createElement(UnitProvider, {
-          initialUnitSystem,
-          children,
-        }),
-      });
+  const createWrapper = (
+    initialUnitSystem?: UnitSystem,
+    isAuthenticated = false
+  ) =>
+    function TestWrapper({ children }: { children: React.ReactNode }) {
+      const initialAuthState = {
+        user: isAuthenticated
+          ? {
+              id: "test",
+              username: "test",
+              email: "test@example.com",
+              email_verified: true,
+              created_at: "2023-01-01T00:00:00Z",
+              updated_at: "2023-01-01T00:00:00Z",
+              is_active: true,
+            }
+          : null,
+      };
+
+      return (
+        <AuthProvider initialAuthState={initialAuthState}>
+          <UnitProvider initialUnitSystem={initialUnitSystem}>
+            {children}
+          </UnitProvider>
+        </AuthProvider>
+      );
+    };
 
   describe("useUnits hook", () => {
     it("should throw error when used outside provider", () => {
-      const consoleSpy = jest
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
-
       expect(() => {
         renderHook(() => useUnits());
       }).toThrow("useUnits must be used within a UnitProvider");
@@ -432,10 +433,6 @@ describe("UnitContext", () => {
       const wrapper = createWrapper("metric");
       const { result } = renderHook(() => useUnits(), { wrapper });
 
-      const consoleSpy = jest
-        .spyOn(console, "warn")
-        .mockImplementation(() => {});
-
       const result_conv = result.current.convertUnit(100, "unknown", "kg");
       expect(result_conv.value).toBe(100);
       expect(result_conv.unit).toBe("unknown");
@@ -510,9 +507,6 @@ describe("UnitContext", () => {
     });
 
     it("should handle unsupported unit conversions with warning", () => {
-      const consoleSpy = jest
-        .spyOn(console, "warn")
-        .mockImplementation(() => {});
       const wrapper = createWrapper("metric");
       const { result } = renderHook(() => useUnits(), { wrapper });
 
@@ -960,9 +954,6 @@ describe("UnitContext", () => {
 
     it("should handle background fetch errors gracefully", async () => {
       const ApiService = require("@services/api/apiService").default;
-      const consoleSpy = jest
-        .spyOn(console, "warn")
-        .mockImplementation(() => {});
 
       // Mock cached settings
       const cachedSettings = { preferred_units: "imperial" };
@@ -1036,9 +1027,6 @@ describe("UnitContext", () => {
 
     it("should handle updateUnitSystem error and revert", async () => {
       const ApiService = require("@services/api/apiService").default;
-      const consoleSpy = jest
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
 
       // Mock AsyncStorage.setItem to fail, which will trigger error for unauthenticated users
       mockAsyncStorage.setItem.mockRejectedValue(new Error("Storage Error"));

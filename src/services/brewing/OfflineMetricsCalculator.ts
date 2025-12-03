@@ -5,13 +5,16 @@
  * Implements standard brewing formulas for OG, FG, ABV, IBU, and SRM.
  */
 
-import { isDryHopIngredient } from "@/src/utils/recipeUtils";
 import {
   RecipeMetrics,
   RecipeFormData,
   RecipeMetricsInput,
   RecipeIngredient,
+  IngredientInput,
 } from "@src/types";
+
+// Type alias for ingredients that can be used in calculations
+type CalculableIngredient = RecipeIngredient | IngredientInput;
 
 export class OfflineMetricsCalculator {
   /**
@@ -64,7 +67,7 @@ export class OfflineMetricsCalculator {
    * Calculate Original Gravity (OG)
    */
   private static calculateOG(
-    fermentables: RecipeIngredient[],
+    fermentables: CalculableIngredient[],
     batchSizeGallons: number,
     efficiency: number
   ): number {
@@ -76,7 +79,8 @@ export class OfflineMetricsCalculator {
 
     for (const fermentable of fermentables) {
       // Get potential (extract potential) - default to 35 if not specified
-      const potential = fermentable.potential ?? 35;
+      const potential =
+        "potential" in fermentable ? (fermentable.potential ?? 35) : 35;
       // Convert amount to pounds based on unit
       const amountLbs = this.convertToPounds(
         fermentable.amount ?? 0,
@@ -98,7 +102,7 @@ export class OfflineMetricsCalculator {
    */
   private static calculateFG(
     og: number,
-    ingredients: RecipeIngredient[]
+    ingredients: CalculableIngredient[]
   ): number {
     // Calculate average attenuation from yeast
     const yeasts = ingredients.filter(ing => ing.type === "yeast");
@@ -106,8 +110,10 @@ export class OfflineMetricsCalculator {
     let attenuationCount = 0;
 
     for (const yeast of yeasts) {
-      if (yeast.attenuation !== undefined && yeast.attenuation >= 0) {
-        totalAttenuation += yeast.attenuation;
+      const attenuation =
+        "attenuation" in yeast ? yeast.attenuation : undefined;
+      if (attenuation !== undefined && attenuation >= 0) {
+        totalAttenuation += attenuation;
         attenuationCount++;
       }
     }
@@ -135,7 +141,7 @@ export class OfflineMetricsCalculator {
    * Calculate International Bitterness Units (IBU)
    */
   private static calculateIBU(
-    hops: RecipeIngredient[],
+    hops: CalculableIngredient[],
     batchSizeGallons: number,
     og: number,
     boilTime: number
@@ -153,11 +159,18 @@ export class OfflineMetricsCalculator {
           ? (hop.time ?? 0) // only force 0 when time is missing
           : (hop.time ?? boilTime); // default to boil time for boil additions
 
-      // Skip non-bittering additions
-      if (isDryHopIngredient(hop) || hopTime <= 0) {
+      // Skip non-bittering additions (dry hops or hops with no boil time)
+      // Note: We check dry hop inline since isDryHopIngredient expects RecipeIngredient
+      const isDryHop =
+        hop.type === "hop" &&
+        hop.use &&
+        String(hop.use)
+          .toLowerCase()
+          .replace(/[-_\s]/g, "") === "dryhop";
+      if (isDryHop || hopTime <= 0) {
         continue;
       }
-      const alphaAcid = hop.alpha_acid ?? 5; // Default 5% AA (allow 0)
+      const alphaAcid = "alpha_acid" in hop ? (hop.alpha_acid ?? 5) : 5; // Default 5% AA (allow 0)
       // Convert hop amount to ounces for IBU calculation
       const amountOz = this.convertToOunces(hop.amount ?? 0, hop.unit);
 
@@ -189,7 +202,7 @@ export class OfflineMetricsCalculator {
    * Calculate Standard Reference Method (SRM) color
    */
   private static calculateSRM(
-    grains: RecipeIngredient[],
+    grains: CalculableIngredient[],
     batchSizeGallons: number
   ): number {
     if (grains.length === 0) {
@@ -199,7 +212,7 @@ export class OfflineMetricsCalculator {
     let totalMCU = 0; // Malt Color Units
 
     for (const grain of grains) {
-      const colorLovibond = grain.color ?? 2; // Default to 2L if not specified
+      const colorLovibond = "color" in grain ? (grain.color ?? 2) : 2; // Default to 2L if not specified
       // Convert grain amount to pounds for SRM calculation
       const amountLbs = this.convertToPounds(grain.amount ?? 0, grain.unit);
 
@@ -257,17 +270,19 @@ export class OfflineMetricsCalculator {
       if (ing.amount !== undefined && ing.amount < 0) {
         errors.push(`${ing.name || "Ingredient"} amount must be >= 0`);
       }
+      const alphaAcid = "alpha_acid" in ing ? ing.alpha_acid : undefined;
       if (
         ing.type === "hop" &&
-        ing.alpha_acid !== undefined &&
-        (ing.alpha_acid < 0 || ing.alpha_acid > 30)
+        alphaAcid !== undefined &&
+        (alphaAcid < 0 || alphaAcid > 30)
       ) {
         errors.push("Hop alpha acid must be between 0 and 30");
       }
+      const attenuation = "attenuation" in ing ? ing.attenuation : undefined;
       if (
         ing.type === "yeast" &&
-        ing.attenuation !== undefined &&
-        (ing.attenuation < 0 || ing.attenuation > 100)
+        attenuation !== undefined &&
+        (attenuation < 0 || attenuation > 100)
       ) {
         errors.push("Yeast attenuation must be between 0 and 100");
       }

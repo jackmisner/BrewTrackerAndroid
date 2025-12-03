@@ -323,7 +323,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
         );
       }
     } catch (err) {
-      UnifiedLogger.error("units", "Failed to update unit system:", err);
+      await UnifiedLogger.error("units", "Failed to update unit system:", err);
       setError("Failed to save unit preference");
       setUnitSystem(previousSystem); // Revert on error
     } finally {
