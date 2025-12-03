@@ -159,7 +159,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
           try {
             settings = JSON.parse(cachedSettings) as UserSettings;
           } catch (parseErr) {
-            UnifiedLogger.warn(
+            void UnifiedLogger.warn(
               "units",
               "Corrupted cached user settings, removing:",
               parseErr
@@ -185,7 +185,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
               }
             } catch (bgError: any) {
               if (bgError?.response?.status !== 401) {
-                UnifiedLogger.warn(
+                void UnifiedLogger.warn(
                   "units",
                   "Settings fetch after cache corruption failed:",
                   bgError
@@ -226,7 +226,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
             } catch (bgError: any) {
               // Silently handle background fetch errors for unauthenticated users
               if (bgError.response?.status !== 401) {
-                UnifiedLogger.warn(
+                void UnifiedLogger.warn(
                   "units",
                   "Background settings fetch failed:",
                   bgError
@@ -259,7 +259,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
       } catch (err: any) {
         // Only log non-auth errors
         if (err.response?.status !== 401) {
-          UnifiedLogger.warn(
+          void UnifiedLogger.warn(
             "units",
             "Failed to load unit preferences, using default:",
             err
@@ -305,7 +305,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
         try {
           settings = JSON.parse(cachedSettings);
         } catch {
-          UnifiedLogger.warn(
+          void UnifiedLogger.warn(
             "units",
             "Corrupted cached user settings during update; re-initializing."
           );
@@ -424,7 +424,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
 
     // If no conversion found, return original
     else {
-      UnifiedLogger.warn(
+      void UnifiedLogger.warn(
         "units",
         `No conversion available from ${fromUnit} to ${toUnit}`
       );

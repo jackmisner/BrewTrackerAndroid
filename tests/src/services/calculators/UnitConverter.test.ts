@@ -69,10 +69,7 @@ describe("UnitConverter", () => {
       expect(result).toBe(32);
     });
 
-    it("should convert Celsius to Kelvin", () => {
-      const result = UnitConverter.convertTemperature(25, "C", "k");
-      expect(result).toBeCloseTo(298.15, 2);
-    });
+    // Kelvin removed - not used in brewing
 
     it("should handle case insensitive temperature units", () => {
       const result1 = UnitConverter.convertTemperature(
@@ -88,7 +85,7 @@ describe("UnitConverter", () => {
     it("should throw error for unknown temperature units", () => {
       expect(() => {
         UnitConverter.convertTemperature(100, "x", "C");
-      }).toThrow("Unknown temperature unit");
+      }).toThrow("Unsupported temperature unit");
     });
   });
 
@@ -173,24 +170,16 @@ describe("UnitConverter", () => {
       it("should throw error for unknown from temperature unit", () => {
         expect(() => {
           UnitConverter.convertTemperature(100, "invalid", "C");
-        }).toThrow("Unknown temperature unit: invalid");
+        }).toThrow("Unsupported temperature unit");
       });
 
       it("should throw error for unknown to temperature unit", () => {
         expect(() => {
           UnitConverter.convertTemperature(100, "C", "invalid");
-        }).toThrow("Unknown temperature unit: invalid");
+        }).toThrow("Unsupported temperature unit");
       });
 
-      it("should handle Kelvin conversion", () => {
-        const result = UnitConverter.convertTemperature(273.15, "k", "C");
-        expect(result).toBeCloseTo(0, 2);
-      });
-
-      it("should handle Fahrenheit to Kelvin conversion", () => {
-        const result = UnitConverter.convertTemperature(32, "F", "k");
-        expect(result).toBeCloseTo(273.15, 2);
-      });
+      // Kelvin tests removed - not used in brewing
 
       it("should handle same unit temperature conversion", () => {
         const result = UnitConverter.convertTemperature(100, "C", "C");
@@ -260,8 +249,7 @@ describe("UnitConverter", () => {
       const units = UnitConverter.getTemperatureUnits();
       expect(units).toContain("F");
       expect(units).toContain("C");
-      expect(units).toContain("K");
-      expect(units.length).toBe(3);
+      expect(units.length).toBe(2); // Only C and F (Kelvin not used in brewing)
     });
   });
 });

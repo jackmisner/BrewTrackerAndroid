@@ -29,6 +29,7 @@ import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import {
   IngredientInput,
   Recipe,
+  RecipeCreatePayload,
   RecipeMetricsInput,
   TemperatureUnit,
   UnitSystem,
@@ -128,7 +129,11 @@ function normalizeImportedIngredients(
         );
         return false;
       }
-      if (isNaN(Number(ing.amount))) {
+      if (
+        ing.amount === "" ||
+        ing.amount == null ||
+        isNaN(Number(ing.amount))
+      ) {
         void UnifiedLogger.error(
           "import-review",
           "Ingredient has invalid amount",
@@ -167,7 +172,7 @@ export default function ImportReviewScreen() {
     try {
       return JSON.parse(params.recipeData);
     } catch (error) {
-      UnifiedLogger.error(
+      void UnifiedLogger.error(
         "import-review",
         "Failed to parse recipe data:",
         error
@@ -285,7 +290,7 @@ export default function ImportReviewScreen() {
       );
 
       // Prepare recipe data for creation
-      const recipePayload = {
+      const recipePayload: RecipeCreatePayload = {
         name: recipeData.name,
         style: recipeData.style || "",
         description: recipeData.description || "",
@@ -316,8 +321,7 @@ export default function ImportReviewScreen() {
 
       // Use offline V2 createRecipe which creates temp recipe first, then syncs to server
       // This ensures immediate display with temp ID, then updates with server ID after sync
-      // TypeScript note: IngredientInput[] is compatible with RecipeIngredient[] for creation
-      // since the backend generates IDs. We cast through unknown to satisfy the type checker.
+      // Cast through unknown since backend accepts IngredientInput[] for creation (generates IDs)
       return await createRecipe(recipePayload as unknown as Partial<Recipe>);
     },
     onSuccess: createdRecipe => {
@@ -647,7 +651,7 @@ export default function ImportReviewScreen() {
                   </Text>
                 </View>
               ) : null}
-              {calculatedMetrics.ibu ? (
+              {calculatedMetrics.ibu != null ? (
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>IBU:</Text>
                   <Text style={styles.detailValue}>
@@ -655,7 +659,7 @@ export default function ImportReviewScreen() {
                   </Text>
                 </View>
               ) : null}
-              {calculatedMetrics.srm ? (
+              {calculatedMetrics.srm != null ? (
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>SRM:</Text>
                   <Text style={styles.detailValue}>

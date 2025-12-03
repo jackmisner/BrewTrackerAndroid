@@ -25,6 +25,7 @@ import {
   SyncError,
   STORAGE_KEYS_V2,
   Recipe,
+  RecipeCreatePayload,
   BrewSession,
   UnitSystem,
 } from "@src/types";
@@ -319,8 +320,11 @@ export class UserCacheService {
 
   /**
    * Create a new recipe
+   * Accepts either Partial<Recipe> or RecipeCreatePayload (for imports with IngredientInput[])
    */
-  static async createRecipe(recipe: Partial<Recipe>): Promise<Recipe> {
+  static async createRecipe(
+    recipe: Partial<Recipe> | RecipeCreatePayload
+  ): Promise<Recipe> {
     try {
       const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
       const now = Date.now();
@@ -378,7 +382,7 @@ export class UserCacheService {
       const sanitizedRecipeData = this.sanitizeRecipeUpdatesForAPI({
         ...recipe,
         user_id: newRecipe.user_id,
-      });
+      } as Partial<Recipe>);
 
       // Create pending operation
       const operation: PendingOperation = {

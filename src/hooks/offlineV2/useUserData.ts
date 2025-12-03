@@ -7,7 +7,13 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { UserCacheService } from "@services/offlineV2/UserCacheService";
-import { UseUserDataReturn, SyncResult, Recipe, BrewSession } from "@src/types";
+import {
+  UseUserDataReturn,
+  SyncResult,
+  Recipe,
+  RecipeCreatePayload,
+  BrewSession,
+} from "@src/types";
 import { useAuth } from "@contexts/AuthContext";
 import { useUnits } from "@contexts/UnitContext";
 import { UnifiedLogger } from "@services/logger/UnifiedLogger";
@@ -76,7 +82,7 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
   loadDataRef.current = loadData;
 
   const create = useCallback(
-    async (recipe: Partial<Recipe>): Promise<Recipe> => {
+    async (recipe: Partial<Recipe> | RecipeCreatePayload): Promise<Recipe> => {
       const userId = await getUserIdForOperations();
       if (!userId) {
         throw new Error("User not authenticated");
@@ -85,7 +91,7 @@ export function useRecipes(): UseUserDataReturn<Recipe> {
       const newRecipe = await UserCacheService.createRecipe({
         ...recipe,
         user_id: userId,
-      });
+      } as Partial<Recipe>);
 
       // Refresh data
       await loadData(false);

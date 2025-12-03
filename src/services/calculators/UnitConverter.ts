@@ -48,10 +48,11 @@ export class UnitConverter {
   };
 
   /**
-   * Normalize temperature unit to canonical form ("C", "F", or "K")
+   * Normalize temperature unit to canonical form ("C" or "F")
+   * Only supports Celsius and Fahrenheit (Kelvin is not used in brewing)
    * @private
    */
-  private static normalizeTemperatureUnit(unit: string): string {
+  private static normalizeTemperatureUnit(unit: string): "C" | "F" {
     const normalized = unit.toLowerCase();
     switch (normalized) {
       case "f":
@@ -60,11 +61,10 @@ export class UnitConverter {
       case "c":
       case "celsius":
         return "C";
-      case "k":
-      case "kelvin":
-        return "K";
       default:
-        throw new Error(`Unknown temperature unit: ${unit}`);
+        throw new Error(
+          `Unsupported temperature unit: ${unit}. Only Celsius (C) and Fahrenheit (F) are supported for brewing.`
+        );
     }
   }
 
@@ -82,32 +82,13 @@ export class UnitConverter {
       return value;
     }
 
-    // Convert to Celsius first
-    let celsius: number;
-    switch (from) {
-      case "F":
-        celsius = (value - 32) * (5 / 9);
-        break;
-      case "C":
-        celsius = value;
-        break;
-      case "K":
-        celsius = value - 273.15;
-        break;
-      default:
-        throw new Error(`Unknown temperature unit: ${fromUnit}`);
-    }
-
-    // Convert from Celsius to target unit
-    switch (to) {
-      case "F":
-        return celsius * (9 / 5) + 32;
-      case "C":
-        return celsius;
-      case "K":
-        return celsius + 273.15;
-      default:
-        throw new Error(`Unknown temperature unit: ${toUnit}`);
+    // Direct conversion between C and F
+    if (from === "F") {
+      // F to C
+      return (value - 32) * (5 / 9);
+    } else {
+      // C to F
+      return value * (9 / 5) + 32;
     }
   }
 
@@ -206,7 +187,7 @@ export class UnitConverter {
   }
 
   public static getTemperatureUnits(): string[] {
-    return ["F", "C", "K"];
+    return ["F", "C"]; // Only Celsius and Fahrenheit are used in brewing
   }
 
   // Validation methods

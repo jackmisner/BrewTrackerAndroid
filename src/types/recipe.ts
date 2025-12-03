@@ -172,6 +172,17 @@ export interface RecipeMetricsInput {
   ingredients: (RecipeIngredient | IngredientInput)[];
 }
 
+/**
+ * Payload for creating a new recipe
+ *
+ * Similar to Partial<Recipe> but accepts IngredientInput[] for ingredients
+ * since the backend generates ingredient IDs during creation.
+ */
+export interface RecipeCreatePayload
+  extends Omit<Partial<Recipe>, "ingredients"> {
+  ingredients: IngredientInput[];
+}
+
 // Recipe search filters
 export interface RecipeSearchFilters {
   style?: string;
