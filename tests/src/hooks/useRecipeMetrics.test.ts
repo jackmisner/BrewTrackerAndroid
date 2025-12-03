@@ -247,6 +247,7 @@ describe("useRecipeMetrics - Essential Tests", () => {
 
     // Test should complete without errors despite null/undefined id/name fields
     expect(result.current).toBeDefined();
+    expect(result.current.isError).toBe(false);
     // Verify the hook returns a valid query result object with expected properties
     expect(result.current).toHaveProperty("data");
     expect(result.current).toHaveProperty("isLoading");
@@ -387,9 +388,17 @@ describe("useRecipeMetrics - Essential Tests", () => {
     );
 
     expect(recipeMetricsQueries).toHaveLength(1);
-    expect(recipeMetricsQueries[0].queryKey[1]).toBe("offline-first");
-    expect(recipeMetricsQueries[0].queryKey[2]).toBe(5.5); // batch_size
-    expect(recipeMetricsQueries[0].queryKey[3]).toBe("gal"); // batch_size_unit
-    expect(recipeMetricsQueries[0].queryKey[4]).toBe(72); // efficiency
+
+    // Query key structure from useRecipeMetrics.ts:40-50
+    // [0] = "recipeMetrics", [1] = "offline-first",
+    // [2] = batch_size, [3] = batch_size_unit, [4] = efficiency
+    const [queryName, mode, batchSize, batchSizeUnit, efficiency] =
+      recipeMetricsQueries[0].queryKey;
+
+    expect(queryName).toBe("recipeMetrics");
+    expect(mode).toBe("offline-first");
+    expect(batchSize).toBe(5.5);
+    expect(batchSizeUnit).toBe("gal");
+    expect(efficiency).toBe(72);
   });
 });

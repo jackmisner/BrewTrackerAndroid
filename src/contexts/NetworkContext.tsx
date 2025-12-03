@@ -166,7 +166,11 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
         // Load any cached network preferences
         await loadCachedNetworkState();
       } catch (error) {
-        console.warn("Failed to initialize network monitoring:", error);
+        UnifiedLogger.warn(
+          "network",
+          "Failed to initialize network monitoring:",
+          error
+        );
         // Fallback to optimistic connected state
         setIsConnected(true);
         setConnectionType("unknown");
@@ -302,7 +306,11 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
             { results }
           );
           if (failures.length > 0) {
-            console.warn("Background cache refresh had failures:", failures);
+            UnifiedLogger.warn(
+              "network",
+              "Background cache refresh had failures:",
+              failures
+            );
           }
         })
         .catch(error => {
@@ -311,7 +319,11 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
             "Background cache refresh failed",
             { error: error instanceof Error ? error.message : String(error) }
           );
-          console.warn("Background cache refresh failed:", error);
+          UnifiedLogger.warn(
+            "network",
+            "Background cache refresh failed:",
+            error
+          );
         });
 
       // **CRITICAL FIX**: Also trigger sync of pending operations when coming back online
@@ -353,7 +365,8 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
                       error instanceof Error ? error.message : "Unknown error",
                   }
                 );
-                console.warn(
+                UnifiedLogger.warn(
+                  "network",
                   "Background sync of pending operations failed:",
                   error
                 );
@@ -386,7 +399,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
         })
       );
     } catch (error) {
-      console.warn("Failed to cache network state:", error);
+      UnifiedLogger.warn("network", "Failed to cache network state:", error);
     }
   };
 
@@ -411,7 +424,11 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
         }
       }
     } catch (error) {
-      console.warn("Failed to load cached network state:", error);
+      UnifiedLogger.warn(
+        "network",
+        "Failed to load cached network state:",
+        error
+      );
     }
   };
 
@@ -423,7 +440,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
       const state = await NetInfo.fetch();
       await updateNetworkState(state);
     } catch (error) {
-      console.warn("Failed to refresh network state:", error);
+      UnifiedLogger.warn("network", "Failed to refresh network state:", error);
       throw error;
     }
   };

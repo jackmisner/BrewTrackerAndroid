@@ -40,53 +40,9 @@ jest.mock("expo-router", () => ({
   })),
 }));
 
-jest.mock("@tanstack/react-query", () => {
-  const actual = jest.requireActual("@tanstack/react-query");
-  return {
-    ...actual,
-    QueryClient: jest.fn().mockImplementation(() => ({
-      invalidateQueries: jest.fn(),
-      clear: jest.fn(),
-      mount: jest.fn(),
-      unmount: jest.fn(),
-      isFetching: jest.fn(() => 0),
-      isMutating: jest.fn(() => 0),
-      defaultOptions: jest.fn(() => ({ queries: { retry: false } })),
-      getQueryCache: jest.fn(() => ({
-        getAll: jest.fn(() => []),
-        find: jest.fn(),
-        findAll: jest.fn(() => []),
-      })),
-      getMutationCache: jest.fn(() => ({
-        getAll: jest.fn(() => []),
-        find: jest.fn(),
-        findAll: jest.fn(() => []),
-      })),
-      removeQueries: jest.fn(),
-      cancelQueries: jest.fn(),
-      fetchQuery: jest.fn(),
-      prefetchQuery: jest.fn(),
-      setQueryData: jest.fn(),
-      getQueryData: jest.fn(),
-      setQueriesData: jest.fn(),
-      getQueriesData: jest.fn(),
-    })),
-    useQuery: jest.fn(() => ({
-      data: null,
-      isLoading: false,
-      error: null,
-    })),
-    useMutation: jest.fn(() => ({
-      mutate: jest.fn(),
-      mutateAsync: jest.fn(),
-      isLoading: false,
-      error: null,
-    })),
-    useQueryClient: jest.fn(() => ({
-      invalidateQueries: jest.fn(),
-    })),
-  };
-});
+// Note: @tanstack/react-query is already mocked in setupTests.js with a more
+// sophisticated implementation that includes Map-backed query storage and cache tracking.
+// No need to override it here.
 
 jest.mock("@services/api/apiService", () => ({
   default: {
@@ -156,7 +112,6 @@ describe("ImportReviewScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     testUtils.resetCounters();
-    testUtils.resetCounters();
     setMockAuthState({
       user: {
         id: "test-user",
@@ -185,11 +140,6 @@ describe("ImportReviewScreen", () => {
 });
 
 describe("ImportReviewScreen - Additional UI Tests", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    testUtils.resetCounters();
-  });
-
   it("should display batch size information", () => {
     const { getByText } = renderWithProviders(<ImportReviewScreen />);
     expect(getByText("Batch Size:")).toBeTruthy();
@@ -217,11 +167,6 @@ describe("ImportReviewScreen - Additional UI Tests", () => {
 });
 
 describe("ImportReviewScreen - UI Elements", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    testUtils.resetCounters();
-  });
-
   it("should display recipe details section", () => {
     const { getByText } = renderWithProviders(<ImportReviewScreen />);
 
@@ -297,11 +242,6 @@ describe("ImportReviewScreen - coerceIngredientTime Function", () => {
 });
 
 describe("ImportReviewScreen - Advanced UI Tests", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    testUtils.resetCounters();
-  });
-
   it("should display recipe with no specified style", () => {
     const { getByText } = renderWithProviders(<ImportReviewScreen />);
     expect(getByText("Not specified")).toBeTruthy(); // Style not specified
@@ -375,11 +315,6 @@ describe("ImportReviewScreen - Advanced UI Tests", () => {
 });
 
 describe("ImportReviewScreen - Recipe Variations", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    testUtils.resetCounters();
-  });
-
   it("should handle recipe with custom values", () => {
     const mockParams = jest.requireMock("expo-router").useLocalSearchParams;
     mockParams.mockReturnValue({

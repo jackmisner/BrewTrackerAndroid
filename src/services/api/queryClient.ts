@@ -105,6 +105,7 @@ export const QUERY_KEYS = {
 
   // Recipes
   RECIPES: ["recipes"] as const,
+  USER_RECIPES: ["userRecipes"] as const,
   RECIPE: (id: string) => ["recipes", id] as const,
   RECIPE_METRICS: (id: string) => ["recipes", id, "metrics"] as const,
   RECIPE_VERSIONS: (id: string) => ["recipes", id, "versions"] as const,

@@ -217,9 +217,9 @@ export default function DashboardScreen() {
     },
     onSuccess: () => {
       // Invalidate both recipes and dashboard queries to immediately update UI
-      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.RECIPES });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD });
-      queryClient.invalidateQueries({ queryKey: ["userRecipes"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.USER_RECIPES });
     },
     onError: (error: unknown) => {
       console.error("Failed to delete recipe:", error);
@@ -245,8 +245,8 @@ export default function DashboardScreen() {
       }
     },
     onSuccess: (response, recipe) => {
-      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.RECIPES] });
-      queryClient.invalidateQueries({ queryKey: [...QUERY_KEYS.DASHBOARD] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.RECIPES });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.DASHBOARD });
       // Ensure offline lists reflect the new clone
       queryClient.invalidateQueries({
         queryKey: [...QUERY_KEYS.RECIPES, "offline"],

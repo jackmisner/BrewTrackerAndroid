@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { UnitProvider, useUnits } from "@contexts/UnitContext";
 import { AuthProvider } from "@contexts/AuthContext";
 import { UnitSystem } from "@src/types";
+import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
 
 // Mock AsyncStorage
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -19,6 +20,16 @@ jest.mock("@services/api/apiService", () => ({
       getSettings: jest.fn(),
       updateSettings: jest.fn(),
     },
+  },
+}));
+
+// Mock UnifiedLogger
+jest.mock("@/src/services/logger/UnifiedLogger", () => ({
+  UnifiedLogger: {
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn(),
   },
 }));
 
@@ -63,8 +74,6 @@ describe("UnitContext", () => {
       expect(() => {
         renderHook(() => useUnits());
       }).toThrow("useUnits must be used within a UnitProvider");
-
-      consoleSpy.mockRestore();
     });
 
     it("should provide unit context when used within provider", () => {
@@ -430,11 +439,10 @@ describe("UnitContext", () => {
       const result_conv = result.current.convertUnit(100, "unknown", "kg");
       expect(result_conv.value).toBe(100);
       expect(result_conv.unit).toBe("unknown");
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.warn).toHaveBeenCalledWith(
+        "units",
         "No conversion available from unknown to kg"
       );
-
-      consoleSpy.mockRestore();
     });
 
     it("should handle invalid string inputs in convertUnit", () => {
@@ -517,11 +525,10 @@ describe("UnitContext", () => {
 
       expect(invalidResult.value).toBe(100);
       expect(invalidResult.unit).toBe("unknown_unit");
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.warn).toHaveBeenCalledWith(
+        "units",
         "No conversion available from unknown_unit to another_unit"
       );
-
-      consoleSpy.mockRestore();
     });
   });
 
@@ -977,12 +984,11 @@ describe("UnitContext", () => {
 
       // Should still use cached settings despite background error
       expect(result.current.unitSystem).toBe("imperial");
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.warn).toHaveBeenCalledWith(
+        "units",
         "Background settings fetch failed:",
         expect.any(Error)
       );
-
-      consoleSpy.mockRestore();
     });
   });
 
@@ -1047,12 +1053,11 @@ describe("UnitContext", () => {
       // Should revert to original system on error
       expect(result.current.unitSystem).toBe("imperial");
       expect(result.current.error).toBe("Failed to save unit preference");
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.error).toHaveBeenCalledWith(
+        expect.any(String),
         "Failed to update unit system:",
         expect.any(Error)
       );
-
-      consoleSpy.mockRestore();
     });
   });
 

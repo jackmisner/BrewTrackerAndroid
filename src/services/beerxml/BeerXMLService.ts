@@ -1,6 +1,7 @@
 import ApiService from "@services/api/apiService";
 import { BeerXMLService as StorageBeerXMLService } from "@services/storageService";
 import { Recipe, RecipeIngredient, UnitSystem } from "@src/types";
+import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
 
 // Service-specific interfaces for BeerXML operations
 
@@ -125,7 +126,7 @@ class BeerXMLService {
         saveMethod: saveResult.method,
       };
     } catch (error) {
-      console.error("🍺 BeerXML Export - Error:", error);
+      UnifiedLogger.error("beerxml", "🍺 BeerXML Export - Error:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Export failed",
@@ -155,7 +156,7 @@ class BeerXMLService {
         filename: result.filename,
       };
     } catch (error) {
-      console.error("🍺 BeerXML Import - Error:", error);
+      UnifiedLogger.error("beerxml", "🍺 BeerXML Import - Error:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Import failed",
@@ -181,7 +182,10 @@ class BeerXMLService {
         ? response.data.recipes
         : [];
       if (!Array.isArray(recipes) || recipes.length === 0) {
-        console.warn("🍺 BeerXML Parse - No recipes found in response");
+        UnifiedLogger.warn(
+          "beerxml",
+          "🍺 BeerXML Parse - No recipes found in response"
+        );
       }
       const transformedRecipes = recipes.map((recipeData: any) => ({
         ...recipeData.recipe,
@@ -191,7 +195,7 @@ class BeerXMLService {
 
       return transformedRecipes;
     } catch (error) {
-      console.error("🍺 BeerXML Parse - Error:", error);
+      UnifiedLogger.error("beerxml", "🍺 BeerXML Parse - Error:", error);
       throw new Error(
         `Failed to parse BeerXML: ${error instanceof Error ? error.message : "Unknown error"}`
       );
@@ -245,7 +249,7 @@ class BeerXMLService {
 
       return matchingResults as IngredientMatchingResult[];
     } catch (error) {
-      console.error("🍺 BeerXML Match - Error:", error);
+      UnifiedLogger.error("beerxml", "🍺 BeerXML Match - Error:", error);
       throw new Error(
         `Failed to match ingredients: ${error instanceof Error ? error.message : "Unknown error"}`
       );
@@ -269,7 +273,7 @@ class BeerXMLService {
 
       return createdIngredients;
     } catch (error) {
-      console.error("🍺 BeerXML Create - Error:", error);
+      UnifiedLogger.error("beerxml", "🍺 BeerXML Create - Error:", error);
       throw new Error(
         `Failed to create ingredients: ${error instanceof Error ? error.message : "Unknown error"}`
       );
@@ -474,7 +478,10 @@ class BeerXMLService {
       ).optimized_recipe;
 
       if (!convertedRecipe) {
-        console.warn("No converted recipe returned, using original");
+        UnifiedLogger.warn(
+          "beerxml",
+          "No converted recipe returned, using original"
+        );
         return recipe;
       }
 
@@ -493,9 +500,12 @@ class BeerXMLService {
         mash_temp_unit: convertedRecipe.mash_temp_unit ?? recipe.mash_temp_unit,
       };
     } catch (error) {
-      console.error("Error converting recipe units:", error);
+      UnifiedLogger.error("beerxml", "Error converting recipe units:", error);
       // Return original recipe if conversion fails - don't block import
-      console.warn("Unit conversion failed, continuing with original units");
+      UnifiedLogger.warn(
+        "beerxml",
+        "Unit conversion failed, continuing with original units"
+      );
       return recipe;
     }
   }

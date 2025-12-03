@@ -39,6 +39,13 @@ import { useRecipes } from "@src/hooks/offlineV2";
 import { OfflineMetricsCalculator } from "@services/brewing/OfflineMetricsCalculator";
 import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
 
+function deriveMashTempUnit(recipeData: any): TemperatureUnit {
+  return (
+    (recipeData.mash_temp_unit as TemperatureUnit) ??
+    (String(recipeData.batch_size_unit).toLowerCase() === "l" ? "C" : "F")
+  );
+}
+
 function coerceIngredientTime(input: unknown): number | undefined {
   if (input == null) {
     return undefined;
@@ -81,7 +88,15 @@ export default function ImportReviewScreen() {
     isLoading: metricsLoading,
     error: metricsError,
   } = useQuery({
-    queryKey: ["recipeMetrics", "beerxml-import-offline", recipeData],
+    queryKey: [
+      "recipeMetrics",
+      "beerxml-import-offline",
+      recipeData?.batch_size,
+      recipeData?.batch_size_unit,
+      recipeData?.efficiency,
+      recipeData?.boil_time,
+      JSON.stringify(recipeData?.ingredients?.map((i: any) => i.ingredient_id)),
+    ],
     queryFn: async () => {
       if (!recipeData || !recipeData.ingredients) {
         return null;
@@ -93,11 +108,7 @@ export default function ImportReviewScreen() {
         batch_size_unit: recipeData.batch_size_unit || "gal",
         efficiency: recipeData.efficiency || 75,
         boil_time: recipeData.boil_time || 60,
-        mash_temp_unit:
-          (recipeData.mash_temp_unit as TemperatureUnit) ??
-          (String(recipeData.batch_size_unit).toLowerCase() === "l"
-            ? "C"
-            : "F"),
+        mash_temp_unit: deriveMashTempUnit(recipeData),
         mash_temperature:
           typeof recipeData.mash_temperature === "number"
             ? recipeData.mash_temperature
@@ -154,11 +165,7 @@ export default function ImportReviewScreen() {
           ? "metric"
           : "imperial") as "metric" | "imperial",
         // Respect provided unit when present; default sensibly per system.
-        mash_temp_unit:
-          (recipeData.mash_temp_unit as TemperatureUnit) ??
-          (String(recipeData.batch_size_unit).toLowerCase() === "l"
-            ? "C"
-            : "F"),
+        mash_temp_unit: deriveMashTempUnit(recipeData),
         mash_temperature:
           typeof recipeData.mash_temperature === "number"
             ? recipeData.mash_temperature
@@ -212,7 +219,7 @@ export default function ImportReviewScreen() {
     onSuccess: createdRecipe => {
       // Invalidate queries to refresh recipe lists
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.RECIPES });
-      queryClient.invalidateQueries({ queryKey: ["userRecipes"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.USER_RECIPES });
       queryClient.invalidateQueries({
         queryKey: [...QUERY_KEYS.RECIPES, "offline"],
       });

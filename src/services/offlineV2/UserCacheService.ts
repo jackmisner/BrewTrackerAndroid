@@ -44,7 +44,8 @@ async function withKeyQueue<T>(key: string, fn: () => Promise<T>): Promise<T> {
 
   // Log warning if too many concurrent calls for the same key
   if (currentCount > 10) {
-    console.warn(
+    UnifiedLogger.warn(
+      "offline-cache",
       `[withKeyQueue] High concurrent call count for key "${key}": ${currentCount} calls`
     );
   }
@@ -52,7 +53,8 @@ async function withKeyQueue<T>(key: string, fn: () => Promise<T>): Promise<T> {
   // Break infinite loops by limiting max concurrent calls per key
   if (currentCount > 50) {
     queueDebugCounters.set(key, 0); // Reset counter
-    console.error(
+    UnifiedLogger.error(
+      "offline-cache",
       `[withKeyQueue] Breaking potential infinite loop for key "${key}" after ${currentCount} calls`
     );
     // Execute directly to break the loop
@@ -109,7 +111,8 @@ export class UserCacheService {
     try {
       // Require userId for security - prevent cross-user data access
       if (!userId) {
-        console.warn(
+        UnifiedLogger.warn(
+          "offline-cache",
           `[UserCacheService.getRecipeById] User ID is required for security`
         );
         return null;
@@ -134,7 +137,11 @@ export class UserCacheService {
 
       return recipeItem.data;
     } catch (error) {
-      console.error(`[UserCacheService.getRecipeById] Error:`, error);
+      UnifiedLogger.error(
+        "offline-cache",
+        `[UserCacheService.getRecipeById] Error:`,
+        error
+      );
       return null;
     }
   }
@@ -171,7 +178,8 @@ export class UserCacheService {
         isDeleted: !!recipeItem.isDeleted,
       };
     } catch (error) {
-      console.error(
+      UnifiedLogger.error(
+        "offline-cache",
         `[UserCacheService.getRecipeByIdIncludingDeleted] Error:`,
         error
       );
@@ -196,7 +204,8 @@ export class UserCacheService {
         }
       );
 
-      console.log(
+      UnifiedLogger.debug(
+        "offline-cache",
         `[UserCacheService.getRecipes] Getting recipes for user ID: "${userId}"`
       );
 
@@ -229,26 +238,30 @@ export class UserCacheService {
         }
       );
 
-      console.log(
+      UnifiedLogger.debug(
+        "offline-cache",
         `[UserCacheService.getRecipes] getCachedRecipes returned ${cached.length} items for user "${userId}"`
       );
 
       // If no cached recipes found, try to hydrate from server
       if (cached.length === 0) {
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.getRecipes] No cached recipes found, attempting to hydrate from server...`
         );
         try {
           await this.hydrateRecipesFromServer(userId, false, userUnitSystem);
           // Try again after hydration
           const hydratedCached = await this.getCachedRecipes(userId);
-          console.log(
+          UnifiedLogger.debug(
+            "offline-cache",
             `[UserCacheService.getRecipes] After hydration: ${hydratedCached.length} recipes cached`
           );
 
           return this.filterAndSortHydrated(hydratedCached);
         } catch (hydrationError) {
-          console.warn(
+          UnifiedLogger.warn(
+            "offline-cache",
             `[UserCacheService.getRecipes] Failed to hydrate from server:`,
             hydrationError
           );
@@ -258,13 +271,15 @@ export class UserCacheService {
 
       // Filter out deleted items and return data
       const filteredRecipes = cached.filter(item => !item.isDeleted);
-      console.log(
+      UnifiedLogger.debug(
+        "offline-cache",
         `[UserCacheService.getRecipes] After filtering out deleted: ${filteredRecipes.length} recipes`
       );
 
       if (filteredRecipes.length > 0) {
         const recipeIds = filteredRecipes.map(item => item.data.id);
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.getRecipes] Recipe IDs: [${recipeIds.join(", ")}]`
         );
       }
@@ -296,7 +311,7 @@ export class UserCacheService {
           error: error instanceof Error ? error.message : "Unknown error",
         }
       );
-      console.error("Error getting recipes:", error);
+      UnifiedLogger.error("offline-cache", "Error getting recipes:", error);
       throw new OfflineError("Failed to get recipes", "RECIPES_ERROR", true);
     }
   }
@@ -400,7 +415,7 @@ export class UserCacheService {
 
       return newRecipe;
     } catch (error) {
-      console.error("Error creating recipe:", error);
+      UnifiedLogger.error("offline-cache", "Error creating recipe:", error);
       throw new OfflineError("Failed to create recipe", "CREATE_ERROR", true);
     }
   }
@@ -501,7 +516,7 @@ export class UserCacheService {
 
       return updatedRecipe;
     } catch (error) {
-      console.error("Error updating recipe:", error);
+      UnifiedLogger.error("offline-cache", "Error updating recipe:", error);
       if (error instanceof OfflineError) {
         throw error;
       }
@@ -550,10 +565,12 @@ export class UserCacheService {
             ).length,
           }
         );
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.deleteRecipe] Recipe not found. Looking for ID: "${id}"`
         );
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.deleteRecipe] Available recipe IDs:`,
           cached.map(item => ({
             id: item.id,
@@ -681,7 +698,7 @@ export class UserCacheService {
       // Trigger background sync
       this.backgroundSync();
     } catch (error) {
-      console.error("Error deleting recipe:", error);
+      UnifiedLogger.error("offline-cache", "Error deleting recipe:", error);
       if (error instanceof OfflineError) {
         throw error;
       }
@@ -760,7 +777,7 @@ export class UserCacheService {
 
       return clonedRecipe;
     } catch (error) {
-      console.error("Error cloning recipe:", error);
+      UnifiedLogger.error("offline-cache", "Error cloning recipe:", error);
       if (error instanceof OfflineError) {
         throw error;
       }
@@ -788,7 +805,8 @@ export class UserCacheService {
     try {
       // Require userId for security - prevent cross-user data access
       if (!userId) {
-        console.warn(
+        UnifiedLogger.warn(
+          "offline-cache",
           `[UserCacheService.getBrewSessionById] User ID is required for security`
         );
         return null;
@@ -840,7 +858,11 @@ export class UserCacheService {
 
       return sessionItem.data;
     } catch (error) {
-      console.error(`[UserCacheService.getBrewSessionById] Error:`, error);
+      UnifiedLogger.error(
+        "offline-cache",
+        `[UserCacheService.getBrewSessionById] Error:`,
+        error
+      );
       return null;
     }
   }
@@ -862,7 +884,8 @@ export class UserCacheService {
         }
       );
 
-      console.log(
+      UnifiedLogger.debug(
+        "offline-cache",
         `[UserCacheService.getBrewSessions] Getting brew sessions for user ID: "${userId}"`
       );
 
@@ -895,13 +918,15 @@ export class UserCacheService {
         }
       );
 
-      console.log(
+      UnifiedLogger.debug(
+        "offline-cache",
         `[UserCacheService.getBrewSessions] getCachedBrewSessions returned ${cached.length} items for user "${userId}"`
       );
 
       // If no cached sessions found, try to hydrate from server
       if (cached.length === 0) {
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.getBrewSessions] No cached sessions found, attempting to hydrate from server...`
         );
         try {
@@ -912,13 +937,15 @@ export class UserCacheService {
           );
           // Try again after hydration
           const hydratedCached = await this.getCachedBrewSessions(userId);
-          console.log(
+          UnifiedLogger.debug(
+            "offline-cache",
             `[UserCacheService.getBrewSessions] After hydration: ${hydratedCached.length} sessions cached`
           );
 
           return this.filterAndSortHydrated(hydratedCached);
         } catch (hydrationError) {
-          console.warn(
+          UnifiedLogger.warn(
+            "offline-cache",
             `[UserCacheService.getBrewSessions] Failed to hydrate from server:`,
             hydrationError
           );
@@ -928,13 +955,15 @@ export class UserCacheService {
 
       // Filter out deleted items and return data
       const filteredSessions = cached.filter(item => !item.isDeleted);
-      console.log(
+      UnifiedLogger.debug(
+        "offline-cache",
         `[UserCacheService.getBrewSessions] After filtering out deleted: ${filteredSessions.length} sessions`
       );
 
       if (filteredSessions.length > 0) {
         const sessionIds = filteredSessions.map(item => item.data.id);
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.getBrewSessions] Session IDs: [${sessionIds.join(", ")}]`
         );
       }
@@ -966,7 +995,11 @@ export class UserCacheService {
           error: error instanceof Error ? error.message : "Unknown error",
         }
       );
-      console.error("Error getting brew sessions:", error);
+      UnifiedLogger.error(
+        "offline-cache",
+        "Error getting brew sessions:",
+        error
+      );
       throw new OfflineError(
         "Failed to get brew sessions",
         "SESSIONS_ERROR",
@@ -1080,7 +1113,11 @@ export class UserCacheService {
 
       return newSession;
     } catch (error) {
-      console.error("Error creating brew session:", error);
+      UnifiedLogger.error(
+        "offline-cache",
+        "Error creating brew session:",
+        error
+      );
       throw new OfflineError(
         "Failed to create brew session",
         "CREATE_ERROR",
@@ -1185,7 +1222,11 @@ export class UserCacheService {
 
       return updatedSession;
     } catch (error) {
-      console.error("Error updating brew session:", error);
+      UnifiedLogger.error(
+        "offline-cache",
+        "Error updating brew session:",
+        error
+      );
       if (error instanceof OfflineError) {
         throw error;
       }
@@ -1355,7 +1396,11 @@ export class UserCacheService {
       // Trigger background sync
       this.backgroundSync();
     } catch (error) {
-      console.error("Error deleting brew session:", error);
+      UnifiedLogger.error(
+        "offline-cache",
+        "Error deleting brew session:",
+        error
+      );
       if (error instanceof OfflineError) {
         throw error;
       }
@@ -1461,7 +1506,11 @@ export class UserCacheService {
 
       return updatedSessionData;
     } catch (error) {
-      console.error("Error adding fermentation entry:", error);
+      UnifiedLogger.error(
+        "offline-cache",
+        "Error adding fermentation entry:",
+        error
+      );
       throw new OfflineError(
         "Failed to add fermentation entry",
         "CREATE_ERROR",
@@ -1565,7 +1614,11 @@ export class UserCacheService {
 
       return updatedSessionData;
     } catch (error) {
-      console.error("Error updating fermentation entry:", error);
+      UnifiedLogger.error(
+        "offline-cache",
+        "Error updating fermentation entry:",
+        error
+      );
       throw new OfflineError(
         "Failed to update fermentation entry",
         "UPDATE_ERROR",
@@ -1661,7 +1714,11 @@ export class UserCacheService {
 
       return updatedSessionData;
     } catch (error) {
-      console.error("Error deleting fermentation entry:", error);
+      UnifiedLogger.error(
+        "offline-cache",
+        "Error deleting fermentation entry:",
+        error
+      );
       throw new OfflineError(
         "Failed to delete fermentation entry",
         "DELETE_ERROR",
@@ -1797,7 +1854,7 @@ export class UserCacheService {
 
       return updatedSessionData;
     } catch (error) {
-      console.error("Error adding dry-hop:", error);
+      UnifiedLogger.error("offline-cache", "Error adding dry-hop:", error);
       throw new OfflineError("Failed to add dry-hop", "CREATE_ERROR", true);
     }
   }
@@ -1892,7 +1949,7 @@ export class UserCacheService {
 
       return updatedSessionData;
     } catch (error) {
-      console.error("Error removing dry-hop:", error);
+      UnifiedLogger.error("offline-cache", "Error removing dry-hop:", error);
       throw new OfflineError("Failed to remove dry-hop", "UPDATE_ERROR", true);
     }
   }
@@ -1978,7 +2035,7 @@ export class UserCacheService {
 
       return updatedSession;
     } catch (error) {
-      console.error("Error deleting dry-hop:", error);
+      UnifiedLogger.error("offline-cache", "Error deleting dry-hop:", error);
       throw new OfflineError("Failed to delete dry-hop", "DELETE_ERROR", true);
     }
   }
@@ -2003,7 +2060,7 @@ export class UserCacheService {
     if (this.syncInProgress && this.syncStartTime) {
       const elapsed = Date.now() - this.syncStartTime;
       if (elapsed > this.SYNC_TIMEOUT_MS) {
-        console.warn("Resetting stuck sync flag");
+        UnifiedLogger.warn("offline-cache", "Resetting stuck sync flag");
         this.syncInProgress = false;
         this.syncStartTime = undefined;
       }
@@ -2031,7 +2088,8 @@ export class UserCacheService {
     try {
       let operations = await this.getPendingOperations();
       if (operations.length > 0) {
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService] Starting sync of ${operations.length} pending operations`
         );
       }
@@ -2093,7 +2151,8 @@ export class UserCacheService {
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : "Unknown error";
-          console.error(
+          UnifiedLogger.error(
+            "offline-cache",
             `[UserCacheService] Failed to process operation ${operation.id}:`,
             errorMessage
           );
@@ -2186,7 +2245,7 @@ export class UserCacheService {
         `Sync failed: ${errorMessage}`,
         { error: errorMessage }
       );
-      console.error("Sync failed:", errorMessage);
+      UnifiedLogger.error("offline-cache", "Sync failed:", errorMessage);
       result.success = false;
       result.errors.push(`Sync process failed: ${errorMessage}`);
       return result;
@@ -2215,7 +2274,11 @@ export class UserCacheService {
       const operations = await this.getPendingOperations();
       return operations.length;
     } catch (error) {
-      console.error("Error getting pending operations count:", error);
+      UnifiedLogger.error(
+        "offline-cache",
+        "Error getting pending operations count:",
+        error
+      );
       return 0;
     }
   }
@@ -2227,7 +2290,7 @@ export class UserCacheService {
     try {
       await AsyncStorage.removeItem(STORAGE_KEYS_V2.PENDING_OPERATIONS);
     } catch (error) {
-      console.error("Error clearing sync queue:", error);
+      UnifiedLogger.error("offline-cache", "Error clearing sync queue:", error);
       throw new OfflineError("Failed to clear sync queue", "CLEAR_ERROR", true);
     }
   }
@@ -2280,7 +2343,11 @@ export class UserCacheService {
           `Failed to reset retry counts: ${errorMessage}`,
           { error: errorMessage }
         );
-        console.error("Error resetting retry counts:", error);
+        UnifiedLogger.error(
+          "offline-cache",
+          "Error resetting retry counts:",
+          error
+        );
         return 0;
       }
     });
@@ -2312,18 +2379,24 @@ export class UserCacheService {
         return hasTempId && (!hasNeedSync || !hasPendingOp);
       });
 
-      console.log(
+      UnifiedLogger.debug(
+        "offline-cache",
         `[UserCacheService] Found ${stuckRecipes.length} stuck recipes with temp IDs`
       );
       stuckRecipes.forEach(recipe => {
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService] Stuck recipe: ID="${recipe.id}", tempId="${recipe.tempId}", needsSync="${recipe.needsSync}", syncStatus="${recipe.syncStatus}"`
         );
       });
 
       return { stuckRecipes, pendingOperations: pendingOps };
     } catch (error) {
-      console.error("[UserCacheService] Error finding stuck recipes:", error);
+      UnifiedLogger.error(
+        "offline-cache",
+        "[UserCacheService] Error finding stuck recipes:",
+        error
+      );
       return { stuckRecipes: [], pendingOperations: [] };
     }
   }
@@ -2446,7 +2519,11 @@ export class UserCacheService {
         syncStatus,
       };
     } catch (error) {
-      console.error("[UserCacheService] Error getting debug info:", error);
+      UnifiedLogger.error(
+        "offline-cache",
+        "[UserCacheService] Error getting debug info:",
+        error
+      );
       return { recipe: null, pendingOperations: [], syncStatus: "error" };
     }
   }
@@ -2458,7 +2535,10 @@ export class UserCacheService {
     recipeId: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log(`[UserCacheService] Force syncing recipe: ${recipeId}`);
+      UnifiedLogger.debug(
+        "offline-cache",
+        `[UserCacheService] Force syncing recipe: ${recipeId}`
+      );
 
       const debugInfo = await this.getRecipeDebugInfo(recipeId);
 
@@ -2478,7 +2558,8 @@ export class UserCacheService {
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
-      console.error(
+      UnifiedLogger.error(
+        "offline-cache",
         `[UserCacheService] Error force syncing recipe ${recipeId}:`,
         errorMsg
       );
@@ -2499,7 +2580,8 @@ export class UserCacheService {
 
       for (const recipe of stuckRecipes) {
         try {
-          console.log(
+          UnifiedLogger.debug(
+            "offline-cache",
             `[UserCacheService] Attempting to fix stuck recipe: ${recipe.id}`
           );
 
@@ -2526,21 +2608,32 @@ export class UserCacheService {
           // Add the pending operation
           await this.addPendingOperation(operation);
 
-          console.log(`[UserCacheService] Fixed stuck recipe: ${recipe.id}`);
+          UnifiedLogger.debug(
+            "offline-cache",
+            `[UserCacheService] Fixed stuck recipe: ${recipe.id}`
+          );
           fixed++;
         } catch (error) {
           const errorMsg = `Failed to fix recipe ${recipe.id}: ${error instanceof Error ? error.message : "Unknown error"}`;
-          console.error(`[UserCacheService] ${errorMsg}`);
+          UnifiedLogger.error(
+            "offline-cache",
+            `[UserCacheService] ${errorMsg}`
+          );
           errors.push(errorMsg);
         }
       }
 
-      console.log(
+      UnifiedLogger.debug(
+        "offline-cache",
         `[UserCacheService] Fixed ${fixed} stuck recipes with ${errors.length} errors`
       );
       return { fixed, errors };
     } catch (error) {
-      console.error("[UserCacheService] Error fixing stuck recipes:", error);
+      UnifiedLogger.error(
+        "offline-cache",
+        "[UserCacheService] Error fixing stuck recipes:",
+        error
+      );
       return {
         fixed: 0,
         errors: [
@@ -2558,7 +2651,8 @@ export class UserCacheService {
     userUnitSystem: "imperial" | "metric" = "imperial"
   ): Promise<Recipe[]> {
     try {
-      console.log(
+      UnifiedLogger.debug(
+        "offline-cache",
         `[UserCacheService.refreshRecipesFromServer] Refreshing recipes from server for user: "${userId}"`
       );
 
@@ -2567,29 +2661,34 @@ export class UserCacheService {
 
       // Return fresh cached data
       const refreshedRecipes = await this.getRecipes(userId, userUnitSystem);
-      console.log(
+      UnifiedLogger.debug(
+        "offline-cache",
         `[UserCacheService.refreshRecipesFromServer] Refresh completed, returning ${refreshedRecipes.length} recipes`
       );
 
       return refreshedRecipes;
     } catch (error) {
-      console.error(
+      UnifiedLogger.error(
+        "offline-cache",
         `[UserCacheService.refreshRecipesFromServer] Refresh failed:`,
         error
       );
 
       // When refresh fails, try to return existing cached data instead of throwing
       try {
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.refreshRecipesFromServer] Attempting to return cached data after refresh failure`
         );
         const cachedRecipes = await this.getRecipes(userId, userUnitSystem);
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.refreshRecipesFromServer] Returning ${cachedRecipes.length} cached recipes after refresh failure`
         );
         return cachedRecipes;
       } catch (cacheError) {
-        console.error(
+        UnifiedLogger.error(
+          "offline-cache",
           `[UserCacheService.refreshRecipesFromServer] Failed to get cached data:`,
           cacheError
         );
@@ -2608,7 +2707,8 @@ export class UserCacheService {
     userUnitSystem: "imperial" | "metric" = "imperial"
   ): Promise<void> {
     try {
-      console.log(
+      UnifiedLogger.debug(
+        "offline-cache",
         `[UserCacheService.hydrateRecipesFromServer] Fetching recipes from server for user: "${userId}" (forceRefresh: ${forceRefresh})`
       );
 
@@ -2624,7 +2724,8 @@ export class UserCacheService {
 
       // If force refresh and we successfully got server data, clear and replace cache
       if (forceRefresh && serverRecipes.length >= 0) {
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.hydrateRecipesFromServer] Force refresh successful - updating cache for user "${userId}"`
         );
 
@@ -2656,7 +2757,8 @@ export class UserCacheService {
             return false;
           });
 
-          console.log(
+          UnifiedLogger.debug(
+            "offline-cache",
             `[UserCacheService.hydrateRecipesFromServer] Found ${offlineCreatedRecipes.length} V2 offline-created recipes to preserve`
           );
         }
@@ -2670,7 +2772,8 @@ export class UserCacheService {
             await LegacyMigrationService.getLegacyRecipeCount(userId);
 
           if (legacyCount > 0) {
-            console.log(
+            UnifiedLogger.debug(
+              "offline-cache",
               `[UserCacheService.hydrateRecipesFromServer] Found ${legacyCount} legacy recipes - migrating to V2 before force refresh`
             );
 
@@ -2680,7 +2783,8 @@ export class UserCacheService {
                 userId,
                 userUnitSystem
               );
-            console.log(
+            UnifiedLogger.debug(
+              "offline-cache",
               `[UserCacheService.hydrateRecipesFromServer] Legacy migration result:`,
               migrationResult
             );
@@ -2701,20 +2805,23 @@ export class UserCacheService {
                 );
               });
 
-              console.log(
+              UnifiedLogger.debug(
+                "offline-cache",
                 `[UserCacheService.hydrateRecipesFromServer] After migration: ${offlineCreatedRecipes.length} total offline recipes to preserve`
               );
             }
           }
         } catch (migrationError) {
-          console.error(
+          UnifiedLogger.error(
+            "offline-cache",
             `[UserCacheService.hydrateRecipesFromServer] Legacy migration failed:`,
             migrationError
           );
           // Continue with force refresh even if migration fails
         }
 
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.hydrateRecipesFromServer] Found ${offlineCreatedRecipes.length} offline-created recipes to preserve`
         );
 
@@ -2726,12 +2833,14 @@ export class UserCacheService {
           await this.addRecipeToCache(recipe);
         }
 
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.hydrateRecipesFromServer] Preserved ${offlineCreatedRecipes.length} offline-created recipes`
         );
       }
 
-      console.log(
+      UnifiedLogger.debug(
+        "offline-cache",
         `[UserCacheService.hydrateRecipesFromServer] Fetched ${serverRecipes.length} recipes from server`
       );
 
@@ -2745,7 +2854,8 @@ export class UserCacheService {
           recipe => !preservedIds.has(recipe.id)
         );
 
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.hydrateRecipesFromServer] Filtered out ${serverRecipes.length - filteredServerRecipes.length} duplicate server recipes`
         );
 
@@ -2764,17 +2874,20 @@ export class UserCacheService {
           await this.addRecipeToCache(recipe);
         }
 
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.hydrateRecipesFromServer] Successfully cached ${syncableRecipes.length} recipes`
         );
       } else if (!forceRefresh) {
         // Only log this for non-force refresh (normal hydration)
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.hydrateRecipesFromServer] No server recipes found`
         );
       }
     } catch (error) {
-      console.error(
+      UnifiedLogger.error(
+        "offline-cache",
         `[UserCacheService.hydrateRecipesFromServer] Failed to hydrate from server:`,
         error
       );
@@ -2791,20 +2904,28 @@ export class UserCacheService {
   static async clearUserData(userId?: string): Promise<void> {
     try {
       if (userId) {
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.clearUserData] Clearing data for user: "${userId}"`
         );
         await this.clearUserRecipesFromCache(userId);
         await this.clearUserBrewSessionsFromCache(userId);
         await this.clearUserPendingOperations(userId);
       } else {
-        console.log(`[UserCacheService.clearUserData] Clearing all data`);
+        UnifiedLogger.debug(
+          "offline-cache",
+          `[UserCacheService.clearUserData] Clearing all data`
+        );
         await AsyncStorage.removeItem(STORAGE_KEYS_V2.USER_RECIPES);
         await AsyncStorage.removeItem(STORAGE_KEYS_V2.PENDING_OPERATIONS);
         await AsyncStorage.removeItem(STORAGE_KEYS_V2.USER_BREW_SESSIONS);
       }
     } catch (error) {
-      console.error(`[UserCacheService.clearUserData] Error:`, error);
+      UnifiedLogger.error(
+        "offline-cache",
+        `[UserCacheService.clearUserData] Error:`,
+        error
+      );
       throw error;
     }
   }
@@ -2831,11 +2952,13 @@ export class UserCacheService {
         STORAGE_KEYS_V2.PENDING_OPERATIONS,
         JSON.stringify(filteredOperations)
       );
-      console.log(
+      UnifiedLogger.debug(
+        "offline-cache",
         `[UserCacheService.clearUserPendingOperations] Cleared pending operations for user "${userId}"`
       );
     } catch (error) {
-      console.error(
+      UnifiedLogger.error(
+        "offline-cache",
         `[UserCacheService.clearUserPendingOperations] Error:`,
         error
       );
@@ -2863,11 +2986,13 @@ export class UserCacheService {
           STORAGE_KEYS_V2.USER_RECIPES,
           JSON.stringify(filteredRecipes)
         );
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.clearUserRecipesFromCache] Cleared recipes for user "${userId}", kept ${filteredRecipes.length} recipes for other users`
         );
       } catch (error) {
-        console.error(
+        UnifiedLogger.error(
+          "offline-cache",
           `[UserCacheService.clearUserRecipesFromCache] Error:`,
           error
         );
@@ -2951,18 +3076,23 @@ export class UserCacheService {
   ): Promise<SyncableItem<Recipe>[]> {
     return await withKeyQueue(STORAGE_KEYS_V2.USER_RECIPES, async () => {
       try {
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.getCachedRecipes] Loading cache for user ID: "${userId}"`
         );
 
         const cached = await AsyncStorage.getItem(STORAGE_KEYS_V2.USER_RECIPES);
         if (!cached) {
-          console.log(`[UserCacheService.getCachedRecipes] No cache found`);
+          UnifiedLogger.debug(
+            "offline-cache",
+            `[UserCacheService.getCachedRecipes] No cache found`
+          );
           return [];
         }
 
         const allRecipes: SyncableItem<Recipe>[] = JSON.parse(cached);
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.getCachedRecipes] Total cached recipes found: ${allRecipes.length}`
         );
 
@@ -2972,7 +3102,8 @@ export class UserCacheService {
             id: item.data.id,
             user_id: item.data.user_id,
           }));
-          console.log(
+          UnifiedLogger.debug(
+            "offline-cache",
             `[UserCacheService.getCachedRecipes] Sample cached recipes:`,
             sampleUserIds
           );
@@ -2981,19 +3112,25 @@ export class UserCacheService {
         const userRecipes = allRecipes.filter(item => {
           const isMatch = item.data.user_id === userId;
           if (!isMatch) {
-            console.log(
+            UnifiedLogger.debug(
+              "offline-cache",
               `[UserCacheService.getCachedRecipes] Recipe ${item.data.id} user_id "${item.data.user_id}" != target "${userId}"`
             );
           }
           return isMatch;
         });
 
-        console.log(
+        UnifiedLogger.debug(
+          "offline-cache",
           `[UserCacheService.getCachedRecipes] Filtered to ${userRecipes.length} recipes for user "${userId}"`
         );
         return userRecipes;
       } catch (e) {
-        console.warn("Corrupt USER_RECIPES cache; resetting", e);
+        UnifiedLogger.warn(
+          "offline-cache",
+          "Corrupt USER_RECIPES cache; resetting",
+          e
+        );
         await AsyncStorage.removeItem(STORAGE_KEYS_V2.USER_RECIPES);
         return [];
       }
@@ -3018,7 +3155,11 @@ export class UserCacheService {
           JSON.stringify(recipes)
         );
       } catch (error) {
-        console.error("Error adding recipe to cache:", error);
+        UnifiedLogger.error(
+          "offline-cache",
+          "Error adding recipe to cache:",
+          error
+        );
         throw new OfflineError("Failed to cache recipe", "CACHE_ERROR", true);
       }
     });
@@ -3053,7 +3194,11 @@ export class UserCacheService {
           JSON.stringify(recipes)
         );
       } catch (error) {
-        console.error("Error updating recipe in cache:", error);
+        UnifiedLogger.error(
+          "offline-cache",
+          "Error updating recipe in cache:",
+          error
+        );
         throw new OfflineError(
           "Failed to update cached recipe",
           "CACHE_ERROR",
@@ -3075,7 +3220,10 @@ export class UserCacheService {
         if (__DEV__) {
           const stack = new Error().stack;
           const caller = stack?.split("\n")[3]?.trim() || "unknown";
-          console.log(`[getCachedBrewSessions] Called by: ${caller}`);
+          UnifiedLogger.debug(
+            "offline-cache",
+            `[getCachedBrewSessions] Called by: ${caller}`
+          );
         }
 
         await UnifiedLogger.debug(
@@ -3116,7 +3264,8 @@ export class UserCacheService {
         const userSessions = allSessions.filter(item => {
           const isMatch = item.data.user_id === userId;
           if (!isMatch) {
-            console.log(
+            UnifiedLogger.debug(
+              "offline-cache",
               `[UserCacheService.getCachedBrewSessions] Session ${item.data.id} user_id "${item.data.user_id}" != target "${userId}"`
             );
           }
@@ -3703,7 +3852,11 @@ export class UserCacheService {
       );
       return cached ? JSON.parse(cached) : [];
     } catch (error) {
-      console.error("Error getting pending operations:", error);
+      UnifiedLogger.error(
+        "offline-cache",
+        "Error getting pending operations:",
+        error
+      );
       return [];
     }
   }
@@ -3726,7 +3879,11 @@ export class UserCacheService {
           JSON.stringify(operations)
         );
       } catch (error) {
-        console.error("Error adding pending operation:", error);
+        UnifiedLogger.error(
+          "offline-cache",
+          "Error adding pending operation:",
+          error
+        );
         throw new OfflineError(
           "Failed to queue operation",
           "QUEUE_ERROR",
@@ -3754,7 +3911,11 @@ export class UserCacheService {
           JSON.stringify(filtered)
         );
       } catch (error) {
-        console.error("Error removing pending operation:", error);
+        UnifiedLogger.error(
+          "offline-cache",
+          "Error removing pending operation:",
+          error
+        );
       }
     });
   }
@@ -3780,7 +3941,11 @@ export class UserCacheService {
           );
         }
       } catch (error) {
-        console.error("Error updating pending operation:", error);
+        UnifiedLogger.error(
+          "offline-cache",
+          "Error updating pending operation:",
+          error
+        );
       }
     });
   }
@@ -3911,7 +4076,8 @@ export class UserCacheService {
             if (isTempId) {
               // Convert UPDATE with temp ID to CREATE operation
               if (__DEV__) {
-                console.log(
+                UnifiedLogger.debug(
+                  "offline-cache",
                   `[UserCacheService.syncOperation] Converting UPDATE with temp ID ${operation.entityId} to CREATE operation:`,
                   JSON.stringify(operation.data, null, 2)
                 );
@@ -3923,7 +4089,8 @@ export class UserCacheService {
             } else {
               // Normal UPDATE operation for real MongoDB IDs
               if (__DEV__) {
-                console.log(
+                UnifiedLogger.debug(
+                  "offline-cache",
                   `[UserCacheService.syncOperation] Sending UPDATE data to API for recipe ${operation.entityId}:`,
                   JSON.stringify(operation.data, null, 2)
                 );
@@ -4167,7 +4334,8 @@ export class UserCacheService {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.error(
+      UnifiedLogger.error(
+        "offline-cache",
         `[UserCacheService] Error processing ${operation.type} operation for ${operation.entityId}:`,
         errorMessage
       );
@@ -4235,7 +4403,7 @@ export class UserCacheService {
             `Background sync failed: ${errorMessage}`,
             { error: errorMessage }
           );
-          console.warn("Background sync failed:", error);
+          UnifiedLogger.warn("offline-cache", "Background sync failed:", error);
         }
       }, delay);
     } catch (error) {
@@ -4246,7 +4414,11 @@ export class UserCacheService {
         `Failed to start background sync: ${errorMessage}`,
         { error: errorMessage }
       );
-      console.warn("Failed to start background sync:", error);
+      UnifiedLogger.warn(
+        "offline-cache",
+        "Failed to start background sync:",
+        error
+      );
     }
   }
 
@@ -4291,7 +4463,8 @@ export class UserCacheService {
             JSON.stringify(recipes)
           );
         } else {
-          console.warn(
+          UnifiedLogger.warn(
+            "offline-cache",
             `[UserCacheService] Recipe with temp ID "${tempId}" not found in cache`
           );
         }
@@ -4332,7 +4505,8 @@ export class UserCacheService {
             }
           );
         } else {
-          console.warn(
+          UnifiedLogger.warn(
+            "offline-cache",
             `[UserCacheService] Brew session with temp ID "${tempId}" not found in cache`
           );
         }
@@ -4468,7 +4642,8 @@ export class UserCacheService {
           error: error instanceof Error ? error.message : "Unknown error",
         }
       );
-      console.error(
+      UnifiedLogger.error(
+        "offline-cache",
         "[UserCacheService] Error mapping temp ID to real ID:",
         error
       );
@@ -4504,7 +4679,8 @@ export class UserCacheService {
             { entityId, recipeName: recipes[i].data.name }
           );
         } else {
-          console.warn(
+          UnifiedLogger.warn(
+            "offline-cache",
             `[UserCacheService] Recipe with ID "${entityId}" not found in cache for marking as synced`
           );
         }
@@ -4536,7 +4712,8 @@ export class UserCacheService {
             { entityId, sessionName: sessions[i].data.name }
           );
         } else {
-          console.warn(
+          UnifiedLogger.warn(
+            "offline-cache",
             `[UserCacheService] Brew session with ID "${entityId}" not found in cache for marking as synced`
           );
         }
@@ -4580,7 +4757,8 @@ export class UserCacheService {
             { entityId, removedCount: recipes.length - filteredRecipes.length }
           );
         } else {
-          console.warn(
+          UnifiedLogger.warn(
+            "offline-cache",
             `[UserCacheService] Recipe with ID "${entityId}" not found in cache for removal`
           );
         }
@@ -4613,7 +4791,8 @@ export class UserCacheService {
             }
           );
         } else {
-          console.warn(
+          UnifiedLogger.warn(
+            "offline-cache",
             `[UserCacheService] Brew session with ID "${entityId}" not found in cache for removal`
           );
         }
@@ -4641,7 +4820,8 @@ export class UserCacheService {
 
     // Debug logging to understand the data being sanitized
     if (__DEV__ && sanitized.ingredients) {
-      console.log(
+      UnifiedLogger.debug(
+        "offline-cache",
         "[UserCacheService.sanitizeRecipeUpdatesForAPI] Original ingredients:",
         JSON.stringify(
           sanitized.ingredients.map(ing => ({
@@ -4775,7 +4955,8 @@ export class UserCacheService {
 
     // Debug logging to see the sanitized result
     if (__DEV__ && sanitized.ingredients) {
-      console.log(
+      UnifiedLogger.debug(
+        "offline-cache",
         "[UserCacheService.sanitizeRecipeUpdatesForAPI] Sanitized ingredients (FULL):",
         JSON.stringify(sanitized.ingredients, null, 2)
       );

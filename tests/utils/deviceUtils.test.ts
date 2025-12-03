@@ -28,20 +28,23 @@ jest.mock("expo-secure-store");
 jest.mock("expo-crypto");
 
 describe("deviceUtils", () => {
-  let originalCrypto: any;
+  let originalCryptoDescriptor: PropertyDescriptor | undefined;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    originalCrypto = global.crypto;
+    originalCryptoDescriptor = Object.getOwnPropertyDescriptor(
+      global,
+      "crypto"
+    );
   });
 
   afterEach(() => {
-    // Restore original crypto
-    Object.defineProperty(global, "crypto", {
-      value: originalCrypto,
-      writable: true,
-      configurable: true,
-    });
+    if (originalCryptoDescriptor) {
+      Object.defineProperty(global, "crypto", originalCryptoDescriptor);
+    } else {
+      // If crypto wasn’t originally defined, clean up any test-added value
+      delete (global as any).crypto;
+    }
   });
 
   describe("getDeviceId", () => {
@@ -164,6 +167,7 @@ describe("deviceUtils", () => {
 
       // Should still return the generated UUID even if storage fails
       expect(result).toBe(mockUUID);
+      expect(SecureStore.setItemAsync).toHaveBeenCalledTimes(1);
       expect(consoleWarnSpy).toHaveBeenCalled();
 
       consoleWarnSpy.mockRestore();

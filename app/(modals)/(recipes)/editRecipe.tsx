@@ -16,7 +16,12 @@ import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import { useRecipes } from "@src/hooks/offlineV2";
 import { useAuth } from "@contexts/AuthContext";
-import { RecipeFormData, RecipeIngredient, Recipe } from "@src/types";
+import {
+  RecipeFormData,
+  RecipeIngredient,
+  Recipe,
+  RecipeMetrics,
+} from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
 import { ParametersForm } from "@src/components/recipes/RecipeForm/ParametersForm";
@@ -380,6 +385,24 @@ export default function EditRecipeScreen() {
         return sanitized;
       });
 
+      const getMetricOrFallback = (
+        metricKey: keyof RecipeMetrics,
+        estimatedKey: keyof Pick<
+          Recipe,
+          | "estimated_og"
+          | "estimated_fg"
+          | "estimated_abv"
+          | "estimated_ibu"
+          | "estimated_srm"
+        >
+      ): number | undefined => {
+        const metricValue = metricsData?.[metricKey];
+        if (metricValue !== undefined && Number.isFinite(metricValue)) {
+          return metricValue as number;
+        }
+        return existingRecipe?.[estimatedKey] as number | undefined;
+      };
+
       const updateData = {
         name: formData.name || "",
         style: formData.style || "",
@@ -418,26 +441,11 @@ export default function EditRecipeScreen() {
         ingredients: sanitizedIngredients,
         // Include estimated metrics - use newly calculated metrics if available and finite,
         // otherwise preserve existing recipe metrics to avoid resetting them
-        estimated_og:
-          metricsData && Number.isFinite(metricsData.og)
-            ? metricsData.og
-            : existingRecipe?.estimated_og,
-        estimated_fg:
-          metricsData && Number.isFinite(metricsData.fg)
-            ? metricsData.fg
-            : existingRecipe?.estimated_fg,
-        estimated_abv:
-          metricsData && Number.isFinite(metricsData.abv)
-            ? metricsData.abv
-            : existingRecipe?.estimated_abv,
-        estimated_ibu:
-          metricsData && Number.isFinite(metricsData.ibu)
-            ? metricsData.ibu
-            : existingRecipe?.estimated_ibu,
-        estimated_srm:
-          metricsData && Number.isFinite(metricsData.srm)
-            ? metricsData.srm
-            : existingRecipe?.estimated_srm,
+        estimated_og: getMetricOrFallback("og", "estimated_og"),
+        estimated_fg: getMetricOrFallback("fg", "estimated_fg"),
+        estimated_abv: getMetricOrFallback("abv", "estimated_abv"),
+        estimated_ibu: getMetricOrFallback("ibu", "estimated_ibu"),
+        estimated_srm: getMetricOrFallback("srm", "estimated_srm"),
       };
 
       const updatedRecipe = await updateRecipeV2(recipe_id, updateData);

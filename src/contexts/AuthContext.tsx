@@ -361,10 +361,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         .then(() => {
           StaticDataService.getCacheStats()
             .then(stats => console.log("V2 Cache Status:", stats))
-            .catch(error => console.warn("Failed to get cache stats:", error));
+            .catch(error =>
+              UnifiedLogger.warn("auth", "Failed to get cache stats:", error)
+            );
         })
         .catch(error => {
-          console.warn("Failed to cache ingredients after login:", error);
+          UnifiedLogger.warn(
+            "auth",
+            "Failed to cache ingredients after login:",
+            error
+          );
         });
     } catch (error) {
       // Rollback: Clear token, cached data, and auth status if session setup fails
@@ -556,10 +562,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         .then(() => {
           StaticDataService.getCacheStats()
             .then(stats => console.log("V2 Cache Status:", stats))
-            .catch(error => console.warn("Failed to get cache stats:", error));
+            .catch(error =>
+              UnifiedLogger.warn("auth", "Failed to get cache stats:", error)
+            );
         })
         .catch(error => {
-          console.warn(
+          UnifiedLogger.warn(
+            "auth",
             "Failed to cache ingredients during auth initialization:",
             error
           );
@@ -667,7 +676,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         // Note: Token should be handled if provided
       }
     } catch (error: any) {
-      console.error("Registration failed:", error);
+      UnifiedLogger.error("auth", "Registration failed:", error);
       setError(error.response?.data?.message || "Registration failed");
       throw error;
     } finally {
@@ -686,7 +695,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       // Apply session (token storage, auth status update, caching, etc.)
       await applyNewSession(access_token, userData);
     } catch (error: any) {
-      console.error("Google sign-in failed:", error);
+      UnifiedLogger.error("auth", "Google sign-in failed:", error);
       setError(error.response?.data?.message || "Google sign-in failed");
       throw error;
     } finally {
@@ -826,7 +835,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
       setUser(userData);
     } catch (error: any) {
-      console.error("Failed to refresh user:", error);
+      UnifiedLogger.error("auth", "Failed to refresh user:", error);
       // Don't set error state for refresh failures unless it's a 401
       if (error.response?.status === 401) {
         await logout();
@@ -850,7 +859,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         await refreshUser();
       }
     } catch (error: any) {
-      console.error("Email verification failed:", error);
+      UnifiedLogger.error("auth", "Email verification failed:", error);
       setError(error.response?.data?.message || "Email verification failed");
       throw error;
     } finally {
@@ -863,7 +872,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       setError(null);
       await ApiService.auth.resendVerification();
     } catch (error: any) {
-      console.error("Failed to resend verification:", error);
+      UnifiedLogger.error("auth", "Failed to resend verification:", error);
       setError(
         error.response?.data?.message || "Failed to resend verification"
       );
@@ -888,7 +897,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         );
       }
     } catch (error: any) {
-      console.error("Failed to check verification status:", error);
+      UnifiedLogger.error(
+        "auth",
+        "Failed to check verification status:",
+        error
+      );
     }
   };
 
@@ -898,7 +911,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       setError(null);
       await ApiService.auth.forgotPassword({ email });
     } catch (error: any) {
-      console.error("Failed to send password reset:", error);
+      UnifiedLogger.error("auth", "Failed to send password reset:", error);
       setError(
         error.response?.data?.error || "Failed to send password reset email"
       );
@@ -917,7 +930,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       setError(null);
       await ApiService.auth.resetPassword({ token, new_password: newPassword });
     } catch (error: any) {
-      console.error("Failed to reset password:", error);
+      UnifiedLogger.error("auth", "Failed to reset password:", error);
       setError(error.response?.data?.error || "Failed to reset password");
       throw error;
     } finally {
@@ -940,7 +953,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       setIsBiometricAvailable(available);
       setIsBiometricEnabled(enabled);
     } catch (error) {
-      console.error("Failed to check biometric availability:", error);
+      UnifiedLogger.error(
+        "auth",
+        "Failed to check biometric availability:",
+        error
+      );
       setIsBiometricAvailable(false);
       setIsBiometricEnabled(false);
     }
@@ -1074,7 +1091,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       await BiometricService.enableBiometrics(username);
       await checkBiometricAvailability();
     } catch (error: any) {
-      console.error("Failed to enable biometrics:", error);
+      UnifiedLogger.error("auth", "Failed to enable biometrics:", error);
       throw error;
     }
   };
@@ -1088,7 +1105,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       await BiometricService.disableBiometricsLocally();
       await checkBiometricAvailability();
     } catch (error: any) {
-      console.error("Failed to disable biometrics:", error);
+      UnifiedLogger.error("auth", "Failed to disable biometrics:", error);
       throw error;
     }
   };
@@ -1114,7 +1131,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
       return extractUserIdFromJWT(token);
     } catch (error) {
-      console.warn("Failed to extract user ID:", error);
+      UnifiedLogger.warn("auth", "Failed to extract user ID:", error);
       return null;
     }
   };

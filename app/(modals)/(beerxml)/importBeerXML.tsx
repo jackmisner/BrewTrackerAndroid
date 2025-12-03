@@ -141,7 +141,11 @@ export default function ImportBeerXMLScreen() {
           recipeUnitSystem !== unitSystem && recipeUnitSystem !== "mixed",
       }));
     } catch (error) {
-      console.error("🍺 BeerXML Import - Parsing error:", error);
+      UnifiedLogger.error(
+        "beerxml",
+        "🍺 BeerXML Import - Parsing error:",
+        error
+      );
       setImportState(prev => ({
         ...prev,
         isLoading: false,
@@ -178,7 +182,11 @@ export default function ImportBeerXMLScreen() {
       // Proceed to ingredient matching
       proceedToIngredientMatching(convertedRecipe);
     } catch (error) {
-      console.error("🍺 BeerXML Import - Conversion error:", error);
+      UnifiedLogger.error(
+        "beerxml",
+        "🍺 BeerXML Import - Conversion error:",
+        error
+      );
       setImportState(prev => ({ ...prev, isConverting: false }));
       Alert.alert(
         "Conversion Error",
