@@ -37,6 +37,7 @@ import { QUERY_KEYS } from "@services/api/queryClient";
 import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { useRecipes } from "@src/hooks/offlineV2";
 import { OfflineMetricsCalculator } from "@services/brewing/OfflineMetricsCalculator";
+import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
 
 function coerceIngredientTime(input: unknown): number | undefined {
   if (input == null) {
@@ -67,7 +68,7 @@ export default function ImportReviewScreen() {
     try {
       return JSON.parse(params.recipeData);
     } catch (error) {
-      console.error("Failed to parse recipe data:", error);
+      UnifiedLogger.error("Failed to parse recipe data:", error as string);
       return null;
     }
   });
@@ -85,16 +86,6 @@ export default function ImportReviewScreen() {
       if (!recipeData || !recipeData.ingredients) {
         return null;
       }
-
-      // Debug: Check ingredient structure
-      console.log(
-        "[IMPORT_REVIEW] Sample ingredient:",
-        recipeData.ingredients?.[0]
-      );
-      console.log(
-        "[IMPORT_REVIEW] Total ingredients:",
-        recipeData.ingredients.length
-      );
 
       // Prepare recipe data for offline calculation
       const recipeFormData: RecipeMetricsInput = {
@@ -116,12 +107,6 @@ export default function ImportReviewScreen() {
         ingredients: recipeData.ingredients,
       };
 
-      console.log(
-        "[IMPORT_REVIEW] Calculating metrics offline with",
-        recipeFormData.ingredients.length,
-        "ingredients"
-      );
-
       // Calculate metrics offline (always, no network dependency)
       try {
         const validation =
@@ -136,7 +121,6 @@ export default function ImportReviewScreen() {
 
         const metrics =
           OfflineMetricsCalculator.calculateMetrics(recipeFormData);
-        console.log("[IMPORT_REVIEW] Calculated metrics:", metrics);
         return metrics;
       } catch (error) {
         console.error("[IMPORT_REVIEW] Metrics calculation failed:", error);
@@ -157,9 +141,6 @@ export default function ImportReviewScreen() {
   const createRecipeMutation = useMutation({
     mutationFn: async () => {
       // Prepare recipe data for creation
-      console.log(
-        `[IMPORT_REVIEW] recipeData.batch_size: ${recipeData.batch_size} ${recipeData.batch_size_unit}`
-      );
       const recipePayload = {
         name: recipeData.name,
         style: recipeData.style || "",
@@ -607,8 +588,12 @@ export default function ImportReviewScreen() {
                         <Text style={styles.ingredientDetails}>
                           {ingredient.amount || 0} {ingredient.unit || ""}
                           {ingredient.use && ` • ${ingredient.use}`}
-                          {ingredient.time > 0 &&
-                            ` • ${coerceIngredientTime(ingredient.time)} min`}
+                          {(() => {
+                            const time = coerceIngredientTime(ingredient.time);
+                            return time !== undefined && time > 0
+                              ? ` • ${time} min`
+                              : "";
+                          })()}
                         </Text>
                       </View>
                     </View>

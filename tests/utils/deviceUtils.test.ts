@@ -11,14 +11,19 @@ import * as Crypto from "expo-crypto";
 import { getDeviceId, getDeviceName, getPlatform } from "@utils/deviceUtils";
 import { STORAGE_KEYS } from "@services/config";
 
-// Create mutable mock device
-const mockDevice = {
-  modelName: null as string | null,
-  osName: null as string | null,
-};
+// Mutable state for device mock
+let mockModelName: string | null | undefined = null;
+let mockOsName: string | null | undefined = null;
 
-// Mock expo modules
-jest.mock("expo-device", () => mockDevice);
+// Mock expo modules with dynamic getters
+jest.mock("expo-device", () => ({
+  get modelName() {
+    return mockModelName;
+  },
+  get osName() {
+    return mockOsName;
+  },
+}));
 jest.mock("expo-secure-store");
 jest.mock("expo-crypto");
 
@@ -166,8 +171,13 @@ describe("deviceUtils", () => {
   });
 
   describe("getDeviceName", () => {
+    beforeEach(() => {
+      // Reset modelName before each test
+      mockModelName = null;
+    });
+
     it("should return 'Unknown Device' when modelName is null", async () => {
-      mockDevice.modelName = null;
+      mockModelName = null;
 
       const result = await getDeviceName();
 
@@ -175,17 +185,25 @@ describe("deviceUtils", () => {
     });
 
     it("should return 'Unknown Device' when modelName is undefined", async () => {
-      mockDevice.modelName = null;
+      mockModelName = undefined;
 
       const result = await getDeviceName();
 
       expect(result).toBe("Unknown Device");
     });
+
+    it("should return the modelName when it is a valid string", async () => {
+      mockModelName = "Pixel 6 Pro";
+
+      const result = await getDeviceName();
+
+      expect(result).toBe("Pixel 6 Pro");
+    });
   });
 
   describe("getPlatform", () => {
     it("should return 'web' for unknown OS (fallback)", () => {
-      mockDevice.osName = "Windows";
+      mockOsName = "Windows";
 
       const result = getPlatform();
 
@@ -193,7 +211,7 @@ describe("deviceUtils", () => {
     });
 
     it("should return 'web' when osName is null", () => {
-      mockDevice.osName = null;
+      mockOsName = null;
 
       const result = getPlatform();
 

@@ -34,6 +34,7 @@ import { TEST_IDS } from "@src/constants/testIDs";
 import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { UnitConversionChoiceModal } from "@src/components/beerxml/UnitConversionChoiceModal";
 import { UnitSystem } from "@src/types";
+import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
 
 interface ImportState {
   step: "file_selection" | "parsing" | "recipe_selection";
@@ -99,7 +100,10 @@ export default function ImportBeerXMLScreen() {
       // Automatically proceed to parsing
       await parseBeerXML(result.content, result.filename);
     } catch (error) {
-      console.error("🍺 BeerXML Import - File selection error:", error);
+      UnifiedLogger.error(
+        "🍺 BeerXML Import - File selection error:",
+        error as string
+      );
       setImportState(prev => ({
         ...prev,
         isLoading: false,

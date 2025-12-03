@@ -246,7 +246,11 @@ describe("useRecipeMetrics - Essential Tests", () => {
     });
 
     // Test should complete without errors despite null/undefined id/name fields
-    expect(() => result.current).not.toThrow();
+    expect(result.current).toBeDefined();
+    // Verify the hook returns a valid query result object with expected properties
+    expect(result.current).toHaveProperty("data");
+    expect(result.current).toHaveProperty("isLoading");
+    expect(result.current).toHaveProperty("isError");
   });
 
   it("should handle complex recipe data with all ingredient types", async () => {
