@@ -27,9 +27,8 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useTheme } from "@contexts/ThemeContext";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import {
-  IngredientInput,
   Recipe,
-  RecipeCreatePayload,
+  RecipeIngredient,
   RecipeMetricsInput,
   TemperatureUnit,
   UnitSystem,
@@ -105,7 +104,7 @@ function coerceIngredientTime(input: unknown): number | undefined {
  */
 function normalizeImportedIngredients(
   ingredients: any[] | undefined
-): IngredientInput[] {
+): RecipeIngredient[] {
   if (!ingredients || !Array.isArray(ingredients)) {
     return [];
   }
@@ -144,7 +143,8 @@ function normalizeImportedIngredients(
       return true;
     })
     .map(
-      (ing: any): IngredientInput => ({
+      (ing: any): RecipeIngredient => ({
+        // No id - backend generates on creation
         ingredient_id: ing.ingredient_id,
         name: ing.name,
         type: ing.type,
@@ -290,7 +290,7 @@ export default function ImportReviewScreen() {
       );
 
       // Prepare recipe data for creation
-      const recipePayload: RecipeCreatePayload = {
+      const recipePayload: Partial<Recipe> = {
         name: recipeData.name,
         style: recipeData.style || "",
         description: recipeData.description || "",
@@ -321,8 +321,7 @@ export default function ImportReviewScreen() {
 
       // Use offline V2 createRecipe which creates temp recipe first, then syncs to server
       // This ensures immediate display with temp ID, then updates with server ID after sync
-      // Cast through unknown since backend accepts IngredientInput[] for creation (generates IDs)
-      return await createRecipe(recipePayload as unknown as Partial<Recipe>);
+      return await createRecipe(recipePayload);
     },
     onSuccess: createdRecipe => {
       // Invalidate queries to refresh recipe lists

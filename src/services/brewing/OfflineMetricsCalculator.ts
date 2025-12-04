@@ -5,16 +5,13 @@
  * Implements standard brewing formulas for OG, FG, ABV, IBU, and SRM.
  */
 
+import { isDryHopIngredient } from "@/src/utils/recipeUtils";
 import {
   RecipeMetrics,
   RecipeFormData,
   RecipeMetricsInput,
   RecipeIngredient,
-  IngredientInput,
 } from "@src/types";
-
-// Type alias for ingredients that can be used in calculations
-type CalculableIngredient = RecipeIngredient | IngredientInput;
 
 export class OfflineMetricsCalculator {
   /**
@@ -67,7 +64,7 @@ export class OfflineMetricsCalculator {
    * Calculate Original Gravity (OG)
    */
   private static calculateOG(
-    fermentables: CalculableIngredient[],
+    fermentables: RecipeIngredient[],
     batchSizeGallons: number,
     efficiency: number
   ): number {
@@ -102,7 +99,7 @@ export class OfflineMetricsCalculator {
    */
   private static calculateFG(
     og: number,
-    ingredients: CalculableIngredient[]
+    ingredients: RecipeIngredient[]
   ): number {
     // Calculate average attenuation from yeast
     const yeasts = ingredients.filter(ing => ing.type === "yeast");
@@ -141,7 +138,7 @@ export class OfflineMetricsCalculator {
    * Calculate International Bitterness Units (IBU)
    */
   private static calculateIBU(
-    hops: CalculableIngredient[],
+    hops: RecipeIngredient[],
     batchSizeGallons: number,
     og: number,
     boilTime: number
@@ -160,14 +157,7 @@ export class OfflineMetricsCalculator {
           : (hop.time ?? boilTime); // default to boil time for boil additions
 
       // Skip non-bittering additions (dry hops or hops with no boil time)
-      // Note: We check dry hop inline since isDryHopIngredient expects RecipeIngredient
-      const isDryHop =
-        hop.type === "hop" &&
-        hop.use &&
-        String(hop.use)
-          .toLowerCase()
-          .replace(/[-_\s]/g, "") === "dryhop";
-      if (isDryHop || hopTime <= 0) {
+      if (isDryHopIngredient(hop) || hopTime <= 0) {
         continue;
       }
       const alphaAcid = "alpha_acid" in hop ? (hop.alpha_acid ?? 5) : 5; // Default 5% AA (allow 0)
@@ -202,7 +192,7 @@ export class OfflineMetricsCalculator {
    * Calculate Standard Reference Method (SRM) color
    */
   private static calculateSRM(
-    grains: CalculableIngredient[],
+    grains: RecipeIngredient[],
     batchSizeGallons: number
   ): number {
     if (grains.length === 0) {

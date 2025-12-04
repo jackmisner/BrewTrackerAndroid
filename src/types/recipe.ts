@@ -42,7 +42,8 @@ export type HopFormat = "Pellet" | "Leaf" | "Plug" | "Whole" | "Extract";
 
 // Recipe ingredient interface
 export interface RecipeIngredient {
-  id: ID;
+  id?: ID; // Optional - backend generates on creation, present on fetched recipes
+  ingredient_id?: string; // Reference to ingredient database entry (optional for test data and backward compat)
   name: string;
   type: IngredientType;
   amount: number;
@@ -159,8 +160,7 @@ export interface RecipeFormData {
  * rather than relying on a general unit_system preference, ensuring calculations
  * work correctly regardless of user's unit system settings.
  *
- * Ingredients can be either RecipeIngredient (from existing recipes) or IngredientInput
- * (from imports/new recipes). The id field is not used by the calculator.
+ * RecipeIngredient.id is optional, so this works for both imports and existing recipes.
  */
 export interface RecipeMetricsInput {
   batch_size: number;
@@ -169,19 +169,10 @@ export interface RecipeMetricsInput {
   boil_time: number;
   mash_temperature?: number;
   mash_temp_unit?: TemperatureUnit;
-  ingredients: (RecipeIngredient | IngredientInput)[];
+  ingredients: RecipeIngredient[];
 }
 
-/**
- * Payload for creating a new recipe
- *
- * Similar to Partial<Recipe> but accepts IngredientInput[] for ingredients
- * since the backend generates ingredient IDs during creation.
- */
-export interface RecipeCreatePayload
-  extends Omit<Partial<Recipe>, "ingredients"> {
-  ingredients: IngredientInput[];
-}
+// RecipeCreatePayload removed - Partial<Recipe> is sufficient since RecipeIngredient.id is optional
 
 // Recipe search filters
 export interface RecipeSearchFilters {
@@ -254,14 +245,5 @@ export interface CreateRecipeIngredientData {
   notes?: string;
 }
 
-// Strict ingredient input for BeerXML import with required fields for validation
-export interface IngredientInput {
-  ingredient_id: string;
-  name: string;
-  type: IngredientType;
-  amount: number;
-  unit: IngredientUnit;
-  use?: string;
-  time?: number;
-  instance_id?: string; // Unique instance identifier for React keys and duplicate ingredient handling (optional - backend generates if missing)
-}
+// IngredientInput removed - RecipeIngredient now handles both creation and fetched recipes
+// with optional id field
