@@ -17,7 +17,7 @@
  * <UnitConversionChoiceModal
  *   visible={showUnitChoice}
  *   userUnitSystem="imperial"
- *   isConverting={false}
+ *   convertingTarget={null} // or "metric" | "imperial" when converting
  *   recipeName="My IPA"
  *   onChooseMetric={handleMetric}
  *   onChooseImperial={handleImperial}
@@ -49,9 +49,9 @@ interface UnitConversionChoiceModalProps {
    */
   userUnitSystem: UnitSystem;
   /**
-   * Whether conversion is in progress
+   * Which unit system is currently being converted to, or null if no conversion in progress
    */
-  isConverting: boolean;
+  convertingTarget: UnitSystem | null;
   /**
    * Optional recipe name to display
    */
@@ -81,13 +81,18 @@ export const UnitConversionChoiceModal: React.FC<
 > = ({
   visible,
   userUnitSystem,
-  isConverting,
+  convertingTarget,
   recipeName,
   onChooseMetric,
   onChooseImperial,
   onCancel,
 }) => {
   const { colors } = useTheme();
+
+  // Determine which button is in loading state and which is just disabled
+  const isConvertingMetric = convertingTarget === "metric";
+  const isConvertingImperial = convertingTarget === "imperial";
+  const isAnyConversion = convertingTarget !== null;
 
   return (
     <Modal
@@ -167,16 +172,16 @@ export const UnitConversionChoiceModal: React.FC<
                       ? colors.primary
                       : colors.backgroundSecondary,
                   borderColor: colors.border,
-                  opacity: isConverting ? 0.6 : 1,
+                  opacity: isAnyConversion ? 0.6 : 1,
                 },
               ]}
               onPress={onChooseMetric}
-              disabled={isConverting}
+              disabled={isAnyConversion}
               accessibilityLabel="Import recipe with metric units (kg, L, °C)"
               accessibilityRole="button"
-              accessibilityState={{ disabled: isConverting }}
+              accessibilityState={{ disabled: isAnyConversion }}
             >
-              {isConverting ? (
+              {isConvertingMetric ? (
                 <>
                   <ActivityIndicator
                     size="small"
@@ -254,16 +259,16 @@ export const UnitConversionChoiceModal: React.FC<
                       ? colors.primary
                       : colors.backgroundSecondary,
                   borderColor: colors.border,
-                  opacity: isConverting ? 0.6 : 1,
+                  opacity: isAnyConversion ? 0.6 : 1,
                 },
               ]}
               onPress={onChooseImperial}
-              disabled={isConverting}
+              disabled={isAnyConversion}
               accessibilityLabel="Import recipe with imperial units (lbs, gal, °F)"
               accessibilityRole="button"
-              accessibilityState={{ disabled: isConverting }}
+              accessibilityState={{ disabled: isAnyConversion }}
             >
-              {isConverting ? (
+              {isConvertingImperial ? (
                 <>
                   <ActivityIndicator
                     size="small"

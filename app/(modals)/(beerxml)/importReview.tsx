@@ -12,7 +12,7 @@
  * - Import statistics and metadata display
  */
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -182,6 +182,23 @@ export default function ImportReviewScreen() {
   });
 
   /**
+   * Normalize ingredients once - use this for both preview and creation
+   * This ensures "what you see is what you get"
+   */
+  const normalizedIngredients = useMemo(() => {
+    return normalizeImportedIngredients(recipeData?.ingredients);
+  }, [recipeData?.ingredients]);
+
+  /**
+   * Count of ingredients that were filtered out during normalization
+   */
+  const filteredOutCount = useMemo(() => {
+    const originalCount = recipeData?.ingredients?.length || 0;
+    const normalizedCount = normalizedIngredients.length;
+    return originalCount - normalizedCount;
+  }, [recipeData?.ingredients, normalizedIngredients.length]);
+
+  /**
    * Calculate recipe metrics before creation using offline-first approach
    */
   const {
@@ -208,14 +225,11 @@ export default function ImportReviewScreen() {
       ),
     ],
     queryFn: async () => {
-      if (!recipeData || !recipeData.ingredients) {
+      if (!recipeData || normalizedIngredients.length === 0) {
         return null;
       }
 
-      // Normalize ingredients first (applies validation and generates instance_ids)
-      const normalizedIngredients = normalizeImportedIngredients(
-        recipeData.ingredients
-      );
+      // Use pre-normalized ingredients (already validated and have instance_ids)
 
       // Derive unit system using centralized logic
       const unitSystem = deriveUnitSystem(
@@ -243,7 +257,7 @@ export default function ImportReviewScreen() {
       const validation =
         OfflineMetricsCalculator.validateRecipeData(recipeFormData);
       if (!validation.isValid) {
-        await UnifiedLogger.warn(
+        void UnifiedLogger.warn(
           "import-review",
           "Invalid recipe data for metrics calculation",
           validation.errors
@@ -257,7 +271,7 @@ export default function ImportReviewScreen() {
         return metrics;
       } catch (error) {
         // Internal calculator error - throw to set metricsError state
-        await UnifiedLogger.error(
+        void UnifiedLogger.error(
           "import-review",
           "Unexpected metrics calculation failure",
           error
@@ -265,10 +279,7 @@ export default function ImportReviewScreen() {
         throw error; // Re-throw to trigger error state
       }
     },
-    enabled:
-      !!recipeData &&
-      !!recipeData.ingredients &&
-      recipeData.ingredients.length > 0,
+    enabled: !!recipeData && normalizedIngredients.length > 0,
     staleTime: Infinity, // Deterministic calculation, never stale
     retry: false, // Local calculation doesn't need retries
   });
@@ -278,11 +289,7 @@ export default function ImportReviewScreen() {
    */
   const createRecipeMutation = useMutation({
     mutationFn: async () => {
-      // Normalize ingredients using centralized helper (same as metrics calculation)
-      const normalizedIngredients = normalizeImportedIngredients(
-        recipeData.ingredients
-      );
-
+      // Use pre-normalized ingredients (same as used for preview and metrics)
       // Derive unit system using centralized logic
       const unitSystem = deriveUnitSystem(
         recipeData.batch_size_unit,
@@ -502,7 +509,13 @@ export default function ImportReviewScreen() {
               <View style={styles.summaryText}>
                 <Text style={styles.summaryLabel}>Ingredients</Text>
                 <Text style={styles.summaryValue}>
-                  {recipeData.ingredients?.length || 0} ingredients
+                  {normalizedIngredients.length} ingredients
+                  {filteredOutCount > 0 && (
+                    <Text style={{ color: theme.colors.warning }}>
+                      {" "}
+                      ({filteredOutCount} invalid filtered out)
+                    </Text>
+                  )}
                 </Text>
               </View>
             </View>
@@ -678,10 +691,9 @@ export default function ImportReviewScreen() {
 
           <View style={styles.ingredientSummary}>
             {["grain", "hop", "yeast", "other"].map(type => {
-              const ingredients =
-                recipeData.ingredients?.filter(
-                  (ing: any) => ing.type === type
-                ) || [];
+              const ingredients = normalizedIngredients.filter(
+                ing => ing.type === type
+              );
 
               if (ingredients.length === 0) {
                 return null;
@@ -693,7 +705,7 @@ export default function ImportReviewScreen() {
                     {type.charAt(0).toUpperCase() + type.slice(1)}s (
                     {ingredients.length})
                   </Text>
-                  {ingredients.map((ingredient: any, index: number) => (
+                  {ingredients.map((ingredient, index) => (
                     <View key={index} style={styles.ingredientItem}>
                       <View style={styles.ingredientInfo}>
                         <Text style={styles.ingredientName}>
@@ -702,10 +714,9 @@ export default function ImportReviewScreen() {
                         <Text style={styles.ingredientDetails}>
                           {ingredient.amount || 0} {ingredient.unit || ""}
                           {ingredient.use && ` • ${ingredient.use}`}
-                          {(time =>
-                            time !== undefined && time > 0
-                              ? ` • ${time} min`
-                              : "")(coerceIngredientTime(ingredient.time))}
+                          {ingredient.time !== undefined && ingredient.time > 0
+                            ? ` • ${ingredient.time} min`
+                            : ""}
                         </Text>
                       </View>
                     </View>

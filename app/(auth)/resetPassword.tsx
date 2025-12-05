@@ -189,7 +189,7 @@ const ResetPasswordScreen: React.FC = () => {
       setSuccess(true);
     } catch (err: unknown) {
       // Error is handled by the context and displayed through error state
-      await UnifiedLogger.error(
+      void UnifiedLogger.error(
         "resetPassword.handleResetPassword",
         "Password reset failed:",
         err

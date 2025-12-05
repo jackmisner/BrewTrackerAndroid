@@ -8,7 +8,7 @@
 import { UserCacheService } from "./UserCacheService";
 import { StaticDataService } from "./StaticDataService";
 import { UnifiedLogger } from "@services/logger/UnifiedLogger";
-import { UnitSystem } from "@/src/types";
+import type { UnitSystem } from "@/src/types";
 
 export class StartupHydrationService {
   private static isHydrating = false;
@@ -30,14 +30,30 @@ export class StartupHydrationService {
 
     try {
       // Hydrate in parallel for better performance
-      await Promise.allSettled([
+      const results = await Promise.allSettled([
         this.hydrateUserData(userId, userUnitSystem),
         this.hydrateStaticData(),
       ]);
 
-      this.hasHydrated = true;
+      // Only mark as hydrated if both succeeded
+      const hasFailure = results.some(r => r.status === "rejected");
+      if (!hasFailure) {
+        this.hasHydrated = true;
+      } else {
+        void UnifiedLogger.warn(
+          "offline-hydration",
+          "[StartupHydrationService] Partial hydration failure - will retry on next startup",
+          {
+            results: results.map((r, i) => ({
+              type: i === 0 ? "userData" : "staticData",
+              status: r.status,
+              reason: r.status === "rejected" ? r.reason : undefined,
+            })),
+          }
+        );
+      }
     } catch (error) {
-      await UnifiedLogger.error(
+      void UnifiedLogger.error(
         "offline-hydration",
         "[StartupHydrationService] Hydration failed:",
         error
@@ -65,7 +81,6 @@ export class StartupHydrationService {
       if (existingRecipes.length === 0) {
         // The UserCacheService.getRecipes() method will automatically hydrate
         // So we don't need to do anything special here
-      } else {
       }
 
       // TODO: Add brew sessions hydration when implemented
@@ -85,9 +100,9 @@ export class StartupHydrationService {
    */
   private static async hydrateStaticData(): Promise<void> {
     try {
-      // Check and update ingredients cache
-      const ingredientsStats = await StaticDataService.getCacheStats();
-      if (!ingredientsStats.ingredients.cached) {
+      // Check and update ingredients and beer styles cache
+      const cacheStats = await StaticDataService.getCacheStats();
+      if (!cacheStats.ingredients.cached) {
         await StaticDataService.getIngredients(); // This will cache automatically
       } else {
         // Check for updates in background
@@ -101,7 +116,7 @@ export class StartupHydrationService {
       }
 
       // Check and update beer styles cache
-      if (!ingredientsStats.beerStyles.cached) {
+      if (!cacheStats.beerStyles.cached) {
         await StaticDataService.getBeerStyles(); // This will cache automatically
       } else {
         // Check for updates in background

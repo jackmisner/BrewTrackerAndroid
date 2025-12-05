@@ -24,7 +24,7 @@ jest.mock("@services/api/apiService", () => ({
 }));
 
 // Mock UnifiedLogger
-jest.mock("@/src/services/logger/UnifiedLogger", () => ({
+jest.mock("@services/logger/UnifiedLogger", () => ({
   UnifiedLogger: {
     error: jest.fn(),
     warn: jest.fn(),

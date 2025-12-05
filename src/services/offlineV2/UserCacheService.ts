@@ -3186,10 +3186,6 @@ export class UserCacheService {
   ): Partial<BrewSession> {
     const sanitized = { ...updates };
 
-    // Debug logging to understand the data being sanitized
-    if (__DEV__) {
-    }
-
     // Remove fields that shouldn't be updated via API
     delete sanitized.id;
     delete sanitized.created_at;
@@ -3232,6 +3228,105 @@ export class UserCacheService {
     }
 
     return sanitized;
+  }
+
+  /**
+   * Resolve temporary recipe_id in brew session data
+   *
+   * @param brewSessionData - The brew session data that may contain a temp recipe_id
+   * @param operation - The pending operation being processed
+   * @param pathContext - Context indicating if this is a CREATE or UPDATE operation
+   * @returns Object containing updated brewSessionData (with recipe_id guaranteed to be a string) and flag indicating if temp ID was found
+   * @throws OfflineError if userId is missing or recipe not found
+   */
+  private static async resolveTempRecipeId<
+    TempBrewSessionData extends Partial<BrewSession>,
+  >(
+    brewSessionData: TempBrewSessionData,
+    operation: PendingOperation,
+    pathContext: "CREATE" | "UPDATE"
+  ): Promise<{
+    brewSessionData: TempBrewSessionData & { recipe_id: string };
+    hadTempRecipeId: boolean;
+  }> {
+    const updatedData = { ...brewSessionData };
+    const hasTemporaryRecipeId = updatedData.recipe_id?.startsWith("temp_");
+
+    if (!hasTemporaryRecipeId) {
+      // recipe_id exists and is not a temp ID, so it's already a real ID
+      return {
+        brewSessionData: updatedData as TempBrewSessionData & {
+          recipe_id: string;
+        },
+        hadTempRecipeId: false,
+      };
+    }
+
+    // Validate operation has userId
+    if (!operation.userId) {
+      await UnifiedLogger.error(
+        "UserCacheService.resolveTempRecipeId",
+        `Cannot resolve temp recipe_id - operation has no userId`,
+        { entityId: operation.entityId, pathContext }
+      );
+      throw new OfflineError(
+        "Invalid operation - missing userId",
+        "DEPENDENCY_ERROR",
+        false
+      );
+    }
+
+    await UnifiedLogger.info(
+      "UserCacheService.resolveTempRecipeId",
+      `Brew session ${pathContext} has temporary recipe_id - looking up real ID`,
+      {
+        tempRecipeId: updatedData.recipe_id,
+        entityId: operation.entityId,
+        pathContext,
+      }
+    );
+
+    // Look up the real recipe ID from the recipe cache
+    const recipes = await this.getCachedRecipes(operation.userId);
+    const matchedRecipe = recipes.find(
+      r =>
+        r.data.id === updatedData.recipe_id ||
+        r.tempId === updatedData.recipe_id
+    );
+
+    if (matchedRecipe) {
+      const realRecipeId = matchedRecipe.data.id;
+      await UnifiedLogger.info(
+        "UserCacheService.resolveTempRecipeId",
+        `Resolved temp recipe_id to real ID${pathContext === "UPDATE" ? " (UPDATE path)" : ""}`,
+        {
+          tempRecipeId: updatedData.recipe_id,
+          realRecipeId: realRecipeId,
+          pathContext,
+        }
+      );
+      updatedData.recipe_id = realRecipeId;
+    } else {
+      // Recipe not found - this means the recipe hasn't synced yet
+      await UnifiedLogger.warn(
+        "UserCacheService.resolveTempRecipeId",
+        `Cannot find recipe for temp ID - skipping brew session ${pathContext} sync`,
+        {
+          tempRecipeId: updatedData.recipe_id,
+          entityId: operation.entityId,
+          pathContext,
+        }
+      );
+      throw new OfflineError("Recipe not synced yet", "DEPENDENCY_ERROR", true);
+    }
+
+    // At this point, recipe_id has been resolved to a real string ID
+    return {
+      brewSessionData: updatedData as TempBrewSessionData & {
+        recipe_id: string;
+      },
+      hadTempRecipeId: true,
+    };
   }
 
   /**
@@ -3434,69 +3529,12 @@ export class UserCacheService {
             );
           } else if (operation.entityType === "brew_session") {
             // CRITICAL FIX: Check if brew session has temp recipe_id and resolve it
-            const brewSessionData = { ...operation.data };
-            const hasTemporaryRecipeId =
-              brewSessionData.recipe_id?.startsWith("temp_");
-
-            if (hasTemporaryRecipeId) {
-              if (!operation.userId) {
-                await UnifiedLogger.error(
-                  "UserCacheService.processPendingOperation",
-                  `Cannot resolve temp recipe_id - operation has no userId`,
-                  { entityId: operation.entityId }
-                );
-                throw new OfflineError(
-                  "Invalid operation - missing userId",
-                  "DEPENDENCY_ERROR",
-                  false
-                );
-              }
-
-              await UnifiedLogger.info(
-                "UserCacheService.processPendingOperation",
-                `Brew session has temporary recipe_id - looking up real ID`,
-                {
-                  tempRecipeId: brewSessionData.recipe_id,
-                  entityId: operation.entityId,
-                }
+            const { brewSessionData, hadTempRecipeId } =
+              await this.resolveTempRecipeId(
+                { ...operation.data },
+                operation,
+                "CREATE"
               );
-
-              // Look up the real recipe ID from the recipe cache
-              const recipes = await this.getCachedRecipes(operation.userId);
-              const matchedRecipe = recipes.find(
-                r =>
-                  r.data.id === brewSessionData.recipe_id ||
-                  r.tempId === brewSessionData.recipe_id
-              );
-
-              if (matchedRecipe) {
-                const realRecipeId = matchedRecipe.data.id;
-                await UnifiedLogger.info(
-                  "UserCacheService.processPendingOperation",
-                  `Resolved temp recipe_id to real ID`,
-                  {
-                    tempRecipeId: brewSessionData.recipe_id,
-                    realRecipeId: realRecipeId,
-                  }
-                );
-                brewSessionData.recipe_id = realRecipeId;
-              } else {
-                // Recipe not found - this means the recipe hasn't synced yet
-                await UnifiedLogger.warn(
-                  "UserCacheService.processPendingOperation",
-                  `Cannot find recipe for temp ID - skipping brew session sync`,
-                  {
-                    tempRecipeId: brewSessionData.recipe_id,
-                    entityId: operation.entityId,
-                  }
-                );
-                throw new OfflineError(
-                  "Recipe not synced yet",
-                  "DEPENDENCY_ERROR",
-                  true
-                );
-              }
-            }
 
             await UnifiedLogger.info(
               "UserCacheService.processPendingOperation",
@@ -3506,7 +3544,7 @@ export class UserCacheService {
                 operationId: operation.id,
                 sessionName: brewSessionData?.name || "Unknown",
                 recipeId: brewSessionData.recipe_id,
-                hadTempRecipeId: hasTemporaryRecipeId,
+                hadTempRecipeId: hadTempRecipeId,
                 brewSessionData: brewSessionData, // Log the actual data being sent
               }
             );
@@ -3624,69 +3662,12 @@ export class UserCacheService {
             const isTempId = operation.entityId.startsWith("temp_");
 
             // CRITICAL FIX: Check if brew session has temp recipe_id and resolve it (for both CREATE and UPDATE paths)
-            const brewSessionData = { ...operation.data };
-            const hasTemporaryRecipeId =
-              brewSessionData.recipe_id?.startsWith("temp_");
-
-            if (hasTemporaryRecipeId) {
-              if (!operation.userId) {
-                await UnifiedLogger.error(
-                  "UserCacheService.processPendingOperation",
-                  `Cannot resolve temp recipe_id - operation has no userId`,
-                  { entityId: operation.entityId }
-                );
-                throw new OfflineError(
-                  "Invalid operation - missing userId",
-                  "DEPENDENCY_ERROR",
-                  false
-                );
-              }
-
-              await UnifiedLogger.info(
-                "UserCacheService.processPendingOperation",
-                `Brew session UPDATE has temporary recipe_id - looking up real ID`,
-                {
-                  tempRecipeId: brewSessionData.recipe_id,
-                  entityId: operation.entityId,
-                }
+            const { brewSessionData, hadTempRecipeId } =
+              await this.resolveTempRecipeId(
+                { ...operation.data },
+                operation,
+                "UPDATE"
               );
-
-              // Look up the real recipe ID from the recipe cache
-              const recipes = await this.getCachedRecipes(operation.userId);
-              const matchedRecipe = recipes.find(
-                r =>
-                  r.data.id === brewSessionData.recipe_id ||
-                  r.tempId === brewSessionData.recipe_id
-              );
-
-              if (matchedRecipe) {
-                const realRecipeId = matchedRecipe.data.id;
-                await UnifiedLogger.info(
-                  "UserCacheService.processPendingOperation",
-                  `Resolved temp recipe_id to real ID (UPDATE path)`,
-                  {
-                    tempRecipeId: brewSessionData.recipe_id,
-                    realRecipeId: realRecipeId,
-                  }
-                );
-                brewSessionData.recipe_id = realRecipeId;
-              } else {
-                // Recipe not found - this means the recipe hasn't synced yet
-                await UnifiedLogger.warn(
-                  "UserCacheService.processPendingOperation",
-                  `Cannot find recipe for temp ID - skipping brew session UPDATE sync`,
-                  {
-                    tempRecipeId: brewSessionData.recipe_id,
-                    entityId: operation.entityId,
-                  }
-                );
-                throw new OfflineError(
-                  "Recipe not synced yet",
-                  "DEPENDENCY_ERROR",
-                  true
-                );
-              }
-            }
 
             if (isTempId) {
               // Convert UPDATE with temp ID to CREATE operation
@@ -3697,7 +3678,7 @@ export class UserCacheService {
                   entityId: operation.entityId,
                   sessionName: brewSessionData?.name || "Unknown",
                   recipeId: brewSessionData.recipe_id,
-                  hadTempRecipeId: hasTemporaryRecipeId,
+                  hadTempRecipeId: hadTempRecipeId,
                 }
               );
               const response =
@@ -3715,7 +3696,7 @@ export class UserCacheService {
                   updateFields: Object.keys(brewSessionData || {}),
                   sessionName: brewSessionData?.name || "Unknown",
                   recipeId: brewSessionData.recipe_id,
-                  hadTempRecipeId: hasTemporaryRecipeId,
+                  hadTempRecipeId: hadTempRecipeId,
                 }
               );
 

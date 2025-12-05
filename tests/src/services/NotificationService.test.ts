@@ -87,12 +87,6 @@ describe("NotificationService", () => {
     (NotificationService as any).isInitialized = false;
     (NotificationService as any).notificationIdentifiers = [];
 
-    // Clear UnifiedLogger mocks
-    jest.mocked(UnifiedLogger.error).mockClear();
-    jest.mocked(UnifiedLogger.warn).mockClear();
-    jest.mocked(UnifiedLogger.error).mockClear();
-    jest.mocked(UnifiedLogger.debug).mockClear();
-
     // Default mock returns
     mockGetPermissions.mockResolvedValue({ status: "granted" });
     mockRequestPermissions.mockResolvedValue({ status: "granted" });
@@ -615,7 +609,7 @@ describe("NotificationService", () => {
       expect(result.size).toBe(0); // No successful schedules
     });
 
-    it("should log debug information in development", async () => {
+    it("should log a warning in development when skipping hop alerts", async () => {
       const originalDev = (global as any).__DEV__;
       (global as any).__DEV__ = true;
 

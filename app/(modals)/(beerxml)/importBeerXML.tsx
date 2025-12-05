@@ -46,7 +46,7 @@ interface ImportState {
   } | null;
   parsedRecipes: BeerXMLRecipe[];
   selectedRecipe: BeerXMLRecipe | null;
-  isConverting: boolean;
+  convertingTarget: UnitSystem | null;
 }
 
 export default function ImportBeerXMLScreen() {
@@ -61,7 +61,7 @@ export default function ImportBeerXMLScreen() {
     selectedFile: null,
     parsedRecipes: [],
     selectedRecipe: null,
-    isConverting: false,
+    convertingTarget: null,
   });
 
   /**
@@ -157,7 +157,7 @@ export default function ImportBeerXMLScreen() {
       return;
     }
 
-    setImportState(prev => ({ ...prev, isConverting: true }));
+    setImportState(prev => ({ ...prev, convertingTarget: targetSystem }));
 
     try {
       // Convert recipe to target system with normalization
@@ -182,7 +182,7 @@ export default function ImportBeerXMLScreen() {
         ...prev,
         selectedRecipe: convertedRecipe,
         step: "recipe_selection",
-        isConverting: false,
+        convertingTarget: null,
       }));
     } catch (error) {
       UnifiedLogger.error(
@@ -190,7 +190,7 @@ export default function ImportBeerXMLScreen() {
         "🍺 BeerXML Import - Conversion error:",
         error
       );
-      setImportState(prev => ({ ...prev, isConverting: false }));
+      setImportState(prev => ({ ...prev, convertingTarget: null }));
       Alert.alert(
         "Conversion Error",
         "Failed to convert recipe units. Please try again or select a different file.",
@@ -240,7 +240,7 @@ export default function ImportBeerXMLScreen() {
       selectedFile: null,
       parsedRecipes: [],
       selectedRecipe: null,
-      isConverting: false,
+      convertingTarget: null,
     });
   };
 
@@ -482,7 +482,7 @@ export default function ImportBeerXMLScreen() {
       <UnitConversionChoiceModal
         visible={importState.step === "unit_choice"}
         userUnitSystem={unitSystem}
-        isConverting={importState.isConverting}
+        convertingTarget={importState.convertingTarget}
         recipeName={importState.selectedRecipe?.name}
         onChooseMetric={() => handleUnitSystemChoice("metric")}
         onChooseImperial={() => handleUnitSystemChoice("imperial")}

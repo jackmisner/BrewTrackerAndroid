@@ -126,7 +126,7 @@ class BeerXMLService {
         saveMethod: saveResult.method,
       };
     } catch (error) {
-      UnifiedLogger.error("beerxml", "🍺 BeerXML Export - Error:", error);
+      void UnifiedLogger.error("beerxml", "🍺 BeerXML Export - Error:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Export failed",
@@ -156,7 +156,7 @@ class BeerXMLService {
         filename: result.filename,
       };
     } catch (error) {
-      UnifiedLogger.error("beerxml", "🍺 BeerXML Import - Error:", error);
+      void UnifiedLogger.error("beerxml", "🍺 BeerXML Import - Error:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Import failed",
@@ -182,7 +182,7 @@ class BeerXMLService {
         ? response.data.recipes
         : [];
       if (!Array.isArray(recipes) || recipes.length === 0) {
-        UnifiedLogger.warn(
+        void UnifiedLogger.warn(
           "beerxml",
           "🍺 BeerXML Parse - No recipes found in response"
         );
@@ -195,7 +195,7 @@ class BeerXMLService {
 
       return transformedRecipes;
     } catch (error) {
-      UnifiedLogger.error("beerxml", "🍺 BeerXML Parse - Error:", error);
+      void UnifiedLogger.error("beerxml", "🍺 BeerXML Parse - Error:", error);
       throw new Error(
         `Failed to parse BeerXML: ${error instanceof Error ? error.message : "Unknown error"}`
       );
@@ -249,7 +249,7 @@ class BeerXMLService {
 
       return matchingResults as IngredientMatchingResult[];
     } catch (error) {
-      UnifiedLogger.error("beerxml", "🍺 BeerXML Match - Error:", error);
+      void UnifiedLogger.error("beerxml", "🍺 BeerXML Match - Error:", error);
       throw new Error(
         `Failed to match ingredients: ${error instanceof Error ? error.message : "Unknown error"}`
       );
@@ -273,7 +273,7 @@ class BeerXMLService {
 
       return createdIngredients;
     } catch (error) {
-      UnifiedLogger.error("beerxml", "🍺 BeerXML Create - Error:", error);
+      void UnifiedLogger.error("beerxml", "🍺 BeerXML Create - Error:", error);
       throw new Error(
         `Failed to create ingredients: ${error instanceof Error ? error.message : "Unknown error"}`
       );
