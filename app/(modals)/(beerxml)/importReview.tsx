@@ -52,6 +52,13 @@ function deriveUnitSystem(
   if (explicitUnitSystem === "metric" || explicitUnitSystem === "imperial") {
     return explicitUnitSystem;
   }
+
+  if (explicitUnitSystem !== undefined) {
+    void UnifiedLogger.warn(
+      "import-review",
+      `Invalid explicit unit_system "${explicitUnitSystem}", deriving from batch_size_unit`
+    );
+  }
   // Default based on batch size unit
   return batchSizeUnit?.toLowerCase() === "l" ? "metric" : "imperial";
 }
@@ -231,14 +238,11 @@ export default function ImportReviewScreen() {
       recipeData?.boil_time,
       recipeData?.mash_temperature,
       recipeData?.mash_temp_unit,
-      // Include full ingredient fingerprint (ID + amount + unit) for proper cache invalidation
-      JSON.stringify(
-        recipeData?.ingredients?.map((i: any) => ({
-          id: i.ingredient_id,
-          amount: i.amount,
-          unit: i.unit,
-        }))
-      ),
+      // Include ingredient fingerprint for cache invalidation
+      normalizedIngredients.length,
+      normalizedIngredients
+        .map(i => `${i.ingredient_id}:${i.amount}:${i.unit}`)
+        .join("|"),
     ],
     queryFn: async () => {
       if (!recipeData || normalizedIngredients.length === 0) {

@@ -2684,11 +2684,11 @@ export class UserCacheService {
         );
 
         return userRecipes;
-      } catch (e) {
+      } catch (error) {
         UnifiedLogger.warn(
           "offline-cache",
           "Corrupt USER_RECIPES cache; resetting",
-          e
+          { error: error instanceof Error ? error.message : "Unknown error" }
         );
         await AsyncStorage.removeItem(STORAGE_KEYS_V2.USER_RECIPES);
         return [];

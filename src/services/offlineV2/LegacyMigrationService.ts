@@ -214,10 +214,16 @@ export class LegacyMigrationService {
       parent_recipe_id: legacyRecipe.parent_recipe_id,
       original_author: legacyRecipe.original_author,
       // Add missing required fields based on user's unit system
-      batch_size_unit: userUnitSystem === "metric" ? "l" : "gal",
-      unit_system: userUnitSystem,
-      mash_temperature: userUnitSystem === "metric" ? 67 : 152, // 67°C ≈ 152°F
-      mash_temp_unit: userUnitSystem === "metric" ? "C" : "F",
+      batch_size_unit:
+        legacyRecipe.batch_size_unit ||
+        (userUnitSystem === "metric" ? "l" : "gal"),
+      unit_system: legacyRecipe.unit_system || userUnitSystem,
+      mash_temperature:
+        legacyRecipe.mash_temperature ||
+        (userUnitSystem === "metric" ? 67 : 152), // Default mash temp values
+      mash_temp_unit:
+        legacyRecipe.mash_temp_unit ||
+        (userUnitSystem === "metric" ? "C" : "F"),
       notes: "", // Default empty notes
     };
 
