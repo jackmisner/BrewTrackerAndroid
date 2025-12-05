@@ -32,6 +32,7 @@ import {
   RecipeMetricsInput,
   TemperatureUnit,
   UnitSystem,
+  BatchSizeUnit,
 } from "@src/types";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { generateUniqueId } from "@utils/keyUtils";
@@ -105,6 +106,89 @@ function coerceIngredientTime(input: unknown): number | undefined {
   } // preserve explicit zero
   const n = typeof input === "number" ? input : Number(input);
   return Number.isFinite(n) && n >= 0 ? n : undefined; // reject NaN/±Inf/negatives
+}
+
+/**
+ * Type for imported recipe data from BeerXML
+ */
+interface ImportedRecipeData {
+  name: string;
+  style?: string;
+  description?: string;
+  notes?: string;
+  batch_size: number | string;
+  batch_size_unit?: string;
+  boil_time?: number | string;
+  efficiency?: number;
+  unit_system?: string;
+  mash_temp_unit?: string;
+  mash_temperature?: number;
+  ingredients?: any[];
+}
+
+/**
+ * Normalized recipe values for consistent use across metrics, creation, and preview
+ */
+interface NormalizedRecipeValues {
+  unitSystem: UnitSystem;
+  batchSize: number;
+  batchSizeUnit: BatchSizeUnit;
+  boilTime: number;
+  displayBatchSize: string;
+  displayBoilTime: string;
+}
+
+/**
+ * Normalize batch size and boil time values with consistent defaults
+ * Returns values ready for metrics calculation, recipe creation, and preview display
+ */
+function normalizeRecipeValues(
+  recipeData: ImportedRecipeData
+): NormalizedRecipeValues {
+  // Derive unit system using centralized logic
+  const unitSystem = deriveUnitSystem(
+    recipeData.batch_size_unit,
+    recipeData.unit_system
+  );
+
+  // Normalize batch size with fallback to 19.0
+  const rawBatchSize =
+    typeof recipeData.batch_size === "number"
+      ? recipeData.batch_size
+      : Number(recipeData.batch_size);
+  const batchSize =
+    Number.isFinite(rawBatchSize) && rawBatchSize > 0 ? rawBatchSize : 19.0;
+
+  // Normalize batch size unit
+  const batchSizeUnit =
+    recipeData.batch_size_unit || (unitSystem === "metric" ? "l" : "gal");
+
+  // Normalize boil time with fallback to 60
+  const boilTime = coerceIngredientTime(recipeData.boil_time) ?? 60;
+
+  // Generate display strings (consistent with what's shown and saved)
+  const displayBatchSize = batchSize.toFixed(1);
+  const displayBoilTime = String(boilTime);
+
+  // Determine display unit label
+  const rawUnit = String(batchSizeUnit).toLowerCase();
+  const unitLabel =
+    rawUnit === "l"
+      ? "L"
+      : rawUnit === "gal" || rawUnit === "gallons"
+        ? "gal"
+        : unitSystem === "metric"
+          ? "L"
+          : "gal";
+
+  return {
+    unitSystem,
+    batchSize,
+    batchSizeUnit: unitLabel === "L" ? "l" : "gal", // Normalized for API
+    boilTime,
+    displayBatchSize: `${displayBatchSize} ${unitLabel}`,
+    displayBoilTime: `${displayBoilTime} minutes`,
+  };
 }
 
 /**
@@ -202,7 +286,7 @@ export default function ImportReviewScreen() {
 
   const queryClient = useQueryClient();
   const { create: createRecipe } = useRecipes();
-  const [recipeData] = useState(() => {
+  const [recipeData] = useState<ImportedRecipeData | null>(() => {
     try {
       return JSON.parse(params.recipeData);
     } catch (error) {
@@ -214,6 +298,17 @@ export default function ImportReviewScreen() {
       return null;
     }
   });
+
+  /**
+   * Normalize recipe values once - use this for metrics, creation, and preview
+   * This ensures "what you see is what you get" across all three contexts
+   */
+  const normalizedValues = useMemo(() => {
+    if (!recipeData) {
+      return null;
+    }
+    return normalizeRecipeValues(recipeData);
+  }, [recipeData]);
 
   /**
    * Normalize ingredients once - use this for both preview and creation
@@ -256,38 +351,27 @@ export default function ImportReviewScreen() {
         .join("|"),
     ],
     queryFn: async () => {
-      if (!recipeData || normalizedIngredients.length === 0) {
+      if (
+        !recipeData ||
+        !normalizedValues ||
+        normalizedIngredients.length === 0
+      ) {
         return null;
       }
 
-      // Use pre-normalized ingredients (already validated and have instance_ids)
-
-      // Derive unit system using centralized logic
-      const unitSystem = deriveUnitSystem(
-        recipeData.batch_size_unit,
-        recipeData.unit_system
-      );
-
-      // Prepare recipe data for offline calculation
-      const batchSize =
-        typeof recipeData.batch_size === "number"
-          ? recipeData.batch_size
-          : Number(recipeData.batch_size);
-      const boilTime = coerceIngredientTime(recipeData.boil_time);
-
+      // Use pre-normalized values for consistent metrics calculation
       const recipeFormData: RecipeMetricsInput = {
-        batch_size:
-          Number.isFinite(batchSize) && batchSize > 0 ? batchSize : 19.0,
-        batch_size_unit:
-          recipeData.batch_size_unit || (unitSystem === "metric" ? "l" : "gal"),
+        batch_size: normalizedValues.batchSize,
+        batch_size_unit: normalizedValues.batchSizeUnit,
         efficiency: recipeData.efficiency || 75,
-        boil_time: boilTime ?? 60,
+        boil_time: normalizedValues.boilTime,
         mash_temp_unit: deriveMashTempUnit(
           recipeData.mash_temp_unit,
-          unitSystem
+          normalizedValues.unitSystem
         ),
         mash_temperature:
-          recipeData.mash_temperature ?? (unitSystem === "metric" ? 67 : 152),
+          recipeData.mash_temperature ??
+          (normalizedValues.unitSystem === "metric" ? 67 : 152),
         ingredients: normalizedIngredients,
       };
 
@@ -328,41 +412,29 @@ export default function ImportReviewScreen() {
    */
   const createRecipeMutation = useMutation({
     mutationFn: async () => {
-      // Use pre-normalized ingredients (same as used for preview and metrics)
-      // Derive unit system using centralized logic
-      const unitSystem = deriveUnitSystem(
-        recipeData.batch_size_unit,
-        recipeData.unit_system
-      );
+      if (!normalizedValues || !recipeData) {
+        throw new Error("Recipe values not normalized");
+      }
 
-      const rawBatchSize =
-        typeof recipeData.batch_size === "number"
-          ? recipeData.batch_size
-          : Number(recipeData.batch_size);
-      const normalizedBatchSize =
-        Number.isFinite(rawBatchSize) && rawBatchSize > 0 ? rawBatchSize : 19.0;
-
-      const boilTime = coerceIngredientTime(recipeData.boil_time);
-      const normalizedBoilTime = boilTime ?? 60;
-
+      // Use pre-normalized values (same as used for metrics and preview)
       // Prepare recipe data for creation
       const recipePayload: Partial<Recipe> = {
         name: recipeData.name,
         style: recipeData.style || "",
         description: recipeData.description || "",
         notes: recipeData.notes || "",
-        batch_size: normalizedBatchSize,
-        batch_size_unit:
-          recipeData.batch_size_unit || (unitSystem === "metric" ? "l" : "gal"),
-        boil_time: normalizedBoilTime,
+        batch_size: normalizedValues.batchSize,
+        batch_size_unit: normalizedValues.batchSizeUnit,
+        boil_time: normalizedValues.boilTime,
         efficiency: recipeData.efficiency || 75,
-        unit_system: unitSystem,
+        unit_system: normalizedValues.unitSystem,
         mash_temp_unit: deriveMashTempUnit(
           recipeData.mash_temp_unit,
-          unitSystem
+          normalizedValues.unitSystem
         ),
         mash_temperature:
-          recipeData.mash_temperature ?? (unitSystem === "metric" ? 67 : 152),
+          recipeData.mash_temperature ??
+          (normalizedValues.unitSystem === "metric" ? 67 : 152),
         is_public: false, // Import as private by default
         // Include calculated metrics if available
         ...(calculatedMetrics && {
@@ -397,7 +469,7 @@ export default function ImportReviewScreen() {
       // Show success message and navigate to recipe
       Alert.alert(
         "Import Successful",
-        `"${recipeData.name}" has been imported successfully!`,
+        `"${recipeData?.name || "Recipe"}" has been imported successfully!`,
         [
           {
             text: "View Recipe",
@@ -425,7 +497,7 @@ export default function ImportReviewScreen() {
       void UnifiedLogger.error("import-review", "Recipe creation error", error);
       Alert.alert(
         "Import Failed",
-        `Failed to create recipe "${recipeData.name}". Please try again.`,
+        `Failed to create recipe "${recipeData?.name || "Recipe"}". Please try again.`,
         [{ text: "OK" }]
       );
     },
@@ -437,7 +509,7 @@ export default function ImportReviewScreen() {
   const handleCreateRecipe = () => {
     Alert.alert(
       "Create Recipe",
-      `Create "${recipeData.name}" in your recipe collection?`,
+      `Create "${recipeData?.name || "Recipe"}" in your recipe collection?`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -615,38 +687,14 @@ export default function ImportReviewScreen() {
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Batch Size:</Text>
               <Text style={styles.detailValue}>
-                {(() => {
-                  const n = Number(recipeData.batch_size);
-                  const displayValue = Number.isFinite(n)
-                    ? n.toFixed(1)
-                    : "N/A";
-
-                  const unitSystem = deriveUnitSystem(
-                    recipeData.batch_size_unit,
-                    recipeData.unit_system
-                  );
-                  const rawUnit = String(
-                    recipeData.batch_size_unit || ""
-                  ).toLowerCase();
-
-                  const unitLabel =
-                    rawUnit === "l"
-                      ? "L"
-                      : rawUnit === "gal" || rawUnit === "gallons"
-                        ? "gal"
-                        : unitSystem === "metric"
-                          ? "L"
-                          : "gal";
-
-                  return `${displayValue} ${unitLabel}`;
-                })()}
+                {normalizedValues?.displayBatchSize || "N/A"}
               </Text>
             </View>
 
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Boil Time:</Text>
               <Text style={styles.detailValue}>
-                {coerceIngredientTime(recipeData.boil_time) ?? 60} minutes
+                {normalizedValues?.displayBoilTime || "N/A"}
               </Text>
             </View>
 
