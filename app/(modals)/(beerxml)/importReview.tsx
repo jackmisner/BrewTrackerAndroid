@@ -60,7 +60,10 @@ function deriveUnitSystem(
     );
   }
   // Default based on batch size unit
-  return batchSizeUnit?.toLowerCase() === "l" ? "metric" : "imperial";
+  const lowerCasedUnit = batchSizeUnit?.toLowerCase();
+  return lowerCasedUnit === "gal" || lowerCasedUnit === "gallons"
+    ? "imperial"
+    : "metric";
 }
 
 /**
@@ -149,35 +152,36 @@ function normalizeImportedIngredients(
       }
       return true;
     })
-    .map(
-      (ing: any): RecipeIngredient => ({
+    .map((ing: any): RecipeIngredient => {
+      const type = String(ing.type).toLowerCase();
+      return {
         // No id - backend generates on creation
         ingredient_id: ing.ingredient_id,
         name: ing.name,
-        type: ing.type,
+        type: type,
         amount: Number(ing.amount) || 0,
         unit: ing.unit,
         use: ing.use,
         time: coerceIngredientTime(ing.time),
         instance_id: generateUniqueId("ing"),
         // Include type-specific fields for proper ingredient matching and metrics
-        ...(ing.type === "grain" && {
+        ...(type === "grain" && {
           potential: ing.potential,
           color: ing.color,
           grain_type: ing.grain_type,
         }),
-        ...(ing.type === "hop" && {
+        ...(type === "hop" && {
           alpha_acid: ing.alpha_acid,
         }),
-        ...(ing.type === "yeast" && {
+        ...(type === "yeast" && {
           attenuation: ing.attenuation,
         }),
         // Preserve BeerXML metadata if available
         ...(ing.beerxml_data && {
           beerxml_data: ing.beerxml_data,
         }),
-      })
-    );
+      };
+    });
 }
 
 export default function ImportReviewScreen() {
@@ -258,11 +262,19 @@ export default function ImportReviewScreen() {
       );
 
       // Prepare recipe data for offline calculation
+      const batchSize =
+        typeof recipeData.batch_size === "number"
+          ? recipeData.batch_size
+          : Number(recipeData.batch_size);
+      const boilTime = coerceIngredientTime(recipeData.boil_time);
+
       const recipeFormData: RecipeMetricsInput = {
-        batch_size: recipeData.batch_size || 19.0,
-        batch_size_unit: recipeData.batch_size_unit || "l",
+        batch_size:
+          Number.isFinite(batchSize) && batchSize > 0 ? batchSize : 19.0,
+        batch_size_unit:
+          recipeData.batch_size_unit || (unitSystem === "metric" ? "l" : "gal"),
         efficiency: recipeData.efficiency || 75,
-        boil_time: recipeData.boil_time || 60,
+        boil_time: boilTime ?? 60,
         mash_temp_unit: deriveMashTempUnit(
           recipeData.mash_temp_unit,
           unitSystem
@@ -725,8 +737,11 @@ export default function ImportReviewScreen() {
                     {type.charAt(0).toUpperCase() + type.slice(1)}s (
                     {ingredients.length})
                   </Text>
-                  {ingredients.map((ingredient, index) => (
-                    <View key={index} style={styles.ingredientItem}>
+                  {ingredients.map(ingredient => (
+                    <View
+                      key={ingredient.instance_id}
+                      style={styles.ingredientItem}
+                    >
                       <View style={styles.ingredientInfo}>
                         <Text style={styles.ingredientName}>
                           {ingredient.name}
