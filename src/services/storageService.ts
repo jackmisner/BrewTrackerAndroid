@@ -18,7 +18,7 @@ import { File, Directory, Paths } from "expo-file-system";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STORAGE_KEYS } from "@services/config";
-import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 /**
  * Android API levels for permission handling

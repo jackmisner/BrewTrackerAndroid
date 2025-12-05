@@ -14,7 +14,7 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ApiService from "@services/api/apiService";
-import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 import {
   CachedStaticData,
   StaticDataCacheStats,

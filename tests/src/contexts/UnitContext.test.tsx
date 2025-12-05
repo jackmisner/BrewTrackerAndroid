@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { UnitProvider, useUnits } from "@contexts/UnitContext";
 import { AuthProvider } from "@contexts/AuthContext";
 import { UnitSystem } from "@src/types";
-import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 // Mock AsyncStorage
 jest.mock("@react-native-async-storage/async-storage", () => ({

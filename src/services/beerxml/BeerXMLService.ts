@@ -1,7 +1,7 @@
 import ApiService from "@services/api/apiService";
 import { BeerXMLService as StorageBeerXMLService } from "@services/storageService";
 import { Recipe, RecipeIngredient, UnitSystem } from "@src/types";
-import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 // Service-specific interfaces for BeerXML operations
 

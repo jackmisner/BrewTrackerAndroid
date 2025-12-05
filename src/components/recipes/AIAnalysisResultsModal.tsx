@@ -53,7 +53,6 @@ import {
   normalizeBackendMetrics,
 } from "@utils/aiHelpers";
 import { beerStyleAnalysisService } from "@services/beerStyles/BeerStyleAnalysisService";
-import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 interface AIAnalysisResultsModalProps {
   /**
@@ -285,25 +284,8 @@ export function AIAnalysisResultsModal({
   );
 
   // Debug logging
-  UnifiedLogger.debug("AIAnalysisResultsModal", "Rendering modal", {
-    hasOptimisation,
-    hasStyle: !!style,
-    styleName: style?.name,
-    styleId: style?.id,
-    recipeChangesCount: result.recipe_changes?.length || 0,
-    hasOriginalMetrics: !!result.original_metrics,
-    hasOptimizedMetrics: !!result.optimized_metrics,
-    iterationsCompleted: result.iterations_completed,
-  });
 
   // Debug grouped changes
-  UnifiedLogger.debug("AIAnalysisResultsModal", "Grouped changes", {
-    hasGroupedChanges: !!groupedChanges,
-    parametersCount: groupedChanges?.parameters.length || 0,
-    modificationsCount: groupedChanges?.modifications.length || 0,
-    additionsCount: groupedChanges?.additions.length || 0,
-    removalsCount: groupedChanges?.removals.length || 0,
-  });
 
   // Debug conditionals - ensure all are explicit booleans
   const showSummary = hasOptimisation;
@@ -312,19 +294,6 @@ export function AIAnalysisResultsModal({
     !!normalizedOriginalMetrics &&
     !!normalizedOptimizedMetrics;
   const showChanges = hasOptimisation && !!groupedChanges;
-
-  UnifiedLogger.debug("AIAnalysisResultsModal", "Boolean check", {
-    hasOptimisationType: typeof hasOptimisation,
-    hasOptimisationValue: hasOptimisation,
-    showSummaryType: typeof showSummary,
-    showSummaryValue: showSummary,
-  });
-
-  UnifiedLogger.debug("AIAnalysisResultsModal", "Section visibility", {
-    showSummary,
-    showMetrics,
-    showChanges,
-  });
 
   return (
     <Modal

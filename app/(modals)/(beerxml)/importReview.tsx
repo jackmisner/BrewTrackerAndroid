@@ -39,7 +39,7 @@ import { QUERY_KEYS } from "@services/api/queryClient";
 import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { useRecipes } from "@src/hooks/offlineV2";
 import { OfflineMetricsCalculator } from "@services/brewing/OfflineMetricsCalculator";
-import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 /**
  * Derive unit system from batch_size_unit with fallback to metric

@@ -111,16 +111,6 @@ export const StaleDataBanner: React.FC<StaleDataBannerProps> = ({
     const staleThresholdMs = staleThresholdHours * 60 * 60 * 1000;
     const now = Date.now();
 
-    await UnifiedLogger.debug(
-      "StaleDataBanner.checkStaleData",
-      "Checking for stale data",
-      {
-        totalQueries: queries.length,
-        staleThresholdHours,
-        staleThresholdMs,
-      }
-    );
-
     let oldestDataTimestamp = now;
     let hasAnyStaleData = false;
     const staleQueries: any[] = [];
@@ -198,15 +188,6 @@ export const StaleDataBanner: React.FC<StaleDataBannerProps> = ({
         setOldestDataAge(`${ageDays}d ago`);
       }
     } else {
-      await UnifiedLogger.debug(
-        "StaleDataBanner.checkStaleData",
-        "No stale data found",
-        {
-          totalQueries: queries.length,
-          successfulQueries: queries.filter(q => q.state.status === "success")
-            .length,
-        }
-      );
     }
   }, [queryClient, staleThresholdHours]);
 
@@ -298,23 +279,7 @@ export const StaleDataBanner: React.FC<StaleDataBannerProps> = ({
   // 2. Not dismissed recently
   if (!hasStaleData || isDismissed) {
     if (hasStaleData && isDismissed) {
-      void UnifiedLogger.debug(
-        "StaleDataBanner.render",
-        "Banner hidden - dismissed by user",
-        {
-          hasStaleData,
-          isDismissed,
-        }
-      );
     } else if (!hasStaleData) {
-      void UnifiedLogger.debug(
-        "StaleDataBanner.render",
-        "Banner hidden - no stale data",
-        {
-          hasStaleData,
-          isDismissed,
-        }
-      );
     }
     return null;
   }

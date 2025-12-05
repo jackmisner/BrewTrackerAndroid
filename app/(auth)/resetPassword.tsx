@@ -47,7 +47,7 @@ import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
 import { loginStyles } from "@styles/auth/loginStyles";
 import { TEST_IDS } from "@src/constants/testIDs";
-import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 type Strength = "" | "weak" | "medium" | "strong";
 

@@ -21,7 +21,7 @@
 
 import * as Notifications from "expo-notifications";
 import * as Haptics from "expo-haptics";
-import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 export interface HopAlert {
   time: number;

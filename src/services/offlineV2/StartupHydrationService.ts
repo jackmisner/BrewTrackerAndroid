@@ -7,7 +7,7 @@
 
 import { UserCacheService } from "./UserCacheService";
 import { StaticDataService } from "./StaticDataService";
-import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 import { UnitSystem } from "@/src/types";
 
 export class StartupHydrationService {
@@ -23,18 +23,10 @@ export class StartupHydrationService {
   ): Promise<void> {
     // Prevent multiple concurrent hydrations
     if (this.isHydrating || this.hasHydrated) {
-      UnifiedLogger.debug(
-        "offline-hydration",
-        `[StartupHydrationService] Hydration already in progress or completed`
-      );
       return;
     }
 
     this.isHydrating = true;
-    UnifiedLogger.debug(
-      "offline-hydration",
-      `[StartupHydrationService] Starting hydration for user: "${userId}"`
-    );
 
     try {
       // Hydrate in parallel for better performance
@@ -44,10 +36,6 @@ export class StartupHydrationService {
       ]);
 
       this.hasHydrated = true;
-      UnifiedLogger.debug(
-        "offline-hydration",
-        `[StartupHydrationService] Hydration completed successfully`
-      );
     } catch (error) {
       await UnifiedLogger.error(
         "offline-hydration",
@@ -68,11 +56,6 @@ export class StartupHydrationService {
     userUnitSystem: UnitSystem = "imperial"
   ): Promise<void> {
     try {
-      UnifiedLogger.debug(
-        "offline-hydration",
-        `[StartupHydrationService] Hydrating user data...`
-      );
-
       // Check if user already has cached recipes
       const existingRecipes = await UserCacheService.getRecipes(
         userId,
@@ -80,26 +63,13 @@ export class StartupHydrationService {
       );
 
       if (existingRecipes.length === 0) {
-        UnifiedLogger.debug(
-          "offline-hydration",
-          `[StartupHydrationService] No cached recipes found, will hydrate from server`
-        );
         // The UserCacheService.getRecipes() method will automatically hydrate
         // So we don't need to do anything special here
       } else {
-        UnifiedLogger.debug(
-          "offline-hydration",
-          `[StartupHydrationService] User already has ${existingRecipes.length} cached recipes`
-        );
       }
 
       // TODO: Add brew sessions hydration when implemented
       // await this.hydrateBrewSessions(userId);
-
-      UnifiedLogger.debug(
-        "offline-hydration",
-        `[StartupHydrationService] User data hydration completed`
-      );
     } catch (error) {
       void UnifiedLogger.warn(
         "offline-hydration",
@@ -115,24 +85,11 @@ export class StartupHydrationService {
    */
   private static async hydrateStaticData(): Promise<void> {
     try {
-      UnifiedLogger.debug(
-        "offline-hydration",
-        `[StartupHydrationService] Hydrating static data...`
-      );
-
       // Check and update ingredients cache
       const ingredientsStats = await StaticDataService.getCacheStats();
       if (!ingredientsStats.ingredients.cached) {
-        UnifiedLogger.debug(
-          "offline-hydration",
-          `[StartupHydrationService] No cached ingredients found, fetching...`
-        );
         await StaticDataService.getIngredients(); // This will cache automatically
       } else {
-        UnifiedLogger.debug(
-          "offline-hydration",
-          `[StartupHydrationService] Ingredients already cached (${ingredientsStats.ingredients.record_count} items)`
-        );
         // Check for updates in background
         StaticDataService.updateIngredientsCache().catch(error => {
           void UnifiedLogger.warn(
@@ -145,16 +102,8 @@ export class StartupHydrationService {
 
       // Check and update beer styles cache
       if (!ingredientsStats.beerStyles.cached) {
-        UnifiedLogger.debug(
-          "offline-hydration",
-          `[StartupHydrationService] No cached beer styles found, fetching...`
-        );
         await StaticDataService.getBeerStyles(); // This will cache automatically
       } else {
-        UnifiedLogger.debug(
-          "offline-hydration",
-          `[StartupHydrationService] Beer styles already cached (${ingredientsStats.beerStyles.record_count} items)`
-        );
         // Check for updates in background
         StaticDataService.updateBeerStylesCache().catch(error => {
           void UnifiedLogger.warn(
@@ -164,11 +113,6 @@ export class StartupHydrationService {
           );
         });
       }
-
-      UnifiedLogger.debug(
-        "offline-hydration",
-        `[StartupHydrationService] Static data hydration completed`
-      );
     } catch (error) {
       void UnifiedLogger.warn(
         "offline-hydration",
@@ -184,10 +128,6 @@ export class StartupHydrationService {
   static resetHydrationState(): void {
     this.isHydrating = false;
     this.hasHydrated = false;
-    UnifiedLogger.debug(
-      "offline-hydration",
-      `[StartupHydrationService] Hydration state reset`
-    );
   }
 
   /**

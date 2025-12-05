@@ -252,16 +252,6 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
     if (shouldRefresh || shouldPeriodicRefresh) {
       lastCacheRefresh.current = Date.now();
 
-      void UnifiedLogger.debug(
-        "NetworkContext.handleStateChange",
-        "Triggering background refresh and sync",
-        {
-          shouldRefresh,
-          shouldPeriodicRefresh,
-          isComingBackOnline: shouldRefresh,
-        }
-      );
-
       // Trigger comprehensive background cache refresh using V2 system (non-blocking)
       Promise.allSettled([
         StaticDataService.updateIngredientsCache(),

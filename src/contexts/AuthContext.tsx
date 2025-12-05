@@ -351,11 +351,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       // Update state
       setUser(normalizedUser);
 
-      await UnifiedLogger.debug("auth", "Session applied successfully", {
-        userId: normalizedUser.id,
-        username: normalizedUser.username,
-      });
-
       // Cache ingredients in background (don't block)
       StaticDataService.updateIngredientsCache()
         .then(() => {
@@ -385,7 +380,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
         setAuthStatus("unauthenticated");
         setUser(null);
-        await UnifiedLogger.debug("auth", "Session rollback completed");
       } catch (rollbackError) {
         await UnifiedLogger.error(
           "auth",
@@ -723,14 +717,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
       // Clear JWT token from SecureStore
       await ApiService.token.removeToken();
-      await UnifiedLogger.debug("auth", "JWT token removed from SecureStore");
 
       // Clear device token (but keep biometric credentials for backward compatibility)
       await DeviceTokenService.clearDeviceToken();
-      await UnifiedLogger.debug(
-        "auth",
-        "Device token cleared from SecureStore"
-      );
 
       // Clear cached data
       await AsyncStorage.multiRemove([
@@ -738,19 +727,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         STORAGE_KEYS.USER_SETTINGS,
         STORAGE_KEYS.CACHED_INGREDIENTS,
       ]);
-      await UnifiedLogger.debug("auth", "AsyncStorage cleared");
 
       // Clear React Query cache and persisted storage
       cacheUtils.clearAll();
       await cacheUtils.clearUserPersistedCache(userId);
-      await UnifiedLogger.debug("auth", "React Query cache cleared");
 
       // Clear user-scoped offline data
       const { UserCacheService } = await import(
         "@services/offlineV2/UserCacheService"
       );
       await UserCacheService.clearUserData(userId);
-      await UnifiedLogger.debug("auth", "User offline data cleared");
 
       await UnifiedLogger.info("auth", "Logout completed successfully", {
         userId,
@@ -979,12 +965,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       const biometricEnabled = await BiometricService.isBiometricEnabled();
       const hasDeviceToken = await BiometricService.hasStoredDeviceToken();
 
-      await UnifiedLogger.debug("auth", "Biometric pre-flight check", {
-        biometricAvailable,
-        biometricEnabled,
-        hasDeviceToken,
-      });
-
       if (!hasDeviceToken) {
         await UnifiedLogger.warn(
           "auth",
@@ -996,19 +976,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       }
 
       // Authenticate with biometrics and exchange device token for access token
-      await UnifiedLogger.debug(
-        "auth",
-        "Requesting biometric authentication from BiometricService"
-      );
-
+      if (!biometricAvailable || !biometricEnabled) {
+        await UnifiedLogger.warn(
+          "auth",
+          "Biometric login failed: Biometrics not available or not enabled"
+        );
+        throw new Error(
+          "Biometric authentication is not available or not enabled on this device."
+        );
+      }
       const result = await BiometricService.authenticateWithBiometrics();
-
-      await UnifiedLogger.debug("auth", "Biometric authentication result", {
-        success: result.success,
-        errorCode: result.errorCode,
-        hasAccessToken: !!result.accessToken,
-        hasUser: !!result.user,
-      });
 
       if (!result.success || !result.accessToken || !result.user) {
         await UnifiedLogger.warn("auth", "Biometric authentication rejected", {
@@ -1026,23 +1003,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         throw error;
       }
 
-      await UnifiedLogger.debug(
-        "auth",
-        "Biometric authentication successful, device token exchanged for access token"
-      );
-
       const { accessToken: access_token, user: userData } = result;
 
       // Validate user data structure
       if (!userData?.id || !userData?.username) {
         throw new Error("Invalid user data received from biometric login");
       }
-
-      await UnifiedLogger.debug("auth", "Biometric login successful", {
-        userId: userData.id,
-        username: userData.username,
-        hasAccessToken: true,
-      });
 
       // Apply session (token storage, auth status update, caching, etc.)
       // Note: applyNewSession handles user data validation

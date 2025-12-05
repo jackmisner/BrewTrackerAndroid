@@ -28,7 +28,7 @@ import axios, {
 } from "axios";
 import * as SecureStore from "expo-secure-store";
 import NetInfo from "@react-native-community/netinfo";
-import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STORAGE_KEYS, ENDPOINTS } from "@services/config";
 import { setupIDInterceptors } from "./idInterceptor";

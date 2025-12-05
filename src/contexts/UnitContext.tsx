@@ -37,7 +37,7 @@ import ApiService from "@services/api/apiService";
 import { STORAGE_KEYS } from "@services/config";
 import { UnitSystem, MeasurementType, UserSettings } from "@src/types";
 import { useAuth } from "@contexts/AuthContext";
-import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 // Unit option interface for common units
 interface UnitOption {

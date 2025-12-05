@@ -11,7 +11,7 @@ import {
 import * as Notifications from "expo-notifications";
 import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
-import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 // Mock expo-notifications
 jest.mock("expo-notifications", () => ({
