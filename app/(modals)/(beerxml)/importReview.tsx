@@ -328,16 +328,26 @@ export default function ImportReviewScreen() {
         recipeData.unit_system
       );
 
+      const rawBatchSize =
+        typeof recipeData.batch_size === "number"
+          ? recipeData.batch_size
+          : Number(recipeData.batch_size);
+      const normalizedBatchSize =
+        Number.isFinite(rawBatchSize) && rawBatchSize > 0 ? rawBatchSize : 19.0;
+
+      const boilTime = coerceIngredientTime(recipeData.boil_time);
+      const normalizedBoilTime = boilTime ?? 60;
+
       // Prepare recipe data for creation
       const recipePayload: Partial<Recipe> = {
         name: recipeData.name,
         style: recipeData.style || "",
         description: recipeData.description || "",
         notes: recipeData.notes || "",
-        batch_size: recipeData.batch_size || 19.0,
+        batch_size: normalizedBatchSize,
         batch_size_unit:
           recipeData.batch_size_unit || (unitSystem === "metric" ? "l" : "gal"),
-        boil_time: recipeData.boil_time || 60,
+        boil_time: normalizedBoilTime,
         efficiency: recipeData.efficiency || 75,
         unit_system: unitSystem,
         mash_temp_unit: deriveMashTempUnit(
