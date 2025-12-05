@@ -1,6 +1,7 @@
 import ApiService from "@services/api/apiService";
 import { BeerXMLService as StorageBeerXMLService } from "@services/storageService";
-import { Recipe, RecipeIngredient } from "@src/types";
+import { Recipe, RecipeIngredient, UnitSystem } from "@src/types";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 // Service-specific interfaces for BeerXML operations
 
@@ -9,7 +10,7 @@ interface FileValidationResult {
   errors: string[];
 }
 
-interface BeerXMLRecipe extends Partial<Recipe> {
+export interface BeerXMLRecipe extends Partial<Recipe> {
   ingredients: RecipeIngredient[];
   metadata?: BeerXMLMetadata;
 }
@@ -125,7 +126,7 @@ class BeerXMLService {
         saveMethod: saveResult.method,
       };
     } catch (error) {
-      console.error("🍺 BeerXML Export - Error:", error);
+      void UnifiedLogger.error("beerxml", "🍺 BeerXML Export - Error:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Export failed",
@@ -155,7 +156,7 @@ class BeerXMLService {
         filename: result.filename,
       };
     } catch (error) {
-      console.error("🍺 BeerXML Import - Error:", error);
+      void UnifiedLogger.error("beerxml", "🍺 BeerXML Import - Error:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Import failed",
@@ -181,7 +182,10 @@ class BeerXMLService {
         ? response.data.recipes
         : [];
       if (!Array.isArray(recipes) || recipes.length === 0) {
-        console.warn("🍺 BeerXML Parse - No recipes found in response");
+        void UnifiedLogger.warn(
+          "beerxml",
+          "🍺 BeerXML Parse - No recipes found in response"
+        );
       }
       const transformedRecipes = recipes.map((recipeData: any) => ({
         ...recipeData.recipe,
@@ -191,7 +195,7 @@ class BeerXMLService {
 
       return transformedRecipes;
     } catch (error) {
-      console.error("🍺 BeerXML Parse - Error:", error);
+      void UnifiedLogger.error("beerxml", "🍺 BeerXML Parse - Error:", error);
       throw new Error(
         `Failed to parse BeerXML: ${error instanceof Error ? error.message : "Unknown error"}`
       );
@@ -245,7 +249,7 @@ class BeerXMLService {
 
       return matchingResults as IngredientMatchingResult[];
     } catch (error) {
-      console.error("🍺 BeerXML Match - Error:", error);
+      void UnifiedLogger.error("beerxml", "🍺 BeerXML Match - Error:", error);
       throw new Error(
         `Failed to match ingredients: ${error instanceof Error ? error.message : "Unknown error"}`
       );
@@ -269,7 +273,7 @@ class BeerXMLService {
 
       return createdIngredients;
     } catch (error) {
-      console.error("🍺 BeerXML Create - Error:", error);
+      void UnifiedLogger.error("beerxml", "🍺 BeerXML Create - Error:", error);
       throw new Error(
         `Failed to create ingredients: ${error instanceof Error ? error.message : "Unknown error"}`
       );
@@ -395,6 +399,107 @@ class BeerXMLService {
       newRequired,
       highConfidence,
     };
+  }
+
+  /**
+   * Detect if recipe uses different unit system than user preference
+   * Returns the detected recipe unit system
+   */
+  detectRecipeUnitSystem(recipe: BeerXMLRecipe): UnitSystem | "mixed" {
+    let metricCount = 0;
+    let imperialCount = 0;
+
+    // Check batch size unit (trim to handle whitespace)
+    const batchUnit = recipe.batch_size_unit?.toLowerCase().trim() || "";
+    if (["l", "liter", "liters", "litre", "litres", "ml"].includes(batchUnit)) {
+      metricCount++;
+    } else if (["gal", "gallon", "gallons"].includes(batchUnit)) {
+      imperialCount++;
+    }
+
+    // Check ingredient units (trim to handle whitespace)
+    recipe.ingredients?.forEach(ingredient => {
+      const unit = ingredient.unit?.toLowerCase().trim() || "";
+      if (
+        ["g", "kg", "gram", "grams", "kilogram", "kilograms"].includes(unit)
+      ) {
+        metricCount++;
+      } else if (
+        ["oz", "lb", "lbs", "ounce", "ounces", "pound", "pounds"].includes(unit)
+      ) {
+        imperialCount++;
+      }
+    });
+
+    // Determine predominant system
+    if (metricCount > 0 && imperialCount === 0) {
+      return "metric";
+    }
+    if (imperialCount > 0 && metricCount === 0) {
+      return "imperial";
+    }
+    if (metricCount > imperialCount) {
+      return "metric";
+    }
+    if (imperialCount > metricCount) {
+      return "imperial";
+    }
+    return "mixed"; // Equal or unknown
+  }
+
+  /**
+   * Convert recipe units to target unit system with brewing-friendly normalization
+   *
+   * BeerXML files are always in metric per spec. This function:
+   * 1. Converts from metric to target system (if imperial)
+   * 2. Normalizes values to brewing-friendly increments (e.g., 1oz -> 30g)
+   *
+   * IMPORTANT: Normalization is applied even when importing as metric, because
+   * the recipe may have originally been imperial and converted to metric for
+   * BeerXML export, resulting in odd values like 28.3g (1oz). The backend's
+   * conversion endpoint rounds these to practical brewing increments (30g) unless normalization argument is explicitly passed as false.
+   */
+  async convertRecipeUnits(
+    recipe: BeerXMLRecipe,
+    targetUnitSystem: UnitSystem,
+    normalize: boolean = true
+  ): Promise<{ recipe: BeerXMLRecipe; warnings?: string[] }> {
+    try {
+      // Call dedicated BeerXML conversion endpoint
+      const response = await ApiService.beerxml.convertRecipe({
+        recipe,
+        target_system: targetUnitSystem,
+        normalize,
+      });
+
+      const convertedRecipe = response.data.recipe;
+      const warnings = response.data.warnings ?? [];
+
+      if (!convertedRecipe) {
+        void UnifiedLogger.warn(
+          "beerxml",
+          "No converted recipe returned, using original"
+        );
+        return { recipe, warnings: [] };
+      }
+
+      return {
+        recipe: convertedRecipe as BeerXMLRecipe,
+        warnings,
+      };
+    } catch (error) {
+      void UnifiedLogger.error(
+        "beerxml",
+        "Error converting recipe units:",
+        error
+      );
+      // Return original recipe if conversion fails - don't block import
+      void UnifiedLogger.warn(
+        "beerxml",
+        "Unit conversion failed, continuing with original units"
+      );
+      return { recipe, warnings: [] };
+    }
   }
 }
 

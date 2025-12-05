@@ -7,6 +7,7 @@ import { NetworkProvider } from "@contexts/NetworkContext";
 import { DeveloperProvider } from "@contexts/DeveloperContext";
 import { UnitProvider } from "@contexts/UnitContext";
 import { CalculatorsProvider } from "@contexts/CalculatorsContext";
+import { TemperatureUnit } from "@/src/types";
 // Note: ScreenDimensionsProvider causes issues with react-native-safe-area-context in tests
 // import { ScreenDimensionsProvider } from "@contexts/ScreenDimensionsContext";
 
@@ -20,7 +21,7 @@ interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
     isConnected?: boolean;
   };
   unitSettings?: {
-    temperatureUnit?: "F" | "C";
+    temperatureUnit?: TemperatureUnit;
     volumeUnit?: "gal" | "L";
     weightUnit?: "lb" | "kg";
   };

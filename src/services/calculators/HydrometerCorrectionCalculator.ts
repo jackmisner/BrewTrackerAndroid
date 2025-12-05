@@ -4,6 +4,7 @@
  * Most hydrometers are calibrated at 60°F (15.5°C)
  */
 
+import { TemperatureUnit } from "@/src/types/common";
 import { UnitConverter } from "./UnitConverter";
 
 export interface CorrectionResult {
@@ -28,7 +29,7 @@ export class HydrometerCorrectionCalculator {
     measuredGravity: number,
     wortTemp: number,
     calibrationTemp: number,
-    tempUnit: "f" | "c" = "f"
+    tempUnit: TemperatureUnit = "F"
   ): CorrectionResult {
     // Validate inputs
     this.validateInputs(measuredGravity, wortTemp, calibrationTemp, tempUnit);
@@ -37,12 +38,12 @@ export class HydrometerCorrectionCalculator {
     let wortTempF = wortTemp;
     let calibrationTempF = calibrationTemp;
 
-    if (tempUnit === "c") {
-      wortTempF = UnitConverter.convertTemperature(wortTemp, "c", "f");
+    if (tempUnit === "C") {
+      wortTempF = UnitConverter.convertTemperature(wortTemp, "C", "F");
       calibrationTempF = UnitConverter.convertTemperature(
         calibrationTemp,
-        "c",
-        "f"
+        "C",
+        "F"
       );
     }
 
@@ -83,10 +84,10 @@ export class HydrometerCorrectionCalculator {
   public static calculateCorrectionDefault(
     measuredGravity: number,
     wortTemp: number,
-    tempUnit: "f" | "c" = "f"
+    tempUnit: TemperatureUnit = "F"
   ): CorrectionResult {
     const defaultCalibrationTemp =
-      tempUnit === "f"
+      tempUnit === "F"
         ? this.DEFAULT_CALIBRATION_TEMP_F
         : this.DEFAULT_CALIBRATION_TEMP_C;
 
@@ -107,11 +108,11 @@ export class HydrometerCorrectionCalculator {
     measuredGravity: number,
     targetGravity: number,
     calibrationTemp: number,
-    tempUnit: "f" | "c" = "f"
+    tempUnit: TemperatureUnit = "F"
   ): number {
     // Set initial bounds based on physical temperature limits
     let low: number, high: number;
-    if (tempUnit === "f") {
+    if (tempUnit === "F") {
       low = 32; // Freezing point of water in Fahrenheit
       high = 212; // Boiling point of water in Fahrenheit
     } else {
@@ -153,14 +154,21 @@ export class HydrometerCorrectionCalculator {
 
   /**
    * Get correction table for common temperatures
+   *
+   * @param measuredGravity - The specific gravity reading from the hydrometer
+   * @param calibrationTemp - The calibration temperature of the hydrometer (default: 60°F)
+   *                          Note: Default of 60 is meaningful only when tempUnit="F".
+   *                          If using tempUnit="C", explicitly pass 15.5 for standard calibration.
+   * @param tempUnit - Temperature unit ("F" or "C", default: "F")
+   * @returns Array of temperature-correction pairs for display
    */
   public static getCorrectionTable(
     measuredGravity: number,
     calibrationTemp: number = 60,
-    tempUnit: "f" | "c" = "f"
+    tempUnit: TemperatureUnit = "F"
   ): { temp: number; correctedGravity: number; correction: number }[] {
     const temps =
-      tempUnit === "f"
+      tempUnit === "F"
         ? [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 110, 120]
         : [10, 13, 15.5, 18, 21, 24, 27, 29, 32, 35, 38, 43, 49];
 
@@ -186,7 +194,7 @@ export class HydrometerCorrectionCalculator {
   public static isCorrectionSignificant(
     wortTemp: number,
     calibrationTemp: number,
-    tempUnit: "f" | "c" = "f"
+    tempUnit: TemperatureUnit = "F"
   ): boolean {
     // Calculate correction for a reference gravity of 1.050
     const result = this.calculateCorrection(
@@ -205,7 +213,7 @@ export class HydrometerCorrectionCalculator {
     measuredGravity: number,
     wortTemp: number,
     calibrationTemp: number,
-    tempUnit: "f" | "c"
+    tempUnit: TemperatureUnit
   ): void {
     // Validate specific gravity
     if (measuredGravity < 0.99 || measuredGravity > 1.2) {
@@ -213,7 +221,7 @@ export class HydrometerCorrectionCalculator {
     }
 
     // Validate temperatures based on unit
-    if (tempUnit === "f") {
+    if (tempUnit === "F") {
       if (wortTemp < 32 || wortTemp > 212) {
         throw new Error("Wort temperature must be between 32°F and 212°F");
       }
@@ -239,13 +247,13 @@ export class HydrometerCorrectionCalculator {
    */
   public static getCalibrationTemperatures(): Record<
     string,
-    { f: number; c: number }
+    { F: number; C: number }
   > {
     return {
-      Standard: { f: 60, c: 15.5 },
-      European: { f: 68, c: 20 },
-      Precision: { f: 68, c: 20 },
-      Digital: { f: 68, c: 20 },
+      Standard: { F: 60, C: 15.5 },
+      European: { F: 68, C: 20 },
+      Precision: { F: 68, C: 20 },
+      Digital: { F: 68, C: 20 },
     };
   }
 }

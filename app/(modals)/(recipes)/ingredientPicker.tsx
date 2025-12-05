@@ -48,6 +48,7 @@ import {
   IngredientUnit,
   Ingredient,
   HopFormat,
+  UnitSystem,
 } from "@src/types";
 import { ingredientPickerStyles } from "@styles/modals/ingredientPickerStyles";
 import { IngredientDetailEditor } from "@src/components/recipes/IngredientEditor/IngredientDetailEditor";
@@ -154,7 +155,7 @@ const convertIngredientToRecipeIngredient = (
 const createRecipeIngredientWithDefaults = (
   baseIngredient: RecipeIngredient,
   ingredientType: IngredientType,
-  unitSystem: "imperial" | "metric"
+  unitSystem: UnitSystem
 ): RecipeIngredient => {
   // Default amounts by type and unit system
   const getDefaultAmount = (type: IngredientType): number => {

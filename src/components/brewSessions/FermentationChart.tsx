@@ -29,7 +29,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, Modal, Pressable } from "react-native";
 import { LineChart } from "react-native-gifted-charts";
-import { FermentationEntry, Recipe } from "@src/types";
+import { FermentationEntry, Recipe, TemperatureUnit } from "@src/types";
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
 import { useScreenDimensions } from "@contexts/ScreenDimensionsContext";
@@ -244,7 +244,7 @@ interface FermentationChartProps {
   fermentationData: FermentationEntry[];
   expectedFG?: number;
   actualOG?: number;
-  temperatureUnit?: "C" | "F"; // Session-specific temperature unit
+  temperatureUnit?: TemperatureUnit; // Session-specific temperature unit
   forceRefresh?: number; // External refresh trigger
   recipeData?: Recipe; // Recipe data for accessing estimated_fg
 }

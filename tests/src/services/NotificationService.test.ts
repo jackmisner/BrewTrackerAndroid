@@ -11,6 +11,7 @@ import {
 import * as Notifications from "expo-notifications";
 import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 // Mock expo-notifications
 jest.mock("expo-notifications", () => ({
@@ -49,6 +50,16 @@ jest.mock("expo-haptics", () => ({
 jest.mock("react-native", () => ({
   Platform: {
     OS: "android", // Android-only development
+  },
+}));
+
+// Mock UnifiedLogger
+jest.mock("@/src/services/logger/UnifiedLogger", () => ({
+  UnifiedLogger: {
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn(),
   },
 }));
 
@@ -114,14 +125,13 @@ describe("NotificationService", () => {
       mockGetPermissions.mockResolvedValue({ status: "denied" });
       mockRequestPermissions.mockResolvedValue({ status: "denied" });
 
-      const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
       const result = await NotificationService.initialize();
 
       expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.warn).toHaveBeenCalledWith(
+        "notifications",
         "Notification permissions not granted"
       );
-      consoleSpy.mockRestore();
     });
 
     it("should set up Android notification channel", async () => {
@@ -156,16 +166,14 @@ describe("NotificationService", () => {
 
     it("should handle initialization errors", async () => {
       mockGetPermissions.mockRejectedValue(new Error("Permission error"));
-
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
       const result = await NotificationService.initialize();
 
       expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.error).toHaveBeenCalledWith(
+        "notifications",
         "Failed to initialize notifications:",
         expect.any(Error)
       );
-      consoleSpy.mockRestore();
     });
   });
 
@@ -221,8 +229,6 @@ describe("NotificationService", () => {
     it("should handle scheduling errors", async () => {
       mockGetPermissions.mockResolvedValue({ status: "granted" });
       mockScheduleNotification.mockRejectedValue(new Error("Scheduling error"));
-
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
       const identifier = await NotificationService.scheduleHopAlert(
         "Cascade",
         1,
@@ -231,11 +237,11 @@ describe("NotificationService", () => {
       );
 
       expect(identifier).toBeNull();
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.error).toHaveBeenCalledWith(
+        "notifications",
         "Failed to schedule hop alert:",
         expect.any(Error)
       );
-      consoleSpy.mockRestore();
     });
   });
 
@@ -372,15 +378,13 @@ describe("NotificationService", () => {
 
     it("should handle cancellation errors", async () => {
       mockCancelAll.mockRejectedValue(new Error("Cancel error"));
-
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
       await NotificationService.cancelAllAlerts();
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.error).toHaveBeenCalledWith(
+        "notifications",
         "Failed to cancel notifications:",
         expect.any(Error)
       );
-      consoleSpy.mockRestore();
     });
   });
 
@@ -402,15 +406,13 @@ describe("NotificationService", () => {
 
     it("should handle cancellation errors", async () => {
       mockCancelSpecific.mockRejectedValue(new Error("Cancel specific error"));
-
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
       await NotificationService.cancelAlert("test-id");
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.error).toHaveBeenCalledWith(
+        "notifications",
         "Failed to cancel notification:",
         expect.any(Error)
       );
-      consoleSpy.mockRestore();
     });
   });
 
@@ -435,15 +437,13 @@ describe("NotificationService", () => {
 
     it("should handle haptic feedback errors", async () => {
       mockHapticImpact.mockRejectedValue(new Error("Haptic error"));
-
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
       await NotificationService.triggerHapticFeedback("medium");
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.error).toHaveBeenCalledWith(
+        "notifications",
         "Failed to trigger haptic feedback:",
         expect.any(Error)
       );
-      consoleSpy.mockRestore();
     });
   });
 
@@ -514,16 +514,14 @@ describe("NotificationService", () => {
 
     it("should handle permission check errors", async () => {
       mockGetPermissions.mockRejectedValue(new Error("Permission check error"));
-
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
       const result = await NotificationService.areNotificationsEnabled();
 
       expect(result).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.error).toHaveBeenCalledWith(
+        "notifications",
         "Failed to check notification permissions:",
         expect.any(Error)
       );
-      consoleSpy.mockRestore();
     });
   });
 
@@ -543,16 +541,14 @@ describe("NotificationService", () => {
 
     it("should return empty array on error", async () => {
       mockGetScheduled.mockRejectedValue(new Error("Get scheduled error"));
-
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
       const result = await NotificationService.getScheduledNotifications();
 
       expect(result).toEqual([]);
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.error).toHaveBeenCalledWith(
+        "notifications",
         "Failed to get scheduled notifications:",
         expect.any(Error)
       );
-      consoleSpy.mockRestore();
     });
   });
 
@@ -613,12 +609,9 @@ describe("NotificationService", () => {
       expect(result.size).toBe(0); // No successful schedules
     });
 
-    it("should log debug information in development", async () => {
+    it("should log a warning in development when skipping hop alerts", async () => {
       const originalDev = (global as any).__DEV__;
       (global as any).__DEV__ = true;
-
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
-      const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation();
 
       await NotificationService.scheduleHopAlertsForRecipe(
         [{ time: 3, name: "Very Late Hop", amount: 0.5, unit: "oz" }],
@@ -626,12 +619,10 @@ describe("NotificationService", () => {
       );
 
       // 90s boil - 3min hop (180s) - 30s = -120s (negative, so skipped with warning)
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect(UnifiedLogger.warn).toHaveBeenCalledWith(
+        "notifications",
         expect.stringContaining('⚠️ Skipping hop alert for "Very Late Hop"')
       );
-
-      consoleSpy.mockRestore();
-      consoleWarnSpy.mockRestore();
       (global as any).__DEV__ = originalDev;
     });
   });

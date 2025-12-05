@@ -44,6 +44,7 @@ import {
   RecipeIngredient,
   Recipe,
   AIAnalysisResponse,
+  UnitSystem,
 } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { BasicInfoForm } from "@src/components/recipes/RecipeForm/BasicInfoForm";
@@ -84,9 +85,7 @@ const STEP_TITLES = ["Basic Info", "Parameters", "Ingredients", "Review"];
  * @param unitSystem - User's preferred unit system ('imperial' or 'metric')
  * @returns Initial recipe form data with appropriate units and defaults
  */
-const createInitialRecipeState = (
-  unitSystem: "imperial" | "metric"
-): RecipeFormData => ({
+const createInitialRecipeState = (unitSystem: UnitSystem): RecipeFormData => ({
   name: "",
   style: "",
   description: "",
@@ -109,7 +108,7 @@ type RecipeBuilderAction =
   | { type: "ADD_INGREDIENT"; ingredient: RecipeIngredient }
   | { type: "REMOVE_INGREDIENT"; index: number }
   | { type: "UPDATE_INGREDIENT"; index: number; ingredient: RecipeIngredient }
-  | { type: "RESET"; unitSystem: "imperial" | "metric" };
+  | { type: "RESET"; unitSystem: UnitSystem };
 
 /**
  * Updates the recipe form state based on the specified action.
@@ -277,7 +276,7 @@ export default function CreateRecipeScreen() {
     },
     onSuccess: response => {
       // Invalidate relevant recipe caches to ensure fresh data
-      queryClient.invalidateQueries({ queryKey: ["userRecipes"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.USER_RECIPES });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.RECIPES }); // AllRecipes cache
       queryClient.invalidateQueries({
         queryKey: [...QUERY_KEYS.RECIPES, "offline"],

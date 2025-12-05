@@ -49,6 +49,7 @@ import React, {
   ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { TemperatureUnit, UnitSystem } from "../types";
 
 /**
  * Type definitions for individual calculator states
@@ -75,7 +76,7 @@ export interface StrikeWaterState {
   grainWeightUnit: string;
   grainTemp: string;
   targetMashTemp: string;
-  tempUnit: "f" | "c";
+  tempUnit: TemperatureUnit;
   waterToGrainRatio: string;
   result: {
     strikeTemp: number;
@@ -87,7 +88,7 @@ export interface HydrometerCorrectionState {
   measuredGravity: string;
   wortTemp: string;
   calibrationTemp: string;
-  tempUnit: "f" | "c";
+  tempUnit: TemperatureUnit;
   result: number | null;
 }
 
@@ -169,8 +170,8 @@ export interface BoilTimerState {
 }
 
 export interface UserPreferences {
-  defaultUnits: "metric" | "imperial";
-  temperatureUnit: "f" | "c";
+  defaultUnits: UnitSystem;
+  temperatureUnit: TemperatureUnit;
   saveHistory: boolean;
 }
 
@@ -254,7 +255,7 @@ const initialState: CalculatorState = {
     grainWeightUnit: "lb",
     grainTemp: "",
     targetMashTemp: "",
-    tempUnit: "f",
+    tempUnit: "F",
     waterToGrainRatio: "1.25",
     result: null,
   },
@@ -262,7 +263,7 @@ const initialState: CalculatorState = {
     measuredGravity: "",
     wortTemp: "",
     calibrationTemp: "60",
-    tempUnit: "f",
+    tempUnit: "F",
     result: null,
   },
   dilution: {
@@ -310,8 +311,8 @@ const initialState: CalculatorState = {
     timerStartedAt: undefined,
   },
   preferences: {
-    defaultUnits: "imperial",
-    temperatureUnit: "f",
+    defaultUnits: "metric",
+    temperatureUnit: "C",
     saveHistory: true,
   },
   history: {},

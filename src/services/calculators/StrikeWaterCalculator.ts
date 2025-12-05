@@ -3,6 +3,7 @@
  * Calculates the temperature of water needed to achieve target mash temperature
  */
 
+import { TemperatureUnit } from "@/src/types/common";
 import { UnitConverter } from "./UnitConverter";
 
 export interface StrikeWaterResult {
@@ -32,7 +33,7 @@ export class StrikeWaterCalculator {
     grainTemp: number,
     targetMashTemp: number,
     waterToGrainRatio: number = 1.25,
-    tempUnit: "f" | "c" = "f",
+    tempUnit: TemperatureUnit = "F",
     tunWeight: number = 10 // pounds of tun material
   ): StrikeWaterResult {
     // Convert grain weight to pounds for calculations
@@ -46,12 +47,12 @@ export class StrikeWaterCalculator {
     let grainTempF = grainTemp;
     let targetMashTempF = targetMashTemp;
 
-    if (tempUnit === "c") {
-      grainTempF = UnitConverter.convertTemperature(grainTemp, "c", "f");
+    if (tempUnit === "C") {
+      grainTempF = UnitConverter.convertTemperature(grainTemp, "C", "F");
       targetMashTempF = UnitConverter.convertTemperature(
         targetMashTemp,
-        "c",
-        "f"
+        "C",
+        "F"
       );
     }
 
@@ -74,8 +75,8 @@ export class StrikeWaterCalculator {
 
     // Convert results back to requested unit
     let strikeTemp = strikeWaterTempF;
-    if (tempUnit === "c") {
-      strikeTemp = UnitConverter.convertTemperature(strikeWaterTempF, "f", "c");
+    if (tempUnit === "C") {
+      strikeTemp = UnitConverter.convertTemperature(strikeWaterTempF, "F", "C");
     }
 
     return {
@@ -93,24 +94,24 @@ export class StrikeWaterCalculator {
     targetMashTemp: number,
     currentMashVolume: number, // quarts
     infusionWaterTemp: number,
-    tempUnit: "f" | "c" = "f"
+    tempUnit: TemperatureUnit = "F"
   ): InfusionResult {
     // Convert temperatures to Fahrenheit for calculations
     let currentTempF = currentMashTemp;
     let targetTempF = targetMashTemp;
     let infusionTempF = infusionWaterTemp;
 
-    if (tempUnit === "c") {
+    if (tempUnit === "C") {
       currentTempF = UnitConverter.convertTemperature(
         currentMashTemp,
-        "c",
-        "f"
+        "C",
+        "F"
       );
-      targetTempF = UnitConverter.convertTemperature(targetMashTemp, "c", "f");
+      targetTempF = UnitConverter.convertTemperature(targetMashTemp, "C", "F");
       infusionTempF = UnitConverter.convertTemperature(
         infusionWaterTemp,
-        "c",
-        "f"
+        "C",
+        "F"
       );
     }
 
@@ -131,9 +132,9 @@ export class StrikeWaterCalculator {
     // Convert temperatures back to requested unit
     let targetTemp = targetTempF;
     let infusionTemp = infusionTempF;
-    if (tempUnit === "c") {
-      targetTemp = UnitConverter.convertTemperature(targetTempF, "f", "c");
-      infusionTemp = UnitConverter.convertTemperature(infusionTempF, "f", "c");
+    if (tempUnit === "C") {
+      targetTemp = UnitConverter.convertTemperature(targetTempF, "F", "C");
+      infusionTemp = UnitConverter.convertTemperature(infusionTempF, "F", "C");
     }
 
     return {
@@ -178,7 +179,7 @@ export class StrikeWaterCalculator {
     grainTemp: number,
     targetMashTemp: number,
     waterToGrainRatio: number,
-    tempUnit: "f" | "c"
+    tempUnit: TemperatureUnit
   ): void {
     if (grainWeight <= 0) {
       throw new Error("Grain weight must be greater than 0");
@@ -189,7 +190,7 @@ export class StrikeWaterCalculator {
     }
 
     // Temperature validation based on unit
-    if (tempUnit === "f") {
+    if (tempUnit === "F") {
       if (grainTemp < 32 || grainTemp > 120) {
         throw new Error("Grain temperature must be between 32°F and 120°F");
       }

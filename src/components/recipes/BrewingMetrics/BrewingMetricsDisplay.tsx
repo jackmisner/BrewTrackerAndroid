@@ -12,6 +12,7 @@ import {
   formatSRM,
   getSrmColor,
 } from "@utils/formatUtils";
+import { TemperatureUnit } from "@/src/types";
 
 interface BrewingMetricsProps {
   metrics?: {
@@ -22,7 +23,7 @@ interface BrewingMetricsProps {
     srm?: number;
   };
   mash_temperature?: number;
-  mash_temp_unit?: "F" | "C";
+  mash_temp_unit?: TemperatureUnit;
   loading?: boolean;
   error?: string | null;
   compact?: boolean;

@@ -14,6 +14,7 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ApiService from "@services/api/apiService";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 import {
   CachedStaticData,
   StaticDataCacheStats,
@@ -72,7 +73,11 @@ export class StaticDataService {
       const freshData = await this.fetchAndCacheIngredients();
       return this.applyIngredientFilters(freshData, filters);
     } catch (error) {
-      console.error("Error getting ingredients:", error);
+      await UnifiedLogger.error(
+        "offline-static",
+        "Error getting ingredients:",
+        error
+      );
       throw new OfflineError(
         "Failed to get ingredients data",
         "INGREDIENTS_ERROR",
@@ -106,7 +111,11 @@ export class StaticDataService {
       const freshData = await this.fetchAndCacheBeerStyles();
       return this.applyBeerStyleFilters(freshData, filters);
     } catch (error) {
-      console.error("Error getting beer styles:", error);
+      await UnifiedLogger.error(
+        "offline-static",
+        "Error getting beer styles:",
+        error
+      );
       throw new OfflineError(
         "Failed to get beer styles data",
         "BEER_STYLES_ERROR",
@@ -147,7 +156,11 @@ export class StaticDataService {
           String(cachedBeerStyles) !== String(beerStylesVersion.version),
       };
     } catch (error) {
-      console.warn("Failed to check for updates:", error);
+      await UnifiedLogger.warn(
+        "offline-static",
+        "Failed to check for updates:",
+        error
+      );
       // Return false for both if check fails
       return { ingredients: false, beerStyles: false };
     }
@@ -160,7 +173,11 @@ export class StaticDataService {
     try {
       await this.fetchAndCacheIngredients();
     } catch (error) {
-      console.error("Failed to update ingredients cache:", error);
+      await UnifiedLogger.error(
+        "offline-static",
+        "Failed to update ingredients cache:",
+        error
+      );
       throw new VersionError(
         "Failed to update ingredients cache",
         "ingredients"
@@ -175,7 +192,11 @@ export class StaticDataService {
     try {
       await this.fetchAndCacheBeerStyles();
     } catch (error) {
-      console.error("Failed to update beer styles cache:", error);
+      await UnifiedLogger.error(
+        "offline-static",
+        "Failed to update beer styles cache:",
+        error
+      );
       throw new VersionError(
         "Failed to update beer styles cache",
         "beer_styles"
@@ -192,7 +213,8 @@ export class StaticDataService {
     try {
       await this.fetchAndCacheIngredients();
     } catch (error) {
-      console.warn(
+      await UnifiedLogger.warn(
+        "offline-static",
         "Failed to refresh ingredients after authentication:",
         error
       );
@@ -216,7 +238,11 @@ export class StaticDataService {
         AsyncStorage.removeItem(STORAGE_KEYS_V2.BEER_STYLES_VERSION),
       ]);
     } catch (error) {
-      console.error("Failed to clear cache:", error);
+      await UnifiedLogger.error(
+        "offline-static",
+        "Failed to clear cache:",
+        error
+      );
       throw new OfflineError(
         "Failed to clear cache",
         "CACHE_CLEAR_ERROR",
@@ -264,7 +290,11 @@ export class StaticDataService {
         },
       };
     } catch (error) {
-      console.error("Failed to get cache stats:", error);
+      await UnifiedLogger.error(
+        "offline-static",
+        "Failed to get cache stats:",
+        error
+      );
       // Return empty stats on error
       return {
         ingredients: {
@@ -304,7 +334,8 @@ export class StaticDataService {
         // In this case, we can't fetch ingredients, so return empty array
         // but still cache the version info for when user logs in
         if (authError?.status === 401 || authError?.status === 403) {
-          console.warn(
+          void UnifiedLogger.warn(
+            "offline-static",
             "Cannot fetch ingredients: user not authenticated. Ingredients will be available after login."
           );
 
@@ -356,7 +387,11 @@ export class StaticDataService {
 
       return ingredients;
     } catch (error) {
-      console.error("Failed to fetch ingredients:", error);
+      await UnifiedLogger.error(
+        "offline-static",
+        "Failed to fetch ingredients:",
+        error
+      );
       throw new OfflineError(
         "Failed to fetch ingredients",
         "FETCH_ERROR",
@@ -371,7 +406,8 @@ export class StaticDataService {
   private static async fetchAndCacheBeerStyles(): Promise<BeerStyle[]> {
     try {
       if (__DEV__) {
-        console.log(
+        void UnifiedLogger.debug(
+          "offline-static",
           `[StaticDataService.fetchAndCacheBeerStyles] Starting fetch...`
         );
       }
@@ -383,7 +419,8 @@ export class StaticDataService {
       ]);
 
       if (__DEV__) {
-        console.log(
+        void UnifiedLogger.debug(
+          "offline-static",
           `[StaticDataService.fetchAndCacheBeerStyles] API responses received - version: ${versionResponse?.data?.version}`
         );
       }
@@ -395,9 +432,12 @@ export class StaticDataService {
 
       if (Array.isArray(beerStylesData)) {
         // If it's already an array, process normally
-        console.log(
-          `[StaticDataService.fetchAndCacheBeerStyles] Processing array format with ${beerStylesData.length} items`
-        );
+        if (__DEV__) {
+          void UnifiedLogger.debug(
+            "offline-static",
+            `[StaticDataService.fetchAndCacheBeerStyles] Processing array format with ${beerStylesData.length} items`
+          );
+        }
         beerStylesData.forEach((item: any) => {
           if (Array.isArray(item?.styles)) {
             // Item is a category with styles array
@@ -416,7 +456,8 @@ export class StaticDataService {
       ) {
         // If it's an object with numeric keys (like "1", "2", etc.), convert to array
         if (__DEV__) {
-          console.log(
+          void UnifiedLogger.debug(
+            "offline-static",
             `[StaticDataService.fetchAndCacheBeerStyles] Processing object format with keys: ${Object.keys(beerStylesData).length}`
           );
         }
@@ -432,10 +473,10 @@ export class StaticDataService {
           }
         });
       } else {
-        console.error(
+        await UnifiedLogger.error(
+          "offline-static",
           `[StaticDataService.fetchAndCacheBeerStyles] Unexpected data format:`,
-          typeof beerStylesData,
-          beerStylesData
+          { type: typeof beerStylesData, data: beerStylesData }
         );
         throw new OfflineError(
           "Beer styles data is not in expected format",
@@ -459,7 +500,11 @@ export class StaticDataService {
 
       return allStyles;
     } catch (error) {
-      console.error("Failed to fetch beer styles:", error);
+      await UnifiedLogger.error(
+        "offline-static",
+        "Failed to fetch beer styles:",
+        error
+      );
       throw new OfflineError(
         "Failed to fetch beer styles",
         "FETCH_ERROR",
@@ -478,7 +523,11 @@ export class StaticDataService {
       );
       return cached ? JSON.parse(cached) : null;
     } catch (error) {
-      console.error("Failed to get cached ingredients:", error);
+      await UnifiedLogger.error(
+        "offline-static",
+        "Failed to get cached ingredients:",
+        error
+      );
       return null;
     }
   }
@@ -493,7 +542,11 @@ export class StaticDataService {
       );
       return cached ? JSON.parse(cached) : null;
     } catch (error) {
-      console.error("Failed to get cached beer styles:", error);
+      await UnifiedLogger.error(
+        "offline-static",
+        "Failed to get cached beer styles:",
+        error
+      );
       return null;
     }
   }
@@ -512,7 +565,11 @@ export class StaticDataService {
 
       return await AsyncStorage.getItem(key);
     } catch (error) {
-      console.error(`Failed to get cached version for ${dataType}:`, error);
+      await UnifiedLogger.error(
+        "offline-static",
+        `Failed to get cached version for ${dataType}:`,
+        error
+      );
       return null;
     }
   }
@@ -559,7 +616,8 @@ export class StaticDataService {
             dataType === "ingredients" &&
             (error?.status === 401 || error?.status === 403)
           ) {
-            console.warn(
+            void UnifiedLogger.warn(
+              "offline-static",
               "Background ingredients update failed: authentication required"
             );
           } else {
@@ -569,7 +627,11 @@ export class StaticDataService {
       }
     } catch (error) {
       // Silent fail for background checks
-      console.warn(`Background version check failed for ${dataType}:`, error);
+      void UnifiedLogger.warn(
+        "offline-static",
+        `Background version check failed for ${dataType}:`,
+        error
+      );
     } finally {
       this.versionCheckInProgress[dataType] = false;
     }

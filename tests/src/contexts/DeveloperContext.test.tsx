@@ -11,6 +11,7 @@ import {
   NetworkSimulationMode,
 } from "@contexts/DeveloperContext";
 import { Text, TouchableOpacity } from "react-native";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 // Mock AsyncStorage
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -23,6 +24,16 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 jest.mock("@services/config", () => ({
   STORAGE_KEYS: {
     USER_SETTINGS: "user_settings",
+  },
+}));
+
+// Mock UnifiedLogger
+jest.mock("@services/logger/UnifiedLogger", () => ({
+  UnifiedLogger: {
+    warn: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn(),
   },
 }));
 
@@ -147,8 +158,6 @@ describe("DeveloperContext", () => {
       mockAsyncStorage.getItem.mockRejectedValueOnce(
         new Error("Storage error")
       );
-      const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
-
       const { getByTestId } = render(
         <DeveloperProvider>
           <TestComponent />
@@ -157,13 +166,12 @@ describe("DeveloperContext", () => {
 
       await waitFor(() => {
         expect(getByTestId("network-mode")).toHaveTextContent("normal");
-        expect(consoleSpy).toHaveBeenCalledWith(
+        expect(UnifiedLogger.warn).toHaveBeenCalledWith(
+          "developer",
           "Failed to load developer settings:",
           expect.any(Error)
         );
       });
-
-      consoleSpy.mockRestore();
     });
   });
 
@@ -193,8 +201,6 @@ describe("DeveloperContext", () => {
       mockAsyncStorage.setItem.mockRejectedValueOnce(
         new Error("Storage error")
       );
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-
       const { getByTestId } = render(
         <DeveloperProvider>
           <TestComponent />
@@ -206,13 +212,12 @@ describe("DeveloperContext", () => {
       });
 
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith(
+        expect(UnifiedLogger.error).toHaveBeenCalledWith(
+          expect.any(String),
           "Failed to set network simulation mode:",
           expect.any(Error)
         );
       });
-
-      consoleSpy.mockRestore();
     });
   });
 
@@ -309,8 +314,6 @@ describe("DeveloperContext", () => {
       mockAsyncStorage.removeItem.mockRejectedValueOnce(
         new Error("Reset error")
       );
-      const consoleSpy = jest.spyOn(console, "error").mockImplementation();
-
       const { getByTestId } = render(
         <DeveloperProvider>
           <TestComponent />
@@ -322,13 +325,12 @@ describe("DeveloperContext", () => {
       });
 
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith(
+        expect(UnifiedLogger.error).toHaveBeenCalledWith(
+          expect.any(String),
           "Failed to reset developer settings:",
           expect.any(Error)
         );
       });
-
-      consoleSpy.mockRestore();
     });
   });
 
@@ -342,52 +344,6 @@ describe("DeveloperContext", () => {
       expect(() => {
         render(<TestComponentWithoutProvider />);
       }).toThrow("useDeveloper must be used within a DeveloperProvider");
-    });
-  });
-
-  describe("Console Logging", () => {
-    it("should log network mode changes", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
-
-      const { getByTestId } = render(
-        <DeveloperProvider>
-          <TestComponent />
-        </DeveloperProvider>
-      );
-
-      await act(async () => {
-        getByTestId("set-slow").props.onPress();
-      });
-
-      await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith(
-          'Developer mode: Network simulation set to "slow"'
-        );
-      });
-
-      consoleSpy.mockRestore();
-    });
-
-    it("should log settings reset", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
-
-      const { getByTestId } = render(
-        <DeveloperProvider>
-          <TestComponent />
-        </DeveloperProvider>
-      );
-
-      await act(async () => {
-        getByTestId("reset-settings").props.onPress();
-      });
-
-      await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith(
-          "Developer settings reset to defaults"
-        );
-      });
-
-      consoleSpy.mockRestore();
     });
   });
 });

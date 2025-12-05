@@ -12,8 +12,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   CalculatorsProvider,
   useCalculators,
-  CalculatorState,
-  CalculatorAction,
 } from "../../../src/contexts/CalculatorsContext";
 
 // Mock AsyncStorage
@@ -58,13 +56,13 @@ describe("CalculatorsContext", () => {
       expect(state.abv.result).toBeNull();
 
       // Test Strike Water calculator defaults
-      expect(state.strikeWater.tempUnit).toBe("f");
+      expect(state.strikeWater.tempUnit).toBe("F");
       expect(state.strikeWater.waterToGrainRatio).toBe("1.25");
       expect(state.strikeWater.result).toBeNull();
 
       // Test Hydrometer Correction defaults
       expect(state.hydrometerCorrection.calibrationTemp).toBe("60");
-      expect(state.hydrometerCorrection.tempUnit).toBe("f");
+      expect(state.hydrometerCorrection.tempUnit).toBe("F");
       expect(state.hydrometerCorrection.result).toBeNull();
 
       // Test Boil Timer defaults
@@ -142,7 +140,7 @@ describe("CalculatorsContext", () => {
               grainWeightUnit: "kg",
               grainTemp: "20",
               targetMashTemp: "67",
-              tempUnit: "c",
+              tempUnit: "C",
               result: { strikeTemp: 72.5, waterVolume: 12.5 },
             },
           });
@@ -151,7 +149,7 @@ describe("CalculatorsContext", () => {
         const { strikeWater } = result.current.state;
         expect(strikeWater.grainWeight).toBe("10");
         expect(strikeWater.grainWeightUnit).toBe("kg");
-        expect(strikeWater.tempUnit).toBe("c");
+        expect(strikeWater.tempUnit).toBe("C");
         expect(strikeWater.result).toEqual({
           strikeTemp: 72.5,
           waterVolume: 12.5,
@@ -170,7 +168,7 @@ describe("CalculatorsContext", () => {
               measuredGravity: "1.050",
               wortTemp: "80",
               calibrationTemp: "68",
-              tempUnit: "f",
+              tempUnit: "F",
               result: 1.052,
             },
           });
@@ -458,7 +456,7 @@ describe("CalculatorsContext", () => {
               },
               preferences: {
                 defaultUnits: "metric",
-                temperatureUnit: "c",
+                temperatureUnit: "C",
                 saveHistory: true,
               },
             },
@@ -477,7 +475,7 @@ describe("CalculatorsContext", () => {
         expect(state.preferences.defaultUnits).toBe("metric");
 
         // Should preserve other calculator states
-        expect(state.strikeWater.tempUnit).toBe("f"); // Default preserved
+        expect(state.strikeWater.tempUnit).toBe("F"); // Default preserved
       });
 
       it("should handle partial nested state updates", () => {
@@ -562,7 +560,7 @@ describe("CalculatorsContext", () => {
         },
         preferences: {
           defaultUnits: "metric" as const,
-          temperatureUnit: "c" as const,
+          temperatureUnit: "C" as const,
           saveHistory: false,
         },
       };
@@ -581,7 +579,7 @@ describe("CalculatorsContext", () => {
       expect(result.current.state.abv.originalGravity).toBe("1.060");
       expect(result.current.state.abv.formula).toBe("advanced");
       expect(result.current.state.preferences.defaultUnits).toBe("metric");
-      expect(result.current.state.preferences.temperatureUnit).toBe("c");
+      expect(result.current.state.preferences.temperatureUnit).toBe("C");
     });
 
     it("should handle corrupted persisted state gracefully", async () => {
@@ -595,7 +593,8 @@ describe("CalculatorsContext", () => {
 
       // Should fall back to default state
       expect(result.current.state.abv.formula).toBe("simple");
-      expect(result.current.state.preferences.defaultUnits).toBe("imperial");
+      expect(result.current.state.preferences.defaultUnits).toBe("metric");
+      expect(result.current.state.preferences.temperatureUnit).toBe("C");
     });
 
     it("should persist state changes to AsyncStorage after hydration", async () => {

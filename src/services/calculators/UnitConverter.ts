@@ -47,51 +47,48 @@ export class UnitConverter {
     tbsp: 0.0147868,
   };
 
+  /**
+   * Normalize temperature unit to canonical form ("C" or "F")
+   * Only supports Celsius and Fahrenheit (Kelvin is not used in brewing)
+   * @private
+   */
+  private static normalizeTemperatureUnit(unit: string): "C" | "F" {
+    const normalized = unit.toLowerCase();
+    switch (normalized) {
+      case "f":
+      case "fahrenheit":
+        return "F";
+      case "c":
+      case "celsius":
+        return "C";
+      default:
+        throw new Error(
+          `Unsupported temperature unit: ${unit}. Only Celsius (C) and Fahrenheit (F) are supported for brewing.`
+        );
+    }
+  }
+
   // Temperature conversion functions
   public static convertTemperature(
     value: number,
     fromUnit: string,
     toUnit: string
   ): number {
-    const from = fromUnit.toLowerCase();
-    const to = toUnit.toLowerCase();
+    // Normalize units to canonical form
+    const from = this.normalizeTemperatureUnit(fromUnit);
+    const to = this.normalizeTemperatureUnit(toUnit);
 
     if (from === to) {
       return value;
     }
 
-    // Convert to Celsius first
-    let celsius: number;
-    switch (from) {
-      case "f":
-      case "fahrenheit":
-        celsius = (value - 32) * (5 / 9);
-        break;
-      case "c":
-      case "celsius":
-        celsius = value;
-        break;
-      case "k":
-      case "kelvin":
-        celsius = value - 273.15;
-        break;
-      default:
-        throw new Error(`Unknown temperature unit: ${fromUnit}`);
-    }
-
-    // Convert from Celsius to target unit
-    switch (to) {
-      case "f":
-      case "fahrenheit":
-        return celsius * (9 / 5) + 32;
-      case "c":
-      case "celsius":
-        return celsius;
-      case "k":
-      case "kelvin":
-        return celsius + 273.15;
-      default:
-        throw new Error(`Unknown temperature unit: ${toUnit}`);
+    // Direct conversion between C and F
+    if (from === "F") {
+      // F to C
+      return (value - 32) * (5 / 9);
+    } else {
+      // C to F
+      return value * (9 / 5) + 32;
     }
   }
 
@@ -190,7 +187,7 @@ export class UnitConverter {
   }
 
   public static getTemperatureUnits(): string[] {
-    return ["f", "c", "k", "fahrenheit", "celsius", "kelvin"];
+    return ["F", "C"]; // Only Celsius and Fahrenheit are used in brewing
   }
 
   // Validation methods
@@ -203,8 +200,12 @@ export class UnitConverter {
   }
 
   public static isValidTemperatureUnit(unit: string): boolean {
-    const validUnits = ["f", "c", "k", "fahrenheit", "celsius", "kelvin"];
-    return validUnits.includes(unit.toLowerCase());
+    try {
+      this.normalizeTemperatureUnit(unit);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // Formatting methods for display
@@ -219,6 +220,7 @@ export class UnitConverter {
   }
 
   public static formatTemperature(temp: number, unit: string): string {
-    return `${temp.toFixed(1)}°${unit.toUpperCase()}`;
+    const normalizedUnit = this.normalizeTemperatureUnit(unit);
+    return `${temp.toFixed(1)}°${normalizedUnit}`;
   }
 }

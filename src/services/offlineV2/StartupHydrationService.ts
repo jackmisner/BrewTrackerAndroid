@@ -7,6 +7,8 @@
 
 import { UserCacheService } from "./UserCacheService";
 import { StaticDataService } from "./StaticDataService";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
+import type { UnitSystem } from "@/src/types";
 
 export class StartupHydrationService {
   private static isHydrating = false;
@@ -17,32 +19,45 @@ export class StartupHydrationService {
    */
   static async hydrateOnStartup(
     userId: string,
-    userUnitSystem: "imperial" | "metric" = "imperial"
+    userUnitSystem: UnitSystem = "metric"
   ): Promise<void> {
     // Prevent multiple concurrent hydrations
     if (this.isHydrating || this.hasHydrated) {
-      console.log(
-        `[StartupHydrationService] Hydration already in progress or completed`
-      );
       return;
     }
 
     this.isHydrating = true;
-    console.log(
-      `[StartupHydrationService] Starting hydration for user: "${userId}"`
-    );
 
     try {
       // Hydrate in parallel for better performance
-      await Promise.allSettled([
+      const results = await Promise.allSettled([
         this.hydrateUserData(userId, userUnitSystem),
         this.hydrateStaticData(),
       ]);
 
-      this.hasHydrated = true;
-      console.log(`[StartupHydrationService] Hydration completed successfully`);
+      // Only mark as hydrated if both succeeded
+      const hasFailure = results.some(r => r.status === "rejected");
+      if (!hasFailure) {
+        this.hasHydrated = true;
+      } else {
+        void UnifiedLogger.warn(
+          "offline-hydration",
+          "[StartupHydrationService] Partial hydration failure - will retry on next startup",
+          {
+            results: results.map((r, i) => ({
+              type: i === 0 ? "userData" : "staticData",
+              status: r.status,
+              reason: r.status === "rejected" ? r.reason : undefined,
+            })),
+          }
+        );
+      }
     } catch (error) {
-      console.error(`[StartupHydrationService] Hydration failed:`, error);
+      void UnifiedLogger.error(
+        "offline-hydration",
+        "[StartupHydrationService] Hydration failed:",
+        error
+      );
       // Don't throw - app should still work even if hydration fails
     } finally {
       this.isHydrating = false;
@@ -54,11 +69,9 @@ export class StartupHydrationService {
    */
   private static async hydrateUserData(
     userId: string,
-    userUnitSystem: "imperial" | "metric" = "imperial"
+    userUnitSystem: UnitSystem = "metric"
   ): Promise<void> {
     try {
-      console.log(`[StartupHydrationService] Hydrating user data...`);
-
       // Check if user already has cached recipes
       const existingRecipes = await UserCacheService.getRecipes(
         userId,
@@ -66,23 +79,15 @@ export class StartupHydrationService {
       );
 
       if (existingRecipes.length === 0) {
-        console.log(
-          `[StartupHydrationService] No cached recipes found, will hydrate from server`
-        );
         // The UserCacheService.getRecipes() method will automatically hydrate
         // So we don't need to do anything special here
-      } else {
-        console.log(
-          `[StartupHydrationService] User already has ${existingRecipes.length} cached recipes`
-        );
       }
 
       // TODO: Add brew sessions hydration when implemented
       // await this.hydrateBrewSessions(userId);
-
-      console.log(`[StartupHydrationService] User data hydration completed`);
     } catch (error) {
-      console.warn(
+      void UnifiedLogger.warn(
+        "offline-hydration",
         `[StartupHydrationService] User data hydration failed:`,
         error
       );
@@ -95,22 +100,15 @@ export class StartupHydrationService {
    */
   private static async hydrateStaticData(): Promise<void> {
     try {
-      console.log(`[StartupHydrationService] Hydrating static data...`);
-
-      // Check and update ingredients cache
-      const ingredientsStats = await StaticDataService.getCacheStats();
-      if (!ingredientsStats.ingredients.cached) {
-        console.log(
-          `[StartupHydrationService] No cached ingredients found, fetching...`
-        );
+      // Check and update ingredients and beer styles cache
+      const cacheStats = await StaticDataService.getCacheStats();
+      if (!cacheStats.ingredients.cached) {
         await StaticDataService.getIngredients(); // This will cache automatically
       } else {
-        console.log(
-          `[StartupHydrationService] Ingredients already cached (${ingredientsStats.ingredients.record_count} items)`
-        );
         // Check for updates in background
         StaticDataService.updateIngredientsCache().catch(error => {
-          console.warn(
+          void UnifiedLogger.warn(
+            "offline-hydration",
             `[StartupHydrationService] Background ingredients update failed:`,
             error
           );
@@ -118,27 +116,21 @@ export class StartupHydrationService {
       }
 
       // Check and update beer styles cache
-      if (!ingredientsStats.beerStyles.cached) {
-        console.log(
-          `[StartupHydrationService] No cached beer styles found, fetching...`
-        );
+      if (!cacheStats.beerStyles.cached) {
         await StaticDataService.getBeerStyles(); // This will cache automatically
       } else {
-        console.log(
-          `[StartupHydrationService] Beer styles already cached (${ingredientsStats.beerStyles.record_count} items)`
-        );
         // Check for updates in background
         StaticDataService.updateBeerStylesCache().catch(error => {
-          console.warn(
+          void UnifiedLogger.warn(
+            "offline-hydration",
             `[StartupHydrationService] Background beer styles update failed:`,
             error
           );
         });
       }
-
-      console.log(`[StartupHydrationService] Static data hydration completed`);
     } catch (error) {
-      console.warn(
+      void UnifiedLogger.warn(
+        "offline-hydration",
         `[StartupHydrationService] Static data hydration failed:`,
         error
       );
@@ -151,7 +143,6 @@ export class StartupHydrationService {
   static resetHydrationState(): void {
     this.isHydrating = false;
     this.hasHydrated = false;
-    console.log(`[StartupHydrationService] Hydration state reset`);
   }
 
   /**

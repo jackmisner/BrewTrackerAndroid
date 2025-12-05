@@ -70,7 +70,7 @@ describe("StartupHydrationService", () => {
       // Verify user data hydration was attempted
       expect(mockUserCacheService.getRecipes).toHaveBeenCalledWith(
         mockUserId,
-        "imperial"
+        "metric"
       );
 
       // Verify static data hydration was attempted
@@ -467,12 +467,12 @@ describe("StartupHydrationService", () => {
         },
       });
 
-      // Call without unit system (should default to imperial)
+      // Call without unit system (should default to metric)
       await StartupHydrationService.hydrateOnStartup(mockUserId);
 
       expect(mockUserCacheService.getRecipes).toHaveBeenCalledWith(
         mockUserId,
-        "imperial"
+        "metric"
       );
     });
   });

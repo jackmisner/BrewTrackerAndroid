@@ -351,20 +351,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       // Update state
       setUser(normalizedUser);
 
-      await UnifiedLogger.debug("auth", "Session applied successfully", {
-        userId: normalizedUser.id,
-        username: normalizedUser.username,
-      });
-
       // Cache ingredients in background (don't block)
       StaticDataService.updateIngredientsCache()
         .then(() => {
           StaticDataService.getCacheStats()
             .then(stats => console.log("V2 Cache Status:", stats))
-            .catch(error => console.warn("Failed to get cache stats:", error));
+            .catch(error =>
+              UnifiedLogger.warn("auth", "Failed to get cache stats:", error)
+            );
         })
         .catch(error => {
-          console.warn("Failed to cache ingredients after login:", error);
+          UnifiedLogger.warn(
+            "auth",
+            "Failed to cache ingredients after login:",
+            error
+          );
         });
     } catch (error) {
       // Rollback: Clear token, cached data, and auth status if session setup fails
@@ -379,7 +380,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
         setAuthStatus("unauthenticated");
         setUser(null);
-        await UnifiedLogger.debug("auth", "Session rollback completed");
       } catch (rollbackError) {
         await UnifiedLogger.error(
           "auth",
@@ -556,10 +556,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         .then(() => {
           StaticDataService.getCacheStats()
             .then(stats => console.log("V2 Cache Status:", stats))
-            .catch(error => console.warn("Failed to get cache stats:", error));
+            .catch(error =>
+              UnifiedLogger.warn("auth", "Failed to get cache stats:", error)
+            );
         })
         .catch(error => {
-          console.warn(
+          UnifiedLogger.warn(
+            "auth",
             "Failed to cache ingredients during auth initialization:",
             error
           );
@@ -667,7 +670,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         // Note: Token should be handled if provided
       }
     } catch (error: any) {
-      console.error("Registration failed:", error);
+      UnifiedLogger.error("auth", "Registration failed:", error);
       setError(error.response?.data?.message || "Registration failed");
       throw error;
     } finally {
@@ -686,7 +689,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       // Apply session (token storage, auth status update, caching, etc.)
       await applyNewSession(access_token, userData);
     } catch (error: any) {
-      console.error("Google sign-in failed:", error);
+      UnifiedLogger.error("auth", "Google sign-in failed:", error);
       setError(error.response?.data?.message || "Google sign-in failed");
       throw error;
     } finally {
@@ -714,14 +717,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
       // Clear JWT token from SecureStore
       await ApiService.token.removeToken();
-      await UnifiedLogger.debug("auth", "JWT token removed from SecureStore");
 
       // Clear device token (but keep biometric credentials for backward compatibility)
       await DeviceTokenService.clearDeviceToken();
-      await UnifiedLogger.debug(
-        "auth",
-        "Device token cleared from SecureStore"
-      );
 
       // Clear cached data
       await AsyncStorage.multiRemove([
@@ -729,19 +727,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         STORAGE_KEYS.USER_SETTINGS,
         STORAGE_KEYS.CACHED_INGREDIENTS,
       ]);
-      await UnifiedLogger.debug("auth", "AsyncStorage cleared");
 
       // Clear React Query cache and persisted storage
       cacheUtils.clearAll();
       await cacheUtils.clearUserPersistedCache(userId);
-      await UnifiedLogger.debug("auth", "React Query cache cleared");
 
       // Clear user-scoped offline data
       const { UserCacheService } = await import(
         "@services/offlineV2/UserCacheService"
       );
       await UserCacheService.clearUserData(userId);
-      await UnifiedLogger.debug("auth", "User offline data cleared");
 
       await UnifiedLogger.info("auth", "Logout completed successfully", {
         userId,
@@ -826,7 +821,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
       setUser(userData);
     } catch (error: any) {
-      console.error("Failed to refresh user:", error);
+      UnifiedLogger.error("auth", "Failed to refresh user:", error);
       // Don't set error state for refresh failures unless it's a 401
       if (error.response?.status === 401) {
         await logout();
@@ -850,7 +845,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         await refreshUser();
       }
     } catch (error: any) {
-      console.error("Email verification failed:", error);
+      UnifiedLogger.error("auth", "Email verification failed:", error);
       setError(error.response?.data?.message || "Email verification failed");
       throw error;
     } finally {
@@ -863,7 +858,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       setError(null);
       await ApiService.auth.resendVerification();
     } catch (error: any) {
-      console.error("Failed to resend verification:", error);
+      UnifiedLogger.error("auth", "Failed to resend verification:", error);
       setError(
         error.response?.data?.message || "Failed to resend verification"
       );
@@ -888,7 +883,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         );
       }
     } catch (error: any) {
-      console.error("Failed to check verification status:", error);
+      UnifiedLogger.error(
+        "auth",
+        "Failed to check verification status:",
+        error
+      );
     }
   };
 
@@ -898,7 +897,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       setError(null);
       await ApiService.auth.forgotPassword({ email });
     } catch (error: any) {
-      console.error("Failed to send password reset:", error);
+      UnifiedLogger.error("auth", "Failed to send password reset:", error);
       setError(
         error.response?.data?.error || "Failed to send password reset email"
       );
@@ -917,7 +916,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       setError(null);
       await ApiService.auth.resetPassword({ token, new_password: newPassword });
     } catch (error: any) {
-      console.error("Failed to reset password:", error);
+      UnifiedLogger.error("auth", "Failed to reset password:", error);
       setError(error.response?.data?.error || "Failed to reset password");
       throw error;
     } finally {
@@ -940,7 +939,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       setIsBiometricAvailable(available);
       setIsBiometricEnabled(enabled);
     } catch (error) {
-      console.error("Failed to check biometric availability:", error);
+      UnifiedLogger.error(
+        "auth",
+        "Failed to check biometric availability:",
+        error
+      );
       setIsBiometricAvailable(false);
       setIsBiometricEnabled(false);
     }
@@ -962,12 +965,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       const biometricEnabled = await BiometricService.isBiometricEnabled();
       const hasDeviceToken = await BiometricService.hasStoredDeviceToken();
 
-      await UnifiedLogger.debug("auth", "Biometric pre-flight check", {
-        biometricAvailable,
-        biometricEnabled,
-        hasDeviceToken,
-      });
-
       if (!hasDeviceToken) {
         await UnifiedLogger.warn(
           "auth",
@@ -979,19 +976,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       }
 
       // Authenticate with biometrics and exchange device token for access token
-      await UnifiedLogger.debug(
-        "auth",
-        "Requesting biometric authentication from BiometricService"
-      );
-
+      if (!biometricAvailable || !biometricEnabled) {
+        await UnifiedLogger.warn(
+          "auth",
+          "Biometric login failed: Biometrics not available or not enabled"
+        );
+        throw new Error(
+          "Biometric authentication is not available or not enabled on this device."
+        );
+      }
       const result = await BiometricService.authenticateWithBiometrics();
-
-      await UnifiedLogger.debug("auth", "Biometric authentication result", {
-        success: result.success,
-        errorCode: result.errorCode,
-        hasAccessToken: !!result.accessToken,
-        hasUser: !!result.user,
-      });
 
       if (!result.success || !result.accessToken || !result.user) {
         await UnifiedLogger.warn("auth", "Biometric authentication rejected", {
@@ -1009,23 +1003,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
         throw error;
       }
 
-      await UnifiedLogger.debug(
-        "auth",
-        "Biometric authentication successful, device token exchanged for access token"
-      );
-
       const { accessToken: access_token, user: userData } = result;
 
       // Validate user data structure
       if (!userData?.id || !userData?.username) {
         throw new Error("Invalid user data received from biometric login");
       }
-
-      await UnifiedLogger.debug("auth", "Biometric login successful", {
-        userId: userData.id,
-        username: userData.username,
-        hasAccessToken: true,
-      });
 
       // Apply session (token storage, auth status update, caching, etc.)
       // Note: applyNewSession handles user data validation
@@ -1074,7 +1057,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       await BiometricService.enableBiometrics(username);
       await checkBiometricAvailability();
     } catch (error: any) {
-      console.error("Failed to enable biometrics:", error);
+      UnifiedLogger.error("auth", "Failed to enable biometrics:", error);
       throw error;
     }
   };
@@ -1088,7 +1071,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       await BiometricService.disableBiometricsLocally();
       await checkBiometricAvailability();
     } catch (error: any) {
-      console.error("Failed to disable biometrics:", error);
+      UnifiedLogger.error("auth", "Failed to disable biometrics:", error);
       throw error;
     }
   };
@@ -1114,7 +1097,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
 
       return extractUserIdFromJWT(token);
     } catch (error) {
-      console.warn("Failed to extract user ID:", error);
+      UnifiedLogger.warn("auth", "Failed to extract user ID:", error);
       return null;
     }
   };

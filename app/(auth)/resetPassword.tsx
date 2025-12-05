@@ -47,6 +47,7 @@ import { useAuth } from "@contexts/AuthContext";
 import { useTheme } from "@contexts/ThemeContext";
 import { loginStyles } from "@styles/auth/loginStyles";
 import { TEST_IDS } from "@src/constants/testIDs";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 type Strength = "" | "weak" | "medium" | "strong";
 
@@ -188,7 +189,11 @@ const ResetPasswordScreen: React.FC = () => {
       setSuccess(true);
     } catch (err: unknown) {
       // Error is handled by the context and displayed through error state
-      console.error("Password reset failed:", err);
+      void UnifiedLogger.error(
+        "resetPassword.handleResetPassword",
+        "Password reset failed:",
+        err
+      );
       // Optionally show a fallback alert if context error handling fails
       if (!error) {
         Alert.alert("Error", "Failed to reset password. Please try again.");

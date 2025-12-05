@@ -166,6 +166,7 @@ export const ENDPOINTS = {
     PARSE: "/beerxml/parse",
     MATCH_INGREDIENTS: "/beerxml/match-ingredients",
     CREATE_INGREDIENTS: "/beerxml/create-ingredients",
+    CONVERT_RECIPE: "/beerxml/convert-recipe",
   },
 
   // AI

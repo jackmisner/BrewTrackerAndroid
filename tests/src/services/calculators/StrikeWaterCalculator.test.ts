@@ -33,10 +33,10 @@ jest.mock("@services/calculators/UnitConverter", () => ({
       return value;
     }),
     convertTemperature: jest.fn((value, from, to) => {
-      if (from === "c" && to === "f") {
+      if (from === "C" && to === "F") {
         return (value * 9) / 5 + 32;
       }
-      if (from === "f" && to === "c") {
+      if (from === "F" && to === "C") {
         return ((value - 32) * 5) / 9;
       }
       return value;
@@ -53,7 +53,7 @@ describe("StrikeWaterCalculator", () => {
         70, // grain temp (F)
         152, // target mash temp (F)
         1.25, // water-to-grain ratio
-        "f", // temp unit
+        "F", // temp unit
         10 // tun weight
       );
 
@@ -70,7 +70,7 @@ describe("StrikeWaterCalculator", () => {
         50,
         152,
         1.25,
-        "f"
+        "F"
       );
       const warmGrain = StrikeWaterCalculator.calculateStrikeWater(
         10,
@@ -78,7 +78,7 @@ describe("StrikeWaterCalculator", () => {
         70,
         152,
         1.25,
-        "f"
+        "F"
       );
 
       expect(coolGrain.strikeTemp).toBeGreaterThan(warmGrain.strikeTemp);
@@ -91,7 +91,7 @@ describe("StrikeWaterCalculator", () => {
         20, // grain temp (C)
         67, // target mash temp (C)
         1.25, // water-to-grain ratio
-        "c" // temp unit
+        "C" // temp unit
       );
 
       expect(result.strikeTemp).toBeGreaterThan(67); // Should be higher than target
@@ -106,7 +106,7 @@ describe("StrikeWaterCalculator", () => {
         70,
         152,
         1.0,
-        "f"
+        "F"
       );
       const thinMash = StrikeWaterCalculator.calculateStrikeWater(
         10,
@@ -114,7 +114,7 @@ describe("StrikeWaterCalculator", () => {
         70,
         152,
         1.5,
-        "f"
+        "F"
       );
 
       expect(thickMash.waterVolume).toBe(10); // 10 * 1.0
@@ -129,7 +129,7 @@ describe("StrikeWaterCalculator", () => {
         70,
         152,
         1.25,
-        "f",
+        "F",
         5 // light tun
       );
       const heavyTun = StrikeWaterCalculator.calculateStrikeWater(
@@ -138,7 +138,7 @@ describe("StrikeWaterCalculator", () => {
         70,
         152,
         1.25,
-        "f",
+        "F",
         20 // heavy tun
       );
 
@@ -166,7 +166,7 @@ describe("StrikeWaterCalculator", () => {
         70.456,
         152.789,
         1.25,
-        "f"
+        "F"
       );
 
       expect(result.strikeTemp).toBe(Math.round(result.strikeTemp * 10) / 10);
@@ -184,7 +184,7 @@ describe("StrikeWaterCalculator", () => {
         158, // target mash temp
         12.5, // current mash volume (qt)
         180, // infusion water temp
-        "f"
+        "F"
       );
 
       expect(result.infusionVolume).toBeGreaterThan(0);
@@ -198,7 +198,7 @@ describe("StrikeWaterCalculator", () => {
         70, // target mash temp (C)
         12, // current mash volume
         85, // infusion water temp (C)
-        "c"
+        "C"
       );
 
       expect(result.infusionVolume).toBeGreaterThan(0);
@@ -213,7 +213,7 @@ describe("StrikeWaterCalculator", () => {
           158, // target temp
           12, // volume
           150, // infusion temp (too low - less than target)
-          "f"
+          "F"
         );
       }).toThrow(
         "Infusion water temperature must be higher than target mash temperature"
@@ -226,14 +226,14 @@ describe("StrikeWaterCalculator", () => {
         155,
         12,
         180,
-        "f"
+        "F"
       );
       const bigJump = StrikeWaterCalculator.calculateInfusion(
         150,
         165,
         12,
         180,
-        "f"
+        "F"
       );
 
       expect(bigJump.infusionVolume).toBeGreaterThan(smallJump.infusionVolume);
@@ -245,7 +245,7 @@ describe("StrikeWaterCalculator", () => {
         158.456,
         12.789,
         180.321,
-        "f"
+        "F"
       );
 
       expect(result.infusionVolume).toBe(
@@ -300,45 +300,45 @@ describe("StrikeWaterCalculator", () => {
   describe("validateInputs", () => {
     it("should validate grain weight", () => {
       expect(() => {
-        StrikeWaterCalculator.validateInputs(0, 70, 152, 1.25, "f");
+        StrikeWaterCalculator.validateInputs(0, 70, 152, 1.25, "F");
       }).toThrow("Grain weight must be greater than 0");
 
       expect(() => {
-        StrikeWaterCalculator.validateInputs(-5, 70, 152, 1.25, "f");
+        StrikeWaterCalculator.validateInputs(-5, 70, 152, 1.25, "F");
       }).toThrow("Grain weight must be greater than 0");
     });
 
     it("should validate water-to-grain ratio", () => {
       expect(() => {
-        StrikeWaterCalculator.validateInputs(10, 70, 152, 0, "f");
+        StrikeWaterCalculator.validateInputs(10, 70, 152, 0, "F");
       }).toThrow("Water to grain ratio must be between 0 and 10");
 
       expect(() => {
-        StrikeWaterCalculator.validateInputs(10, 70, 152, 15, "f");
+        StrikeWaterCalculator.validateInputs(10, 70, 152, 15, "F");
       }).toThrow("Water to grain ratio must be between 0 and 10");
     });
 
     it("should validate Fahrenheit temperature ranges", () => {
       expect(() => {
-        StrikeWaterCalculator.validateInputs(10, 25, 152, 1.25, "f"); // Grain too cold
+        StrikeWaterCalculator.validateInputs(10, 25, 152, 1.25, "F"); // Grain too cold
       }).toThrow("Grain temperature must be between 32°F and 120°F");
 
       expect(() => {
-        StrikeWaterCalculator.validateInputs(10, 70, 130, 1.25, "f"); // Mash too cold
+        StrikeWaterCalculator.validateInputs(10, 70, 130, 1.25, "F"); // Mash too cold
       }).toThrow("Target mash temperature must be between 140°F and 170°F");
 
       expect(() => {
-        StrikeWaterCalculator.validateInputs(10, 70, 180, 1.25, "f"); // Mash too hot
+        StrikeWaterCalculator.validateInputs(10, 70, 180, 1.25, "F"); // Mash too hot
       }).toThrow("Target mash temperature must be between 140°F and 170°F");
     });
 
     it("should validate Celsius temperature ranges", () => {
       expect(() => {
-        StrikeWaterCalculator.validateInputs(10, -5, 67, 1.25, "c"); // Grain too cold
+        StrikeWaterCalculator.validateInputs(10, -5, 67, 1.25, "C"); // Grain too cold
       }).toThrow("Grain temperature must be between 0°C and 50°C");
 
       expect(() => {
-        StrikeWaterCalculator.validateInputs(10, 20, 55, 1.25, "c"); // Mash too cold
+        StrikeWaterCalculator.validateInputs(10, 20, 55, 1.25, "C"); // Mash too cold
       }).toThrow("Target mash temperature must be between 60°C and 77°C");
     });
 
@@ -347,11 +347,11 @@ describe("StrikeWaterCalculator", () => {
 
     it("should pass validation for valid inputs", () => {
       expect(() => {
-        StrikeWaterCalculator.validateInputs(10, 70, 152, 1.25, "f");
+        StrikeWaterCalculator.validateInputs(10, 70, 152, 1.25, "F");
       }).not.toThrow();
 
       expect(() => {
-        StrikeWaterCalculator.validateInputs(5, 20, 67, 1.5, "c");
+        StrikeWaterCalculator.validateInputs(5, 20, 67, 1.5, "C");
       }).not.toThrow();
     });
   });
@@ -396,7 +396,7 @@ describe("StrikeWaterCalculator", () => {
         70,
         152,
         1.25,
-        "f"
+        "F"
       );
 
       expect(result.strikeTemp).toBeGreaterThan(0);
@@ -410,7 +410,7 @@ describe("StrikeWaterCalculator", () => {
         70,
         152,
         1.25,
-        "f"
+        "F"
       );
 
       expect(result.strikeTemp).toBeGreaterThan(0);
@@ -424,7 +424,7 @@ describe("StrikeWaterCalculator", () => {
         150,
         152,
         1.25,
-        "f" // Only 2F difference
+        "F" // Only 2F difference
       );
 
       expect(result.strikeTemp).toBeGreaterThan(152);

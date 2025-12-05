@@ -1,7 +1,7 @@
 import React from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import { ParametersForm } from "@src/components/recipes/RecipeForm/ParametersForm";
-import { RecipeFormData } from "@src/types";
+import { RecipeFormData, UnitSystem } from "@src/types";
 import { TEST_IDS } from "@src/constants/testIDs";
 
 // Comprehensive React Native mocking to avoid ES6 module issues
@@ -42,7 +42,7 @@ jest.mock("@contexts/ThemeContext", () => ({
 
 // Mock unit context
 const mockUnitContext = {
-  unitSystem: "imperial" as "imperial" | "metric",
+  unitSystem: "imperial" as UnitSystem,
   setUnitSystem: jest.fn(),
 };
 

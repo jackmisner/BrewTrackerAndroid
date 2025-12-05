@@ -23,7 +23,7 @@ import { DryHopTracker } from "@src/components/brewSessions/DryHopTracker";
 import { useBrewSessions } from "@hooks/offlineV2/useUserData";
 import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { QUERY_KEYS } from "@services/api/queryClient";
-import UnifiedLogger from "@services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 import { DevIdDebugger } from "@src/components/debug/DevIdDebugger";
 
 export default function ViewBrewSession() {
@@ -164,16 +164,7 @@ export default function ViewBrewSession() {
     const currentRecipeId = brewSessionData?.recipe_id;
     try {
       // First try to refresh the overall brew sessions data
-      await UnifiedLogger.debug(
-        "ViewBrewSession.onRefresh",
-        "Calling brewSessionsHook.refresh() to fetch from server"
-      );
       await brewSessionsHook.refresh();
-
-      await UnifiedLogger.debug(
-        "ViewBrewSession.onRefresh",
-        "Server refresh complete, now getting specific session from cache"
-      );
 
       // Then reload the specific session
       const session = await brewSessionsHook.getById(brewSessionId);
@@ -801,19 +792,6 @@ export default function ViewBrewSession() {
               const updatedSession = await getById(brewSession.id);
               if (updatedSession) {
                 setBrewSessionData(updatedSession);
-                await UnifiedLogger.debug(
-                  "viewBrewSession.onAddDryHop",
-                  `Session reloaded with ${updatedSession.dry_hop_additions?.length || 0} dry-hops`,
-                  {
-                    dryHopAdditions: updatedSession.dry_hop_additions?.map(
-                      dh => ({
-                        hop_name: dh.hop_name,
-                        recipe_instance_id: dh.recipe_instance_id,
-                        hasInstanceId: !!dh.recipe_instance_id,
-                      })
-                    ),
-                  }
-                );
               }
             }}
             onRemoveDryHop={async dryHopIndex => {

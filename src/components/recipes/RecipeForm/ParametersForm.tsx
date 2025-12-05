@@ -4,7 +4,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 import { useTheme } from "@contexts/ThemeContext";
 import { useUnits } from "@contexts/UnitContext";
-import { RecipeFormData } from "@src/types";
+import { RecipeFormData, TemperatureUnit } from "@src/types";
 import { createRecipeStyles } from "@styles/modals/createRecipeStyles";
 import { StyleAnalysis } from "@src/components/recipes/StyleAnalysis";
 import { TEST_IDS } from "@src/constants/testIDs";
@@ -98,7 +98,7 @@ export function ParametersForm({
     validateField(field, value);
   };
 
-  const handleMashTempUnitChange = (unit: "F" | "C") => {
+  const handleMashTempUnitChange = (unit: TemperatureUnit) => {
     // Convert temperature when changing units
     let newTemp = recipeData.mash_temperature;
 
@@ -224,7 +224,8 @@ export function ParametersForm({
             ]}
             value={recipeData.mash_temperature.toString()}
             onChangeText={text => {
-              const numValue = parseFloat(text) || 0;
+              const numValue =
+                text.trim() === "" ? Number.NaN : parseFloat(text);
               handleFieldChange("mash_temperature", numValue);
             }}
             placeholder={unitSystem === "imperial" ? "152" : "67"}

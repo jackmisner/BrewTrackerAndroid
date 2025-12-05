@@ -3,17 +3,28 @@
  */
 
 import React from "react";
-import { render } from "@testing-library/react-native";
+import { renderWithProviders, testUtils } from "@/tests/testUtils";
 import ImportReviewScreen from "../../../../app/(modals)/(beerxml)/importReview";
 import { TEST_IDS } from "@src/constants/testIDs";
 
-// Mock dependencies
-jest.mock("@contexts/ThemeContext", () => ({
-  useTheme: () => ({
-    colors: { primary: "#007AFF", text: "#000", background: "#FFF" },
-    fonts: { regular: "System" },
-  }),
+// Mock Appearance
+jest.mock("react-native/Libraries/Utilities/Appearance", () => ({
+  getColorScheme: jest.fn(() => "light"),
+  addChangeListener: jest.fn(),
+  removeChangeListener: jest.fn(),
 }));
+
+// Mock dependencies
+jest.mock("@contexts/ThemeContext", () => {
+  const React = require("react");
+  return {
+    useTheme: () => ({
+      colors: { primary: "#007AFF", text: "#000", background: "#FFF" },
+      fonts: { regular: "System" },
+    }),
+    ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
 
 jest.mock("expo-router", () => ({
   router: { back: jest.fn(), push: jest.fn() },
@@ -29,35 +40,9 @@ jest.mock("expo-router", () => ({
   })),
 }));
 
-jest.mock("@tanstack/react-query", () => {
-  const actual = jest.requireActual("@tanstack/react-query");
-  return {
-    ...actual,
-    QueryClient: jest.fn().mockImplementation(() => ({
-      invalidateQueries: jest.fn(),
-      clear: jest.fn(),
-      defaultOptions: jest.fn(() => ({ queries: { retry: false } })),
-      getQueryCache: jest.fn(() => ({
-        getAll: jest.fn(() => []),
-      })),
-      removeQueries: jest.fn(),
-    })),
-    useQuery: jest.fn(() => ({
-      data: null,
-      isLoading: false,
-      error: null,
-    })),
-    useMutation: jest.fn(() => ({
-      mutate: jest.fn(),
-      mutateAsync: jest.fn(),
-      isLoading: false,
-      error: null,
-    })),
-    useQueryClient: jest.fn(() => ({
-      invalidateQueries: jest.fn(),
-    })),
-  };
-});
+// Note: @tanstack/react-query is already mocked in setupTests.js with a more
+// sophisticated implementation that includes Map-backed query storage and cache tracking.
+// No need to override it here.
 
 jest.mock("@services/api/apiService", () => ({
   default: {
@@ -68,51 +53,108 @@ jest.mock("@services/api/apiService", () => ({
   },
 }));
 
+// Mock auth context
+let mockAuthState = {
+  user: { id: "test-user", username: "testuser", email: "test@example.com" },
+  isLoading: false,
+  isAuthenticated: true,
+  error: null,
+};
+
+const setMockAuthState = (overrides: Partial<typeof mockAuthState>) => {
+  mockAuthState = { ...mockAuthState, ...overrides };
+};
+
+jest.mock("@contexts/AuthContext", () => {
+  return {
+    useAuth: () => mockAuthState,
+    AuthProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+// Mock other context providers
+jest.mock("@contexts/NetworkContext", () => {
+  return {
+    useNetwork: () => ({ isConnected: true, isInternetReachable: true }),
+    NetworkProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+jest.mock("@contexts/DeveloperContext", () => {
+  return {
+    useDeveloper: () => ({ isDeveloperMode: false }),
+    DeveloperProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+  };
+});
+
+jest.mock("@contexts/UnitContext", () => {
+  return {
+    useUnits: () => ({ unitSystem: "metric", setUnitSystem: jest.fn() }),
+    UnitProvider: ({ children }: { children: React.ReactNode }) => children,
+  };
+});
+
+jest.mock("@contexts/CalculatorsContext", () => {
+  return {
+    useCalculators: () => ({ state: {}, dispatch: jest.fn() }),
+    CalculatorsProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+  };
+});
+
 describe("ImportReviewScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    testUtils.resetCounters();
+    setMockAuthState({
+      user: {
+        id: "test-user",
+        username: "testuser",
+        email: "test@example.com",
+      },
+      isLoading: false,
+      isAuthenticated: true,
+      error: null,
+    });
   });
 
   it("should render without crashing", () => {
-    expect(() => render(<ImportReviewScreen />)).not.toThrow();
+    expect(() => renderWithProviders(<ImportReviewScreen />)).not.toThrow();
   });
 
   it("should display import review title", () => {
-    const { getByText } = render(<ImportReviewScreen />);
+    const { getByText } = renderWithProviders(<ImportReviewScreen />);
     expect(getByText("Import Review")).toBeTruthy();
   });
 
   it("should display recipe name", () => {
-    const { getAllByText } = render(<ImportReviewScreen />);
+    const { getAllByText } = renderWithProviders(<ImportReviewScreen />);
     expect(getAllByText("Test Recipe").length).toBeGreaterThan(0);
   });
 });
 
 describe("ImportReviewScreen - Additional UI Tests", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
   it("should display batch size information", () => {
-    const { getByText } = render(<ImportReviewScreen />);
+    const { getByText } = renderWithProviders(<ImportReviewScreen />);
     expect(getByText("Batch Size:")).toBeTruthy();
     // The 5.0 and gal are in the same text node together
     expect(getByText("5.0 gal")).toBeTruthy();
   });
 
   it("should show metrics section", () => {
-    const { getByText } = render(<ImportReviewScreen />);
+    const { getByText } = renderWithProviders(<ImportReviewScreen />);
     expect(getByText("Calculated Metrics")).toBeTruthy();
     expect(getByText("No metrics calculated")).toBeTruthy();
   });
 
   it("should display filename from params", () => {
-    const { getByText } = render(<ImportReviewScreen />);
+    const { getByText } = renderWithProviders(<ImportReviewScreen />);
     expect(getByText("test.xml")).toBeTruthy();
   });
 
   it("should have proper screen structure", () => {
-    const { getByTestId } = render(<ImportReviewScreen />);
+    const { getByTestId } = renderWithProviders(<ImportReviewScreen />);
     expect(
       getByTestId(TEST_IDS.patterns.scrollAction("import-review"))
     ).toBeTruthy();
@@ -120,12 +162,8 @@ describe("ImportReviewScreen - Additional UI Tests", () => {
 });
 
 describe("ImportReviewScreen - UI Elements", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
   it("should display recipe details section", () => {
-    const { getByText } = render(<ImportReviewScreen />);
+    const { getByText } = renderWithProviders(<ImportReviewScreen />);
 
     expect(getByText("Recipe Details")).toBeTruthy();
     expect(getByText("Name:")).toBeTruthy();
@@ -134,7 +172,9 @@ describe("ImportReviewScreen - UI Elements", () => {
   });
 
   it("should display import summary section", () => {
-    const { getByText, getAllByText } = render(<ImportReviewScreen />);
+    const { getByText, getAllByText } = renderWithProviders(
+      <ImportReviewScreen />
+    );
 
     expect(getByText("Import Summary")).toBeTruthy();
     expect(getByText("Source File")).toBeTruthy();
@@ -144,14 +184,14 @@ describe("ImportReviewScreen - UI Elements", () => {
   });
 
   it("should display action buttons", () => {
-    const { getByText } = render(<ImportReviewScreen />);
+    const { getByText } = renderWithProviders(<ImportReviewScreen />);
 
     expect(getByText("Review Ingredients")).toBeTruthy();
     expect(getByText("Create Recipe")).toBeTruthy();
   });
 
   it("should show efficiency and boil time", () => {
-    const { getByText } = render(<ImportReviewScreen />);
+    const { getByText } = renderWithProviders(<ImportReviewScreen />);
 
     expect(getByText("Efficiency:")).toBeTruthy();
     expect(getByText("75%")).toBeTruthy(); // efficiency with %
@@ -160,7 +200,9 @@ describe("ImportReviewScreen - UI Elements", () => {
   });
 
   it("should show ingredients section", () => {
-    const { getAllByText, getByText } = render(<ImportReviewScreen />);
+    const { getAllByText, getByText } = renderWithProviders(
+      <ImportReviewScreen />
+    );
 
     expect(getAllByText("Ingredients").length).toBeGreaterThan(0);
     expect(getByText("0 ingredients")).toBeTruthy(); // count with text
@@ -189,18 +231,14 @@ describe("ImportReviewScreen - coerceIngredientTime Function", () => {
       createdIngredientsCount: "6",
     });
 
-    const { getAllByText } = render(<ImportReviewScreen />);
+    const { getAllByText } = renderWithProviders(<ImportReviewScreen />);
     expect(getAllByText("Time Test Recipe").length).toBeGreaterThan(0);
   });
 });
 
 describe("ImportReviewScreen - Advanced UI Tests", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
   it("should display recipe with no specified style", () => {
-    const { getByText } = render(<ImportReviewScreen />);
+    const { getByText } = renderWithProviders(<ImportReviewScreen />);
     expect(getByText("Not specified")).toBeTruthy(); // Style not specified
   });
 
@@ -212,24 +250,62 @@ describe("ImportReviewScreen - Advanced UI Tests", () => {
         batch_size: 5,
         batch_size_unit: "gal",
         ingredients: [
-          { name: "Hop 1" },
-          { name: "Hop 2" },
-          { name: "Hop 3" },
-          { name: "Hop 4" },
-          { name: "Hop 5" },
-          { name: "Hop 6" },
+          {
+            ingredient_id: "1",
+            name: "Hop 1",
+            type: "hop",
+            amount: 1,
+            unit: "oz",
+          },
+          {
+            ingredient_id: "2",
+            name: "Hop 2",
+            type: "hop",
+            amount: 2,
+            unit: "oz",
+          },
+          {
+            ingredient_id: "3",
+            name: "Hop 3",
+            type: "hop",
+            amount: 1,
+            unit: "oz",
+          },
+          {
+            ingredient_id: "4",
+            name: "Hop 4",
+            type: "hop",
+            amount: 1,
+            unit: "oz",
+          },
+          {
+            ingredient_id: "5",
+            name: "Hop 5",
+            type: "hop",
+            amount: 0.5,
+            unit: "oz",
+          },
+          {
+            ingredient_id: "6",
+            name: "Hop 6",
+            type: "hop",
+            amount: 1,
+            unit: "oz",
+          },
         ],
       }),
       filename: "test.xml",
       createdIngredientsCount: "6",
     });
 
-    const { getByText } = render(<ImportReviewScreen />);
+    const { getByText } = renderWithProviders(<ImportReviewScreen />);
     expect(getByText("6 ingredients")).toBeTruthy();
   });
 
   it("should display multiple UI sections", () => {
-    const { getByText, getAllByText } = render(<ImportReviewScreen />);
+    const { getByText, getAllByText } = renderWithProviders(
+      <ImportReviewScreen />
+    );
 
     expect(getByText("Import Summary")).toBeTruthy();
     expect(getByText("Recipe Details")).toBeTruthy();
@@ -238,21 +314,23 @@ describe("ImportReviewScreen - Advanced UI Tests", () => {
   });
 
   it("should show default recipe values", () => {
-    const { getByText } = render(<ImportReviewScreen />);
+    const { getByText } = renderWithProviders(<ImportReviewScreen />);
 
     expect(getByText("60 minutes")).toBeTruthy(); // Default boil time
     expect(getByText("75%")).toBeTruthy(); // Default efficiency
   });
 
   it("should display import action buttons", () => {
-    const { getByText } = render(<ImportReviewScreen />);
+    const { getByText } = renderWithProviders(<ImportReviewScreen />);
 
     expect(getByText("Review Ingredients")).toBeTruthy();
     expect(getByText("Create Recipe")).toBeTruthy();
   });
 
   it("should render all component parts", () => {
-    const { getByTestId, getAllByRole } = render(<ImportReviewScreen />);
+    const { getByTestId, getAllByRole } = renderWithProviders(
+      <ImportReviewScreen />
+    );
 
     expect(
       getByTestId(TEST_IDS.patterns.scrollAction("import-review"))
@@ -268,10 +346,6 @@ describe("ImportReviewScreen - Advanced UI Tests", () => {
 });
 
 describe("ImportReviewScreen - Recipe Variations", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
   it("should handle recipe with custom values", () => {
     const mockParams = jest.requireMock("expo-router").useLocalSearchParams;
     mockParams.mockReturnValue({
@@ -291,7 +365,9 @@ describe("ImportReviewScreen - Recipe Variations", () => {
       createdIngredientsCount: "2",
     });
 
-    const { getAllByText, getByText } = render(<ImportReviewScreen />);
+    const { getAllByText, getByText } = renderWithProviders(
+      <ImportReviewScreen />
+    );
 
     expect(getAllByText("Custom Recipe").length).toBeGreaterThan(0);
     expect(getByText("10.0 L")).toBeTruthy(); // Metric batch size (uppercase L)
@@ -315,7 +391,7 @@ describe("ImportReviewScreen - Recipe Variations", () => {
       error: null,
     });
 
-    const { getByText } = render(<ImportReviewScreen />);
+    const { getByText } = renderWithProviders(<ImportReviewScreen />);
     expect(getByText("Calculated Metrics")).toBeTruthy();
 
     // Restore original mock

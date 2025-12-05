@@ -37,6 +37,7 @@ import ApiService from "@services/api/apiService";
 import { STORAGE_KEYS } from "@services/config";
 import { UnitSystem, MeasurementType, UserSettings } from "@src/types";
 import { useAuth } from "@contexts/AuthContext";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 // Unit option interface for common units
 interface UnitOption {
@@ -158,7 +159,11 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
           try {
             settings = JSON.parse(cachedSettings) as UserSettings;
           } catch (parseErr) {
-            console.warn("Corrupted cached user settings, removing:", parseErr);
+            void UnifiedLogger.warn(
+              "units",
+              "Corrupted cached user settings, removing:",
+              parseErr
+            );
             await AsyncStorage.removeItem(STORAGE_KEYS.USER_SETTINGS);
             // Treat as no-cache: fetch if authed, else default.
             try {
@@ -180,7 +185,8 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
               }
             } catch (bgError: any) {
               if (bgError?.response?.status !== 401) {
-                console.warn(
+                void UnifiedLogger.warn(
+                  "units",
                   "Settings fetch after cache corruption failed:",
                   bgError
                 );
@@ -220,7 +226,11 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
             } catch (bgError: any) {
               // Silently handle background fetch errors for unauthenticated users
               if (bgError.response?.status !== 401) {
-                console.warn("Background settings fetch failed:", bgError);
+                void UnifiedLogger.warn(
+                  "units",
+                  "Background settings fetch failed:",
+                  bgError
+                );
               }
             }
           }
@@ -249,7 +259,11 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
       } catch (err: any) {
         // Only log non-auth errors
         if (err.response?.status !== 401) {
-          console.warn("Failed to load unit preferences, using default:", err);
+          void UnifiedLogger.warn(
+            "units",
+            "Failed to load unit preferences, using default:",
+            err
+          );
         }
         if (isMounted) {
           setUnitSystem("metric");
@@ -291,7 +305,8 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
         try {
           settings = JSON.parse(cachedSettings);
         } catch {
-          console.warn(
+          void UnifiedLogger.warn(
+            "units",
             "Corrupted cached user settings during update; re-initializing."
           );
         }
@@ -308,7 +323,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
         );
       }
     } catch (err) {
-      console.error("Failed to update unit system:", err);
+      await UnifiedLogger.error("units", "Failed to update unit system:", err);
       setError("Failed to save unit preference");
       setUnitSystem(previousSystem); // Revert on error
     } finally {
@@ -332,7 +347,7 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
       case "volume":
         return unitSystem === "metric" ? "l" : "gal";
       case "temperature":
-        return unitSystem === "metric" ? "c" : "f";
+        return unitSystem === "metric" ? "C" : "F";
       default:
         return unitSystem === "metric" ? "kg" : "lb";
     }
@@ -401,15 +416,18 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
     }
 
     // Temperature conversions
-    else if (fromUnit === "f" && toUnit === "c") {
+    else if (fromUnit === "F" && toUnit === "C") {
       convertedValue = ((numValue - 32) * 5) / 9;
-    } else if (fromUnit === "c" && toUnit === "f") {
+    } else if (fromUnit === "C" && toUnit === "F") {
       convertedValue = (numValue * 9) / 5 + 32;
     }
 
     // If no conversion found, return original
     else {
-      console.warn(`No conversion available from ${fromUnit} to ${toUnit}`);
+      void UnifiedLogger.warn(
+        "units",
+        `No conversion available from ${fromUnit} to ${toUnit}`
+      );
       return { value: numValue, unit: fromUnit };
     }
 
@@ -610,8 +628,8 @@ export const UnitProvider: React.FC<UnitProviderProps> = ({
 
       case "temperature":
         return unitSystem === "metric"
-          ? [{ value: "c", label: "°C", description: "Celsius" }]
-          : [{ value: "f", label: "°F", description: "Fahrenheit" }];
+          ? [{ value: "C", label: "°C", description: "Celsius" }]
+          : [{ value: "F", label: "°F", description: "Fahrenheit" }];
 
       default:
         return [];

@@ -3,6 +3,7 @@
  * Calculates amount of priming sugar needed for carbonation
  */
 
+import { TemperatureUnit } from "@/src/types/common";
 import { UnitConverter } from "./UnitConverter";
 
 export interface PrimingSugarResult {
@@ -94,11 +95,11 @@ export class PrimingSugarCalculator {
    */
   public static estimateResidualCO2(
     fermentationTemp: number,
-    tempUnit: "f" | "c" = "f"
+    tempUnit: TemperatureUnit = "F"
   ): number {
     let tempF = fermentationTemp;
-    if (tempUnit === "c") {
-      tempF = UnitConverter.convertTemperature(fermentationTemp, "c", "f");
+    if (tempUnit === "C") {
+      tempF = UnitConverter.convertTemperature(fermentationTemp, "C", "F");
     }
 
     // Find closest temperature in lookup table

@@ -7,10 +7,11 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { UserCacheService } from "./UserCacheService";
-import { Recipe } from "@src/types";
+import { Recipe, UnitSystem } from "@src/types";
 import { OfflineRecipe } from "@src/types/offline";
 import { STORAGE_KEYS } from "@services/config";
 import { generateUniqueId } from "@utils/keyUtils";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 export interface MigrationResult {
   migrated: number;
@@ -25,7 +26,7 @@ export class LegacyMigrationService {
    */
   static async migrateLegacyRecipesToV2(
     userId: string,
-    userUnitSystem: "imperial" | "metric" = "imperial"
+    userUnitSystem: UnitSystem = "metric"
   ): Promise<MigrationResult> {
     const result: MigrationResult = {
       migrated: 0,
@@ -35,16 +36,18 @@ export class LegacyMigrationService {
     };
 
     try {
-      console.log(`[LegacyMigration] Starting migration for user: ${userId}`);
-
       // Get legacy recipes from old storage
       const legacyRecipes = await this.getLegacyRecipes(userId);
-      console.log(
-        `[LegacyMigration] Found ${legacyRecipes.length} legacy recipes`
+      void UnifiedLogger.info(
+        "LegacyMigration.migrateLegacyRecipesToV2",
+        `Found ${legacyRecipes.length} legacy recipes`
       );
 
       if (legacyRecipes.length === 0) {
-        console.log(`[LegacyMigration] No legacy recipes to migrate`);
+        void UnifiedLogger.info(
+          "LegacyMigration.migrateLegacyRecipesToV2",
+          `No legacy recipes to migrate`
+        );
         return result;
       }
 
@@ -55,8 +58,9 @@ export class LegacyMigrationService {
       );
       const existingIds = new Set(existingV2Recipes.map(r => r.id));
 
-      console.log(
-        `[LegacyMigration] Found ${existingV2Recipes.length} existing V2 recipes`
+      void UnifiedLogger.info(
+        "LegacyMigration.migrateLegacyRecipesToV2",
+        `Found ${existingV2Recipes.length} existing V2 recipes`
       );
 
       // Migrate each legacy recipe
@@ -64,8 +68,9 @@ export class LegacyMigrationService {
         try {
           // Skip if already exists in V2 cache
           if (existingIds.has(legacyRecipe.id)) {
-            console.log(
-              `[LegacyMigration] Skipping duplicate recipe: ${legacyRecipe.id}`
+            void UnifiedLogger.info(
+              "LegacyMigration.migrateLegacyRecipesToV2",
+              `Skipping duplicate recipe: ${legacyRecipe.id}`
             );
             result.skipped++;
             continue;
@@ -88,13 +93,15 @@ export class LegacyMigrationService {
             tempId: legacyRecipe.tempId,
           });
 
-          console.log(
-            `[LegacyMigration] Migrated recipe: ${legacyRecipe.name} (${legacyRecipe.id})`
+          void UnifiedLogger.info(
+            "LegacyMigration.migrateLegacyRecipesToV2",
+            `Migrated recipe: ${legacyRecipe.name} (${legacyRecipe.id})`
           );
           result.migrated++;
         } catch (error) {
-          console.error(
-            `[LegacyMigration] Failed to migrate recipe ${legacyRecipe.id}:`,
+          void UnifiedLogger.error(
+            "LegacyMigration.migrateLegacyRecipesToV2",
+            `Failed to migrate recipe ${legacyRecipe.id}:`,
             error
           );
           result.errors++;
@@ -104,18 +111,24 @@ export class LegacyMigrationService {
         }
       }
 
-      console.log(`[LegacyMigration] Migration completed:`, result);
+      void UnifiedLogger.info(
+        "LegacyMigration.migrateLegacyRecipesToV2",
+        `Migration completed:`,
+        result
+      );
 
       // Clear legacy recipes after successful migration
       if (result.migrated > 0) {
         try {
           await this.clearLegacyRecipes(userId);
-          console.log(
-            `[LegacyMigration] Successfully cleared legacy recipes after migration`
+          void UnifiedLogger.info(
+            "LegacyMigration.migrateLegacyRecipesToV2",
+            `Successfully cleared legacy recipes after migration`
           );
         } catch (clearError) {
-          console.error(
-            `[LegacyMigration] Failed to clear legacy recipes after migration:`,
+          void UnifiedLogger.error(
+            "LegacyMigration.migrateLegacyRecipesToV2",
+            `Failed to clear legacy recipes after migration:`,
             clearError
           );
           // Don't fail the entire migration if cleanup fails
@@ -124,7 +137,11 @@ export class LegacyMigrationService {
 
       return result;
     } catch (error) {
-      console.error(`[LegacyMigration] Migration failed:`, error);
+      void UnifiedLogger.error(
+        "LegacyMigration.migrateLegacyRecipesToV2",
+        `Migration failed:`,
+        error
+      );
       result.errors++;
       result.errorDetails.push(
         `Migration failed: ${error instanceof Error ? error.message : "Unknown error"}`
@@ -155,7 +172,11 @@ export class LegacyMigrationService {
         recipe => recipe.user_id === userId && !recipe.isDeleted
       );
     } catch (error) {
-      console.error(`[LegacyMigration] Failed to load legacy recipes:`, error);
+      void UnifiedLogger.error(
+        "LegacyMigration.migrateLegacyRecipesToV2",
+        `Failed to load legacy recipes:`,
+        error
+      );
       return [];
     }
   }
@@ -166,7 +187,7 @@ export class LegacyMigrationService {
   private static convertLegacyToV2Recipe(
     legacyRecipe: OfflineRecipe,
     userId: string,
-    userUnitSystem: "imperial" | "metric"
+    userUnitSystem: UnitSystem
   ): Recipe {
     // Create base recipe from legacy data
     const v2Recipe: Recipe = {
@@ -193,10 +214,16 @@ export class LegacyMigrationService {
       parent_recipe_id: legacyRecipe.parent_recipe_id,
       original_author: legacyRecipe.original_author,
       // Add missing required fields based on user's unit system
-      batch_size_unit: userUnitSystem === "metric" ? "l" : "gal",
-      unit_system: userUnitSystem,
-      mash_temperature: userUnitSystem === "metric" ? 67 : 152, // 67°C ≈ 152°F
-      mash_temp_unit: userUnitSystem === "metric" ? "C" : "F",
+      batch_size_unit:
+        legacyRecipe.batch_size_unit ||
+        (userUnitSystem === "metric" ? "l" : "gal"),
+      unit_system: legacyRecipe.unit_system || userUnitSystem,
+      mash_temperature:
+        legacyRecipe.mash_temperature ||
+        (userUnitSystem === "metric" ? 67 : 152), // Default mash temp values
+      mash_temp_unit:
+        legacyRecipe.mash_temp_unit ||
+        (userUnitSystem === "metric" ? "C" : "F"),
       notes: "", // Default empty notes
     };
 
@@ -225,8 +252,9 @@ export class LegacyMigrationService {
    */
   static async clearLegacyRecipes(userId: string): Promise<void> {
     try {
-      console.log(
-        `[LegacyMigration] Clearing legacy recipes for user: ${userId}`
+      void UnifiedLogger.info(
+        "LegacyMigration.clearLegacyRecipes",
+        `Clearing legacy recipes for user: ${userId}`
       );
 
       const offlineData = await AsyncStorage.getItem(
@@ -255,11 +283,16 @@ export class LegacyMigrationService {
         JSON.stringify(updatedData)
       );
 
-      console.log(
-        `[LegacyMigration] Cleared legacy recipes for user ${userId}`
+      void UnifiedLogger.info(
+        "LegacyMigration.clearLegacyRecipes",
+        `Cleared legacy recipes for user: ${userId}`
       );
     } catch (error) {
-      console.error(`[LegacyMigration] Failed to clear legacy recipes:`, error);
+      void UnifiedLogger.error(
+        "LegacyMigration.clearLegacyRecipes",
+        `Failed to clear legacy recipes:`,
+        error
+      );
       throw error;
     }
   }

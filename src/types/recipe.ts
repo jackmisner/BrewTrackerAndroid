@@ -17,11 +17,11 @@
  * - Optional fields: Many type-specific fields are optional (e.g., alpha_acid for hops)
  */
 
-import { ID } from "./common";
+import { ID, TemperatureUnit, UnitSystem } from "./common";
 
 // Recipe types
 export type IngredientType = "grain" | "hop" | "yeast" | "other";
-export type BatchSizeUnit = "gal" | "l";
+export type BatchSizeUnit = "l" | "gal";
 export type IngredientUnit =
   | "lb"
   | "kg"
@@ -42,7 +42,8 @@ export type HopFormat = "Pellet" | "Leaf" | "Plug" | "Whole" | "Extract";
 
 // Recipe ingredient interface
 export interface RecipeIngredient {
-  id: ID;
+  id?: ID; // Optional - backend generates on creation, present on fetched recipes
+  ingredient_id?: string; // Reference to ingredient database entry (optional for test data and backward compat)
   name: string;
   type: IngredientType;
   amount: number;
@@ -99,11 +100,11 @@ export interface Recipe {
   description: string;
   batch_size: number;
   batch_size_unit: BatchSizeUnit;
-  unit_system: "imperial" | "metric";
+  unit_system: UnitSystem;
   boil_time: number;
   efficiency: number;
   mash_temperature: number;
-  mash_temp_unit: "F" | "C";
+  mash_temp_unit: TemperatureUnit;
   mash_time?: number;
   is_public: boolean;
   notes: string;
@@ -140,16 +141,38 @@ export interface RecipeFormData {
   description: string;
   batch_size: number;
   batch_size_unit: BatchSizeUnit;
-  unit_system: "imperial" | "metric";
+  unit_system: UnitSystem;
   boil_time: number;
   efficiency: number;
   mash_temperature: number;
-  mash_temp_unit: "F" | "C";
+  mash_temp_unit: TemperatureUnit;
   mash_time?: number;
   is_public: boolean;
   notes: string;
   ingredients: RecipeIngredient[];
 }
+
+/**
+ * Minimal data required for metrics calculation
+ *
+ * Note: This interface intentionally does NOT include unit_system.
+ * The metrics calculator uses specific unit fields (batch_size_unit, mash_temp_unit)
+ * rather than relying on a general unit_system preference, ensuring calculations
+ * work correctly regardless of user's unit system settings.
+ *
+ * RecipeIngredient.id is optional, so this works for both imports and existing recipes.
+ */
+export interface RecipeMetricsInput {
+  batch_size: number;
+  batch_size_unit: BatchSizeUnit;
+  efficiency: number;
+  boil_time: number;
+  mash_temperature?: number;
+  mash_temp_unit?: TemperatureUnit;
+  ingredients: RecipeIngredient[];
+}
+
+// RecipeCreatePayload removed - Partial<Recipe> is sufficient since RecipeIngredient.id is optional
 
 // Recipe search filters
 export interface RecipeSearchFilters {
@@ -222,14 +245,5 @@ export interface CreateRecipeIngredientData {
   notes?: string;
 }
 
-// Strict ingredient input for BeerXML import with required fields for validation
-export interface IngredientInput {
-  ingredient_id: string;
-  name: string;
-  type: IngredientType;
-  amount: number;
-  unit: IngredientUnit;
-  use?: string;
-  time?: number;
-  instance_id?: string; // Unique instance identifier for React keys and duplicate ingredient handling (optional - backend generates if missing)
-}
+// IngredientInput removed - RecipeIngredient now handles both creation and fetched recipes
+// with optional id field

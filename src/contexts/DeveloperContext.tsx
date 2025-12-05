@@ -30,7 +30,7 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { STORAGE_KEYS } from "@services/config";
-import UnifiedLogger from "@services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 /**
  * Network simulation modes for testing
@@ -156,7 +156,11 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
           }
         }
       } catch (error) {
-        console.warn("Failed to load developer settings:", error);
+        UnifiedLogger.warn(
+          "developer",
+          "Failed to load developer settings:",
+          error
+        );
         // Self-heal on any error by ensuring we have a safe default
         setNetworkSimulationModeState("normal");
       }
@@ -220,7 +224,11 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
         { error: errorMessage }
       );
 
-      console.warn("Developer mode sync of pending operations failed:", error);
+      UnifiedLogger.warn(
+        "developer",
+        "Developer mode sync of pending operations failed:",
+        error
+      );
       throw error; // Re-throw so callers can handle if needed
     }
   };
@@ -287,7 +295,11 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
           error: error instanceof Error ? error.message : "Unknown error",
         }
       );
-      console.error("Failed to set network simulation mode:", error);
+      UnifiedLogger.error(
+        "developer",
+        "Failed to set network simulation mode:",
+        error
+      );
     }
   };
 
@@ -310,7 +322,11 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
       setNetworkSimulationModeState("normal");
       console.log("Developer settings reset to defaults");
     } catch (error) {
-      console.error("Failed to reset developer settings:", error);
+      UnifiedLogger.error(
+        "developer",
+        "Failed to reset developer settings:",
+        error
+      );
     }
   };
 
@@ -332,7 +348,7 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
       console.log("Developer: V2 system handles cleanup automatically");
       return { removedTombstones: 0, tombstoneNames: [] };
     } catch (error) {
-      console.error("Failed to cleanup tombstones:", error);
+      UnifiedLogger.error("developer", "Failed to cleanup tombstones:", error);
       throw error;
     }
   };
@@ -375,7 +391,7 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
         "Failed to make cache stale",
         { error }
       );
-      console.error("Failed to make cache stale:", error);
+      UnifiedLogger.error("developer", "Failed to make cache stale:", error);
       throw error;
     }
   };
@@ -405,7 +421,7 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
         "Failed to clear cache",
         { error }
       );
-      console.error("Failed to clear cache:", error);
+      UnifiedLogger.error("developer", "Failed to clear cache:", error);
       throw error;
     }
   };
@@ -473,7 +489,7 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
         "Failed to invalidate token",
         { error }
       );
-      console.error("Failed to invalidate token:", error);
+      UnifiedLogger.error("developer", "Failed to invalidate token:", error);
       throw error;
     }
   };
