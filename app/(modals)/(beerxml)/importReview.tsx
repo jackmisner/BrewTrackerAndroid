@@ -113,7 +113,7 @@ function normalizeImportedIngredients(
     .filter((ing: any) => {
       // Validate required fields before mapping
       if (!ing.ingredient_id) {
-        void UnifiedLogger.error(
+        void UnifiedLogger.warn(
           "import-review",
           "Ingredient missing ingredient_id",
           ing

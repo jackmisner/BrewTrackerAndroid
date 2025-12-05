@@ -467,7 +467,7 @@ describe("StartupHydrationService", () => {
         },
       });
 
-      // Call without unit system (should default to imperial)
+      // Call without unit system (should default to metric)
       await StartupHydrationService.hydrateOnStartup(mockUserId);
 
       expect(mockUserCacheService.getRecipes).toHaveBeenCalledWith(

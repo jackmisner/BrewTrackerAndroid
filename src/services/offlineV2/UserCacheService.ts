@@ -2642,12 +2642,6 @@ export class UserCacheService {
   private static filterAndSortHydrated<
     T extends { updated_at?: string; created_at?: string },
   >(hydratedCached: SyncableItem<T>[]): T[] {
-    const deletedItems = hydratedCached.filter(item => item.isDeleted);
-
-    // Log what's being filtered out
-    if (__DEV__ && deletedItems.length > 0) {
-    }
-
     const filteredItems = hydratedCached
       .filter(item => !item.isDeleted)
       .map(item => item.data)
@@ -2667,9 +2661,6 @@ export class UserCacheService {
         const bTime = getTimestamp(b.updated_at || b.created_at || "");
         return bTime - aTime; // Newest first
       });
-
-    if (__DEV__) {
-    }
 
     return filteredItems;
   }
@@ -3218,10 +3209,6 @@ export class UserCacheService {
         Math.floor(Number(sanitized.batch_rating)) || undefined;
     }
 
-    // Debug logging for sanitized result
-    if (__DEV__) {
-    }
-
     return sanitized;
   }
 
@@ -3593,6 +3580,16 @@ export class UserCacheService {
 
             if (isTempId) {
               // Convert UPDATE with temp ID to CREATE operation
+
+              await UnifiedLogger.info(
+                "UserCacheService.processPendingOperation",
+                `Converting UPDATE with temp ID ${operation.entityId} to CREATE operation for recipe`,
+                {
+                  entityId: operation.entityId,
+                  recipeName: operation.data?.name || "Unknown",
+                  operationId: operation.id,
+                }
+              );
 
               const response = await ApiService.recipes.create(operation.data);
               if (response && response.data && response.data.id) {
@@ -4279,10 +4276,6 @@ export class UserCacheService {
   ): Partial<Recipe> {
     const sanitized = { ...updates };
 
-    // Debug logging to understand the data being sanitized
-    if (__DEV__ && sanitized.ingredients) {
-    }
-
     // Remove fields that shouldn't be updated via API
     delete sanitized.id;
     delete sanitized.created_at;
@@ -4397,10 +4390,6 @@ export class UserCacheService {
 
         return sanitizedIngredient;
       });
-    }
-
-    // Debug logging to see the sanitized result
-    if (__DEV__ && sanitized.ingredients) {
     }
 
     return sanitized;
