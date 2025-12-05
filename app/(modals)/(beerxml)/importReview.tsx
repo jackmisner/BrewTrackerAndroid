@@ -153,6 +153,22 @@ function normalizeImportedIngredients(
         use: ing.use,
         time: coerceIngredientTime(ing.time),
         instance_id: generateUniqueId("ing"),
+        // Include type-specific fields for proper ingredient matching and metrics
+        ...(ing.type === "grain" && {
+          potential: ing.potential,
+          color: ing.color,
+          grain_type: ing.grain_type,
+        }),
+        ...(ing.type === "hop" && {
+          alpha_acid: ing.alpha_acid,
+        }),
+        ...(ing.type === "yeast" && {
+          attenuation: ing.attenuation,
+        }),
+        // Preserve BeerXML metadata if available
+        ...(ing.beerxml_data && {
+          beerxml_data: ing.beerxml_data,
+        }),
       })
     );
 }

@@ -19,7 +19,7 @@ export class StartupHydrationService {
    */
   static async hydrateOnStartup(
     userId: string,
-    userUnitSystem: UnitSystem = "imperial"
+    userUnitSystem: UnitSystem = "metric"
   ): Promise<void> {
     // Prevent multiple concurrent hydrations
     if (this.isHydrating || this.hasHydrated) {
@@ -69,7 +69,7 @@ export class StartupHydrationService {
    */
   private static async hydrateUserData(
     userId: string,
-    userUnitSystem: UnitSystem = "imperial"
+    userUnitSystem: UnitSystem = "metric"
   ): Promise<void> {
     try {
       // Check if user already has cached recipes

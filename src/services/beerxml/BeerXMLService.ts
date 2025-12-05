@@ -476,7 +476,7 @@ class BeerXMLService {
       const warnings = response.data.warnings ?? [];
 
       if (!convertedRecipe) {
-        UnifiedLogger.warn(
+        void UnifiedLogger.warn(
           "beerxml",
           "No converted recipe returned, using original"
         );
@@ -488,9 +488,13 @@ class BeerXMLService {
         warnings,
       };
     } catch (error) {
-      UnifiedLogger.error("beerxml", "Error converting recipe units:", error);
+      void UnifiedLogger.error(
+        "beerxml",
+        "Error converting recipe units:",
+        error
+      );
       // Return original recipe if conversion fails - don't block import
-      UnifiedLogger.warn(
+      void UnifiedLogger.warn(
         "beerxml",
         "Unit conversion failed, continuing with original units"
       );

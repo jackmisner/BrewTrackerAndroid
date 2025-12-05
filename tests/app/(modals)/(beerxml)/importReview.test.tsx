@@ -66,7 +66,6 @@ const setMockAuthState = (overrides: Partial<typeof mockAuthState>) => {
 };
 
 jest.mock("@contexts/AuthContext", () => {
-  const React = require("react");
   return {
     useAuth: () => mockAuthState,
     AuthProvider: ({ children }: { children: React.ReactNode }) => children,
@@ -75,7 +74,6 @@ jest.mock("@contexts/AuthContext", () => {
 
 // Mock other context providers
 jest.mock("@contexts/NetworkContext", () => {
-  const React = require("react");
   return {
     useNetwork: () => ({ isConnected: true, isInternetReachable: true }),
     NetworkProvider: ({ children }: { children: React.ReactNode }) => children,
@@ -83,7 +81,6 @@ jest.mock("@contexts/NetworkContext", () => {
 });
 
 jest.mock("@contexts/DeveloperContext", () => {
-  const React = require("react");
   return {
     useDeveloper: () => ({ isDeveloperMode: false }),
     DeveloperProvider: ({ children }: { children: React.ReactNode }) =>
@@ -92,15 +89,13 @@ jest.mock("@contexts/DeveloperContext", () => {
 });
 
 jest.mock("@contexts/UnitContext", () => {
-  const React = require("react");
   return {
-    useUnits: () => ({ unitSystem: "imperial", setUnitSystem: jest.fn() }),
+    useUnits: () => ({ unitSystem: "metric", setUnitSystem: jest.fn() }),
     UnitProvider: ({ children }: { children: React.ReactNode }) => children,
   };
 });
 
 jest.mock("@contexts/CalculatorsContext", () => {
-  const React = require("react");
   return {
     useCalculators: () => ({ state: {}, dispatch: jest.fn() }),
     CalculatorsProvider: ({ children }: { children: React.ReactNode }) =>

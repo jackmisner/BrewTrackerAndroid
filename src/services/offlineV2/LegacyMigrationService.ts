@@ -25,7 +25,7 @@ export class LegacyMigrationService {
    */
   static async migrateLegacyRecipesToV2(
     userId: string,
-    userUnitSystem: UnitSystem = "imperial"
+    userUnitSystem: UnitSystem = "metric"
   ): Promise<MigrationResult> {
     const result: MigrationResult = {
       migrated: 0,

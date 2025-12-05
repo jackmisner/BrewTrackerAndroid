@@ -70,7 +70,7 @@ describe("StartupHydrationService", () => {
       // Verify user data hydration was attempted
       expect(mockUserCacheService.getRecipes).toHaveBeenCalledWith(
         mockUserId,
-        "imperial"
+        "metric"
       );
 
       // Verify static data hydration was attempted
@@ -472,7 +472,7 @@ describe("StartupHydrationService", () => {
 
       expect(mockUserCacheService.getRecipes).toHaveBeenCalledWith(
         mockUserId,
-        "imperial"
+        "metric"
       );
     });
   });

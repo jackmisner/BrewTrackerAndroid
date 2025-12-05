@@ -763,7 +763,7 @@ export class UserCacheService {
    */
   static async getBrewSessions(
     userId: string,
-    userUnitSystem: UnitSystem = "imperial"
+    userUnitSystem: UnitSystem = "metric"
   ): Promise<BrewSession[]> {
     try {
       const cached = await this.getCachedBrewSessions(userId);
@@ -804,11 +804,6 @@ export class UserCacheService {
           userId,
           error: error instanceof Error ? error.message : "Unknown error",
         }
-      );
-      UnifiedLogger.error(
-        "offline-cache",
-        "Error getting brew sessions:",
-        error
       );
       throw new OfflineError(
         "Failed to get brew sessions",
@@ -2383,7 +2378,7 @@ export class UserCacheService {
    */
   static async refreshRecipesFromServer(
     userId: string,
-    userUnitSystem: UnitSystem = "imperial"
+    userUnitSystem: UnitSystem = "metric"
   ): Promise<Recipe[]> {
     try {
       // Always fetch fresh data from server
@@ -2983,7 +2978,7 @@ export class UserCacheService {
   private static async hydrateBrewSessionsFromServer(
     userId: string,
     forceRefresh: boolean = false,
-    _userUnitSystem: UnitSystem = "imperial"
+    _userUnitSystem: UnitSystem = "metric"
   ): Promise<void> {
     try {
       // Import the API service here to avoid circular dependencies
@@ -3142,7 +3137,7 @@ export class UserCacheService {
    */
   static async refreshBrewSessionsFromServer(
     userId: string,
-    userUnitSystem: UnitSystem = "imperial"
+    userUnitSystem: UnitSystem = "metric"
   ): Promise<BrewSession[]> {
     try {
       await UnifiedLogger.info(
@@ -3233,11 +3228,15 @@ export class UserCacheService {
   /**
    * Resolve temporary recipe_id in brew session data
    *
+   * Validates that recipe_id exists and is a non-empty string before processing.
+   * If recipe_id is a temp ID, resolves it to the real MongoDB ID by looking up
+   * the synced recipe in the cache.
+   *
    * @param brewSessionData - The brew session data that may contain a temp recipe_id
    * @param operation - The pending operation being processed
    * @param pathContext - Context indicating if this is a CREATE or UPDATE operation
    * @returns Object containing updated brewSessionData (with recipe_id guaranteed to be a string) and flag indicating if temp ID was found
-   * @throws OfflineError if userId is missing or recipe not found
+   * @throws OfflineError if recipe_id is missing/invalid, userId is missing, or recipe not found
    */
   private static async resolveTempRecipeId<
     TempBrewSessionData extends Partial<BrewSession>,
@@ -3250,10 +3249,33 @@ export class UserCacheService {
     hadTempRecipeId: boolean;
   }> {
     const updatedData = { ...brewSessionData };
-    const hasTemporaryRecipeId = updatedData.recipe_id?.startsWith("temp_");
+
+    // Validate that recipe_id exists and is a non-empty string
+    if (
+      !updatedData.recipe_id ||
+      typeof updatedData.recipe_id !== "string" ||
+      updatedData.recipe_id.trim().length === 0
+    ) {
+      await UnifiedLogger.error(
+        "UserCacheService.resolveTempRecipeId",
+        `Brew session ${pathContext} has missing or invalid recipe_id`,
+        {
+          entityId: operation.entityId,
+          recipeId: updatedData.recipe_id,
+          pathContext,
+        }
+      );
+      throw new OfflineError(
+        "Invalid brew session - missing or invalid recipe_id",
+        "DEPENDENCY_ERROR",
+        false
+      );
+    }
+
+    const hasTemporaryRecipeId = updatedData.recipe_id.startsWith("temp_");
 
     if (!hasTemporaryRecipeId) {
-      // recipe_id exists and is not a temp ID, so it's already a real ID
+      // recipe_id exists, is valid, and is not a temp ID, so it's already a real ID
       return {
         brewSessionData: updatedData as TempBrewSessionData & {
           recipe_id: string;
@@ -3571,16 +3593,13 @@ export class UserCacheService {
 
             if (isTempId) {
               // Convert UPDATE with temp ID to CREATE operation
-              if (__DEV__) {
-              }
+
               const response = await ApiService.recipes.create(operation.data);
               if (response && response.data && response.data.id) {
                 return { realId: response.data.id };
               }
             } else {
               // Normal UPDATE operation for real MongoDB IDs
-              if (__DEV__) {
-              }
               await ApiService.recipes.update(
                 operation.entityId,
                 operation.data

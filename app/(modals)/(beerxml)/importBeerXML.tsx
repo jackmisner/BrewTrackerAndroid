@@ -96,7 +96,7 @@ export default function ImportBeerXMLScreen() {
       // Automatically proceed to parsing
       await parseBeerXML(result.content, result.filename);
     } catch (error) {
-      UnifiedLogger.error(
+      void UnifiedLogger.error(
         "beerxml",
         "🍺 BeerXML Import - File selection error:",
         error
@@ -133,7 +133,7 @@ export default function ImportBeerXMLScreen() {
         step: "unit_choice", // Always show unit choice after parsing
       }));
     } catch (error) {
-      UnifiedLogger.error(
+      void UnifiedLogger.error(
         "beerxml",
         "🍺 BeerXML Import - Parsing error:",
         error
@@ -171,7 +171,7 @@ export default function ImportBeerXMLScreen() {
 
       // Log warnings if any
       if (warnings && warnings.length > 0) {
-        UnifiedLogger.warn(
+        void UnifiedLogger.warn(
           "beerxml",
           "🍺 BeerXML Conversion warnings:",
           warnings
@@ -185,7 +185,7 @@ export default function ImportBeerXMLScreen() {
         convertingTarget: null,
       }));
     } catch (error) {
-      UnifiedLogger.error(
+      void UnifiedLogger.error(
         "beerxml",
         "🍺 BeerXML Import - Conversion error:",
         error
