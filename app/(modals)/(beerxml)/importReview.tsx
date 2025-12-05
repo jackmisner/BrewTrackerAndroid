@@ -138,11 +138,17 @@ function normalizeImportedIngredients(
         );
         return false;
       }
-      if (
-        ing.amount === "" ||
-        ing.amount == null ||
-        isNaN(Number(ing.amount))
-      ) {
+      if (ing.amount === "" || ing.amount == null) {
+        void UnifiedLogger.error(
+          "import-review",
+          "Ingredient has missing amount",
+          ing
+        );
+        return false;
+      }
+      const amountNumber =
+        typeof ing.amount === "number" ? ing.amount : Number(ing.amount);
+      if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
         void UnifiedLogger.error(
           "import-review",
           "Ingredient has invalid amount",
@@ -159,7 +165,8 @@ function normalizeImportedIngredients(
         ingredient_id: ing.ingredient_id,
         name: ing.name,
         type: type,
-        amount: Number(ing.amount) || 0,
+        amount:
+          typeof ing.amount === "number" ? ing.amount : Number(ing.amount),
         unit: ing.unit,
         use: ing.use,
         time: coerceIngredientTime(ing.time),
@@ -610,11 +617,29 @@ export default function ImportReviewScreen() {
               <Text style={styles.detailValue}>
                 {(() => {
                   const n = Number(recipeData.batch_size);
-                  return Number.isFinite(n) ? n.toFixed(1) : "N/A";
-                })()}{" "}
-                {String(recipeData.batch_size_unit).toLowerCase() === "l"
-                  ? "L"
-                  : "gal"}
+                  const displayValue = Number.isFinite(n)
+                    ? n.toFixed(1)
+                    : "N/A";
+
+                  const unitSystem = deriveUnitSystem(
+                    recipeData.batch_size_unit,
+                    recipeData.unit_system
+                  );
+                  const rawUnit = String(
+                    recipeData.batch_size_unit || ""
+                  ).toLowerCase();
+
+                  const unitLabel =
+                    rawUnit === "l"
+                      ? "L"
+                      : rawUnit === "gal" || rawUnit === "gallons"
+                        ? "gal"
+                        : unitSystem === "metric"
+                          ? "L"
+                          : "gal";
+
+                  return `${displayValue} ${unitLabel}`;
+                })()}
               </Text>
             </View>
 
