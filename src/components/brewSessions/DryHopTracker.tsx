@@ -32,7 +32,7 @@ import { getDryHopsFromRecipe } from "@utils/recipeUtils";
 import { useTheme } from "@contexts/ThemeContext";
 import { TEST_IDS } from "@src/constants/testIDs";
 import { dryHopTrackerStyles } from "@styles/components/brewSessions/dryHopTrackerStyles";
-import UnifiedLogger from "@services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 interface DryHopTrackerProps {
   recipe: Recipe | null | undefined;

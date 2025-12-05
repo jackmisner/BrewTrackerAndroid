@@ -23,7 +23,7 @@ import { DryHopTracker } from "@src/components/brewSessions/DryHopTracker";
 import { useBrewSessions } from "@hooks/offlineV2/useUserData";
 import { ModalHeader } from "@src/components/ui/ModalHeader";
 import { QUERY_KEYS } from "@services/api/queryClient";
-import UnifiedLogger from "@services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 import { DevIdDebugger } from "@src/components/debug/DevIdDebugger";
 
 export default function ViewBrewSession() {

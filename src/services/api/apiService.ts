@@ -95,6 +95,10 @@ import {
   CreateDryHopFromRecipeRequest,
   UpdateDryHopRequest,
 
+  // BeerXML types
+  BeerXMLConvertRecipeRequest,
+  BeerXMLConvertRecipeResponse,
+
   // Common types
   ID,
   IngredientType,
@@ -1062,6 +1066,11 @@ const ApiService = {
       ingredients: any[];
     }): Promise<AxiosResponse<{ created_ingredients: any[] }>> =>
       api.post(ENDPOINTS.BEERXML.CREATE_INGREDIENTS, data),
+
+    convertRecipe: (
+      data: BeerXMLConvertRecipeRequest
+    ): Promise<AxiosResponse<BeerXMLConvertRecipeResponse>> =>
+      api.post(ENDPOINTS.BEERXML.CONVERT_RECIPE, data),
   },
 
   // AI endpoints

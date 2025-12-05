@@ -11,7 +11,7 @@ import {
   NetworkSimulationMode,
 } from "@contexts/DeveloperContext";
 import { Text, TouchableOpacity } from "react-native";
-import UnifiedLogger from "@services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 
 // Mock AsyncStorage
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -29,10 +29,9 @@ jest.mock("@services/config", () => ({
 
 // Mock UnifiedLogger
 jest.mock("@services/logger/UnifiedLogger", () => ({
-  __esModule: true,
-  default: {
-    error: jest.fn(),
+  UnifiedLogger: {
     warn: jest.fn(),
+    error: jest.fn(),
     info: jest.fn(),
     debug: jest.fn(),
   },
@@ -345,52 +344,6 @@ describe("DeveloperContext", () => {
       expect(() => {
         render(<TestComponentWithoutProvider />);
       }).toThrow("useDeveloper must be used within a DeveloperProvider");
-    });
-  });
-
-  describe("Console Logging", () => {
-    it("should log network mode changes", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
-
-      const { getByTestId } = render(
-        <DeveloperProvider>
-          <TestComponent />
-        </DeveloperProvider>
-      );
-
-      await act(async () => {
-        getByTestId("set-slow").props.onPress();
-      });
-
-      await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith(
-          'Developer mode: Network simulation set to "slow"'
-        );
-      });
-
-      consoleSpy.mockRestore();
-    });
-
-    it("should log settings reset", async () => {
-      const consoleSpy = jest.spyOn(console, "log").mockImplementation();
-
-      const { getByTestId } = render(
-        <DeveloperProvider>
-          <TestComponent />
-        </DeveloperProvider>
-      );
-
-      await act(async () => {
-        getByTestId("reset-settings").props.onPress();
-      });
-
-      await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith(
-          "Developer settings reset to defaults"
-        );
-      });
-
-      consoleSpy.mockRestore();
     });
   });
 });

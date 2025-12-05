@@ -14,7 +14,7 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { UserValidationService } from "@utils/userValidation";
-import UnifiedLogger from "@services/logger/UnifiedLogger";
+import { UnifiedLogger } from "@services/logger/UnifiedLogger";
 import { isTempId } from "@utils/recipeUtils";
 import {
   TempIdMapping,

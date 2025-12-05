@@ -1,13 +1,14 @@
 /**
  * Unit Conversion Choice Modal Component
  *
- * Modal for choosing whether to convert a BeerXML recipe's units to the user's
- * preferred unit system or import as-is.
+ * Modal for choosing which unit system to use when importing BeerXML recipes.
+ * BeerXML files are always in metric per spec, but users can choose to import
+ * as metric or convert to imperial.
  *
  * Features:
- * - Clear indication of unit system mismatch
- * - Option to convert recipe to user's preferred units
- * - Option to import recipe with original units
+ * - Clear explanation that BeerXML is metric
+ * - Recommendations based on user's preferred unit system
+ * - Applies normalization to both choices (e.g., 28.3g -> 30g)
  * - Loading state during conversion
  * - Accessible design with proper ARIA labels
  *
@@ -15,11 +16,11 @@
  * ```typescript
  * <UnitConversionChoiceModal
  *   visible={showUnitChoice}
- *   recipeUnitSystem="metric"
  *   userUnitSystem="imperial"
  *   isConverting={false}
- *   onConvert={handleConvert}
- *   onImportAsIs={handleImportAsIs}
+ *   recipeName="My IPA"
+ *   onChooseMetric={handleMetric}
+ *   onChooseImperial={handleImperial}
  *   onCancel={handleCancel}
  * />
  * ```
@@ -44,11 +45,7 @@ interface UnitConversionChoiceModalProps {
    */
   visible: boolean;
   /**
-   * The unit system detected in the recipe
-   */
-  recipeUnitSystem: UnitSystem;
-  /**
-   * The user's preferred unit system
+   * The user's preferred unit system (for recommendation)
    */
   userUnitSystem: UnitSystem;
   /**
@@ -56,13 +53,17 @@ interface UnitConversionChoiceModalProps {
    */
   isConverting: boolean;
   /**
-   * Callback when user chooses to convert units
+   * Optional recipe name to display
    */
-  onConvert: () => void;
+  recipeName?: string;
   /**
-   * Callback when user chooses to import as-is
+   * Callback when user chooses metric
    */
-  onImportAsIs: () => void;
+  onChooseMetric: () => void;
+  /**
+   * Callback when user chooses imperial
+   */
+  onChooseImperial: () => void;
   /**
    * Callback when user cancels/closes the modal
    */
@@ -72,18 +73,18 @@ interface UnitConversionChoiceModalProps {
 /**
  * Unit Conversion Choice Modal Component
  *
- * Presents the user with a choice to convert recipe units or import as-is
- * when a unit system mismatch is detected during BeerXML import.
+ * Presents the user with a choice of which unit system to use when
+ * importing a BeerXML recipe (always metric per spec).
  */
 export const UnitConversionChoiceModal: React.FC<
   UnitConversionChoiceModalProps
 > = ({
   visible,
-  recipeUnitSystem,
   userUnitSystem,
   isConverting,
-  onConvert,
-  onImportAsIs,
+  recipeName,
+  onChooseMetric,
+  onChooseImperial,
   onCancel,
 }) => {
   const { colors } = useTheme();
@@ -107,45 +108,38 @@ export const UnitConversionChoiceModal: React.FC<
           {/* Header */}
           <View style={unitConversionModalStyles.header}>
             <MaterialIcons
-              name="warning"
+              name="swap-horiz"
               size={32}
-              color={colors.warning || "#F59E0B"}
-              accessibilityLabel="Warning icon"
+              color={colors.primary}
+              accessibilityLabel="Unit conversion icon"
             />
             <Text
               style={[unitConversionModalStyles.title, { color: colors.text }]}
             >
-              Unit System Mismatch
+              Choose Import Units
             </Text>
           </View>
 
           {/* Message */}
           <View style={unitConversionModalStyles.messageContainer}>
+            {recipeName && (
+              <Text
+                style={[
+                  unitConversionModalStyles.recipeName,
+                  { color: colors.text },
+                ]}
+              >
+                {recipeName}
+              </Text>
+            )}
             <Text
               style={[
                 unitConversionModalStyles.message,
                 { color: colors.textSecondary || colors.text },
               ]}
             >
-              This recipe uses{" "}
-              <Text
-                style={[
-                  unitConversionModalStyles.unitHighlight,
-                  { color: colors.text },
-                ]}
-              >
-                {recipeUnitSystem}
-              </Text>{" "}
-              units, but your preference is set to{" "}
-              <Text
-                style={[
-                  unitConversionModalStyles.unitHighlight,
-                  { color: colors.text },
-                ]}
-              >
-                {userUnitSystem}
-              </Text>
-              .
+              BeerXML files use metric units by default. Choose which unit
+              system you'd like to use in BrewTracker.
             </Text>
 
             <Text
@@ -154,25 +148,31 @@ export const UnitConversionChoiceModal: React.FC<
                 { color: colors.textSecondary || colors.text },
               ]}
             >
-              You can import the recipe as-is or convert it to your preferred
-              unit system.
+              Both options apply brewing-friendly normalization (e.g., 28.3g →
+              30g) for practical measurements.
             </Text>
           </View>
 
           {/* Action Buttons */}
           <View style={unitConversionModalStyles.buttonContainer}>
-            {/* Convert Button */}
+            {/* Metric Choice */}
             <TouchableOpacity
               style={[
-                unitConversionModalStyles.primaryButton,
+                userUnitSystem === "metric"
+                  ? unitConversionModalStyles.primaryButton
+                  : unitConversionModalStyles.secondaryButton,
                 {
-                  backgroundColor: colors.primary,
+                  backgroundColor:
+                    userUnitSystem === "metric"
+                      ? colors.primary
+                      : colors.backgroundSecondary,
+                  borderColor: colors.border,
                   opacity: isConverting ? 0.6 : 1,
                 },
               ]}
-              onPress={onConvert}
+              onPress={onChooseMetric}
               disabled={isConverting}
-              accessibilityLabel={`Convert recipe to ${userUnitSystem} units`}
+              accessibilityLabel="Import recipe with metric units (kg, L, °C)"
               accessibilityRole="button"
               accessibilityState={{ disabled: isConverting }}
             >
@@ -180,13 +180,22 @@ export const UnitConversionChoiceModal: React.FC<
                 <>
                   <ActivityIndicator
                     size="small"
-                    color={colors.background}
+                    color={
+                      userUnitSystem === "metric"
+                        ? colors.background
+                        : colors.text
+                    }
                     style={unitConversionModalStyles.buttonSpinner}
                   />
                   <Text
                     style={[
                       unitConversionModalStyles.buttonText,
-                      { color: colors.background },
+                      {
+                        color:
+                          userUnitSystem === "metric"
+                            ? colors.background
+                            : colors.text,
+                      },
                     ]}
                   >
                     Converting...
@@ -195,46 +204,129 @@ export const UnitConversionChoiceModal: React.FC<
               ) : (
                 <>
                   <MaterialIcons
-                    name="swap-horiz"
+                    name="check-circle"
                     size={20}
-                    color={colors.background}
+                    color={
+                      userUnitSystem === "metric"
+                        ? colors.background
+                        : colors.text
+                    }
                     style={unitConversionModalStyles.buttonIcon}
                   />
-                  <Text
-                    style={[
-                      unitConversionModalStyles.buttonText,
-                      { color: colors.background },
-                    ]}
-                  >
-                    Convert to {userUnitSystem}
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        unitConversionModalStyles.buttonText,
+                        {
+                          color:
+                            userUnitSystem === "metric"
+                              ? colors.background
+                              : colors.text,
+                        },
+                      ]}
+                    >
+                      Import as Metric (kg, L, °C)
+                    </Text>
+                    {userUnitSystem === "metric" && (
+                      <Text
+                        style={[
+                          unitConversionModalStyles.buttonSubtext,
+                          { color: colors.background },
+                        ]}
+                      >
+                        Recommended for your preference
+                      </Text>
+                    )}
+                  </View>
                 </>
               )}
             </TouchableOpacity>
 
-            {/* Import As-Is Button */}
+            {/* Imperial Choice */}
             <TouchableOpacity
               style={[
-                unitConversionModalStyles.secondaryButton,
+                userUnitSystem === "imperial"
+                  ? unitConversionModalStyles.primaryButton
+                  : unitConversionModalStyles.secondaryButton,
                 {
-                  backgroundColor: colors.backgroundSecondary,
+                  backgroundColor:
+                    userUnitSystem === "imperial"
+                      ? colors.primary
+                      : colors.backgroundSecondary,
                   borderColor: colors.border,
+                  opacity: isConverting ? 0.6 : 1,
                 },
               ]}
-              onPress={onImportAsIs}
+              onPress={onChooseImperial}
               disabled={isConverting}
-              accessibilityLabel={`Import recipe as-is with ${recipeUnitSystem} units`}
+              accessibilityLabel="Import recipe with imperial units (lbs, gal, °F)"
               accessibilityRole="button"
               accessibilityState={{ disabled: isConverting }}
             >
-              <Text
-                style={[
-                  unitConversionModalStyles.buttonText,
-                  { color: colors.text },
-                ]}
-              >
-                Import as {recipeUnitSystem}
-              </Text>
+              {isConverting ? (
+                <>
+                  <ActivityIndicator
+                    size="small"
+                    color={
+                      userUnitSystem === "imperial"
+                        ? colors.background
+                        : colors.text
+                    }
+                    style={unitConversionModalStyles.buttonSpinner}
+                  />
+                  <Text
+                    style={[
+                      unitConversionModalStyles.buttonText,
+                      {
+                        color:
+                          userUnitSystem === "imperial"
+                            ? colors.background
+                            : colors.text,
+                      },
+                    ]}
+                  >
+                    Converting...
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <MaterialIcons
+                    name="check-circle"
+                    size={20}
+                    color={
+                      userUnitSystem === "imperial"
+                        ? colors.background
+                        : colors.text
+                    }
+                    style={unitConversionModalStyles.buttonIcon}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        unitConversionModalStyles.buttonText,
+                        {
+                          color:
+                            userUnitSystem === "imperial"
+                              ? colors.background
+                              : colors.text,
+                        },
+                      ]}
+                    >
+                      Import as Imperial (lbs, gal, °F)
+                    </Text>
+                    {userUnitSystem === "imperial" && (
+                      <Text
+                        style={[
+                          unitConversionModalStyles.buttonSubtext,
+                          { color: colors.background },
+                        ]}
+                      >
+                        Recommended for your preference
+                      </Text>
+                    )}
+                  </View>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </View>

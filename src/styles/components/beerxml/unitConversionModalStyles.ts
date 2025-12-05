@@ -43,6 +43,11 @@ export const unitConversionModalStyles = StyleSheet.create({
     marginBottom: 24,
     gap: 12,
   },
+  recipeName: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
   message: {
     fontSize: 16,
     lineHeight: 24,
@@ -79,6 +84,12 @@ export const unitConversionModalStyles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  buttonSubtext: {
+    fontSize: 12,
+    fontWeight: "400",
+    marginTop: 4,
+    opacity: 0.9,
   },
   buttonIcon: {
     marginRight: 8,

@@ -37,7 +37,7 @@ import { UnitSystem } from "@src/types";
 import { UnifiedLogger } from "@/src/services/logger/UnifiedLogger";
 
 interface ImportState {
-  step: "file_selection" | "parsing" | "recipe_selection";
+  step: "file_selection" | "parsing" | "unit_choice" | "recipe_selection";
   isLoading: boolean;
   error: string | null;
   selectedFile: {
@@ -46,8 +46,6 @@ interface ImportState {
   } | null;
   parsedRecipes: BeerXMLRecipe[];
   selectedRecipe: BeerXMLRecipe | null;
-  showUnitConversionChoice: boolean;
-  recipeUnitSystem: UnitSystem | null;
   isConverting: boolean;
 }
 
@@ -63,8 +61,6 @@ export default function ImportBeerXMLScreen() {
     selectedFile: null,
     parsedRecipes: [],
     selectedRecipe: null,
-    showUnitConversionChoice: false,
-    recipeUnitSystem: null,
     isConverting: false,
   });
 
@@ -114,31 +110,26 @@ export default function ImportBeerXMLScreen() {
 
   /**
    * Parse the selected BeerXML content
+   * BeerXML files are always in metric per spec
    */
   const parseBeerXML = async (content: string, _filename: string) => {
     try {
-      // Parse using backend service
+      // Parse using backend service (returns metric recipes per BeerXML spec)
       const recipes = await BeerXMLService.parseBeerXML(content);
 
       if (recipes.length === 0) {
         throw new Error("No recipes found in the BeerXML file");
       }
 
-      // Check first recipe for unit system mismatch
+      // Select first recipe by default
       const firstRecipe = recipes[0];
-      const recipeUnitSystem =
-        BeerXMLService.detectRecipeUnitSystem(firstRecipe);
 
       setImportState(prev => ({
         ...prev,
         isLoading: false,
         parsedRecipes: recipes,
         selectedRecipe: firstRecipe,
-        step: "recipe_selection",
-        recipeUnitSystem:
-          recipeUnitSystem === "mixed" ? null : recipeUnitSystem,
-        showUnitConversionChoice:
-          recipeUnitSystem !== unitSystem && recipeUnitSystem !== "mixed",
+        step: "unit_choice", // Always show unit choice after parsing
       }));
     } catch (error) {
       UnifiedLogger.error(
@@ -156,9 +147,10 @@ export default function ImportBeerXMLScreen() {
   };
 
   /**
-   * Handle unit conversion - convert recipe to user's preferred unit system
+   * Handle unit system choice and conversion
+   * Applies normalization to both metric and imperial imports
    */
-  const handleConvertAndImport = async () => {
+  const handleUnitSystemChoice = async (targetSystem: UnitSystem) => {
     const recipe = importState.selectedRecipe;
     if (!recipe) {
       return;
@@ -167,20 +159,30 @@ export default function ImportBeerXMLScreen() {
     setImportState(prev => ({ ...prev, isConverting: true }));
 
     try {
-      const convertedRecipe = await BeerXMLService.convertRecipeUnits(
-        recipe,
-        unitSystem
-      );
+      // Convert recipe to target system with normalization
+      // Even metric imports need normalization (e.g., 28.3g -> 30g)
+      const { recipe: convertedRecipe, warnings } =
+        await BeerXMLService.convertRecipeUnits(
+          recipe,
+          targetSystem,
+          true // Always normalize to brewing-friendly increments
+        );
+
+      // Log warnings if any
+      if (warnings && warnings.length > 0) {
+        UnifiedLogger.warn(
+          "beerxml",
+          "🍺 BeerXML Conversion warnings:",
+          warnings
+        );
+      }
 
       setImportState(prev => ({
         ...prev,
         selectedRecipe: convertedRecipe,
-        showUnitConversionChoice: false,
+        step: "recipe_selection",
         isConverting: false,
       }));
-
-      // Proceed to ingredient matching
-      proceedToIngredientMatching(convertedRecipe);
     } catch (error) {
       UnifiedLogger.error(
         "beerxml",
@@ -190,39 +192,18 @@ export default function ImportBeerXMLScreen() {
       setImportState(prev => ({ ...prev, isConverting: false }));
       Alert.alert(
         "Conversion Error",
-        "Failed to convert recipe units. Would you like to import as-is?",
+        "Failed to convert recipe units. Please try again or select a different file.",
         [
           {
-            text: "Cancel",
-            style: "cancel",
+            text: "OK",
             onPress: () =>
               setImportState(prev => ({
                 ...prev,
-                showUnitConversionChoice: false,
+                step: "file_selection",
               })),
-          },
-          {
-            text: "Import As-Is",
-            onPress: () => {
-              setImportState(prev => ({
-                ...prev,
-                showUnitConversionChoice: false,
-              }));
-              proceedToIngredientMatching(recipe);
-            },
           },
         ]
       );
-    }
-  };
-
-  /**
-   * Handle import as-is without unit conversion
-   */
-  const handleImportAsIs = () => {
-    setImportState(prev => ({ ...prev, showUnitConversionChoice: false }));
-    if (importState.selectedRecipe) {
-      proceedToIngredientMatching(importState.selectedRecipe);
     }
   };
 
@@ -258,8 +239,6 @@ export default function ImportBeerXMLScreen() {
       selectedFile: null,
       parsedRecipes: [],
       selectedRecipe: null,
-      showUnitConversionChoice: false,
-      recipeUnitSystem: null,
       isConverting: false,
     });
   };
@@ -499,22 +478,20 @@ export default function ImportBeerXMLScreen() {
       </ScrollView>
 
       {/* Unit Conversion Choice Modal */}
-      {importState.recipeUnitSystem && (
-        <UnitConversionChoiceModal
-          visible={importState.showUnitConversionChoice}
-          recipeUnitSystem={importState.recipeUnitSystem}
-          userUnitSystem={unitSystem}
-          isConverting={importState.isConverting}
-          onConvert={handleConvertAndImport}
-          onImportAsIs={handleImportAsIs}
-          onCancel={() =>
-            setImportState(prev => ({
-              ...prev,
-              showUnitConversionChoice: false,
-            }))
-          }
-        />
-      )}
+      <UnitConversionChoiceModal
+        visible={importState.step === "unit_choice"}
+        userUnitSystem={unitSystem}
+        isConverting={importState.isConverting}
+        recipeName={importState.selectedRecipe?.name}
+        onChooseMetric={() => handleUnitSystemChoice("metric")}
+        onChooseImperial={() => handleUnitSystemChoice("imperial")}
+        onCancel={() =>
+          setImportState(prev => ({
+            ...prev,
+            step: "file_selection",
+          }))
+        }
+      />
     </View>
   );
 }

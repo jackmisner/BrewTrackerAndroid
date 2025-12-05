@@ -448,56 +448,44 @@ class BeerXMLService {
   }
 
   /**
-   * Convert recipe units to user's preferred unit system
-   * Uses the unit conversion workflow for intelligent conversion + normalization
+   * Convert recipe units to target unit system with brewing-friendly normalization
+   *
+   * BeerXML files are always in metric per spec. This function:
+   * 1. Converts from metric to target system (if imperial)
+   * 2. Normalizes values to brewing-friendly increments (e.g., 1oz -> 30g)
+   *
+   * IMPORTANT: Normalization is applied even when importing as metric, because
+   * the recipe may have originally been imperial and converted to metric for
+   * BeerXML export, resulting in odd values like 28.3g (1oz). The backend's
+   * conversion endpoint rounds these to practical brewing increments (30g) unless normalization argument is explicitly passed as false.
    */
   async convertRecipeUnits(
     recipe: BeerXMLRecipe,
-    targetUnitSystem: UnitSystem
-  ): Promise<BeerXMLRecipe> {
+    targetUnitSystem: UnitSystem,
+    normalize: boolean = true
+  ): Promise<{ recipe: BeerXMLRecipe; warnings?: string[] }> {
     try {
-      // Prepare recipe for conversion - add target_unit_system field
-      // Note: AI endpoint accepts partial recipes for unit conversion workflow
-      const recipeForConversion: Partial<Recipe> & {
-        target_unit_system: UnitSystem;
-      } = {
-        ...recipe,
-        target_unit_system: targetUnitSystem,
-      };
-
-      // Call AI analyze endpoint with unit_conversion workflow
-      const response = await ApiService.ai.analyzeRecipe({
-        complete_recipe: recipeForConversion,
-        unit_system: targetUnitSystem,
-        workflow_name: "unit_conversion",
+      // Call dedicated BeerXML conversion endpoint
+      const response = await ApiService.beerxml.convertRecipe({
+        recipe,
+        target_system: targetUnitSystem,
+        normalize,
       });
 
-      // Extract the optimized (converted) recipe
-      const convertedRecipe = (
-        response.data as { optimized_recipe?: Partial<BeerXMLRecipe> }
-      ).optimized_recipe;
+      const convertedRecipe = response.data.recipe;
+      const warnings = response.data.warnings ?? [];
 
       if (!convertedRecipe) {
         UnifiedLogger.warn(
           "beerxml",
           "No converted recipe returned, using original"
         );
-        return recipe;
+        return { recipe, warnings: [] };
       }
 
-      // Merge converted data back into original recipe structure
-      // Use nullish coalescing to preserve falsy values like 0 or empty string
       return {
-        ...recipe,
-        ...convertedRecipe,
-        unit_system: convertedRecipe.unit_system ?? targetUnitSystem,
-        ingredients: convertedRecipe.ingredients ?? recipe.ingredients,
-        batch_size: convertedRecipe.batch_size ?? recipe.batch_size,
-        batch_size_unit:
-          convertedRecipe.batch_size_unit ?? recipe.batch_size_unit,
-        mash_temperature:
-          convertedRecipe.mash_temperature ?? recipe.mash_temperature,
-        mash_temp_unit: convertedRecipe.mash_temp_unit ?? recipe.mash_temp_unit,
+        recipe: convertedRecipe as BeerXMLRecipe,
+        warnings,
       };
     } catch (error) {
       UnifiedLogger.error("beerxml", "Error converting recipe units:", error);
@@ -506,7 +494,7 @@ class BeerXMLService {
         "beerxml",
         "Unit conversion failed, continuing with original units"
       );
-      return recipe;
+      return { recipe, warnings: [] };
     }
   }
 }
