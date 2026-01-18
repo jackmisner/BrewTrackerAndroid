@@ -19,9 +19,8 @@ describe("OfflineV2 Services Index", () => {
   });
 
   it("should export both services in a single import", async () => {
-    const { StaticDataService, UserCacheService } = await import(
-      "@services/offlineV2/index"
-    );
+    const { StaticDataService, UserCacheService } =
+      await import("@services/offlineV2/index");
     expect(StaticDataService).toBeDefined();
     expect(UserCacheService).toBeDefined();
     expect(StaticDataService).not.toBe(UserCacheService);

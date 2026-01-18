@@ -733,9 +733,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       await cacheUtils.clearUserPersistedCache(userId);
 
       // Clear user-scoped offline data
-      const { UserCacheService } = await import(
-        "@services/offlineV2/UserCacheService"
-      );
+      const { UserCacheService } =
+        await import("@services/offlineV2/UserCacheService");
       await UserCacheService.clearUserData(userId);
 
       await UnifiedLogger.info("auth", "Logout completed successfully", {
@@ -795,9 +794,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       await cacheUtils.clearAllPersistedCache();
 
       // Clear user offline data
-      const { UserCacheService } = await import(
-        "@services/offlineV2/UserCacheService"
-      );
+      const { UserCacheService } =
+        await import("@services/offlineV2/UserCacheService");
       await UserCacheService.clearUserData();
     } finally {
       setIsLoading(false);

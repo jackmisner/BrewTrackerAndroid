@@ -103,9 +103,8 @@ export default function ViewRecipeScreen() {
 
         // If not found in V2 cache, check if there are legacy recipes to migrate
         try {
-          const { LegacyMigrationService } = await import(
-            "@services/offlineV2/LegacyMigrationService"
-          );
+          const { LegacyMigrationService } =
+            await import("@services/offlineV2/LegacyMigrationService");
           const legacyCount =
             await LegacyMigrationService.getLegacyRecipeCount(userId);
 
