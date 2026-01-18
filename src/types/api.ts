@@ -368,8 +368,7 @@ export interface ApiCallOptions {
 // Brew Session API types
 export type BrewSessionResponse = BrewSession;
 
-export interface BrewSessionsListResponse
-  extends PaginatedResponse<BrewSession> {
+export interface BrewSessionsListResponse extends PaginatedResponse<BrewSession> {
   brew_sessions: BrewSession[];
 }
 
@@ -379,8 +378,9 @@ export type UpdateBrewSessionResponse = ApiResponse<BrewSession>;
 
 export type FermentationEntryResponse = ApiResponse<FermentationEntry>;
 
-export interface FermentationEntriesResponse
-  extends ApiResponse<FermentationEntry[]> {
+export interface FermentationEntriesResponse extends ApiResponse<
+  FermentationEntry[]
+> {
   data: FermentationEntry[];
 }
 

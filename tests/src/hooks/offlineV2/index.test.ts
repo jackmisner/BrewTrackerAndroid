@@ -24,9 +24,8 @@ describe("OfflineV2 Hooks Index", () => {
   });
 
   it("should export user data hooks", async () => {
-    const { useRecipes, useBrewSessions } = await import(
-      "@hooks/offlineV2/index"
-    );
+    const { useRecipes, useBrewSessions } =
+      await import("@hooks/offlineV2/index");
 
     expect(useRecipes).toBeDefined();
     expect(typeof useRecipes).toBe("function");
@@ -36,9 +35,8 @@ describe("OfflineV2 Hooks Index", () => {
   });
 
   it("should export sync management hooks", async () => {
-    const { useOfflineSync, useSyncStatus } = await import(
-      "@hooks/offlineV2/index"
-    );
+    const { useOfflineSync, useSyncStatus } =
+      await import("@hooks/offlineV2/index");
 
     expect(useOfflineSync).toBeDefined();
     expect(typeof useOfflineSync).toBe("function");

@@ -2487,9 +2487,8 @@ export class UserCacheService {
 
         // MIGRATION: Also check for legacy offline recipes that need preservation
         try {
-          const { LegacyMigrationService } = await import(
-            "./LegacyMigrationService"
-          );
+          const { LegacyMigrationService } =
+            await import("./LegacyMigrationService");
           const legacyCount =
             await LegacyMigrationService.getLegacyRecipeCount(userId);
 

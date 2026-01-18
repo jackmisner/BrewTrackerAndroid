@@ -184,9 +184,8 @@ export const DeveloperProvider: React.FC<DeveloperProviderProps> = ({
         "Starting pending operations sync"
       );
 
-      const { UserCacheService } = await import(
-        "@services/offlineV2/UserCacheService"
-      );
+      const { UserCacheService } =
+        await import("@services/offlineV2/UserCacheService");
 
       const result = await UserCacheService.syncPendingOperations();
       if (result && result.success === false) {

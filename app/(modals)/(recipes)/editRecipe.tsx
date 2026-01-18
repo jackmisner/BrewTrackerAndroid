@@ -276,9 +276,8 @@ export default function EditRecipeScreen() {
       if (!userId) {
         throw new Error("User not authenticated");
       }
-      const { UserCacheService } = await import(
-        "@services/offlineV2/UserCacheService"
-      );
+      const { UserCacheService } =
+        await import("@services/offlineV2/UserCacheService");
       const recipes = await UserCacheService.getRecipes(userId, unitSystem);
       const recipe = recipes.find(r => r.id === recipe_id);
       if (!recipe) {
